@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -17,7 +18,6 @@
             <p>Pure lossless compression. Zero quality drop.</p>
         </header>
 
-        <!-- Drag & Drop Zone -->
         <section id="drop-zone" class="drop-zone">
             <div class="drop-zone-content">
                 <div class="icon-container">
@@ -25,23 +25,18 @@
                 </div>
                 <h2>Upload your files</h2>
                 <p>Drag & drop up to 10 files, or</p>
-                <!-- Explicit Browse Button added for better compatibility -->
                 <button id="browse-btn" class="btn secondary-btn">Browse Files</button>
             </div>
-            <!-- Changed from 'hidden' to 'display: none' to fix browser blocking bugs -->
             <input type="file" id="file-input" multiple style="display: none;">
         </section>
 
-        <!-- Settings & File List Panel -->
         <section id="workspace" class="workspace hidden">
             <div class="file-list-container">
                 <div class="list-header">
                     <h3>Selected Files</h3>
                     <span id="total-original-size" class="badge">0 MB</span>
                 </div>
-                <div id="file-list" class="file-list">
-                    <!-- File items injected via JS -->
-                </div>
+                <div id="file-list" class="file-list"></div>
             </div>
             
             <div class="controls-container">
@@ -60,7 +55,6 @@
             </div>
         </section>
 
-        <!-- Results Panel -->
         <section id="result-area" class="result-area hidden">
             <div class="stats-container">
                 <div class="stat-box">
@@ -78,6 +72,43 @@
             </a>
         </section>
     </main>
+
+    <button id="bmc-trigger" class="bmc-floating-btn" aria-label="Support application development">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>
+        <span>Buy Me a Coffee</span>
+    </button>
+
+    <div id="bmc-modal-overlay" class="bmc-modal-overlay bmc-hidden">
+        <div class="bmc-modal-window">
+            <div class="bmc-modal-header">
+                <h3>Support SqueezeApp</h3>
+                <button id="bmc-close" class="bmc-close-btn" aria-label="Close dialog">&times;</button>
+            </div>
+            <p class="bmc-modal-description">If this app saved you time and local machine memory, consider buying me a coffee via crypto!</p>
+            
+            <div class="bmc-tabs">
+                <button class="bmc-tab-btn bmc-active" data-crypto="sol">
+                    <span>SOL</span>
+                    <span class="bmc-badge">PREF</span>
+                </button>
+                <button class="bmc-tab-btn" data-crypto="btc">
+                    <span>BTC</span>
+                </button>
+                <button class="bmc-tab-btn" data-crypto="eth">
+                    <span>ETH</span>
+                </button>
+            </div>
+
+            <div class="bmc-display-body">
+                <div id="bmc-qrcode-container" class="bmc-qrcode-zone">
+                    </div>
+                <div class="bmc-address-row">
+                    <input type="text" id="bmc-address-text" readonly value="Loading network configuration...">
+                    <button id="bmc-copy-btn" class="bmc-copy-action" aria-label="Copy public keys">Copy</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="app.js"></script>
 </body>

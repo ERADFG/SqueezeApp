@@ -200,3 +200,104 @@ document.addEventListener('DOMContentLoaded', () => {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
     }
 });
+// ==========================================================================
+    // BUY ME A COFFEE / CRYPTO OVERLAY POPUP DIALOG LOGIC
+    // ==========================================================================
+
+    // Target UI Node Addresses Configuration Map
+    const cryptoConfig = {
+        sol: 'GSaQYHN81uBhadwha11LaaD4j4GXBBQMAHE2ZP85kGeW',
+        btc: 'bc1pqngtqtrq9jkvvk3g85lzamnrnayn7w86wg4xjd3xwj843694vzsqv8g92s',
+        eth: '0xa59Ee32DA6434443cc8EF11BeeFD4d9adf559165'
+    };
+
+    const bmcTrigger = document.getElementById('bmc-trigger');
+    const bmcOverlay = document.getElementById('bmc-modal-overlay');
+    const bmcClose = document.getElementById('bmc-close');
+    const bmcTabs = document.querySelectorAll('.bmc-tab-btn');
+    const bmcAddressInput = document.getElementById('bmc-address-text');
+    const bmcCopyBtn = document.getElementById('bmc-copy-btn');
+    const bmcQrContainer = document.getElementById('bmc-qrcode-container');
+
+    let qrEngine = null;
+    let currentCrypto = 'sol';
+
+    // Toggle Modal Window Display States
+    function openBmcModal() {
+        bmcOverlay.classList.remove('bmc-hidden');
+        switchCryptoNetwork(currentCrypto);
+    }
+
+    function closeBmcModal() {
+        bmcOverlay.classList.add('bmc-hidden');
+    }
+
+    // Process Active Target Content Switching & QR Calculations
+    function switchCryptoNetwork(ticker) {
+        currentCrypto = ticker;
+        const address = cryptoConfig[ticker];
+        bmcAddressInput.value = address;
+        
+        // Reset state variables on text copier interface elements
+        bmcCopyBtn.textContent = 'Copy';
+        bmcCopyBtn.classList.remove('bmc-copied');
+
+        // Clear previous visual node elements before instantiation
+        if (bmcQrContainer) {
+            bmcQrContainer.innerHTML = '';
+        }
+
+        // Dynamically compute new canvas payload parameters
+        qrEngine = new QRCode(bmcQrContainer, {
+            text: address,
+            width: 156,
+            height: 156,
+            colorDark: '#09090b',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.H
+        });
+    }
+
+    // Attach Event Listeners to Target Elements
+    if (bmcTrigger) bmcTrigger.addEventListener('click', openBmcModal);
+    if (bmcClose) bmcClose.addEventListener('click', closeBmcModal);
+
+    // Prevent modal close when clicking inside the window content area
+    if (bmcOverlay) {
+        bmcOverlay.addEventListener('click', (e) => {
+            if (e.target === bmcOverlay) closeBmcModal();
+        });
+    }
+
+    if (bmcTabs && bmcTabs.length > 0) {
+        bmcTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                bmcTabs.forEach(t => t.classList.remove('bmc-active'));
+                tab.classList.add('bmc-active');
+                switchCryptoNetwork(tab.getAttribute('data-crypto'));
+            });
+        });
+    }
+
+    // Handle Client-Side Clipboard Actions
+    if (bmcCopyBtn) {
+        bmcCopyBtn.addEventListener('click', async () => {
+            const payloadText = bmcAddressInput.value;
+            if (!payloadText || payloadText.startsWith('Loading')) return;
+
+            try {
+                await navigator.clipboard.writeText(payloadText);
+                bmcCopyBtn.textContent = 'Copied!';
+                bmcCopyBtn.classList.add('bmc-copied');
+                
+                setTimeout(() => {
+                    bmcCopyBtn.textContent = 'Copy';
+                    bmcCopyBtn.classList.remove('bmc-copied');
+                }, 2000);
+            } catch (err) {
+                console.error('Could not copy wallet text: ', err);
+                bmcAddressInput.select();
+                document.execCommand('copy');
+            }
+        });
+    }

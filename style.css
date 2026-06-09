@@ -420,3 +420,256 @@ body {
 .spinner {
     animation: spin 1s linear infinite;
 }
+/* ==========================================================================
+   BUY ME A COFFEE / CRYPTO POPUP OVERLAY MODAL STYLING
+   ========================================================================== */
+
+/* Floating Launch Trigger Button */
+.bmc-floating-btn {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 20px;
+    background-color: #ffffff;
+    color: #09090b;
+    border: none;
+    border-radius: 99px;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(255, 255, 255, 0.15);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
+    animation: bmc-glow-pulse 2s infinite alternate ease-in-out;
+}
+
+.bmc-floating-btn:hover {
+    transform: translateY(-2px) scale(1.02);
+}
+
+.bmc-floating-btn:active {
+    transform: translateY(1px) scale(0.98);
+}
+
+/* Modal Viewport Layering Container (Same Page Overlay) */
+.bmc-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1000;
+    background-color: rgba(9, 9, 11, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    transition: opacity 0.25s ease;
+}
+
+/* Centered UI Box Window */
+.bmc-modal-window {
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    width: 100%;
+    max-width: 400px;
+    padding: 24px;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    position: relative;
+    animation: bmc-modal-entrance 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Title Header Elements */
+.bmc-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.bmc-modal-header h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.bmc-close-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.75rem;
+    cursor: pointer;
+    line-height: 1;
+    transition: var(--transition);
+}
+
+.bmc-close-btn:hover {
+    color: var(--text-primary);
+}
+
+.bmc-modal-description {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+/* Network Tab Selectors */
+.bmc-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    background-color: var(--bg-color);
+    padding: 4px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+.bmc-tab-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    padding: 10px;
+    font-size: 0.875rem;
+    font-weight: 700;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: var(--transition);
+}
+
+.bmc-tab-btn:hover:not(.bmc-active) {
+    color: var(--text-primary);
+    background-color: var(--surface-hover);
+}
+
+.bmc-tab-btn.bmc-active {
+    background-color: var(--surface-color);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.bmc-badge {
+    font-size: 0.65rem;
+    background-color: var(--accent-glow);
+    color: var(--accent-color);
+    border: 1px solid rgba(0, 122, 255, 0.3);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 800;
+}
+
+/* Content Area Display Wrapper */
+.bmc-display-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+/* Rendering Block for Generated QR Code Canvas */
+.bmc-qrcode-zone {
+    width: 180px;
+    height: 180px;
+    background-color: #ffffff;
+    border-radius: var(--radius-md);
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.bmc-qrcode-zone canvas,
+.bmc-qrcode-zone img {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+/* Shared Width Destination Address Inline Box Row */
+.bmc-address-row {
+    display: flex;
+    width: 100%;
+    gap: 8px;
+    background-color: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 6px 6px 6px 12px;
+    align-items: center;
+}
+
+.bmc-address-row input {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-family: monospace;
+    font-size: 0.8125rem;
+    outline: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+    min-width: 0;
+}
+
+.bmc-copy-action {
+    background-color: var(--surface-hover);
+    color: var(--text-primary);
+    border: 1px solid var(--border-hover);
+    padding: 8px 16px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+
+.bmc-copy-action:hover {
+    background-color: var(--border-color);
+    border-color: var(--text-secondary);
+}
+
+.bmc-copy-action.bmc-copied {
+    background-color: var(--success-color);
+    border-color: var(--success-hover);
+    color: #ffffff;
+}
+
+/* Visibility Control Helpers */
+.bmc-hidden {
+    display: none !important;
+    opacity: 0;
+}
+
+/* Keyframe Visual Loops for Attention Glow */
+@keyframes bmc-glow-pulse {
+    0% {
+        box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15), 0 0 0 0px rgba(255, 255, 255, 0.2);
+    }
+    100% {
+        box-shadow: 0 4px 28px rgba(255, 255, 255, 0.4), 0 0 0 12px rgba(255, 255, 255, 0);
+    }
+}
+
+@keyframes bmc-modal-entrance {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
