@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SqueezeApp | Lossless File Compression</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="container">
+        <header class="header">
+            <h1 class="app-logo-text">SqueezeApp</h1>
+            <p>Pure lossless compression. Zero quality drop.</p>
+        </header>
+
+        <!-- Drag & Drop Zone -->
+        <section id="drop-zone" class="drop-zone">
+            <div class="drop-zone-content">
+                <div class="icon-container">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                </div>
+                <h2>Upload your files</h2>
+                <p>Drag & drop up to 10 files, or</p>
+                <!-- Explicit Browse Button added for better compatibility -->
+                <button id="browse-btn" class="btn secondary-btn">Browse Files</button>
+            </div>
+            <!-- Changed from 'hidden' to 'display: none' to fix browser blocking bugs -->
+            <input type="file" id="file-input" multiple style="display: none;">
+        </section>
+
+        <!-- Settings & File List Panel -->
+        <section id="workspace" class="workspace hidden">
+            <div class="file-list-container">
+                <div class="list-header">
+                    <h3>Selected Files</h3>
+                    <span id="total-original-size" class="badge">0 MB</span>
+                </div>
+                <div id="file-list" class="file-list">
+                    <!-- File items injected via JS -->
+                </div>
+            </div>
+            
+            <div class="controls-container">
+                <div class="control-group">
+                    <div class="lossless-status">
+                        <div class="status-indicator"></div>
+                        <span class="status-text">Pure Lossless Mode Active</span>
+                    </div>
+                    <p class="helper-text">Metadata stripping, WebP formatting, and Level 9 ZIP Deflate applied. Pixels and video bitrates remain 100% untouched.</p>
+                </div>
+
+                <button id="compress-btn" class="btn primary-btn">
+                    <svg class="spinner hidden" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
+                    <span class="btn-text">Pack Losslessly</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Results Panel -->
+        <section id="result-area" class="result-area hidden">
+            <div class="stats-container">
+                <div class="stat-box">
+                    <span class="stat-label">New Batch Size</span>
+                    <span id="new-size" class="stat-value">0 KB</span>
+                </div>
+                <div class="stat-box highlight">
+                    <span class="stat-label">Space Saved</span>
+                    <span id="space-saved" class="stat-value">0%</span>
+                </div>
+            </div>
+            <a id="download-btn" class="btn success-btn" download="SqueezeApp_Lossless.zip">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Download Lossless Batch
+            </a>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
