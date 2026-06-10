@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedFiles = [];
     let totalOriginalSize = 0;
 
+    let compressedFilesStore = {};
     // --- Event Listeners ---
     
     // Fix: Allow clicking anywhere in the drop zone OR the specific button
