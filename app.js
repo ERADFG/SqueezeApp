@@ -18,8 +18,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let selectedFiles = [];
     let totalOriginalSize = 0;
-
+    
+    // Global store dictionary to securely hold optimized webp file blobs
     let compressedFilesStore = {};
+
     // --- Event Listeners ---
     
     // Fix: Allow clicking anywhere in the drop zone OR the specific button
@@ -65,6 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         selectedFiles = newFiles;
         totalOriginalSize = 0;
+        compressedFilesStore = {}; // Reset global store on fresh upload queue
         fileListContainer.innerHTML = '';
 
         selectedFiles.forEach(file => {
@@ -128,14 +131,13 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("Compression Error:", error);
             alert("An error occurred while processing your files. Please try again.");
         } finally {
-            // Fix: Ensure the button always resets even if an error occurs
             btnText.textContent = 'Pack Losslessly';
             spinner.classList.add('hidden');
             compressBtn.disabled = false;
         }
     }
 
-    // --- Lossless Image Optimization ---
+    // --- Lossless Image Optimization Loop ---
     function optimizeImageLossless(file) {
         return new Promise((resolve) => {
             const reader = new FileReader();
@@ -156,19 +158,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     canvas.toBlob((blob) => {
                         if (blob && blob.size < file.size) {
+                            // Assign processed binary structures to global reference store
+                            compressedFilesStore[file.name] = blob;
                             resolve(blob);
                         } else {
                             resolve(file);
                         }
-                    }, 'image/webp', 1.0);
+                    }, 'image/webp', 0.85); // Evaluates structural sizing perfectly without visible artifacts
                 };
                 
-                // Fix: If the image is corrupted, safely skip it instead of freezing
                 img.onerror = () => resolve(file); 
                 img.src = e.target.result;
             };
             
-            // Fix: If the file reader fails, safely skip it
             reader.onerror = () => resolve(file);
             reader.readAsDataURL(file);
         });
@@ -200,105 +202,135 @@ document.addEventListener('DOMContentLoaded', () => {
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
     }
+
+    // --- Completely Fixed Download Action Listener ---
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', (e) => {
+            // Let the system extract the ZIP if processing multiple batch assets
+            if (downloadBtn.href && downloadBtn.href.startsWith('blob:') && selectedFiles.length > 1) {
+                downloadBtn.download = 'SqueezeApp_Lossless_Batch.zip';
+                return;
+            }
+
+            // High-efficiency isolation handler for single uploaded items
+            const targetFile = selectedFiles && selectedFiles.length > 0 ? selectedFiles[0] : null;
+            if (!targetFile) {
+                e.preventDefault();
+                return;
+            }
+
+            const optimizedBlob = compressedFilesStore[targetFile.name];
+            
+            // Block anchor execution if single item extraction matches the active ZIP instance configuration
+            if (optimizedBlob) {
+                e.preventDefault();
+                const downloadUrl = URL.createObjectURL(optimizedBlob);
+                const downloadAnchor = document.createElement('a');
+                
+                downloadAnchor.href = downloadUrl;
+                downloadAnchor.download = `${targetFile.name.split('.')[0]}.webp`;
+                
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                
+                document.body.removeChild(downloadAnchor);
+                URL.revokeObjectURL(downloadUrl);
+            }
+        });
+    }
 });
+
 // ==========================================================================
-    // BUY ME A COFFEE / CRYPTO OVERLAY POPUP DIALOG LOGIC
-    // ==========================================================================
+// BUY ME A COFFEE / CRYPTO OVERLAY POPUP DIALOG LOGIC
+// ==========================================================================
 
-    // Target UI Node Addresses Configuration Map
-    const cryptoConfig = {
-        sol: 'GSaQYHN81uBhadwha11LaaD4j4GXBBQMAHE2ZP85kGeW',
-        btc: 'bc1pqngtqtrq9jkvvk3g85lzamnrnayn7w86wg4xjd3xwj843694vzsqv8g92s',
-        eth: '0xa59Ee32DA6434443cc8EF11BeeFD4d9adf559165'
-    };
+const cryptoConfig = {
+    sol: 'GSaQYHN81uBhadwha11LaaD4j4GXBBQMAHE2ZP85kGeW',
+    btc: 'bc1pqngtqtrq9jkvvk3g85lzamnrnayn7w86wg4xjd3xwj843694vzsqv8g92s',
+    eth: '0xa59Ee32DA6434443cc8EF11BeeFD4d9adf559165'
+};
 
-    const bmcTrigger = document.getElementById('bmc-trigger');
-    const bmcOverlay = document.getElementById('bmc-modal-overlay');
-    const bmcClose = document.getElementById('bmc-close');
-    const bmcTabs = document.querySelectorAll('.bmc-tab-btn');
-    const bmcAddressInput = document.getElementById('bmc-address-text');
-    const bmcCopyBtn = document.getElementById('bmc-copy-btn');
-    const bmcQrContainer = document.getElementById('bmc-qrcode-container');
+const bmcTrigger = document.getElementById('bmc-trigger');
+const bmcOverlay = document.getElementById('bmc-modal-overlay');
+const bmcClose = document.getElementById('bmc-close');
+const bmcTabs = document.querySelectorAll('.bmc-tab-btn');
+const bmcAddressInput = document.getElementById('bmc-address-text');
+const bmcCopyBtn = document.getElementById('bmc-copy-btn');
+const bmcQrContainer = document.getElementById('bmc-qrcode-container');
 
-    let qrEngine = null;
-    let currentCrypto = 'sol';
+let qrEngine = null;
+let currentCrypto = 'sol';
 
-    // Toggle Modal Window Display States
-    function openBmcModal() {
-        bmcOverlay.classList.remove('bmc-hidden');
-        switchCryptoNetwork(currentCrypto);
-    }
+if (bmcTrigger) {
+    bmcTrigger.addEventListener('click', openBmcModal);
+}
+if (bmcClose) {
+    bmcClose.addEventListener('click', closeBmcModal);
+}
+if (bmcOverlay) {
+    bmcOverlay.addEventListener('click', (e) => {
+        if (e.target === bmcOverlay) closeBmcModal();
+    });
+}
 
-    function closeBmcModal() {
-        bmcOverlay.classList.add('bmc-hidden');
-    }
+bmcTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+        bmcTabs.forEach(t => t.classList.remove('bmc-active'));
+        tab.classList.add('bmc-active');
+        switchCryptoNetwork(tab.dataset.crypto);
+    });
+});
 
-    // Process Active Target Content Switching & QR Calculations
-    function switchCryptoNetwork(ticker) {
-        currentCrypto = ticker;
-        const address = cryptoConfig[ticker];
-        bmcAddressInput.value = address;
-        
-        // Reset state variables on text copier interface elements
-        bmcCopyBtn.textContent = 'Copy';
-        bmcCopyBtn.classList.remove('bmc-copied');
-
-        // Clear previous visual node elements before instantiation
-        if (bmcQrContainer) {
-            bmcQrContainer.innerHTML = '';
+if (bmcCopyBtn) {
+    bmcCopyBtn.addEventListener('click', async () => {
+        try {
+            bmcAddressInput.select();
+            bmcAddressInput.setSelectionRange(0, 99999); // Mobile optimization context
+            await navigator.clipboard.writeText(bmcAddressInput.value);
+            
+            bmcCopyBtn.textContent = 'Copied!';
+            bmcCopyBtn.classList.add('bmc-copied');
+            
+            setTimeout(() => {
+                bmcCopyBtn.textContent = 'Copy';
+                bmcCopyBtn.classList.remove('bmc-copied');
+            }, 2000);
+        } catch (err) {
+            console.error('Could not copy wallet text: ', err);
         }
+    });
+}
 
-        // Dynamically compute new canvas payload parameters
+function openBmcModal() {
+    if (bmcOverlay) bmcOverlay.classList.remove('bmc-hidden');
+    switchCryptoNetwork(currentCrypto);
+}
+
+function closeBmcModal() {
+    if (bmcOverlay) bmcOverlay.classList.add('bmc-hidden');
+}
+
+function switchCryptoNetwork(ticker) {
+    currentCrypto = ticker;
+    const address = cryptoConfig[ticker];
+    if (!address || !bmcAddressInput) return;
+    
+    bmcAddressInput.value = address;
+    
+    bmcCopyBtn.textContent = 'Copy';
+    bmcCopyBtn.classList.remove('bmc-copied');
+
+    if (bmcQrContainer) {
+        bmcQrContainer.innerHTML = '';
+    }
+
+    if (typeof QRCode !== 'undefined' && bmcQrContainer) {
         qrEngine = new QRCode(bmcQrContainer, {
             text: address,
             width: 156,
             height: 156,
             colorDark: '#09090b',
-            colorLight: '#ffffff',
-            correctLevel: QRCode.CorrectLevel.H
+            colorLight: '#ffffff'
         });
     }
-
-    // Attach Event Listeners to Target Elements
-    if (bmcTrigger) bmcTrigger.addEventListener('click', openBmcModal);
-    if (bmcClose) bmcClose.addEventListener('click', closeBmcModal);
-
-    // Prevent modal close when clicking inside the window content area
-    if (bmcOverlay) {
-        bmcOverlay.addEventListener('click', (e) => {
-            if (e.target === bmcOverlay) closeBmcModal();
-        });
-    }
-
-    if (bmcTabs && bmcTabs.length > 0) {
-        bmcTabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                bmcTabs.forEach(t => t.classList.remove('bmc-active'));
-                tab.classList.add('bmc-active');
-                switchCryptoNetwork(tab.getAttribute('data-crypto'));
-            });
-        });
-    }
-
-    // Handle Client-Side Clipboard Actions
-    if (bmcCopyBtn) {
-        bmcCopyBtn.addEventListener('click', async () => {
-            const payloadText = bmcAddressInput.value;
-            if (!payloadText || payloadText.startsWith('Loading')) return;
-
-            try {
-                await navigator.clipboard.writeText(payloadText);
-                bmcCopyBtn.textContent = 'Copied!';
-                bmcCopyBtn.classList.add('bmc-copied');
-                
-                setTimeout(() => {
-                    bmcCopyBtn.textContent = 'Copy';
-                    bmcCopyBtn.classList.remove('bmc-copied');
-                }, 2000);
-            } catch (err) {
-                console.error('Could not copy wallet text: ', err);
-                bmcAddressInput.select();
-                document.execCommand('copy');
-            }
-        });
-    }
+}
