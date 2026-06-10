@@ -3,108 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SqueezeApp | Lossless File Compression</title>
+    <title>Squeezes | Secure Local Media Suite</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=400;500;600;700&display=swap" rel="stylesheet">
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+    <button class="hamburger-btn" id="menuToggle" aria-label="Toggle Menu">
+        <span class="line"></span>
+        <span class="line"></span>
+        <span class="line"></span>
+    </button>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <div class="sidebar-menu" id="sidebar">
+        <div class="menu-title">Squeezes Menu</div>
+        <nav class="menu-links">
+            <button class="menu-item active" data-target="panel-squeezer">
+                <span class="menu-icon">⬡</span> Smart Compressor
+            </button>
+            <button class="menu-item" data-target="panel-converter">
+                <span class="menu-icon">⤢</span> Universal Converter
+            </button>
+        </nav>
+    </div>
+
     <main class="container">
-        <header class="header">
-            <h1 class="app-logo-text">SqueezeApp</h1>
-            <p>Pure lossless compression. Zero quality drop.</p>
+        <header class="app-header">
+            <h1 class="app-logo-text">Squeezes</h1>
+            <p id="app-description">Pure lossless compression. Zero quality drop.</p>
         </header>
 
-        <section id="drop-zone" class="drop-zone">
-            <div class="drop-zone-content">
-                <div class="icon-container">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                </div>
-                <h2>Upload your files</h2>
+        <section id="panel-squeezer" class="app-panel">
+            <div class="upload-zone drop-zone" id="drop-zone">
+                <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <h3>Upload your files</h3>
                 <p>Drag & drop up to 10 files, or</p>
-                <button id="browse-btn" class="btn secondary-btn">Browse Files</button>
+                <button class="browse-btn" id="browse-btn">Browse Files</button>
+                <input type="file" id="file-input" multiple style="display: none;">
             </div>
-            <input type="file" id="file-input" multiple style="display: none;">
-        </section>
 
-        <section id="workspace" class="workspace hidden">
-            <div class="file-list-container">
-                <div class="list-header">
-                    <h3>Selected Files</h3>
-                    <span id="total-original-size" class="badge">0 MB</span>
+            <div id="workspace" class="workspace hidden">
+                <div class="file-list-container">
+                    <div class="list-header">
+                        <h3>Selected Files</h3>
+                        <span id="total-original-size" class="badge">0 MB</span>
+                    </div>
+                    <div id="file-list" class="file-list"></div>
                 </div>
-                <div id="file-list" class="file-list"></div>
-            </div>
-            
-            <div class="controls-container">
-                <div class="control-group">
+                
+                <div class="controls-container">
                     <div class="lossless-status">
                         <div class="status-indicator"></div>
-                        <span class="status-text">Pure Lossless Mode Active</span>
+                        <span>Pure Lossless Mode Active</span>
                     </div>
-                    <p class="helper-text">Metadata stripping, WebP formatting, and Level 9 ZIP Deflate applied. Pixels and video bitrates remain 100% untouched.</p>
+                    <p class="helper-text">Metadata stripping and level 9 Deflate packing applied.</p>
+                    <button id="compress-btn" class="btn primary-btn">Pack Losslessly</button>
                 </div>
+            </div>
 
-                <button id="compress-btn" class="btn primary-btn">
-                    <svg class="spinner hidden" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
-                    <span class="btn-text">Pack Losslessly</span>
-                </button>
+            <div id="result-area" class="result-area hidden">
+                <div class="stats-container">
+                    <div class="stat-box">
+                        <span class="stat-label">New Size</span>
+                        <span id="new-size" class="stat-value">0 KB</span>
+                    </div>
+                    <div class="stat-box highlight">
+                        <span class="stat-label">Saved</span>
+                        <span id="space-saved" class="stat-value">0%</span>
+                    </div>
+                </div>
+                <a id="download-btn" class="btn success-btn" download="Squeezes_Lossless.zip">Download Lossless Batch</a>
             </div>
         </section>
 
-        <section id="result-area" class="result-area hidden">
-            <div class="stats-container">
-                <div class="stat-box">
-                    <span class="stat-label">New Batch Size</span>
-                    <span id="new-size" class="stat-value">0 KB</span>
-                </div>
-                <div class="stat-box highlight">
-                    <span class="stat-label">Space Saved</span>
-                    <span id="space-saved" class="stat-value">0%</span>
-                </div>
+        <section id="panel-converter" class="app-panel hidden">
+            <div class="upload-zone converter-drop-zone" id="converter-drop-zone">
+                <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>
+                </svg>
+                <h3 id="converter-file-status">Select format target image</h3>
+                <p>Drag & drop or click below to choose source</p>
+                <button class="browse-btn" id="converter-browse-btn">Browse Image</button>
+                <input type="file" id="converter-input" accept="image/*" style="display: none;">
             </div>
-            <a id="download-btn" class="btn success-btn" download="SqueezeApp_Lossless.zip">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                Download Lossless Batch
-            </a>
+
+            <div class="converter-controls-card">
+                <div class="select-group">
+                    <label for="convert-target">CONVERT TO:</label>
+                    <select id="convert-target">
+                        <option value="image/png">PNG Vector Matrix (.png)</option>
+                        <option value="image/jpeg">Optimized JPEG Asset (.jpg)</option>
+                        <option value="image/webp">Next-Gen WebP Engine (.webp)</option>
+                        <option value="pdf">Portable Document Format (.pdf)</option>
+                    </select>
+                </div>
+                <button id="run-convert-btn" class="btn primary-btn">Perform Secure Conversion</button>
+                <a id="converter-download-link" class="btn success-btn hidden">Download Converted Asset</a>
+            </div>
         </section>
     </main>
 
-    <button id="bmc-trigger" class="bmc-floating-btn" aria-label="Support application development">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>
+    <button id="bmc-trigger" class="bmc-floating-btn" aria-label="Support Development">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path></svg>
         <span>Buy Me a Coffee</span>
     </button>
 
     <div id="bmc-modal-overlay" class="bmc-modal-overlay bmc-hidden">
         <div class="bmc-modal-window">
             <div class="bmc-modal-header">
-                <h3>Support SqueezeApp</h3>
-                <button id="bmc-close" class="bmc-close-btn" aria-label="Close dialog">&times;</button>
+                <h3>Support Squeezes</h3>
+                <button id="bmc-close" class="bmc-close-btn">&times;</button>
             </div>
-            <p class="bmc-modal-description">If this app saved you time and local machine memory, consider buying me a coffee via crypto!</p>
-            
+            <p class="bmc-modal-description">squeezes is 100% free and runs inside your browser if this tool saved you time or storage consider supporting its independent development.</p>
             <div class="bmc-tabs">
-                <button class="bmc-tab-btn bmc-active" data-crypto="sol">
-                    <span>SOL</span>
-                    <span class="bmc-badge">PREF</span>
-                </button>
-                <button class="bmc-tab-btn" data-crypto="btc">
-                    <span>BTC</span>
-                </button>
-                <button class="bmc-tab-btn" data-crypto="eth">
-                    <span>ETH</span>
-                </button>
+                <button class="bmc-tab-btn bmc-active" data-crypto="sol">SOL</button>
+                <button class="bmc-tab-btn" data-crypto="btc">BTC</button>
+                <button class="bmc-tab-btn" data-crypto="eth">ETH</button>
             </div>
-
             <div class="bmc-display-body">
-                <div id="bmc-qrcode-container" class="bmc-qrcode-zone">
-                    </div>
+                <div id="bmc-qrcode-container" class="bmc-qrcode-zone"></div>
                 <div class="bmc-address-row">
-                    <input type="text" id="bmc-address-text" readonly value="Loading network configuration...">
-                    <button id="bmc-copy-btn" class="bmc-copy-action" aria-label="Copy public keys">Copy</button>
+                    <input type="text" id="bmc-address-text" readonly value="">
+                    <button id="bmc-copy-btn" class="bmc-copy-action">Copy</button>
                 </div>
             </div>
         </div>
