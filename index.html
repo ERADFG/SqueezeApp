@@ -22,6 +22,7 @@
             margin: 0;
             padding: 0;
             user-select: none;
+            -webkit-user-select: none;
         }
 
         body {
@@ -32,7 +33,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            padding: 16px;
             overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
         }
@@ -75,7 +76,6 @@
             color: var(--text-primary);
         }
 
-        /* ATTENTION-GRABBING COFFEE BUTTON WITH AMBIENT GLOW SYSTEM */
         .coffee-btn {
             display: flex;
             align-items: center;
@@ -88,6 +88,7 @@
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             position: relative;
             animation: coffee-glow 2.5s infinite ease-in-out;
+            touch-action: manipulation;
         }
 
         @keyframes coffee-glow {
@@ -139,9 +140,14 @@
             .workspace-layout {
                 grid-template-columns: 1fr;
             }
+            body {
+                padding: 12px;
+            }
+            .glass-panel {
+                padding: 18px;
+            }
         }
 
-        /* INTENSIFIED HIGH-GLOW DROP ZONE PERFORMANCE */
         .drop-zone {
             display: flex;
             flex-direction: column;
@@ -153,6 +159,7 @@
             position: relative;
             background: rgba(255, 255, 255, 0.002);
             transition: border-color 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease;
+            touch-action: manipulation;
         }
 
         .drop-zone:hover {
@@ -290,11 +297,15 @@
         .queue-item-name {
             font-size: 0.8rem;
             font-weight: 400;
-            max-width: 180px;
+            max-width: 140px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             color: var(--text-primary);
+        }
+
+        @media (min-width: 400px) {
+            .queue-item-name { max-width: 180px; }
         }
 
         .status-badge-inline {
@@ -336,9 +347,13 @@
         }
 
         .metric-value {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             font-weight: 600;
             letter-spacing: -0.3px;
+        }
+
+        @media (min-width: 480px) {
+            .metric-value { font-size: 1.2rem; }
         }
 
         .text-green { color: var(--accent-green); }
@@ -362,6 +377,7 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
+            touch-action: manipulation;
         }
 
         .btn-primary {
@@ -610,12 +626,12 @@
 
             <input type="file" id="fileInput" accept="image/jpeg, image/png, image/webp">
             
-            <div class="drop-zone-icon">
+            <div class="drop-zone-icon" id="dropIcon">
                 <svg viewBox="0 0 24 24">
                     <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
                 </svg>
             </div>
-            <div class="drop-text">Drop image file here</div>
+            <div class="drop-text" id="dropText">Drop image file here</div>
 
             <div class="queue-container" id="queueContainer" style="display: none;"></div>
         </section>
@@ -709,6 +725,8 @@
     const metricOriginal = document.getElementById('metricOriginal');
     const metricOptimized = document.getElementById('metricOptimized');
     const metricReduction = document.getElementById('metricReduction');
+    const dropIcon = document.getElementById('dropIcon');
+    const dropText = document.getElementById('dropText');
 
     const coffeeBtn = document.getElementById('coffeeBtn');
     const donationModal = document.getElementById('donationModal');
@@ -718,7 +736,8 @@
     const addressText = document.getElementById('addressText');
     const copyAddressBtn = document.getElementById('copyAddressBtn');
 
-    coffeeBtn.addEventListener('click', () => {
+    coffeeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
         donationModal.classList.add('active');
         switchCryptoTab('sol');
     });
@@ -751,6 +770,7 @@
         });
     });
 
+    // DRAG & DROP DESKTOP EVENTS
     dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
     dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
     dropZone.addEventListener('drop', (e) => {
@@ -759,12 +779,18 @@
         if (e.dataTransfer.files.length > 0) handleInboundFile(e.dataTransfer.files[0]);
     });
 
+    // FIXED MOBILE TOUCH TRIGGER SYSTEM
     dropZone.addEventListener('click', (e) => {
-        if (!queueContainer.contains(e.target)) fileInput.click();
+        if (queueContainer.contains(e.target) && workingItem !== null) {
+            return; 
+        }
+        fileInput.click();
     });
 
     fileInput.addEventListener('change', () => {
-        if (fileInput.files.length > 0) handleInboundFile(fileInput.files[0]);
+        if (fileInput.files.length > 0) {
+            handleInboundFile(fileInput.files[0]);
+        }
     });
 
     formatSelect.addEventListener('change', () => {
@@ -773,7 +799,8 @@
 
     function handleInboundFile(file) {
         if (!file.type.startsWith('image/')) return;
-        resetActiveState();
+        
+        // Setup working state cleanly without total UI reset to prevent mobile flickering
         workingItem = { fileObject: file, processedBlob: null, processedSize: null, outputMime: file.type };
         reprocessWorkingAsset();
     }
@@ -851,8 +878,8 @@
 
     function renderStateSuccess() {
         if (!workingItem) return;
-        document.querySelector('.drop-zone-icon').style.display = 'none';
-        document.querySelector('.drop-text').style.display = 'none';
+        dropIcon.style.display = 'none';
+        dropText.style.display = 'none';
         queueContainer.style.display = 'block';
         queueContainer.innerHTML = `
             <div class="queue-item">
@@ -875,7 +902,8 @@
         clearBtn.disabled = false;
     }
 
-    actionBtn.addEventListener('click', () => {
+    actionBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); 
         if (!workingItem || !workingItem.processedBlob) return;
         const downloadUrl = URL.createObjectURL(workingItem.processedBlob);
         const anchor = document.createElement('a');
@@ -884,7 +912,7 @@
         const nameSegments = workingItem.fileObject.name.split('.');
         if (nameSegments.length > 1) nameSegments.pop();
         anchor.href = downloadUrl;
-        anchor.download = `${nameSegments.join('.')}_squeezed.${extension}`;
+        anchor.download = `${nameSegments.join('.')}_squeezes.${extension}`;
         document.body.appendChild(anchor);
         anchor.click();
         document.body.removeChild(anchor);
@@ -894,8 +922,8 @@
     function resetActiveState() {
         workingItem = null;
         fileInput.value = '';
-        document.querySelector('.drop-zone-icon').style.display = 'flex';
-        document.querySelector('.drop-text').style.display = 'block';
+        dropIcon.style.display = 'flex';
+        dropText.style.display = 'block';
         queueContainer.style.display = 'none';
         queueContainer.innerHTML = '';
         metricOriginal.textContent = '0 KB';
@@ -905,7 +933,10 @@
         clearBtn.disabled = true;
     }
 
-    clearBtn.addEventListener('click', resetActiveState);
+    clearBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // Avoid triggering file selection panel on clear tap
+        resetActiveState();
+    });
 
     function formatBytes(bytes) {
         if (bytes === 0) return '0 KB';
