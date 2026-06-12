@@ -843,18 +843,20 @@
         }
     }
 
-    // ARMED WITH MOBILE-ASYNC IMAGE LOADING PROTECTION
+    // POWERED WITH img.decode() TO ELIMINATE MOBILE RACE CONDITIONS
     function runLosslessPipeline(file, mimeType, qualityFactor) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onload = (event) => {
                 const img = new Image();
+                img.src = event.target.result;
                 
-                // CRITICAL FOR MOBILE: Wait securely for asset parsing before memory painting
-                img.onload = () => {
+                // Force mobile operating systems to fully open the raw asset in hardware memory before executing canvas actions
+                img.decode().then(() => {
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
+                    
                     canvas.width = img.naturalWidth || img.width;
                     canvas.height = img.naturalHeight || img.height;
                     
@@ -865,12 +867,23 @@
                         targetMime = 'image/webp';
                         workingItem.outputMime = 'image/webp';
                     }
+                    
                     canvas.toBlob((blob) => {
                         blob ? resolve(blob) : reject(new Error("Canvas failure"));
                     }, targetMime, qualityFactor);
-                };
-                img.onerror = (e) => reject(e);
-                img.src = event.target.result;
+                }).catch((err) => {
+                    console.warn("Mobile system decode sync active, running async onload loop fallback:", err);
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        canvas.width = img.naturalWidth || img.width;
+                        canvas.height = img.naturalHeight || img.height;
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        canvas.toBlob((blob) => {
+                            blob ? resolve(blob) : reject(new Error("Canvas fallback failure"));
+                        }, mimeType, qualityFactor);
+                    };
+                });
             };
             reader.onerror = (e) => reject(e);
         });
