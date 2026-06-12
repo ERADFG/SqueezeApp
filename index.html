@@ -797,7 +797,12 @@
 
     function handleInboundFile(file) {
         if (!file.type.startsWith('image/')) return;
-        workingItem = { fileObject: file, processedBlob: null, processedSize: null, outputMime: file.type };
+        
+        // CRITICAL FOR MOBILE REPEAT UPLOADS: Reset DOM file reference state immediately
+        const capturedFile = file;
+        fileInput.value = ''; 
+        
+        workingItem = { fileObject: capturedFile, processedBlob: null, processedSize: null, outputMime: capturedFile.type };
         reprocessWorkingAsset();
     }
 
@@ -843,16 +848,14 @@
         }
     }
 
-    // POWERED WITH img.decode() TO ELIMINATE MOBILE RACE CONDITIONS
+    // ARMED WITH REFRESHED MEMORY DEALLOCATION FOR MOBILE CONVERSIONS
     function runLosslessPipeline(file, mimeType, qualityFactor) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
-            reader.readAsDataURL(file);
+            
             reader.onload = (event) => {
                 const img = new Image();
-                img.src = event.target.result;
                 
-                // Force mobile operating systems to fully open the raw asset in hardware memory before executing canvas actions
                 img.decode().then(() => {
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
@@ -869,10 +872,12 @@
                     }
                     
                     canvas.toBlob((blob) => {
+                        // Garbage collect layout engine DOM image references manually
+                        img.src = '';
                         blob ? resolve(blob) : reject(new Error("Canvas failure"));
                     }, targetMime, qualityFactor);
                 }).catch((err) => {
-                    console.warn("Mobile system decode sync active, running async onload loop fallback:", err);
+                    console.warn("Forcing hardware engine fallback:", err);
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
                         const ctx = canvas.getContext('2d');
@@ -880,12 +885,19 @@
                         canvas.height = img.naturalHeight || img.height;
                         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                         canvas.toBlob((blob) => {
+                            img.onload = null;
+                            img.src = '';
                             blob ? resolve(blob) : reject(new Error("Canvas fallback failure"));
                         }, mimeType, qualityFactor);
                     };
+                    img.src = event.target.result;
                 });
+                
+                img.src = event.target.result;
             };
+            
             reader.onerror = (e) => reject(e);
+            reader.readAsDataURL(file);
         });
     }
 
