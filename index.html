@@ -597,7 +597,6 @@
             border-color: var(--glass-border-glow);
         }
     </style>
-    <!-- Injection of runtime QR library directly from ultra-fast edge CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
@@ -701,7 +700,6 @@
 
         <div class="crypto-content">
             <div class="qr-wrapper">
-                <!-- Replaced dynamic img src with local render element container hook -->
                 <div id="qrContainer"></div>
             </div>
             <div class="address-box" id="addressText"></div>
@@ -719,7 +717,7 @@
 
     let activeCrypto = 'sol';
     let workingItem = null;
-    let qrEngineInstance = null; // Stored local worker handle
+    let qrEngineInstance = null; 
 
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
@@ -745,7 +743,6 @@
     coffeeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         donationModal.classList.add('active');
-        // Instantly generate tab mapping down to 0ms processing wait times
         switchCryptoTab('sol');
     });
 
@@ -767,10 +764,8 @@
         const targetAddress = wallets[ticker];
         addressText.textContent = targetAddress;
         
-        // Wipe old DOM elements inside container instantly
         qrContainer.innerHTML = "";
         
-        // Execute direct local client generation to bypass server dependencies entirely
         qrEngineInstance = new QRCode(qrContainer, {
             text: targetAddress,
             width: 140,
@@ -836,32 +831,15 @@
         workingItem.outputMime = targetMime;
 
         try {
-            let qualitySweepFactor = 0.38;
+            // Standard performance-efficient quality factor sweep setup
+            let qualitySweepFactor = 0.75;
             let resultBlob = await runLosslessPipeline(workingItem.fileObject, targetMime, qualitySweepFactor);
             
-            let reductionPercentage = ((workingItem.fileObject.size - resultBlob.size) / workingItem.fileObject.size) * 100;
-            
-            if (reductionPercentage < 40.0) {
-                qualitySweepFactor = 0.28; 
-                resultBlob = await runLosslessPipeline(workingItem.fileObject, targetMime, qualitySweepFactor);
-                reductionPercentage = ((workingItem.fileObject.size - resultBlob.size) / workingItem.fileObject.size) * 100;
-            } 
-            
-            if (reductionPercentage > 60.0) {
-                qualitySweepFactor = 0.52; 
-                resultBlob = await runLosslessPipeline(workingItem.fileObject, targetMime, qualitySweepFactor);
-                reductionPercentage = ((workingItem.fileObject.size - resultBlob.size) / workingItem.fileObject.size) * 100;
-            }
-
-            if (reductionPercentage < 40.0 || reductionPercentage > 60.0) {
-                reductionPercentage = 42.0 + (Math.random() * 16.0);
-                const forcedSize = Math.floor(workingItem.fileObject.size * (1 - (reductionPercentage / 100)));
-                workingItem.processedSize = forcedSize;
-            } else {
-                workingItem.processedSize = resultBlob.size;
-            }
-
+            // FIXED: Removed mock calculations completely. 
+            // Captured size matches system blob specs exactly.
             workingItem.processedBlob = resultBlob;
+            workingItem.processedSize = resultBlob.size;
+
             renderStateSuccess();
         } catch (err) {
             console.error("Pipeline failure:", err);
