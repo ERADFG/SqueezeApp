@@ -872,13 +872,16 @@
             video.muted = true;
             video.playsInline = true;
             video.crossOrigin = "anonymous";
+            
+            // FIX: Throttle play speed down to keep frame capture light on the main UI thread
+            video.playbackRate = 0.2; 
 
             video.onloadeddata = () => {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
 
-                // Max bounding dimension cap to shield mobile VRAM safely
-                const hardwareLimit = 1280; 
+                // Cap target resolutions to prevent canvas resource strain
+                const hardwareLimit = 960; 
                 let width = video.videoWidth;
                 let height = video.videoHeight;
 
@@ -895,25 +898,22 @@
                 canvas.width = width;
                 canvas.height = height;
 
-                // Sync canvas context styling for mobile screen rendering clarity
                 ctx.imageSmoothingEnabled = true;
-                ctx.imageSmoothingQuality = 'high';
+                ctx.imageSmoothingQuality = 'medium';
 
-                // Capture stream at 30fps for smooth fluid video conversion on phones
-                const stream = canvas.captureStream(30); 
+                // Synchronize stream updates matching targeted low play speeds
+                const stream = canvas.captureStream(24); 
                 let recorder;
                 const chunks = [];
-
-                // 3.5Mbps structural target - flawless high definition profile on mobile hardware
-                const highDefinitionBitrate = 3500000;
+                const targetBitrate = 1800000; // Efficient compression sweet spot
 
                 try {
                     recorder = new MediaRecorder(stream, {
                         mimeType: 'video/webm;codecs=vp8',
-                        videoBitsPerSecond: highDefinitionBitrate 
+                        videoBitsPerSecond: targetBitrate 
                     });
                 } catch(e) {
-                    recorder = new MediaRecorder(stream, { videoBitsPerSecond: highDefinitionBitrate });
+                    recorder = new MediaRecorder(stream, { videoBitsPerSecond: targetBitrate });
                 }
 
                 recorder.ondataavailable = (e) => {
@@ -934,48 +934,34 @@
 
                 recorder.start();
                 video.play();
-                progressBar.style.width = '30%';
 
                 let activeFrameLoop = true;
 
-                // Native Hardware Frame Sync Function
                 function renderFrame() {
                     if (!activeFrameLoop) return;
 
                     if (!video.paused && !video.ended) {
                         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                        let currentPct = 30 + Math.round((video.currentTime / video.duration) * 60);
+                        let currentPct = Math.round((video.currentTime / video.duration) * 100);
                         progressBar.style.width = currentPct + '%';
                     }
 
                     if (!video.ended) {
-                        requestAnimationFrame(renderFrame);
+                        // FIX: Use an explicit async timeout step to separate processing frame blocks 
+                        // from basic window animation paint ticks, avoiding UI freezes.
+                        setTimeout(() => {
+                            requestAnimationFrame(renderFrame);
+                        }, 16); 
                     }
                 }
 
-                // modern rVFC support check for advanced mobile browsers
-                if ('requestVideoFrameCallback' in video) {
-                    const updateCallback = () => {
-                        if (!activeFrameLoop) return;
-                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                        let currentPct = 30 + Math.round((video.currentTime / video.duration) * 60);
-                        progressBar.style.width = currentPct + '%';
-                        
-                        if (!video.ended) {
-                            video.requestVideoFrameCallback(updateCallback);
-                        }
-                    };
-                    video.requestVideoFrameCallback(updateCallback);
-                } else {
-                    // Fallback to structural high speed rAF frame syncing
-                    requestAnimationFrame(renderFrame);
-                }
+                requestAnimationFrame(renderFrame);
 
                 video.onended = () => {
                     activeFrameLoop = false;
                     setTimeout(() => {
                         if (recorder.state !== 'inactive') recorder.stop();
-                    }, 150);
+                    }, 200);
                 };
             };
 
