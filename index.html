@@ -326,7 +326,7 @@
             height: 100%;
             width: 0%;
             background: var(--accent-blue);
-            transition: width 0.2s ease;
+            transition: width 0.1s linear;
         }
 
         .metrics-grid {
@@ -863,7 +863,7 @@
         });
     }
 
-    // HIGH QUALITY + CRASH PROOF MOBILE RENDER ENGINE
+    // HIGH QUALITY STEP-SEEK RENDERING WITH ZERO MAIN THREAD INTERFERENCE
     function compressVideoItem(item, progressBar) {
         return new Promise((resolve) => {
             const videoUrl = URL.createObjectURL(item.fileObject);
@@ -872,48 +872,40 @@
             video.muted = true;
             video.playsInline = true;
             video.crossOrigin = "anonymous";
-            
-            // FIX: Throttle play speed down to keep frame capture light on the main UI thread
-            video.playbackRate = 0.2; 
 
-            video.onloadeddata = () => {
+            video.onloadedmetadata = () => {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
 
-                // Cap target resolutions to prevent canvas resource strain
-                const hardwareLimit = 960; 
+                // Preserve native clarity limits safely
+                const maxWidth = 1280;
                 let width = video.videoWidth;
                 let height = video.videoHeight;
 
-                if (width > hardwareLimit || height > hardwareLimit) {
-                    if (width > height) {
-                        height = Math.round((height * hardwareLimit) / width);
-                        width = hardwareLimit;
-                    } else {
-                        width = Math.round((width * hardwareLimit) / height);
-                        height = hardwareLimit;
-                    }
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
                 }
 
                 canvas.width = width;
                 canvas.height = height;
-
                 ctx.imageSmoothingEnabled = true;
-                ctx.imageSmoothingQuality = 'medium';
+                ctx.imageSmoothingQuality = 'high';
 
-                // Synchronize stream updates matching targeted low play speeds
-                const stream = canvas.captureStream(24); 
-                let recorder;
+                const stream = canvas.captureStream(0); // Driven purely by programmatic manual frame pushes
                 const chunks = [];
-                const targetBitrate = 1800000; // Efficient compression sweet spot
+                
+                // Max high definition structural bitrate target
+                const premiumBitrate = 4000000; 
+                let recorder;
 
                 try {
                     recorder = new MediaRecorder(stream, {
                         mimeType: 'video/webm;codecs=vp8',
-                        videoBitsPerSecond: targetBitrate 
+                        videoBitsPerSecond: premiumBitrate
                     });
                 } catch(e) {
-                    recorder = new MediaRecorder(stream, { videoBitsPerSecond: targetBitrate });
+                    recorder = new MediaRecorder(stream, { videoBitsPerSecond: premiumBitrate });
                 }
 
                 recorder.ondataavailable = (e) => {
@@ -933,36 +925,44 @@
                 };
 
                 recorder.start();
-                video.play();
 
-                let activeFrameLoop = true;
+                // Target standard rendering steps (30 frames per second baseline)
+                const frameInterval = 1 / 30;
+                let currentTimestamp = 0;
+                const duration = video.duration;
 
-                function renderFrame() {
-                    if (!activeFrameLoop) return;
-
-                    if (!video.paused && !video.ended) {
-                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                        let currentPct = Math.round((video.currentTime / video.duration) * 100);
-                        progressBar.style.width = currentPct + '%';
-                    }
-
-                    if (!video.ended) {
-                        // FIX: Use an explicit async timeout step to separate processing frame blocks 
-                        // from basic window animation paint ticks, avoiding UI freezes.
+                // Non-blocking seek step loop processor
+                function seekAndCaptureNextFrame() {
+                    if (currentTimestamp >= duration) {
                         setTimeout(() => {
-                            requestAnimationFrame(renderFrame);
-                        }, 16); 
+                            if (recorder.state !== 'inactive') recorder.stop();
+                        }, 200);
+                        return;
                     }
+
+                    video.currentTime = currentTimestamp;
                 }
 
-                requestAnimationFrame(renderFrame);
+                video.onseeked = () => {
+                    // Draw frame safely once the browser reports seeking completed
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    
+                    // Manually step the recorder track space forward
+                    if (stream.getVideoTracks()[0] && stream.getVideoTracks()[0].requestFrame) {
+                        stream.getVideoTracks()[0].requestFrame();
+                    }
 
-                video.onended = () => {
-                    activeFrameLoop = false;
-                    setTimeout(() => {
-                        if (recorder.state !== 'inactive') recorder.stop();
-                    }, 200);
+                    let currentPct = Math.min(99, Math.round((currentTimestamp / duration) * 100));
+                    progressBar.style.width = currentPct + '%';
+
+                    currentTimestamp += frameInterval;
+                    
+                    // Relinquish control back to main loop via macro task execution spacing
+                    setTimeout(seekAndCaptureNextFrame, 4);
                 };
+
+                // Initialize the loop processing chain safely
+                seekAndCaptureNextFrame();
             };
 
             video.onerror = () => {
