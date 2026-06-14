@@ -810,7 +810,7 @@
 
     function markItemStatus(item, statusLabel) {
         item.status = statusLabel;
-        const badge = document.getElementById(`badge-${item.id}`);
+        const badge = document.getElementById('badge-' + item.id);
         if (!badge) return;
         
         badge.textContent = statusLabel;
@@ -863,7 +863,7 @@
         });
     }
 
-    // HIGH QUALITY NATIVE RECORDING VIDEO METHOD
+    // MOBILE-OPTIMIZED SMART BALANCED COMPRESSION
     function compressVideoItem(item, progressBar) {
         return new Promise((resolve) => {
             const videoUrl = URL.createObjectURL(item.fileObject);
@@ -877,26 +877,39 @@
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
 
-                // BUGFIX: Maintain 100% original dimensions to keep rendering clean and crisp
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
+                // BUGFIX: Smart hardware ceiling scaling (Max 1280px) to shield phone memory from crashing
+                const mobileHardwareCeiling = 1280; 
+                let width = video.videoWidth;
+                let height = video.videoHeight;
 
-                // Setup high-quality stream capture at 24 FPS
+                if (width > mobileHardwareCeiling || height > mobileHardwareCeiling) {
+                    if (width > height) {
+                        height = Math.round((height * mobileHardwareCeiling) / width);
+                        width = mobileHardwareCeiling;
+                    } else {
+                        width = Math.round((width * mobileHardwareCeiling) / height);
+                        height = mobileHardwareCeiling;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                // Setup unified frame track 
                 const stream = canvas.captureStream(24); 
                 let recorder;
                 const chunks = [];
 
-                // BUGFIX: Increased video bitrate ceiling to 5,000,000 bps (~5Mbps) for HD structural profile
-                const highQualityBitrate = 5000000;
+                // BUGFIX: Balanced hardware profile target ~2.2Mbps (High crisp details without phone lag)
+                const optimizedMobileBitrate = 2200000;
 
                 try {
                     recorder = new MediaRecorder(stream, {
                         mimeType: 'video/webm;codecs=vp8',
-                        videoBitsPerSecond: highQualityBitrate 
+                        videoBitsPerSecond: optimizedMobileBitrate 
                     });
                 } catch(e) {
-                    // Safari configuration fallback sequence
-                    recorder = new MediaRecorder(stream, { videoBitsPerSecond: highQualityBitrate });
+                    recorder = new MediaRecorder(stream, { videoBitsPerSecond: optimizedMobileBitrate });
                 }
 
                 recorder.ondataavailable = (e) => {
@@ -923,7 +936,7 @@
                     if (!video.paused && !video.ended) {
                         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                         let currentPct = 30 + Math.round((video.currentTime / video.duration) * 60);
-                        progressBar.style.width = `${currentPct}%`;
+                        progressBar.style.width = currentPct + '%';
                     }
                 }, 1000 / 24);
 
@@ -953,8 +966,8 @@
         fileQueue.forEach(item => {
             if (item.fileObject.type.startsWith('image/')) {
                 item.status = 'Processing';
-                const progressBar = document.getElementById(`progress-${item.id}`);
-                const badge = document.getElementById(`badge-${item.id}`);
+                const progressBar = document.getElementById('progress-' + item.id);
+                const badge = document.getElementById('badge-' + item.id);
                 if (progressBar) progressBar.style.width = '0%';
                 if (badge) {
                     badge.textContent = 'Processing';
@@ -981,7 +994,7 @@
 
         const diff = totalOriginal - totalOptimized;
         const percentage = diff > 0 ? ((diff / totalOriginal) * 100) : 0;
-        metricReduction.textContent = `${percentage.toFixed(1)}%`;
+        metricReduction.textContent = percentage.toFixed(1) + '%';
 
         if (fileQueue.length > 0 && allDone) {
             actionBtn.disabled = false;
@@ -1008,7 +1021,7 @@
             if (nameSegments.length > 1) nameSegments.pop();
 
             anchor.href = downloadUrl;
-            anchor.download = `${nameSegments.join('.')}_squeezes.${extension}`;
+            anchor.download = nameSegments.join('.') + '_squeezes.' + extension;
             document.body.appendChild(anchor);
             anchor.click();
             document.body.removeChild(anchor);
