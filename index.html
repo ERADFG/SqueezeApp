@@ -863,7 +863,7 @@
         });
     }
 
-    // HIGH QUALITY STEP-SEEK RENDERING WITH ZERO MAIN THREAD INTERFERENCE
+    // FIXED: DETERMINISTIC TIMELINE STEPPING ENGINE (PREVENTS LAG & QUALITY LOSS ON ALL PLATFORMS)
     function compressVideoItem(item, progressBar) {
         return new Promise((resolve) => {
             const videoUrl = URL.createObjectURL(item.fileObject);
@@ -873,39 +873,45 @@
             video.playsInline = true;
             video.crossOrigin = "anonymous";
 
-            video.onloadedmetadata = () => {
+            video.onloadeddata = () => {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
 
-                // Preserve native clarity limits safely
-                const maxWidth = 1280;
+                // Cap maximum dimensions slightly to save mobile VRAM from crashing
                 let width = video.videoWidth;
                 let height = video.videoHeight;
+                const maxMobileDimension = 1280;
 
-                if (width > maxWidth) {
-                    height = Math.round((height * maxWidth) / width);
-                    width = maxWidth;
+                if (width > maxMobileDimension || height > maxMobileDimension) {
+                    if (width > height) {
+                        height = Math.round((height * maxMobileDimension) / width);
+                        width = maxMobileDimension;
+                    } else {
+                        width = Math.round((width * maxMobileDimension) / height);
+                        height = maxMobileDimension;
+                    }
                 }
 
                 canvas.width = width;
                 canvas.height = height;
+
+                // High-fidelity image crispness settings
                 ctx.imageSmoothingEnabled = true;
                 ctx.imageSmoothingQuality = 'high';
 
-                const stream = canvas.captureStream(0); // Driven purely by programmatic manual frame pushes
-                const chunks = [];
-                
-                // Max high definition structural bitrate target
-                const premiumBitrate = 4000000; 
+                // We capture stream tracks directly to process on-demand updates
+                const stream = canvas.captureStream(0); 
                 let recorder;
+                const chunks = [];
+                const stableHighBitrate = 4000000; // 4Mbps crisp tracking target
 
                 try {
                     recorder = new MediaRecorder(stream, {
                         mimeType: 'video/webm;codecs=vp8',
-                        videoBitsPerSecond: premiumBitrate
+                        videoBitsPerSecond: stableHighBitrate 
                     });
                 } catch(e) {
-                    recorder = new MediaRecorder(stream, { videoBitsPerSecond: premiumBitrate });
+                    recorder = new MediaRecorder(stream, { videoBitsPerSecond: stableHighBitrate });
                 }
 
                 recorder.ondataavailable = (e) => {
@@ -926,43 +932,47 @@
 
                 recorder.start();
 
-                // Target standard rendering steps (30 frames per second baseline)
-                const frameInterval = 1 / 30;
-                let currentTimestamp = 0;
-                const duration = video.duration;
+                // Setup manual interval timeline clock (30 steps per second)
+                const fps = 30;
+                const frameDuration = 1 / fps;
+                let currentVideoTime = 0;
+                const totalDuration = video.duration;
 
-                // Non-blocking seek step loop processor
-                function seekAndCaptureNextFrame() {
-                    if (currentTimestamp >= duration) {
+                // Force layout state to remain paused. We control time completely.
+                video.pause();
+
+                function stepToNextFrame() {
+                    if (currentVideoTime >= totalDuration) {
                         setTimeout(() => {
                             if (recorder.state !== 'inactive') recorder.stop();
                         }, 200);
                         return;
                     }
-
-                    video.currentTime = currentTimestamp;
+                    video.currentTime = currentVideoTime;
                 }
 
+                // Fires precisely when the device completes extraction of pristine buffer frames
                 video.onseeked = () => {
-                    // Draw frame safely once the browser reports seeking completed
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                     
-                    // Manually step the recorder track space forward
+                    // Request a clean frame capture commit manually
                     if (stream.getVideoTracks()[0] && stream.getVideoTracks()[0].requestFrame) {
                         stream.getVideoTracks()[0].requestFrame();
+                    } else if (stream.requestFrame) {
+                        stream.requestFrame();
                     }
 
-                    let currentPct = Math.min(99, Math.round((currentTimestamp / duration) * 100));
-                    progressBar.style.width = currentPct + '%';
+                    let percentComplete = Math.round((currentVideoTime / totalDuration) * 100);
+                    progressBar.style.width = percentComplete + '%';
 
-                    currentTimestamp += frameInterval;
+                    currentVideoTime += frameDuration;
                     
-                    // Relinquish control back to main loop via macro task execution spacing
-                    setTimeout(seekAndCaptureNextFrame, 4);
+                    // Small timeout ensures hardware encoder completes current write step safely
+                    setTimeout(stepToNextFrame, 10);
                 };
 
-                // Initialize the loop processing chain safely
-                seekAndCaptureNextFrame();
+                // Initialize the structural pipeline
+                stepToNextFrame();
             };
 
             video.onerror = () => {
