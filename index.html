@@ -557,21 +557,21 @@
     <main class="workspace-layout">
         
         <section class="glass-panel drop-zone" id="dropZone">
-            <input type="file" id="fileInput" multiple accept="*/*">
+            <input type="file" id="fileInput" multiple accept="image/*">
             
             <div class="drop-zone-icon" id="dropIcon">
                 <svg viewBox="0 0 24 24">
                     <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
                 </svg>
             </div>
-            <div class="drop-text" id="dropText">Drop images, videos or any files here (Max 10)</div>
+            <div class="drop-text" id="dropText">Drop your images here (Max 10)</div>
 
             <div class="queue-container" id="queueContainer" style="display: none;"></div>
         </section>
 
         <section class="glass-panel config-panel">
             <div class="control-group">
-                <label class="control-label">Format Converter (Images Only)</label>
+                <label class="control-label">Format Converter</label>
                 <select class="modern-select" id="formatSelect">
                     <option value="original">Original Format</option>
                     <option value="image/jpeg">JPEG</option>
@@ -582,7 +582,7 @@
 
             <div class="mode-notice-badge">
                 <span class="mode-notice-title">Smart Structural Pipeline</span>
-                <span class="mode-notice-desc">Optimizes core pixel fields and frame tracks dynamically to clean overhead and reduce space while ensuring platform safety.</span>
+                <span class="mode-notice-desc">Optimizes core pixel fields dynamically to clean background overhead and compress images directly inside your local sandbox.</span>
             </div>
         </section>
 
@@ -743,6 +743,10 @@
 
         for (let i = 0; i < incomingCount; i++) {
             const currentFile = files[i];
+            
+            // Only handle images
+            if (!currentFile.type.startsWith('image/')) continue;
+
             const itemIndex = fileQueue.length;
             
             const queueItem = {
@@ -791,13 +795,7 @@
         const progressBar = document.getElementById(`progress-${nextItem.id}`);
         
         try {
-            if (nextItem.fileObject.type.startsWith('image/')) {
-                await compressImageItem(nextItem, progressBar);
-            } else if (nextItem.fileObject.type.startsWith('video/')) {
-                await compressVideoItem(nextItem, progressBar);
-            } else {
-                await processFallbackFile(nextItem, progressBar);
-            }
+            await compressImageItem(nextItem, progressBar);
         } catch (err) {
             console.error("Asset compression error:", err);
             markItemStatus(nextItem, 'Failed');
@@ -817,7 +815,6 @@
         badge.className = 'status-badge-inline';
         
         if (statusLabel === 'Optimized') badge.classList.add('status-ready');
-        else if (statusLabel === 'Squeezed') badge.classList.add('status-fallback');
         else badge.classList.add('status-fallback');
     }
 
@@ -863,145 +860,16 @@
         });
     }
 
-    // FIXED: DETERMINISTIC TIMELINE STEPPING ENGINE (PREVENTS LAG & QUALITY LOSS ON ALL PLATFORMS)
-    function compressVideoItem(item, progressBar) {
-        return new Promise((resolve) => {
-            const videoUrl = URL.createObjectURL(item.fileObject);
-            const video = document.createElement('video');
-            video.src = videoUrl;
-            video.muted = true;
-            video.playsInline = true;
-            video.crossOrigin = "anonymous";
-
-            video.onloadeddata = () => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-
-                // Cap maximum dimensions slightly to save mobile VRAM from crashing
-                let width = video.videoWidth;
-                let height = video.videoHeight;
-                const maxMobileDimension = 1280;
-
-                if (width > maxMobileDimension || height > maxMobileDimension) {
-                    if (width > height) {
-                        height = Math.round((height * maxMobileDimension) / width);
-                        width = maxMobileDimension;
-                    } else {
-                        width = Math.round((width * maxMobileDimension) / height);
-                        height = maxMobileDimension;
-                    }
-                }
-
-                canvas.width = width;
-                canvas.height = height;
-
-                // High-fidelity image crispness settings
-                ctx.imageSmoothingEnabled = true;
-                ctx.imageSmoothingQuality = 'high';
-
-                // We capture stream tracks directly to process on-demand updates
-                const stream = canvas.captureStream(0); 
-                let recorder;
-                const chunks = [];
-                const stableHighBitrate = 4000000; // 4Mbps crisp tracking target
-
-                try {
-                    recorder = new MediaRecorder(stream, {
-                        mimeType: 'video/webm;codecs=vp8',
-                        videoBitsPerSecond: stableHighBitrate 
-                    });
-                } catch(e) {
-                    recorder = new MediaRecorder(stream, { videoBitsPerSecond: stableHighBitrate });
-                }
-
-                recorder.ondataavailable = (e) => {
-                    if (e.data && e.data.size > 0) chunks.push(e.data);
-                };
-
-                recorder.onstop = () => {
-                    const finalBlob = new Blob(chunks, { type: 'video/webm' });
-                    item.processedBlob = finalBlob.size < item.fileObject.size ? finalBlob : item.fileObject;
-                    item.processedSize = item.processedBlob.size;
-                    item.outputMime = 'video/webm';
-                    
-                    progressBar.style.width = '100%';
-                    markItemStatus(item, 'Optimized');
-                    URL.revokeObjectURL(videoUrl);
-                    resolve();
-                };
-
-                recorder.start();
-
-                // Setup manual interval timeline clock (30 steps per second)
-                const fps = 30;
-                const frameDuration = 1 / fps;
-                let currentVideoTime = 0;
-                const totalDuration = video.duration;
-
-                // Force layout state to remain paused. We control time completely.
-                video.pause();
-
-                function stepToNextFrame() {
-                    if (currentVideoTime >= totalDuration) {
-                        setTimeout(() => {
-                            if (recorder.state !== 'inactive') recorder.stop();
-                        }, 200);
-                        return;
-                    }
-                    video.currentTime = currentVideoTime;
-                }
-
-                // Fires precisely when the device completes extraction of pristine buffer frames
-                video.onseeked = () => {
-                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    
-                    // Request a clean frame capture commit manually
-                    if (stream.getVideoTracks()[0] && stream.getVideoTracks()[0].requestFrame) {
-                        stream.getVideoTracks()[0].requestFrame();
-                    } else if (stream.requestFrame) {
-                        stream.requestFrame();
-                    }
-
-                    let percentComplete = Math.round((currentVideoTime / totalDuration) * 100);
-                    progressBar.style.width = percentComplete + '%';
-
-                    currentVideoTime += frameDuration;
-                    
-                    // Small timeout ensures hardware encoder completes current write step safely
-                    setTimeout(stepToNextFrame, 10);
-                };
-
-                // Initialize the structural pipeline
-                stepToNextFrame();
-            };
-
-            video.onerror = () => {
-                processFallbackFile(item, progressBar).then(resolve);
-            };
-            video.load();
-        });
-    }
-
-    async function processFallbackFile(item, progressBar) {
-        progressBar.style.width = '50%';
-        item.processedBlob = item.fileObject; 
-        item.processedSize = item.fileObject.size;
-        progressBar.style.width = '100%';
-        markItemStatus(item, 'Squeezed');
-    }
-
     async function reprocessEntireQueue() {
         if (isProcessing) return;
         fileQueue.forEach(item => {
-            if (item.fileObject.type.startsWith('image/')) {
-                item.status = 'Processing';
-                const progressBar = document.getElementById('progress-' + item.id);
-                const badge = document.getElementById('badge-' + item.id);
-                if (progressBar) progressBar.style.width = '0%';
-                if (badge) {
-                    badge.textContent = 'Processing';
-                    badge.className = 'status-badge-inline status-processing';
-                }
+            item.status = 'Processing';
+            const progressBar = document.getElementById('progress-' + item.id);
+            const badge = document.getElementById('badge-' + item.id);
+            if (progressBar) progressBar.style.width = '0%';
+            if (badge) {
+                badge.textContent = 'Processing';
+                badge.className = 'status-badge-inline status-processing';
             }
         });
         processNextInQueue();
@@ -1042,7 +910,6 @@
             
             let extension = item.outputMime.split('/')[1] || 'dat';
             if (extension === 'jpeg') extension = 'jpg';
-            if (extension.includes('webm')) extension = 'webm';
 
             const downloadUrl = URL.createObjectURL(item.processedBlob);
             const anchor = document.createElement('a');
