@@ -744,7 +744,6 @@
         for (let i = 0; i < incomingCount; i++) {
             const currentFile = files[i];
             
-            // Only handle images
             if (!currentFile.type.startsWith('image/')) continue;
 
             const itemIndex = fileQueue.length;
@@ -901,12 +900,16 @@
         }
     }
 
-    actionBtn.addEventListener('click', (e) => {
+    // STAGGERED MACRO-TASK DOWNLOAD LOGIC TO BYPASS BROWSER ANTI-SPAM CAPTURE
+    actionBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
         if (fileQueue.length === 0) return;
 
-        fileQueue.forEach(item => {
-            if (!item.processedBlob) return;
+        actionBtn.disabled = true; // Prevent overlapping click triggers
+        
+        for (let i = 0; i < fileQueue.length; i++) {
+            const item = fileQueue[i];
+            if (!item.processedBlob) continue;
             
             let extension = item.outputMime.split('/')[1] || 'dat';
             if (extension === 'jpeg') extension = 'jpg';
@@ -921,8 +924,15 @@
             document.body.appendChild(anchor);
             anchor.click();
             document.body.removeChild(anchor);
+            
+            // Cleanup memory thread
             setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
-        });
+            
+            // Stagger next execution step by 200ms
+            await new Promise(resolve => setTimeout(resolve, 200));
+        }
+        
+        actionBtn.disabled = false;
     });
 
     function resetActiveState() {
