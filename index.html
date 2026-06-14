@@ -533,6 +533,7 @@
         .copy-status-btn:hover { background: rgba(255, 255, 255, 0.08); border-color: var(--glass-border-glow); }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body>
 
@@ -895,45 +896,77 @@
         if (fileQueue.length > 0 && allDone) {
             actionBtn.disabled = false;
             clearBtn.disabled = false;
+            actionBtn.textContent = fileQueue.length > 1 ? "Download Archive (.zip)" : "Download Image";
         } else {
             clearBtn.disabled = fileQueue.length === 0;
+            actionBtn.textContent = "Download All";
         }
     }
 
-    // STAGGERED MACRO-TASK DOWNLOAD LOGIC TO BYPASS BROWSER ANTI-SPAM CAPTURE
+    // HIGH FIDELITY ZIP-STREAM BUNDLER FOR SIMULTANEOUS MULTI-DOWNLOAD BYPASS
     actionBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
         if (fileQueue.length === 0) return;
 
-        actionBtn.disabled = true; // Prevent overlapping click triggers
-        
-        for (let i = 0; i < fileQueue.length; i++) {
-            const item = fileQueue[i];
-            if (!item.processedBlob) continue;
-            
-            let extension = item.outputMime.split('/')[1] || 'dat';
-            if (extension === 'jpeg') extension = 'jpg';
-
-            const downloadUrl = URL.createObjectURL(item.processedBlob);
-            const anchor = document.createElement('a');
-            const nameSegments = item.fileObject.name.split('.');
-            if (nameSegments.length > 1) nameSegments.pop();
-
-            anchor.href = downloadUrl;
-            anchor.download = nameSegments.join('.') + '_squeezes.' + extension;
-            document.body.appendChild(anchor);
-            anchor.click();
-            document.body.removeChild(anchor);
-            
-            // Cleanup memory thread
-            setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
-            
-            // Stagger next execution step by 200ms
-            await new Promise(resolve => setTimeout(resolve, 200));
+        // If there is only one file, handle standard direct transfer safely
+        if (fileQueue.length === 1) {
+            const item = fileQueue[0];
+            if (!item.processedBlob) return;
+            triggerSingleDownload(item.processedBlob, item.fileObject.name, item.outputMime);
+            return;
         }
-        
-        actionBtn.disabled = false;
+
+        // Multi-file handling compiles stream targets directly into a dynamic Zip payload
+        actionBtn.disabled = true;
+        actionBtn.textContent = "Compiling Pack...";
+
+        try {
+            const zipEngine = new JSZip();
+            
+            fileQueue.forEach(item => {
+                if (!item.processedBlob) return;
+                
+                let ext = item.outputMime.split('/')[1] || 'dat';
+                if (ext === 'jpeg') ext = 'jpg';
+
+                const nameSegments = item.fileObject.name.split('.');
+                if (nameSegments.length > 1) nameSegments.pop();
+                const freshName = nameSegments.join('.') + '_squeezes.' + ext;
+
+                // Add blob directly into memory stack
+                zipEngine.file(freshName, item.processedBlob);
+            });
+
+            const zipContentBlob = await zipEngine.generateAsync({ type: "blob" });
+            triggerSingleDownload(zipContentBlob, "squeezes_archive.zip", "application/zip");
+
+        } catch (error) {
+            console.error("Archive compiling execution crash:", error);
+        } finally {
+            actionBtn.disabled = false;
+            actionBtn.textContent = "Download Archive (.zip)";
+        }
     });
+
+    function triggerSingleDownload(blob, fallbackName, mimeType) {
+        let finalName = fallbackName;
+        if (mimeType !== "application/zip") {
+            let ext = mimeType.split('/')[1] || 'dat';
+            if (ext === 'jpeg') ext = 'jpg';
+            const nameSegments = fallbackName.split('.');
+            if (nameSegments.length > 1) nameSegments.pop();
+            finalName = nameSegments.join('.') + '_squeezes.' + ext;
+        }
+
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = finalName;
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
 
     function resetActiveState() {
         fileQueue = [];
@@ -948,6 +981,7 @@
         metricReduction.textContent = '0%';
         actionBtn.disabled = true;
         clearBtn.disabled = true;
+        actionBtn.textContent = "Download All";
     }
 
     clearBtn.addEventListener('click', (e) => {
