@@ -863,7 +863,7 @@
         });
     }
 
-    // MOBILE-OPTIMIZED SMART BALANCED COMPRESSION
+    // HIGH QUALITY + CRASH PROOF MOBILE RENDER ENGINE
     function compressVideoItem(item, progressBar) {
         return new Promise((resolve) => {
             const videoUrl = URL.createObjectURL(item.fileObject);
@@ -877,39 +877,43 @@
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
 
-                // BUGFIX: Smart hardware ceiling scaling (Max 1280px) to shield phone memory from crashing
-                const mobileHardwareCeiling = 1280; 
+                // Max bounding dimension cap to shield mobile VRAM safely
+                const hardwareLimit = 1280; 
                 let width = video.videoWidth;
                 let height = video.videoHeight;
 
-                if (width > mobileHardwareCeiling || height > mobileHardwareCeiling) {
+                if (width > hardwareLimit || height > hardwareLimit) {
                     if (width > height) {
-                        height = Math.round((height * mobileHardwareCeiling) / width);
-                        width = mobileHardwareCeiling;
+                        height = Math.round((height * hardwareLimit) / width);
+                        width = hardwareLimit;
                     } else {
-                        width = Math.round((width * mobileHardwareCeiling) / height);
-                        height = mobileHardwareCeiling;
+                        width = Math.round((width * hardwareLimit) / height);
+                        height = hardwareLimit;
                     }
                 }
 
                 canvas.width = width;
                 canvas.height = height;
 
-                // Setup unified frame track 
-                const stream = canvas.captureStream(24); 
+                // Sync canvas context styling for mobile screen rendering clarity
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+
+                // Capture stream at 30fps for smooth fluid video conversion on phones
+                const stream = canvas.captureStream(30); 
                 let recorder;
                 const chunks = [];
 
-                // BUGFIX: Balanced hardware profile target ~2.2Mbps (High crisp details without phone lag)
-                const optimizedMobileBitrate = 2200000;
+                // 3.5Mbps structural target - flawless high definition profile on mobile hardware
+                const highDefinitionBitrate = 3500000;
 
                 try {
                     recorder = new MediaRecorder(stream, {
                         mimeType: 'video/webm;codecs=vp8',
-                        videoBitsPerSecond: optimizedMobileBitrate 
+                        videoBitsPerSecond: highDefinitionBitrate 
                     });
                 } catch(e) {
-                    recorder = new MediaRecorder(stream, { videoBitsPerSecond: optimizedMobileBitrate });
+                    recorder = new MediaRecorder(stream, { videoBitsPerSecond: highDefinitionBitrate });
                 }
 
                 recorder.ondataavailable = (e) => {
@@ -932,17 +936,46 @@
                 video.play();
                 progressBar.style.width = '30%';
 
-                const trackInterval = setInterval(() => {
+                let activeFrameLoop = true;
+
+                // Native Hardware Frame Sync Function
+                function renderFrame() {
+                    if (!activeFrameLoop) return;
+
                     if (!video.paused && !video.ended) {
                         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                         let currentPct = 30 + Math.round((video.currentTime / video.duration) * 60);
                         progressBar.style.width = currentPct + '%';
                     }
-                }, 1000 / 24);
+
+                    if (!video.ended) {
+                        requestAnimationFrame(renderFrame);
+                    }
+                }
+
+                // modern rVFC support check for advanced mobile browsers
+                if ('requestVideoFrameCallback' in video) {
+                    const updateCallback = () => {
+                        if (!activeFrameLoop) return;
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        let currentPct = 30 + Math.round((video.currentTime / video.duration) * 60);
+                        progressBar.style.width = currentPct + '%';
+                        
+                        if (!video.ended) {
+                            video.requestVideoFrameCallback(updateCallback);
+                        }
+                    };
+                    video.requestVideoFrameCallback(updateCallback);
+                } else {
+                    // Fallback to structural high speed rAF frame syncing
+                    requestAnimationFrame(renderFrame);
+                }
 
                 video.onended = () => {
-                    clearInterval(trackInterval);
-                    recorder.stop();
+                    activeFrameLoop = false;
+                    setTimeout(() => {
+                        if (recorder.state !== 'inactive') recorder.stop();
+                    }, 150);
                 };
             };
 
