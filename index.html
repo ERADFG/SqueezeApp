@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Squeezes — Pure Minimalist Asset Compressor</title>
-    <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-527BWKF63G"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-527BWKF63G"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
@@ -87,26 +86,6 @@
             font-weight: 700;
             letter-spacing: -0.6px;
             color: var(--text-primary);
-        }
-
-        /* Introduction Card Styles */
-        .intro-card {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            padding: 20px 24px;
-        }
-
-        .intro-title {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .intro-text {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            line-height: 1.5;
         }
 
         .coffee-btn {
@@ -433,6 +412,7 @@
         .btn-secondary:hover:not(:disabled) { color: var(--text-primary); border-color: rgba(255, 255, 255, 0.2); }
         .btn-secondary:disabled { opacity: 0.15; cursor: not-allowed; }
 
+        /* General Custom Modals (Donation & Welcome Window) */
         .donation-modal {
             position: fixed;
             inset: 0;
@@ -487,6 +467,40 @@
             color: var(--text-primary);
             border-color: var(--glass-border);
             background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Specific Welcome Modal Overrides */
+        #welcomeModal .modal-card {
+            max-width: 380px;
+            padding: 28px 24px 24px 24px;
+            text-align: center;
+        }
+
+        #welcomeModal .modal-header {
+            justify-content: center;
+            margin-bottom: 12px;
+        }
+
+        #welcomeModal .modal-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.4px;
+        }
+
+        .welcome-desc {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-bottom: 24px;
+        }
+
+        .welcome-action-btn {
+            width: 100%;
+            justify-content: center;
+            padding: 12px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            border-radius: 12px;
         }
 
         .crypto-tabs {
@@ -588,12 +602,6 @@
         </div>
     </header>
 
-    <!-- New Explanatory Section -->
-    <section class="glass-panel intro-card">
-        <h2 class="intro-title">Secure local image compression</h2>
-        <p class="intro-text">Squeezes reduces your file sizes directly in your browser. Your images never leave your device and are never uploaded to a server, keeping your data entirely secure and private.</p>
-    </section>
-
     <main class="workspace-layout">
         
         <section class="glass-panel drop-zone" id="dropZone">
@@ -622,7 +630,7 @@
 
             <div class="mode-notice-badge">
                 <span class="mode-notice-title">Smart Structural Pipeline</span>
-                <span class="mode-notice-desc">Optimizes core pixel fields dynamically to clean background overhead and compress images directly inside your local sandbox.</span>
+                <span class="mode-notice-desc">Optimizes core pixel fields dynamically to clean background overhead and compress files inside your local system window.</span>
             </div>
         </section>
 
@@ -648,6 +656,16 @@
         <button class="btn-primary" id="actionBtn" disabled>Download All</button>
     </footer>
 
+</div>
+
+<div class="donation-modal active" id="welcomeModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 class="modal-title">Welcome to Squeezes</h3>
+        </div>
+        <p class="welcome-desc">Squeezes is a lightweight, secure image compressor. It strips background overhead and shrinks your photo file sizes directly inside your local browser screen. Your images never touch a server.</p>
+        <button class="btn-primary welcome-action-btn" id="welcomeCloseBtn">Start Squeezing</button>
+    </div>
 </div>
 
 <div class="donation-modal" id="donationModal">
@@ -710,6 +728,18 @@
     const addressText = document.getElementById('addressText');
     const copyAddressBtn = document.getElementById('copyAddressBtn');
 
+    const welcomeModal = document.getElementById('welcomeModal');
+    const welcomeCloseBtn = document.getElementById('welcomeCloseBtn');
+
+    // Welcome Window Handler
+    welcomeCloseBtn.addEventListener('click', () => {
+        welcomeModal.classList.remove('active');
+    });
+    welcomeModal.addEventListener('click', (e) => {
+        if(e.target === welcomeModal) welcomeModal.classList.remove('active');
+    });
+
+    // Coffee Button Handlers
     coffeeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         donationModal.classList.add('active');
