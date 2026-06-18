@@ -89,6 +89,26 @@
             color: var(--text-primary);
         }
 
+        /* Introduction Card Styles */
+        .intro-card {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 20px 24px;
+        }
+
+        .intro-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .intro-text {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
         .coffee-btn {
             display: flex;
             align-items: center;
@@ -568,6 +588,12 @@
         </div>
     </header>
 
+    <!-- New Explanatory Section -->
+    <section class="glass-panel intro-card">
+        <h2 class="intro-title">Secure local image compression</h2>
+        <p class="intro-text">Squeezes reduces your file sizes directly in your browser. Your images never leave your device and are never uploaded to a server, keeping your data entirely secure and private.</p>
+    </section>
+
     <main class="workspace-layout">
         
         <section class="glass-panel drop-zone" id="dropZone">
@@ -916,12 +942,10 @@
         }
     }
 
-    // HIGH FIDELITY ZIP-STREAM BUNDLER FOR SIMULTANEOUS MULTI-DOWNLOAD BYPASS
     actionBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
         if (fileQueue.length === 0) return;
 
-        // If there is only one file, handle standard direct transfer safely
         if (fileQueue.length === 1) {
             const item = fileQueue[0];
             if (!item.processedBlob) return;
@@ -929,7 +953,6 @@
             return;
         }
 
-        // Multi-file handling compiles stream targets directly into a dynamic Zip payload
         actionBtn.disabled = true;
         actionBtn.textContent = "Compiling Pack...";
 
@@ -946,7 +969,6 @@
                 if (nameSegments.length > 1) nameSegments.pop();
                 const freshName = nameSegments.join('.') + '_squeezes.' + ext;
 
-                // Add blob directly into memory stack
                 zipEngine.file(freshName, item.processedBlob);
             });
 
