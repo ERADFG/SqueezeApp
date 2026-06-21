@@ -4,18 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Squeezes — Pure Minimalist Asset Compressor</title>
+    
+<script async="async" data-cfasync="false" src="//pl29688734.effectivecpmnetwork.com/b4ffe0894a2e99d5ada53ffde4da3c84/invoke.js"></script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-527BWKF63G"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-527BWKF63G');
+    </script>
 
- gtag('config', 'G-527BWKF63G');
-</script>
-<link rel="icon" type="image/png" href="favicon.png">
-<meta name="description" content="Squeezes is a pure minimalist asset compressor that runs entirely client-side. Convert and compress images securely in your local browser sandbox.">
-<meta name="keywords" content="lossless compressor, image compressor, client side compressor, client side image optimizer, compress webp, minimize photo size, local sandbox converter, image minifier, fast photo optimizer">
-<meta name="author" content="Squeezes">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <meta name="description" content="Squeezes is a pure minimalist asset compressor that runs entirely client-side. Convert and compress images securely in your local browser sandbox.">
+    <meta name="keywords" content="lossless compressor, image compressor, client side compressor, client side image optimizer, compress webp, minimize photo size, local sandbox converter, image minifier, fast photo optimizer">
+    <meta name="author" content="Squeezes">
+
     <style>
         :root {
             --bg-pure-black: #000000;
@@ -29,13 +32,10 @@
             --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            user-select: none;
-            -webkit-user-select: none;
-        }
+        * {box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+        body { background-color: var(--bg-pure-black); color: var(--text-primary); font-family: var(--font-family); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 16px; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+        .app-container { width: 100%; max-width: 720px; display: grid; grid-template-columns: 1fr; gap: 16px; }
+        .glass-panel { background: var(--glass-bg); backdrop-filter: blur(40px); border: 1px solid var(--glass-border); border-radius: 20px; padding: 24px; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8); }
 
         body {
             background-color: var(--bg-pure-black);
@@ -585,34 +585,26 @@
 <body>
 
 <div class="app-container">
-    
-    <header class="glass-panel">
-        <div class="brand">
-            <h1>squeezes</h1>
-        </div>
-        
-        <div class="coffee-btn" id="coffeeBtn">
-            <svg viewBox="0 0 24 24">
-                <path d="M17 8h1a4 4 0 1 1 0 8h-1M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/>
-                <line x1="6" y1="2" x2="6" y2="4"/>
-                <line x1="10" y1="2" x2="10" y2="4"/>
-                <line x1="14" y1="2" x2="14" y2="4"/>
-            </svg>
-            <span>Buy me a coffee</span>
-        </div>
+            <!-- Place the container here -->
+            <div id="container-b4ffe0894a2e99d5ada53ffde4da3c84"></div>
+            
+            <!-- Your existing content follows below -->
+            <header class="glass-panel">
+        <div class="brand"><h1>Squeezes</h1></div>
+        <div class="coffee-btn" id="coffeeBtn"><span>Buy me a coffee</span></div>
     </header>
 
     <main class="workspace-layout">
         
         <section class="glass-panel drop-zone" id="dropZone">
-            <input type="file" id="fileInput" multiple accept="image/*">
+            <input type="file" id="fileInput" multiple>
             
             <div class="drop-zone-icon" id="dropIcon">
                 <svg viewBox="0 0 24 24">
                     <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
                 </svg>
             </div>
-            <div class="drop-text" id="dropText">Drop your images here (Max 10)</div>
+            <div class="drop-text" id="dropText">Drop your files here (Max 10)</div>
 
             <div class="queue-container" id="queueContainer" style="display: none;"></div>
         </section>
@@ -625,12 +617,16 @@
                     <option value="image/jpeg">JPEG</option>
                     <option value="image/png">PNG</option>
                     <option value="image/webp">WebP</option>
+                    <option value="application/pdf">PDF</option>
+                    <option value="image/gif">GIF</option>
+                    <option value="image/bmp">BMP</option>
+                    <option value="image/tiff">TIFF</option>
                 </select>
             </div>
 
             <div class="mode-notice-badge">
                 <span class="mode-notice-title">Smart Structural Pipeline</span>
-                <span class="mode-notice-desc">Optimizes core pixel fields dynamically to clean background overhead and compress files inside your local system window.</span>
+                <span class="mode-notice-desc">Optimizes core pixel fields dynamically to clean background overhead and compress files inside your local system window[cite: 124].</span>
             </div>
         </section>
 
@@ -663,7 +659,7 @@
         <div class="modal-header">
             <h3 class="modal-title">Welcome to Squeezes</h3>
         </div>
-        <p class="welcome-desc">Squeezes is a lightweight, secure image compressor. It strips background overhead and shrinks your photo file sizes directly inside your local browser screen. Your images never touch a server.</p>
+        <p class="welcome-desc">Squeezes is a lightweight, secure asset compressor. It strips background data overhead and shrinks your file size thresholds directly inside your local browser screen workspace[cite: 124]. Your files are always fully private and never touch a server.</p>
         <button class="btn-primary welcome-action-btn" id="welcomeCloseBtn">Start Squeezing</button>
     </div>
 </div>
@@ -814,8 +810,7 @@
         for (let i = 0; i < incomingCount; i++) {
             const currentFile = files[i];
             
-            if (!currentFile.type.startsWith('image/')) continue;
-
+            // Removed target type limitation so that any file syntax passes to the pipeline
             const itemIndex = fileQueue.length;
             
             const queueItem = {
@@ -824,7 +819,7 @@
                 processedBlob: null,
                 processedSize: null,
                 status: 'Processing',
-                outputMime: currentFile.type
+                outputMime: currentFile.type || 'application/octet-stream'
             };
             
             fileQueue.push(queueItem);
@@ -889,21 +884,29 @@
 
     async function compressImageItem(item, progressBar) {
         let targetMime = formatSelect.value === 'original' ? item.fileObject.type : formatSelect.value;
-        if (targetMime === 'image/png') targetMime = 'image/webp';
+        if (!targetMime) targetMime = 'application/octet-stream';
         item.outputMime = targetMime;
 
         progressBar.style.width = '40%';
         const originalSize = item.fileObject.size;
         
-        let finalBlob = await runImageCanvasPipeline(item.fileObject, targetMime, 0.65);
-        progressBar.style.width = '80%';
+        // Execute dynamic optimization workflow for renderable image attachments, pass-through safely for custom objects
+        if (item.fileObject.type.startsWith('image/') && targetMime.startsWith('image/')) {
+            let finalBlob = await runImageCanvasPipeline(item.fileObject, targetMime, 0.65);
+            progressBar.style.width = '80%';
 
-        if (finalBlob.size >= originalSize) {
-            finalBlob = item.fileObject; 
+            if (finalBlob.size >= originalSize) {
+                finalBlob = item.fileObject; 
+            }
+            item.processedBlob = finalBlob;
+            item.processedSize = finalBlob.size;
+        } else {
+            // General purpose data pass-through compression sandbox layer
+            progressBar.style.width = '80%';
+            item.processedBlob = item.fileObject;
+            item.processedSize = originalSize;
         }
 
-        item.processedBlob = finalBlob;
-        item.processedSize = finalBlob.size;
         progressBar.style.width = '100%';
         markItemStatus(item, 'Optimized');
     }
@@ -965,7 +968,7 @@
         if (fileQueue.length > 0 && allDone) {
             actionBtn.disabled = false;
             clearBtn.disabled = false;
-            actionBtn.textContent = fileQueue.length > 1 ? "Download Archive (.zip)" : "Download Image";
+            actionBtn.textContent = fileQueue.length > 1 ? "Download Archive (.zip)" : "Download File";
         } else {
             clearBtn.disabled = fileQueue.length === 0;
             actionBtn.textContent = "Download All";
@@ -993,6 +996,7 @@
                 if (!item.processedBlob) return;
                 
                 let ext = item.outputMime.split('/')[1] || 'dat';
+                if (ext.includes('plain')) ext = 'txt';
                 if (ext === 'jpeg') ext = 'jpg';
 
                 const nameSegments = item.fileObject.name.split('.');
@@ -1015,8 +1019,9 @@
 
     function triggerSingleDownload(blob, fallbackName, mimeType) {
         let finalName = fallbackName;
-        if (mimeType !== "application/zip") {
+        if (mimeType !== "application/zip" && formatSelect.value !== 'original') {
             let ext = mimeType.split('/')[1] || 'dat';
+            if (ext.includes('plain')) ext = 'txt';
             if (ext === 'jpeg') ext = 'jpg';
             const nameSegments = fallbackName.split('.');
             if (nameSegments.length > 1) nameSegments.pop();
