@@ -962,9 +962,18 @@
     }
 
     function updateGlobalMetrics() {
-        let totalOriginal = 0;
-        let totalOptimized = 0;
-        let allDone = true;
+        const totalOriginal = fileQueue.reduce((acc, curr) => acc + curr.fileObject.size, 0);
+        const totalOptimized = fileQueue.reduce((acc, curr) => acc + (curr.processedSize || curr.fileObject.size), 0);
+        
+        metricOriginal.textContent = (totalOriginal / 1024).toFixed(1) + ' KB';
+        metricOptimized.textContent = (totalOptimized / 1024).toFixed(1) + ' KB';
+        
+        const reduction = totalOriginal > 0 ? ((totalOriginal - totalOptimized) / totalOriginal * 100).toFixed(0) : 0;
+        metricReduction.textContent = reduction + '%';
+        
+        actionBtn.disabled = fileQueue.length === 0;
+        clearBtn.disabled = fileQueue.length === 0;
+    }
 
         fileQueue.forEach(item => {
             totalOriginal += item.fileObject.size;
@@ -1099,6 +1108,9 @@
 <footer style="width: 100%; text-align: center; padding: 40px 0; margin-top: 40px; border-top: 1px solid var(--glass-border); color: var(--text-secondary);">
     <a href="privacy.html" style="color: var(--text-primary); text-decoration: none; margin: 0 20px; font-weight: 500; font-size: 0.9rem; transition: opacity 0.2s;">Privacy Policy</a>
     <a href="faq.html" style="color: var(--text-primary); text-decoration: none; margin: 0 20px; font-weight: 500; font-size: 0.9rem; transition: opacity 0.2s;">FAQ</a>
+
+    <footer style="width: 100%; padding: 40px 20px; border-top: 1px solid var(--glass-border); text-align: center; color: var(--text-secondary);">
+    <p>&copy; 2026 Squeezes. All rights reserved.</p>
 </footer>
 
 </body>
