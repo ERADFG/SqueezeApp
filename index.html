@@ -933,9 +933,15 @@
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
-                    canvas.width = img.naturalWidth || img.width;
-                    canvas.height = img.naturalHeight || img.height;
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    
+                    // Maintain native scale dimensions
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    
+                    // Paint image to viewport layer
+                    ctx.drawImage(img, 0, 0, img.width, img.height);
+                    
+                    // Export to compressed blob state
                     canvas.toBlob((blob) => {
                         resolve(blob || file);
                     }, mimeType, qualityFactor);
@@ -961,42 +967,98 @@
         processNextInQueue();
     }
 
+    // Global metric update handler and button control state
     function updateGlobalMetrics() {
-        const totalOriginal = fileQueue.reduce((acc, curr) => acc + curr.fileObject.size, 0);
-        const totalOptimized = fileQueue.reduce((acc, curr) => acc + (curr.processedSize || curr.fileObject.size), 0);
-        
-        metricOriginal.textContent = (totalOriginal / 1024).toFixed(1) + ' KB';
-        metricOptimized.textContent = (totalOptimized / 1024).toFixed(1) + ' KB';
-        
-        const reduction = totalOriginal > 0 ? ((totalOriginal - totalOptimized) / totalOriginal * 100).toFixed(0) : 0;
-        metricReduction.textContent = reduction + '%';
-        
-        actionBtn.disabled = fileQueue.length === 0;
-        clearBtn.disabled = fileQueue.length === 0;
-    }
+        let originalTotal = 0;
+        let optimizedTotal = 0;
+        let completedCount = 0;
 
         fileQueue.forEach(item => {
-            totalOriginal += item.fileObject.size;
-            totalOptimized += item.processedSize || item.fileObject.size;
-            if (item.status === 'Processing') allDone = false;
+            originalTotal += item.fileObject.size;
+            if (item.status === 'Optimized') {
+                optimizedTotal += item.processedSize;
+                completedCount++;
+            } else {
+                optimizedTotal += item.fileObject.size;
+            }
         });
 
-        metricOriginal.textContent = formatBytes(totalOriginal);
-        metricOptimized.textContent = formatBytes(totalOptimized);
+        metricOriginal.textContent = (originalTotal / 1024).toFixed(1) + " KB";
+        metricOptimized.textContent = (optimizedTotal / 1024).toFixed(1) + " KB";
 
-        const diff = totalOriginal - totalOptimized;
-        const percentage = diff > 0 ? ((diff / totalOriginal) * 100) : 0;
-        metricReduction.textContent = percentage.toFixed(1) + '%';
-
-        if (fileQueue.length > 0 && allDone) {
-            actionBtn.disabled = false;
-            clearBtn.disabled = false;
-            actionBtn.textContent = fileQueue.length > 1 ? "Download Archive (.zip)" : "Download Image";
+        if (originalTotal > 0) {
+            const percent = Math.max(0, Math.round(((originalTotal - optimizedTotal) / originalTotal) * 100));
+            metricReduction.textContent = percent + "%";
         } else {
-            clearBtn.disabled = fileQueue.length === 0;
-            actionBtn.textContent = "Download All";
+            metricReduction.textContent = "0%";
         }
+
+        // Enable or disable actions based on queue status
+        clearBtn.disabled = fileQueue.length === 0;
+        actionBtn.disabled = completedCount === 0 || completedCount !== fileQueue.length;
     }
+
+    // Process entire layout if conversion target selection changes
+    function reprocessEntireQueue() {
+        fileQueue.forEach(item => {
+            item.status = 'Processing';
+            const badge = document.getElementById(`badge-${item.id}`);
+            const progress = document.getElementById(`progress-${item.id}`);
+            if (badge) {
+                badge.textContent = 'Processing';
+                badge.className = 'status-badge-inline status-processing';
+            }
+            if (progress) progress.style.width = '0%';
+        });
+        updateGlobalMetrics();
+        processNextInQueue();
+    }
+
+    // Clear Workspace Queue Action
+    clearBtn.addEventListener('click', () => {
+        fileQueue = [];
+        queueContainer.innerHTML = '';
+        queueContainer.style.display = 'none';
+        dropIcon.style.display = 'flex';
+        dropText.style.display = 'block';
+        updateGlobalMetrics();
+    });
+
+    // Production Build Download Packaging Handler (ZIP archive payload execution)
+    actionBtn.addEventListener('click', async () => {
+        if (fileQueue.length === 0) return;
+        
+        actionBtn.disabled = true;
+        actionBtn.textContent = "Packaging ZIP...";
+
+        const zip = new JSZip();
+        
+        fileQueue.forEach(item => {
+            if (!item.processedBlob) return;
+            
+            // Extract baseline filename structure and apply dynamic extension format names
+            let name = item.fileObject.name;
+            const lastDot = name.lastIndexOf('.');
+            if (lastDot !== -1) name = name.substring(0, lastDot);
+            
+            let ext = 'jpg';
+            if (item.outputMime === 'image/png') ext = 'png';
+            if (item.outputMime === 'image/webp') ext = 'webp';
+            
+            zip.file(`${name}-squeezed.${ext}`, item.processedBlob);
+        });
+
+        const content = await zip.generateAsync({ type: "blob" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(content);
+        link.download = `squeezes-${Math.floor(Date.now() / 1000)}.zip`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        actionBtn.textContent = "Download All";
+        actionBtn.disabled = false;
+    });
 
     actionBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
