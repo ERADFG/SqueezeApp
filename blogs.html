@@ -3,117 +3,219 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Squeezes - Optimization Blogs & Guides</title>
+    <title>Squeezes Engineering Blog | The Master Optimization Archive</title>
+    <meta name="description" content="The complete archive of technical deep-dives into client-side image processing, high-performance web optimization, browser canvas rendering, and serverless asset privacy.">
     <style>
         :root {
-            --glass-bg: rgba(255, 255, 255, 0.03);
-            --glass-border: rgba(255, 255, 255, 0.08);
-            --accent-blue: #0a84ff;
-            --text-primary: #f5f5f7;
-            --text-secondary: #86868b;
+            --bg-color: #000000;
+            --accent-color: #0a84ff;
+            --text-main: #f5f5f7;
+            --text-muted: #86868b;
+            --card-bg: rgba(255, 255, 255, 0.02);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --hover-border: rgba(10, 132, 255, 0.3);
         }
-        body { 
-            background: #000; 
-            color: var(--text-primary); 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            padding: 40px 20px; 
-            text-align: center; 
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
-        h1 {
-            font-size: 2rem;
-            letter-spacing: -0.5px;
-            margin-bottom: 8px;
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            padding: 40px 20px;
         }
-        .subtitle {
-            color: var(--text-secondary);
-            font-size: 0.95rem;
-            max-width: 500px;
-            margin: 0 auto 40px auto;
-            line-height: 1.5;
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
         }
-        .list-container { 
-            max-width: 540px; 
-            margin: 0 auto; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 16px; 
+
+        header {
+            margin-bottom: 50px;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 30px;
         }
-        .blog-card { 
-            background: var(--glass-bg); 
-            border: 1px solid var(--glass-border); 
-            padding: 24px; 
-            border-radius: 16px; 
-            text-align: left; 
-            text-decoration: none; 
-            color: inherit; 
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            transition: border-color 0.2s, background 0.2s; 
-        }
-        .blog-card:hover { 
-            border-color: var(--accent-blue); 
-            background: rgba(255, 255, 255, 0.05);
-        }
-        .featured {
-            border-left: 4px solid var(--accent-blue);
-        }
-        h2 { 
-            margin: 0 0 6px 0; 
-            font-size: 1.2rem; 
-            font-weight: 600;
-            color: var(--text-primary); 
-        }
-        .blog-card:hover h2 {
-            color: var(--accent-blue);
-        }
-        p { 
-            margin: 0; 
-            font-size: 0.9rem; 
-            line-height: 1.5;
-            color: var(--text-secondary); 
-        }
-        .back-link {
-            display: inline-block;
-            margin-top: 40px;
-            color: var(--text-secondary);
+
+        header a {
+            color: var(--text-muted);
             text-decoration: none;
-            font-size: 0.9rem;
-            transition: color 0.2s;
+            font-size: 0.95rem;
+            display: inline-block;
+            margin-bottom: 15px;
+            transition: color 0.2s ease;
         }
-        .back-link:hover {
-            color: var(--text-primary);
+
+        header a:hover {
+            color: var(--accent-color);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            letter-spacing: -1px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            max-width: 600px;
+        }
+
+        .blog-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .blog-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 28px;
+            text-decoration: none;
+            color: inherit;
+            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+            display: block;
+        }
+
+        .blog-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--hover-border);
+            box-shadow: 0 8px 24px rgba(10, 132, 255, 0.03);
+        }
+
+        .meta {
+            display: flex;
+            gap: 16px;
+            font-size: 0.85rem;
+            color: var(--accent-color);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .meta span.category {
+            background: rgba(10, 132, 255, 0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .blog-card h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            line-height: 1.3;
+            transition: color 0.2s ease;
+        }
+
+        .blog-card:hover h2 {
+            color: var(--accent-color);
+        }
+
+        .blog-card p {
+            color: var(--text-muted);
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        footer {
+            margin-top: 60px;
+            text-align: center;
+            padding-top: 30px;
+            border-top: 1px solid var(--card-border);
+            color: var(--text-muted);
+            font-size: 0.9rem;
         }
     </style>
 </head>
 <body>
 
-    <h1>Optimization Resources</h1>
-    <p class="subtitle">Deep-dives into web performance engineering, local canvas architecture pipelines, and digital asset privacy algorithms.</p>
+    <div class="container">
+        <header>
+            <a href="index.html">← Back to Workspace App</a>
+            <h1>The Complete Squeezes Knowledge Library</h1>
+            <p class="subtitle">Every guide, technical blueprint, and performance roadmap engineered for local client-side file architectures.</p>
+        </header>
 
-    <div class="list-container">
-        <!-- New Featured Local Compression Core Article Card -->
-        <a href="blog-why-local-compression-matters.html" class="blog-card featured">
-            <h2>Why Client-Side Local Compression Matters</h2>
-            <p>An engineering breakdown of serverless web architectures, security flaws in remote cloud uploads, and how local processing completely isolates your files.</p>
-        </a>
+        <main class="blog-grid">
 
-        <a href="compress-png-locally.html" class="blog-card">
-            <h2>Secure PNG Compressor Guide</h2>
-            <p>How to strip color bit depths and balance metadata maps while fully protecting complex transparent alpha-channels.</p>
-        </a>
+            <a href="blog-why-local-compression-matters.html" class="blog-card" style="border-left: 4px solid var(--accent-color);">
+                <div class="meta">
+                    <span class="category">Core Architecture</span>
+                </div>
+                <h2>Why Client-Side Local Compression Matters</h2>
+                <p>An engineering breakdown of serverless web architectures, privacy vulnerabilities inherent in remote cloud computing, and how local runtime canvas isolating protects user assets.</p>
+            </a>
+            
+            <a href="compress-png-locally.html" class="blog-card">
+                <div class="meta">
+                    <span class="category">Programmatic Module</span>
+                </div>
+                <h2>Secure PNG Compressor Locally: Multi-Channel Optimization</h2>
+                <p>A deep look at stripping alpha-channel transparency maps and optimizing bit depths without data payloads touching public networks.</p>
+            </a>
 
-        <a href="alternative-to-tinypng.html" class="blog-card">
-            <h2>TinyPNG Alternative Guide</h2>
-            <p>A cost and architectural comparison showing why local execution pipelines are quickly replacing traditional monthly SaaS limits.</p>
-        </a>
+            <a href="alternative-to-tinypng.html" class="blog-card">
+                <div class="meta">
+                    <span class="category">Acquisition Cluster</span>
+                </div>
+                <h2>The Ultimate Free TinyPNG Alternative with Zero File Queue Limits</h2>
+                <p>An architectural analysis of localized browser context processing vs cloud-server execution streams. Learn how bypassing upload paywalls simplifies batch operations.</p>
+            </a>
 
-        <a href="free-iloveimg-alternatives.html" class="blog-card">
-            <h2>iLoveIMG Alternative Guide</h2>
-            <p>How to configure fast browser canvas queues to compress hundreds of photos simultaneously without artificial server queue throttling.</p>
-        </a>
+            <a href="compress-jpeg-alternatives.html" class="blog-card">
+                <div class="meta">
+                    <span class="category">Image Mechanics</span>
+                </div>
+                <h2>Evaluating Free Compress JPEG Alternatives for Professional Workflows</h2>
+                <p>A deep dive into local chromatic subsampling arrays and lossy quantization matrix overrides. Shrink visual asset files up to 80% using native browser window hardware context.</p>
+            </a>
+
+            <a href="squoosh-app-alternatives.html" class="blog-card">
+                <div class="meta">
+                    <span class="category">Web Architecture</span>
+                </div>
+                <h2>The Ultimate Squoosh App Alternative for Bulk Batch Processing</h2>
+                <p>How combining vanilla JavaScript execution loops with the native HTML5 Canvas API eliminates single-file optimization bottlenecks for development teams.</p>
+            </a>
+
+            <a href="photoshop-export-vs-local-compressor.html" class="blog-card">
+                <div class="meta">
+                    <span class="category">Performance Optimization</span>
+                </div>
+                <h2>Photoshop Export WebP vs. Squeezes In-Browser Compression Engines</h2>
+                <p>Bypass resource-heavy layout software pipelines. Discover how serverless predictive coding modules compile web-ready graphics instantly while maximizing Core Web Vitals marks.</p>
+            </a>
+
+            <a href="secure-confidential-image-compressors.html" class="blog-card">
+                <div class="meta">
+                    <span class="category">Data Privacy</span>
+                </div>
+                <h2>Secure Image Compression for Confidential and Sensitive Documentation</h2>
+                <p>How an isolated RAM memory structure blocks corporate data leak surfaces. Process identity cards, high-security invoices, and private assets with complete security compliance.</p>
+            </a>
+
+            <a href="free-iloveimg-alternatives.html" class="blog-card">
+                <div class="meta">
+                    <span class="category">Legacy Guides</span>
+                </div>
+                <h2>The Free iLoveIMG Batch Alternative Strategy Blueprint</h2>
+                <p>Configuring fast, concurrent browser canvas queues to compress hundreds of photos simultaneously without artificial server queue throttling.</p>
+            </a>
+
+        </main>
+
+        <footer>
+            <p>&copy; 2026 Squeezes Engine. 100% Client-Side. 0% Server Overhead.</p>
+        </footer>
     </div>
-    
-    <a href="index.html" class="back-link">← Return to Workspace</a>
 
 </body>
 </html>
