@@ -14,8 +14,6 @@
             --text-muted: #86868b;
             --success-color: #30d158;
         }
-
-        /* Light mode adaptive handling if embedded on light blogs */
         @media (prefers-color-scheme: light) {
             :root {
                 --bg-glass: rgba(0, 0, 0, 0.02);
@@ -24,240 +22,64 @@
                 --text-muted: #86868b;
             }
         }
-
-        body {
-            margin: 0;
-            padding: 12px;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: transparent;
-            color: var(--text-main);
-            overflow: hidden;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        .embed-wrapper {
-            position: relative;
-            width: 100%;
-            height: calc(100vh - 24px);
-            box-sizing: border-box;
-            border: 1px dashed var(--border-glass);
-            border-radius: 16px;
-            background: var(--bg-glass);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
-        }
-
-        .embed-wrapper.dragover {
-            border-color: var(--accent-glow);
-            background: var(--accent-glow-bg);
-            transform: scale(0.995);
-        }
-
-        .workspace-state {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            padding: 20px;
-            pointer-events: none;
-            transition: opacity 0.2s ease;
-        }
-
-        .icon-container {
-            width: 48px;
-            height: 48px;
-            margin-bottom: 14px;
-            color: var(--accent-glow);
-            transition: transform 0.2s ease;
-        }
-
-        .embed-wrapper.dragover .icon-container {
-            transform: translateY(-4px);
-        }
-
-        .primary-text {
-            font-size: 0.95rem;
-            font-weight: 500;
-            margin: 0 0 4px 0;
-            letter-spacing: -0.1px;
-        }
-
-        .secondary-text {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            margin: 0;
-        }
-
-        /* Live Optimization Metrics Overlay */
-        .metrics-overlay {
-            display: none;
-            width: 90%;
-            max-width: 280px;
-            background: var(--bg-glass);
-            border: 1px solid var(--border-glass);
-            border-radius: 12px;
-            padding: 12px;
-            margin-top: 10px;
-            box-sizing: border-box;
-        }
-
-        .metric-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.75rem;
-            margin-bottom: 6px;
-        }
-
-        .metric-row:last-child {
-            margin-bottom: 0;
-            padding-top: 6px;
-            border-top: 1px dashed var(--border-glass);
-        }
-
-        .metric-val {
-            font-weight: 600;
-        }
-
-        .savings-pct {
-            color: var(--success-color);
-        }
-
-        /* Subtle Dynamic Brand Footer Badge */
-        .brand-badge {
-            position: absolute;
-            bottom: 12px;
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            opacity: 0.7;
-            transition: opacity 0.2s ease;
-            pointer-events: auto;
-        }
-
-        .brand-badge:hover {
-            opacity: 1;
-        }
-
-        .brand-badge strong {
-            color: var(--accent-glow);
-            font-weight: 600;
-        }
-
-        #fileInput {
-            display: none;
-        }
+        body { margin: 0; padding: 12px; font-family: -apple-system, system-ui, sans-serif; background: transparent; color: var(--text-main); overflow: hidden; -webkit-font-smoothing: antialiased; }
+        .embed-wrapper { position: relative; width: 100%; height: calc(100vh - 24px); border: 1px dashed var(--border-glass); border-radius: 16px; background: var(--bg-glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; }
+        .embed-wrapper.dragover { border-color: var(--accent-glow); background: var(--accent-glow-bg); transform: scale(0.995); }
+        .workspace-state { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 20px; pointer-events: none; }
+        .icon-container { width: 48px; height: 48px; margin-bottom: 14px; color: var(--accent-glow); transition: transform 0.2s ease; }
+        .primary-text { font-size: 0.95rem; font-weight: 500; margin: 0 0 4px 0; }
+        .secondary-text { font-size: 0.8rem; color: var(--text-muted); margin: 0; }
+        .metrics-overlay { display: none; width: 90%; max-width: 280px; background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px; margin-top: 10px; box-sizing: border-box; }
+        .metric-row { display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 6px; }
+        .metric-row:last-child { margin-bottom: 0; padding-top: 6px; border-top: 1px dashed var(--border-glass); }
+        .metric-val { font-weight: 600; }
+        .savings-pct { color: var(--success-color); }
+        .brand-badge { position: absolute; bottom: 12px; font-size: 0.7rem; color: var(--text-muted); text-decoration: none; display: flex; align-items: center; gap: 4px; opacity: 0.7; pointer-events: auto; }
+        .brand-badge strong { color: var(--accent-glow); font-weight: 600; }
+        #fileInput { display: none; }
     </style>
 </head>
 <body>
-
     <input type="file" id="fileInput" accept="image/*">
-
     <div class="embed-wrapper" id="dropZone">
         <div class="workspace-state" id="viewState">
-            <svg class="icon-container" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-            </svg>
+            <svg class="icon-container" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
             <p class="primary-text" id="mainPrompt">Drop image to compress instantly</p>
             <p class="secondary-text" id="subPrompt">100% Private • Max 10MB</p>
-
             <div class="metrics-overlay" id="metricsPanel">
-                <div class="metric-row">
-                    <span style="color: var(--text-muted);">Original:</span>
-                    <span class="metric-val" id="origSize">0 KB</span>
-                </div>
-                <div class="metric-row">
-                    <span style="color: var(--text-muted);">Optimized:</span>
-                    <span class="metric-val" id="optSize">0 KB</span>
-                </div>
-                <div class="metric-row">
-                    <span style="font-weight: 500;">Saved:</span>
-                    <span class="metric-val savings-pct" id="savingsPct">0%</span>
-                </div>
+                <div class="metric-row"><span style="color: var(--text-muted);">Original:</span><span class="metric-val" id="origSize">0 KB</span></div>
+                <div class="metric-row"><span style="color: var(--text-muted);">Optimized:</span><span class="metric-val" id="optSize">0 KB</span></div>
+                <div class="metric-row"><span>Saved:</span><span class="metric-val savings-pct" id="savingsPct">0%</span></div>
             </div>
         </div>
-
-        <a href="https://squeezes.vercel.app" target="_blank" class="brand-badge">
-            Secure processing via <strong>Squeezes</strong> ↗
-        </a>
+        <a href="https://squeezes.vercel.app" target="_blank" class="brand-badge">Secure processing via <strong>Squeezes</strong> ↗</a>
     </div>
-
     <script>
-        const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('fileInput');
-        const mainPrompt = document.getElementById('mainPrompt');
-        const subPrompt = document.getElementById('subPrompt');
-        const metricsPanel = document.getElementById('metricsPanel');
-        const origSizeEl = document.getElementById('origSize');
-        const optSizeEl = document.getElementById('optSize');
-        const savingsPctEl = document.getElementById('savingsPct');
+        const dropZone = document.getElementById('dropZone'); const fileInput = document.getElementById('fileInput');
+        const mainPrompt = document.getElementById('mainPrompt'); const subPrompt = document.getElementById('subPrompt');
+        const metricsPanel = document.getElementById('metricsPanel'); const origSizeEl = document.getElementById('origSize');
+        const optSizeEl = document.getElementById('optSize'); const savingsPctEl = document.getElementById('savingsPct');
 
-        // Fire implicit target directory trigger window
-        dropZone.addEventListener('click', (e) => {
-            if (e.target.tagName === 'A' || e.target.parentNode.tagName === 'A') return;
-            fileInput.click();
-        });
-
-        fileInput.addEventListener('change', () => {
-            if (fileInput.files.length > 0) processEmbedFile(fileInput.files[0]);
-        });
-
-        // Interface drag-and-drop runtime handlers
+        dropZone.addEventListener('click', (e) => { if (e.target.tagName !== 'A' && e.target.parentNode.tagName !== 'A') fileInput.click(); });
+        fileInput.addEventListener('change', () => { if (fileInput.files.length > 0) processEmbedFile(fileInput.files[0]); });
         dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
         dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            if (e.dataTransfer.files.length > 0) processEmbedFile(e.dataTransfer.files[0]);
-        });
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files.length > 0) processEmbedFile(e.dataTransfer.files[0]); });
 
         async function processEmbedFile(file) {
-            if (!file.type.startsWith('image/')) {
-                mainPrompt.textContent = "Unsupported File Format";
-                return;
-            }
-
-            mainPrompt.textContent = "Optimizing Locally...";
-            subPrompt.textContent = "Processing runtime memory canvas layers...";
-            metricsPanel.style.display = 'none';
-
+            if (!file.type.startsWith('image/')) { mainPrompt.textContent = "Unsupported Format"; return; }
+            mainPrompt.textContent = "Optimizing Locally..."; metricsPanel.style.display = 'none';
             try {
                 const originalSize = file.size;
-                // Run image compression via native Canvas viewport pipeline logic (Quality: 65%)
                 const optimizedBlob = await runLocalCanvasEngine(file, file.type, 0.65);
                 const finalBlob = optimizedBlob.size >= originalSize ? file : optimizedBlob;
-
-                // Render metrics instantly onto structural wrapper markup
                 origSizeEl.textContent = (originalSize / 1024).toFixed(1) + " KB";
                 optSizeEl.textContent = (finalBlob.size / 1024).toFixed(1) + " KB";
-                
-                const reduction = Math.max(0, Math.round(((originalSize - finalBlob.size) / originalSize) * 100));
-                savingsPctEl.textContent = reduction + "%";
-
-                // Update UI messaging state
-                mainPrompt.textContent = "Optimization Complete!";
-                subPrompt.textContent = "Click container to download file";
+                savingsPctEl.textContent = Math.max(0, Math.round(((originalSize - finalBlob.size) / originalSize) * 100)) + "%";
+                mainPrompt.textContent = "Optimization Complete!"; subPrompt.textContent = "Click container to download file";
                 metricsPanel.style.display = 'block';
-
-                // Re-bind container interaction directly to execute client-side file package export drop
-                dropZone.onclick = (e) => {
-                    if (e.target.tagName === 'A' || e.target.parentNode.tagName === 'A') return;
-                    triggerDownload(finalBlob, file.name, finalBlob.type);
-                };
-
-            } catch (err) {
-                console.error("Embed processing pipeline failure:", err);
-                mainPrompt.textContent = "Processing Error";
-                subPrompt.textContent = "Fallback local failure execution.";
-            }
+                dropZone.onclick = (e) => { if (e.target.tagName !== 'A' && e.target.parentNode.tagName !== 'A') triggerDownload(finalBlob, file.name, finalBlob.type); };
+            } catch (err) { mainPrompt.textContent = "Processing Error"; }
         }
 
         function runLocalCanvasEngine(file, mimeType, quality) {
@@ -266,13 +88,9 @@
                 reader.onload = (e) => {
                     const img = new Image();
                     img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
-                        canvas.width = img.width;
-                        canvas.height = img.height;
-                        ctx.drawImage(img, 0, 0, img.width, img.height);
-                        let targetMime = mimeType === 'image/png' ? 'image/webp' : mimeType;
-                        canvas.toBlob((blob) => resolve(blob || file), targetMime, quality);
+                        const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height;
+                        canvas.getContext('2d').drawImage(img, 0, 0, img.width, img.height);
+                        canvas.toBlob((blob) => resolve(blob || file), mimeType === 'image/png' ? 'image/webp' : mimeType, quality);
                     };
                     img.src = e.target.result;
                 };
@@ -281,26 +99,11 @@
         }
 
         function triggerDownload(blob, originalName, mimeType) {
-            let ext = mimeType.split('/')[1] || 'dat';
-            if (ext === 'jpeg') ext = 'jpg';
-            
-            const nameSegments = originalName.split('.');
-            if (nameSegments.length > 1) nameSegments.pop();
-            const downloadName = nameSegments.join('.') + '_squeezed.' + ext;
-
-            const url = URL.createObjectURL(blob);
-            const anchor = document.createElement('a');
-            anchor.href = url;
-            anchor.download = downloadName;
-            document.body.appendChild(anchor);
-            anchor.click();
-            document.body.removeChild(anchor);
-            
-            // Instantly restore core container system parameters to allow fresh uploads loops
-            setTimeout(() => {
-                URL.revokeObjectURL(url);
-                location.reload(); // Returns wrapper to baseline blank drop target seamlessly
-            }, 500);
+            let ext = mimeType.split('/')[1] || 'dat'; if (ext === 'jpeg') ext = 'jpg';
+            const nameSegments = originalName.split('.'); if (nameSegments.length > 1) nameSegments.pop();
+            const anchor = document.createElement('a'); anchor.href = URL.createObjectURL(blob);
+            anchor.download = nameSegments.join('.') + '_squeezes.' + ext; anchor.click();
+            setTimeout(() => location.reload(), 500);
         }
     </script>
 </body>
