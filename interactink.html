@@ -105,15 +105,16 @@
     <div id="hoverPreviewBox" class="absolute bg-black border border-white text-neutral-300 text-xs p-4 shadow-2xl hidden z-50 max-w-sm pointer-events-none border-l-4 border-l-white"></div>
 
     <script>
-        // CREDENTIAL CHANNELS RE-MAPPED TO AVOID INTERNAL VARIABLE COLLISIONS
         const SUPABASE_URL = "https://xdshsodkuyawljzuirqt.supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
         
-        const supabaseClient = Supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
+        let supabaseClient;
         const appState = { threads: {}, comments: {}, activeThreadId: null, userSeed: null };
 
-        window.addEventListener('DOMContentLoaded', async () => {
+        window.addEventListener('load', async () => {
+            // Guarantee library load state sanity check
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            
             initSeedEngine();
             bindEventListeners();
             await fetchInitialData();
