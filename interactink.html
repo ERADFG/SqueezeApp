@@ -161,7 +161,11 @@
                 
                 updateGlobalCounterUI();
                 await loadPage(1);
-            } catch (err) { console.error("Initialization Error:", err); }
+            } catch (err) { 
+                console.error("Initialization Error:", err); 
+                // Fallback rendering attempt to make sure loading screens dismiss
+                renderThreads(); 
+            }
         }
 
         async function loadPage(pageNumber) {
@@ -172,22 +176,27 @@
             document.getElementById('latestStream').innerHTML = `<div class="text-xs text-neutral-500 text-center py-10 font-mono animate-pulse">Syncing Slide ${pageNumber}...</div>`;
 
             try {
-                const { data: threads } = await supabaseClient.from('threads')
+                const { data: threads, error: threadErr } = await supabaseClient.from('threads')
                     .select('*')
                     .order('timestamp', { ascending: false })
                     .range(startRange, endRange);
                 
+                if (threadErr) throw threadErr;
+
                 appState.threads = {};
+                appState.commentCounts = {};
+                
                 if (threads && threads.length > 0) {
                     threads.forEach(t => appState.threads[t.id] = t);
                     
-                    // Optimized: Only fetch comment counts for the threads currently visible on the slide
                     const threadIds = threads.map(t => t.id);
-                    const { data: commentIds } = await supabaseClient.from('comments')
+                    // Fixed: wrapped native array context properly inside Supabase relational parsing query matchers
+                    const { data: commentIds, error: commentErr } = await supabaseClient.from('comments')
                         .select('thread_id')
                         .in('thread_id', threadIds);
                     
-                    appState.commentCounts = {};
+                    if (commentErr) throw commentErr;
+
                     if (commentIds) {
                         commentIds.forEach(c => {
                             appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
@@ -196,7 +205,10 @@
                 }
                 
                 renderThreads();
-            } catch(err) { console.error("Slide Load Error:", err); }
+            } catch(err) { 
+                console.error("Slide Load Error:", err);
+                renderThreads(); // Fallback safely to clear loading state
+            }
         }
 
         window.changeSlide = function(direction) {
@@ -229,7 +241,6 @@
                         const c = payload.new;
                         appState.cachedCounts.comments++;
                         
-                        // Update local count if thread is on current slide
                         if (appState.threads[c.thread_id]) {
                             appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
                         }
@@ -273,7 +284,6 @@
                 title.value = ''; threadContent.value = '';
                 threadCharCounter.innerText = '0/1000';
                 
-                // If not on page 1, immediately snap back to page 1 to see the new post
                 if (appState.currentPage !== 1) {
                     loadPage(1);
                 }
@@ -300,22 +310,28 @@
 
         function renderThreads() {
             const threadList = Object.values(appState.threads);
-            
-            // Enforce max 20 posts per view locally in case Realtime added new ones ahead of array bounds
-            const chronological = [...threadList].sort((a, b) => b.timestamp - a.timestamp).slice(0, appState.postsPerPage);
-            
             const latestContainer = document.getElementById('latestStream');
             latestContainer.innerHTML = '';
+
+            if (threadList.length === 0) {
+                latestContainer.innerHTML = `<div class="text-xs text-neutral-600 text-center py-14 font-mono">No network posts logged on this directory stream.</div>`;
+                renderPaginationFooter(latestContainer);
+                return;
+            }
             
-            // Thread Container
+            const chronological = [...threadList].sort((a, b) => b.timestamp - a.timestamp).slice(0, appState.postsPerPage);
+            
             const listWrapper = document.createElement('div');
             listWrapper.className = "divide-y divide-neutral-800 flex-1";
             chronological.forEach(t => listWrapper.appendChild(createThreadElementCard(t)));
             latestContainer.appendChild(listWrapper);
 
-            // Pagination Slide Controls Footer
+            renderPaginationFooter(latestContainer);
+            lucide.createIcons();
+        }
+
+        function renderPaginationFooter(container) {
             const totalPages = Math.ceil(appState.cachedCounts.threads / appState.postsPerPage) || 1;
-            
             const paginationHTML = `
                 <div class="flex justify-between items-center p-4 bg-neutral-950 border-t border-neutral-800 mt-auto">
                     <button onclick="changeSlide(-1)" class="px-5 py-2 text-xs font-bold rounded-full border transition duration-200 ${appState.currentPage > 1 ? 'border-neutral-700 text-white hover:bg-neutral-800 cursor-pointer' : 'border-neutral-900 text-neutral-700 cursor-not-allowed opacity-50'}" ${appState.currentPage === 1 ? 'disabled' : ''}>
@@ -327,9 +343,7 @@
                     </button>
                 </div>
             `;
-            latestContainer.insertAdjacentHTML('beforeend', paginationHTML);
-            
-            lucide.createIcons();
+            container.insertAdjacentHTML('beforeend', paginationHTML);
         }
 
         function createThreadElementCard(thread) {
