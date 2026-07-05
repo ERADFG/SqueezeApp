@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>InteractInk - Anonymous Text Board</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -13,14 +13,13 @@
         ::-webkit-scrollbar-track { background: #000000; }
         ::-webkit-scrollbar-thumb { background: #202327; border-radius: 9999px; }
         input, textarea { background-color: #000000 !important; }
-        /* Style for hyperlinked content */
         .user-link { color: #3b82f6; text-decoration: underline; font-weight: 500; transition: color 0.1s ease; }
         .user-link:hover { color: #60a5fa; }
     </style>
 </head>
-<body class="min-h-screen font-sans antialiased selection:bg-neutral-800 selection:text-white">
+<body class="min-h-screen font-sans antialiased selection:bg-neutral-800 selection:text-white flex justify-center">
 
-    <div class="max-w-2xl mx-auto min-h-screen flex flex-col border-x border-neutral-800">
+    <div class="max-w-2xl w-full min-h-screen flex flex-col border-x border-neutral-800">
         
         <header class="sticky top-0 bg-black/80 backdrop-blur-md border-b border-neutral-800 p-4 z-40 flex justify-between items-center">
             <h2 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
@@ -62,7 +61,7 @@
             </form>
         </section>
 
-        <main id="latestStream" class="divide-y divide-neutral-800 flex-1"></main>
+        <main id="latestStream" class="flex-1 flex flex-col"></main>
     </div>
 
     <div id="threadModal" class="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
@@ -86,7 +85,6 @@
                 </div>
 
                 <div class="border-b border-neutral-800"></div>
-
                 <div id="commentTreeContainer" class="space-y-4"></div>
             </div>
 
@@ -110,10 +108,19 @@
 
     <script>
         const SUPABASE_URL = "https://xdshsodkuyawljzuirqt.supabase.co";
-        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inxdc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
         
         let supabaseClient;
-        const appState = { threads: {}, comments: {}, commentCounts: {}, activeThreadId: null, userSeed: null, cachedCounts: { threads: 0, comments: 0 } };
+        const appState = { 
+            threads: {}, 
+            comments: {}, 
+            commentCounts: {}, 
+            activeThreadId: null, 
+            userSeed: null, 
+            cachedCounts: { threads: 0, comments: 0 },
+            currentPage: 1,
+            postsPerPage: 20
+        };
 
         window.addEventListener('load', async () => {
             if (!window.supabase) return;
@@ -121,11 +128,8 @@
             
             initSeedEngine();
             bindEventListeners();
-            await fetchInitialData();
+            await fetchInitialCounts();
             initRealtimeSync();
-            renderThreads();
-            lucide.createIcons();
-            setInterval(() => renderThreads(), 30000);
         });
 
         function initSeedEngine() {
@@ -145,18 +149,8 @@
             return 'Anon#' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 4);
         }
 
-        async function fetchInitialData() {
+        async function fetchInitialCounts() {
             try {
-                const { data: threads } = await supabaseClient.from('threads').select('*').order('timestamp', { ascending: false }).limit(30);
-                if (threads) threads.forEach(t => appState.threads[t.id] = t);
-
-                const { data: commentIds } = await supabaseClient.from('comments').select('thread_id');
-                if (commentIds) {
-                    commentIds.forEach(c => {
-                        appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
-                    });
-                }
-
                 const [threadCountRes, commentCountRes] = await Promise.all([
                     supabaseClient.from('threads').select('*', { count: 'exact', head: true }),
                     supabaseClient.from('comments').select('*', { count: 'exact', head: true })
@@ -166,26 +160,79 @@
                 appState.cachedCounts.comments = commentCountRes.count || 0;
                 
                 updateGlobalCounterUI();
-            } catch (err) { console.error(err); }
+                await loadPage(1);
+            } catch (err) { console.error("Initialization Error:", err); }
         }
+
+        async function loadPage(pageNumber) {
+            appState.currentPage = pageNumber;
+            const startRange = (pageNumber - 1) * appState.postsPerPage;
+            const endRange = startRange + (appState.postsPerPage - 1);
+            
+            document.getElementById('latestStream').innerHTML = `<div class="text-xs text-neutral-500 text-center py-10 font-mono animate-pulse">Syncing Slide ${pageNumber}...</div>`;
+
+            try {
+                const { data: threads } = await supabaseClient.from('threads')
+                    .select('*')
+                    .order('timestamp', { ascending: false })
+                    .range(startRange, endRange);
+                
+                appState.threads = {};
+                if (threads && threads.length > 0) {
+                    threads.forEach(t => appState.threads[t.id] = t);
+                    
+                    // Optimized: Only fetch comment counts for the threads currently visible on the slide
+                    const threadIds = threads.map(t => t.id);
+                    const { data: commentIds } = await supabaseClient.from('comments')
+                        .select('thread_id')
+                        .in('thread_id', threadIds);
+                    
+                    appState.commentCounts = {};
+                    if (commentIds) {
+                        commentIds.forEach(c => {
+                            appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
+                        });
+                    }
+                }
+                
+                renderThreads();
+            } catch(err) { console.error("Slide Load Error:", err); }
+        }
+
+        window.changeSlide = function(direction) {
+            const totalPages = Math.ceil(appState.cachedCounts.threads / appState.postsPerPage) || 1;
+            const newPage = appState.currentPage + direction;
+            if (newPage >= 1 && newPage <= totalPages) {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                loadPage(newPage);
+            }
+        };
 
         function initRealtimeSync() {
             supabaseClient.channel('global-changes')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'threads' }, payload => {
                     if (payload.eventType === 'INSERT') {
-                        appState.threads[payload.new.id] = payload.new;
                         appState.cachedCounts.threads++;
+                        if (appState.currentPage === 1) {
+                            appState.threads[payload.new.id] = payload.new;
+                        }
                     } else if (payload.eventType === 'UPDATE') {
-                        appState.threads[payload.new.id] = payload.new;
+                        if (appState.threads[payload.new.id]) {
+                            appState.threads[payload.new.id] = payload.new;
+                        }
                     }
                     updateGlobalCounterUI();
-                    renderThreads();
+                    if (appState.currentPage === 1) renderThreads();
                 })
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, payload => {
                     if (payload.eventType === 'INSERT') {
                         const c = payload.new;
                         appState.cachedCounts.comments++;
-                        appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
+                        
+                        // Update local count if thread is on current slide
+                        if (appState.threads[c.thread_id]) {
+                            appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
+                        }
                         
                         if (appState.activeThreadId === c.thread_id) {
                             if (!appState.comments[c.thread_id]) appState.comments[c.thread_id] = {};
@@ -225,6 +272,11 @@
                 await supabaseClient.from('threads').insert([{ id, title: parsedTitle, content: threadContent.value.trim(), timestamp: Date.now(), upvotes: 1 }]);
                 title.value = ''; threadContent.value = '';
                 threadCharCounter.innerText = '0/1000';
+                
+                // If not on page 1, immediately snap back to page 1 to see the new post
+                if (appState.currentPage !== 1) {
+                    loadPage(1);
+                }
             });
 
             document.getElementById('commentForm').addEventListener('submit', async (e) => {
@@ -248,11 +300,35 @@
 
         function renderThreads() {
             const threadList = Object.values(appState.threads);
-            const chronological = [...threadList].sort((a, b) => b.timestamp - a.timestamp);
+            
+            // Enforce max 20 posts per view locally in case Realtime added new ones ahead of array bounds
+            const chronological = [...threadList].sort((a, b) => b.timestamp - a.timestamp).slice(0, appState.postsPerPage);
             
             const latestContainer = document.getElementById('latestStream');
             latestContainer.innerHTML = '';
-            chronological.forEach(t => latestContainer.appendChild(createThreadElementCard(t)));
+            
+            // Thread Container
+            const listWrapper = document.createElement('div');
+            listWrapper.className = "divide-y divide-neutral-800 flex-1";
+            chronological.forEach(t => listWrapper.appendChild(createThreadElementCard(t)));
+            latestContainer.appendChild(listWrapper);
+
+            // Pagination Slide Controls Footer
+            const totalPages = Math.ceil(appState.cachedCounts.threads / appState.postsPerPage) || 1;
+            
+            const paginationHTML = `
+                <div class="flex justify-between items-center p-4 bg-neutral-950 border-t border-neutral-800 mt-auto">
+                    <button onclick="changeSlide(-1)" class="px-5 py-2 text-xs font-bold rounded-full border transition duration-200 ${appState.currentPage > 1 ? 'border-neutral-700 text-white hover:bg-neutral-800 cursor-pointer' : 'border-neutral-900 text-neutral-700 cursor-not-allowed opacity-50'}" ${appState.currentPage === 1 ? 'disabled' : ''}>
+                        &larr; Previous Slide
+                    </button>
+                    <span class="text-[11px] font-mono font-semibold tracking-widest text-neutral-500 uppercase">Slide ${appState.currentPage} / ${totalPages}</span>
+                    <button onclick="changeSlide(1)" class="px-5 py-2 text-xs font-bold rounded-full border transition duration-200 ${appState.currentPage < totalPages ? 'border-neutral-700 text-white hover:bg-neutral-800 cursor-pointer' : 'border-neutral-900 text-neutral-700 cursor-not-allowed opacity-50'}" ${appState.currentPage >= totalPages ? 'disabled' : ''}>
+                        Next Slide &rarr;
+                    </button>
+                </div>
+            `;
+            latestContainer.insertAdjacentHTML('beforeend', paginationHTML);
+            
             lucide.createIcons();
         }
 
@@ -263,7 +339,6 @@
             card.className = "p-4 hover:bg-neutral-900/40 cursor-pointer transition duration-200 flex flex-col";
             card.onclick = () => openThreadModal(thread.id);
             
-            // Integrated link conversion parsing to content cards
             const processedContent = parseRichTextContent(escapeHTML(thread.content));
             
             card.innerHTML = `
@@ -286,7 +361,6 @@
 
             document.getElementById('modalMeta').innerText = `NODE SYSTEM: >>${thread.id} // VERIFIED PIPELINE`;
             document.getElementById('modalTitle').innerText = thread.title;
-            // Stop click bubbling on links so clicking a link doesn't reset the modal trigger state
             document.getElementById('modalOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content));
             document.getElementById('threadModal').classList.remove('hidden');
             
@@ -349,8 +423,6 @@
             item.id = `comment-${node.id}`;
 
             const dateStr = new Date(node.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            
-            // Parse both cross-links references AND raw outer links safely inside comment items
             const structuralLinkedProcessedText = parseRichTextContent(escapeHTML(node.text));
 
             item.innerHTML = `
@@ -378,17 +450,14 @@
             input.focus();
         }
 
-        // Consolidated Rich Formatting Parser (Processes links + board cross-references)
         function parseRichTextContent(text) {
             if (!text) return '';
 
-            // 1. Process board cross-links layout engines (>>ID codes)
             const nodeCrossRegex = /&gt;&gt;([A-Fa-f0-9]{8})/g;
             text = text.replace(nodeCrossRegex, (match, id) => {
                 return `<a href="#comment-${id}" data-preview-id="${id}" class="text-white underline font-bold cross-link-node" onclick="event.stopPropagation();">${match}</a>`;
             });
 
-            // 2. Safe URL matching layout regex parser
             const rawUrlRegex = /(https?:\/\/[^\s]+)/g;
             text = text.replace(rawUrlRegex, (url) => {
                 return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="user-link" onclick="event.stopPropagation();">${url}</a>`;
