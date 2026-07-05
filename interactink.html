@@ -25,7 +25,7 @@
             </h2>
             <div class="flex items-center gap-2">
                 <div class="px-3 py-1 text-[10px] font-mono font-semibold text-neutral-400 bg-neutral-900 border border-neutral-800 rounded-full uppercase tracking-wider">
-                    Total Posts: <span id="globalPostCount" class="text-white">0</span>
+                    Total Broadcasts: <span id="globalPostCount" class="text-white">0</span>
                 </div>
                 <div class="px-3 py-1 flex items-center gap-2 rounded-full bg-neutral-900 border border-neutral-800">
                     <span class="relative flex h-1.5 w-1.5 shrink-0">
@@ -110,7 +110,8 @@
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
         
         let supabaseClient;
-        const appState = { threads: {}, comments: {}, activeThreadId: null, userSeed: null };
+        // Optimization: appState counts are tracked directly via single digits now to conserve memory heap
+        const appState = { threads: {}, comments: {}, activeThreadId: null, userSeed: null, cachedCounts: { threads: 0, comments: 0 } };
 
         window.addEventListener('load', async () => {
             if (!window.supabase) return;
@@ -144,49 +145,54 @@
 
         async function fetchInitialData() {
             try {
-                const { data: threads } = await supabaseClient.from('threads').select('*');
+                // Performance Optimization: Grab only the latest 30 threads instead of the whole database
+                const { data: threads } = await supabaseClient.from('threads').select('*').order('timestamp', { ascending: false }).limit(30);
                 if (threads) threads.forEach(t => appState.threads[t.id] = t);
 
-                const { data: comments } = await supabaseClient.from('comments').select('*');
-                if (comments) {
-                    comments.forEach(c => {
-                        if (!appState.comments[c.thread_id]) appState.comments[c.thread_id] = {};
-                        appState.comments[c.thread_id][c.id] = c;
-                    });
-                }
-                updateGlobalCounter();
+                // Performance Optimization: Fetch metadata row counts via headers instead of transferring text rows
+                const [threadCountRes, commentCountRes] = await Promise.all([
+                    supabaseClient.from('threads').select('*', { count: 'exact', head: true }),
+                    supabaseClient.from('comments').select('*', { count: 'exact', head: true })
+                ]);
+
+                appState.cachedCounts.threads = threadCountRes.count || 0;
+                appState.cachedCounts.comments = commentCountRes.count || 0;
+                
+                updateGlobalCounterUI();
             } catch (err) { console.error(err); }
         }
 
         function initRealtimeSync() {
             supabaseClient.channel('global-changes')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'threads' }, payload => {
-                    if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+                    if (payload.eventType === 'INSERT') {
+                        appState.threads[payload.new.id] = payload.new;
+                        appState.cachedCounts.threads++;
+                    } else if (payload.eventType === 'UPDATE') {
                         appState.threads[payload.new.id] = payload.new;
                     }
-                    updateGlobalCounter();
+                    updateGlobalCounterUI();
                     renderThreads();
                 })
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, payload => {
                     if (payload.eventType === 'INSERT') {
                         const c = payload.new;
-                        if (!appState.comments[c.thread_id]) appState.comments[c.thread_id] = {};
-                        appState.comments[c.thread_id][c.id] = c;
-                        if (appState.activeThreadId === c.thread_id) renderCommentTree();
+                        appState.cachedCounts.comments++;
+                        
+                        // Dynamically append new comments in realtime if user is currently looking at that specific thread modal
+                        if (appState.activeThreadId === c.thread_id) {
+                            if (!appState.comments[c.thread_id]) appState.comments[c.thread_id] = {};
+                            appState.comments[c.thread_id][c.id] = c;
+                            renderCommentTree();
+                        }
                     }
-                    updateGlobalCounter();
-                    renderThreads();
+                    updateGlobalCounterUI();
                 })
                 .subscribe();
         }
 
-        function updateGlobalCounter() {
-            const threadCount = Object.keys(appState.threads).length;
-            let commentCount = 0;
-            Object.values(appState.comments).forEach(threadMap => {
-                commentCount += Object.keys(threadMap).length;
-            });
-            document.getElementById('globalPostCount').innerText = threadCount + commentCount;
+        function updateGlobalCounterUI() {
+            document.getElementById('globalPostCount').innerText = appState.cachedCounts.threads + appState.cachedCounts.comments;
         }
 
         function bindEventListeners() {
@@ -219,8 +225,15 @@
 
                 const id = Math.random().toString(16).substring(2, 10);
                 const tripcode = await generateTripcode(appState.activeThreadId, appState.userSeed);
+                const textVal = commentInput.value.trim();
 
-                await supabaseClient.from('comments').insert([{ id, thread_id: appState.activeThreadId, tripcode, text: commentInput.value.trim(), timestamp: Date.now() }]);
+                await supabaseClient.from('comments').insert([{ id, thread_id: appState.activeThreadId, tripcode, text: textVal, timestamp: Date.now() }]);
+                
+                // Instantly patch active local context to avoid additional round-trips
+                if (!appState.comments[appState.activeThreadId]) appState.comments[appState.activeThreadId] = {};
+                appState.comments[appState.activeThreadId][id] = { id, thread_id: appState.activeThreadId, tripcode, text: textVal, timestamp: Date.now() };
+                
+                renderCommentTree();
                 commentInput.value = '';
                 commentCharCounter.innerText = '0/300';
             });
@@ -237,13 +250,11 @@
         }
 
         function createThreadElementCard(thread) {
-            const commentCount = appState.comments[thread.id] ? Object.keys(appState.comments[thread.id]).length : 0;
             const dateStr = new Date(thread.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const card = document.createElement('div');
             card.className = "p-4 hover:bg-neutral-900/40 cursor-pointer transition duration-200 flex flex-col";
             card.onclick = () => openThreadModal(thread.id);
             
-            // Clean view counter design removed
             card.innerHTML = `
                 <div class="flex items-center justify-between text-xs text-neutral-500 mb-1">
                     <span class="font-bold text-neutral-300 uppercase tracking-wide truncate max-w-[70%]">${escapeHTML(thread.title)}</span>
@@ -251,13 +262,13 @@
                 </div>
                 <p class="text-neutral-300 text-sm leading-relaxed mb-3 break-words whitespace-pre-wrap">${escapeHTML(thread.content)}</p>
                 <div class="flex items-center gap-6 text-xs text-neutral-500">
-                    <span class="flex items-center gap-1.5 hover:text-neutral-300 transition"><i data-lucide="message-square" class="w-4 h-4"></i> ${commentCount}</span>
+                    <span class="flex items-center gap-1.5 hover:text-neutral-300 transition"><i data-lucide="message-square" class="w-4 h-4"></i> View Cluster</span>
                 </div>
             `;
             return card;
         }
 
-        function openThreadModal(tId) {
+        async function openThreadModal(tId) {
             appState.activeThreadId = tId;
             const thread = appState.threads[tId];
             if (!thread) return;
@@ -266,7 +277,16 @@
             document.getElementById('modalTitle').innerText = thread.title;
             document.getElementById('modalOpBody').innerText = thread.content;
             document.getElementById('threadModal').classList.remove('hidden');
-            renderCommentTree();
+            
+            // Performance Optimization: Load comments for this specific thread on demand
+            document.getElementById('commentTreeContainer').innerHTML = `<div class="text-xs text-neutral-600 text-center py-6 font-mono animate-pulse">Syncing linked node packets...</div>`;
+            
+            try {
+                const { data: comments } = await supabaseClient.from('comments').select('*').eq('thread_id', tId);
+                appState.comments[tId] = {};
+                if (comments) comments.forEach(c => appState.comments[tId][c.id] = c);
+                renderCommentTree();
+            } catch (err) { console.error(err); }
         }
 
         function closeThreadModal() {
@@ -345,7 +365,6 @@
             input.focus();
         }
 
-        // Cross-linking syntax handlers
         function parseCrossLinksReferences(text) {
             const regex = /&gt;&gt;([A-Fa-f0-9]{8})/g;
             return text.replace(regex, (match, id) => `<a href="#comment-${id}" data-preview-id="${id}" class="text-white underline font-bold cross-link-node">${match}</a>`);
