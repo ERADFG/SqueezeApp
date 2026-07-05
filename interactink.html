@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InteractInk — Decentralized Anonymous Textboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- GunDB Core + Matrix Relay Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
+    <style>
+        body {
+            background-color: #050508;
+            color: #f3f4f6;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #050508;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e1b4b;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-mono text-sm subpixel-antialiased selection:bg-indigo-900/50">
+
+    <!-- Top Navigation Header -->
+    <header class="border-b border-indigo-950/60 bg-[#07070c]/80 backdrop-blur sticky top-0 z-40 px-4 py-3">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="flex items-center gap-4">
+                <a href="blogs.html" class="text-indigo-500 hover:text-indigo-400 text-xs no-underline">← Blog directory</a>
+                <h1 class="text-lg font-bold tracking-tight text-indigo-400">InteractInk</h1>
+                <span class="text-[10px] bg-indigo-950 text-indigo-400 border border-indigo-900/50 px-2 py-0.5 rounded uppercase tracking-wider font-sans font-semibold">Zero-Server Mesh</span>
+            </div>
+            <div class="flex items-center gap-4 text-xs text-slate-400">
+                <div id="connectionStatus" class="flex items-center gap-2">
+                    <span class="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                    <span>Synchronizing Network Matrix...</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace Frame -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 flex flex-col lg:flex-row gap-6">
+        
+        <!-- Left Column: Stream Controls & Multi-Feed Engine -->
+        <div class="flex-1 flex flex-col gap-6 lg:max-w-2xl xl:max-w-3xl">
+            
+            <!-- Global Message Post Input Shell -->
+            <section class="bg-[#090911] border border-indigo-950/80 rounded-xl p-4 shadow-xl">
+                <h2 class="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-3">Broadcast New Thread Node</h2>
+                <form id="threadForm" class="space-y-3">
+                    <input type="text" id="threadTitle" placeholder="Thread Subject / Topic..." required max="100"
+                           class="w-full bg-[#050508] border border-indigo-950 text-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500 placeholder:text-slate-600">
+                    <textarea id="threadContent" placeholder="Enter anonymous text content packets..." required rows="4"
+                              class="w-full bg-[#050508] border border-indigo-950 text-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500 placeholder:text-slate-600 resize-none"></textarea>
+                    <div class="flex justify-between items-center pt-1">
+                        <span class="text-[11px] text-slate-500">Tripcode generation active via storage layer</span>
+                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-2 rounded-lg transition-colors cursor-pointer text-xs">
+                            Commit Pipeline
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- The "Latest" Chronological Thread Stream Container -->
+            <section class="bg-[#090911] border border-indigo-950/80 rounded-xl p-4 flex-1 flex flex-col">
+                <div class="flex justify-between items-center mb-4 border-b border-indigo-950 pb-2">
+                    <h2 class="text-xs font-semibold text-indigo-400 uppercase tracking-wider">Stream: Latest Nodes</h2>
+                    <span class="text-[10px] text-slate-500 uppercase tracking-widest font-sans" id="latestCount">0 Posted</span>
+                </div>
+                <div id="latestStream" class="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+                    <!-- Dynamic Stream Context Injection Nodes -->
+                </div>
+            </section>
+        </div>
+
+        <!-- Right Side: Trending Performance Metrics (24h Window) -->
+        <aside class="w-full lg:w-80 xl:w-96 shrink-0 flex flex-col gap-6">
+            <section class="bg-[#090911] border border-indigo-950/80 rounded-xl p-4 sticky top-20 shadow-xl">
+                <div class="flex justify-between items-center mb-4 border-b border-indigo-950 pb-2">
+                    <h2 class="text-xs font-semibold text-rose-400 uppercase tracking-wider">Trending Metrics (Past 24h)</h2>
+                    <span class="text-[10px] text-slate-500 font-sans uppercase">Time-Decay Sorting</span>
+                </div>
+                <div id="trendingStream" class="space-y-3 max-h-[650px] overflow-y-auto pr-1">
+                    <!-- Sorted Time-Decay Matrices Injection Nodes -->
+                </div>
+            </section>
+        </aside>
+    </main>
+
+    <!-- Deep-Threaded Dynamic Modal Context Overlay -->
+    <div id="threadModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-[#07070c] border border-indigo-950 w-full max-w-4xl h-[85vh] rounded-xl flex flex-col overflow-hidden shadow-2xl">
+            <!-- Modal Header Core -->
+            <div class="p-4 border-b border-indigo-950 bg-[#090911] flex justify-between items-center">
+                <div>
+                    <span id="modalMeta" class="text-[11px] text-indigo-400 block mb-1">Thread Module ID</span>
+                    <h3 id="modalTitle" class="text-base font-bold text-slate-100">Thread Subject Target</h3>
+                </div>
+                <button onclick="closeThreadModal()" class="text-slate-500 hover:text-slate-300 font-bold p-1 cursor-pointer font-sans text-lg">&times;</button>
+            </div>
+            <!-- Thread Content / Comments Panel Area -->
+            <div class="flex-1 overflow-y-auto p-4 space-y-6" id="modalScrollBody">
+                <div id="modalOpBody" class="p-4 bg-[#0a0a14] border border-indigo-950/50 rounded-lg text-slate-300 border-l-2 border-l-indigo-500 leading-relaxed">
+                    <!-- OP Node Content text -->
+                </div>
+                <!-- Comments Render Node Stack -->
+                <div class="space-y-4">
+                    <h4 class="text-xs font-semibold text-indigo-400 uppercase tracking-wider border-b border-indigo-950/60 pb-2">Discussion Tree Matrix</h4>
+                    <div id="commentTreeContainer" class="space-y-2"></div>
+                </div>
+            </div>
+            <!-- Interactive Comment Injection Input Row -->
+            <div class="p-4 border-t border-indigo-950 bg-[#090911]">
+                <form id="commentForm" class="flex gap-2">
+                    <input type="text" id="commentInput" placeholder="Write reply token packet... (Use >>ID syntax to link replies)" autocomplete="off" required
+                           class="flex-1 bg-[#050508] border border-indigo-950 text-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500 placeholder:text-slate-600">
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-2 rounded-lg text-xs transition-colors cursor-pointer">
+                        Reply
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Persistent Absolute Anchor Link Floating Overlay Viewport Layer -->
+    <div id="hoverPreviewBox" class="absolute bg-[#0b0b14] border border-indigo-800 text-slate-300 text-xs p-3 rounded-lg shadow-2xl hidden z-50 max-w-sm pointer-events-none border-l-4 border-l-indigo-500"></div>
+
+    <!-- Core Runtime Module Script Block -->
+    <script>
+        // GunDB Infrastructure Initialization (Fallback Multi-Relay Graph Topology)
+        const gun = Gun({
+            peers: [
+                'https://gun-manhattan.herokuapp.com/gun',
+                'https://relay.peer.ooo/gun'
+            ]
+        });
+
+        const appState = {
+            threads: {},
+            comments: {},
+            activeThreadId: null,
+            userSeed: null
+        };
+
+        // Execution Core Entrypoint Routine
+        window.addEventListener('DOMContentLoaded', async () => {
+            initSeedEngine();
+            bindEventListeners();
+            initDataPipes();
+            
+            // Continuous 30-Second Sorting Matrix Decay Engine Clock Loop Execution
+            setInterval(() => {
+                renderThreads();
+            }, 30000);
+        });
+
+        // Initialize Internal Local Privacy Seed Engine Structures
+        function initSeedEngine() {
+            let seed = localStorage.getItem('ink_private_seed_key');
+            if (!seed) {
+                seed = [...Array(32)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
+                localStorage.setItem('ink_private_seed_key', seed);
+            }
+            appState.userSeed = seed;
+        }
+
+        // Web Crypto SHA-256 Iso-Thread Identity Generator API Wrapper Logic
+        async function generateTripcode(threadId, seedString) {
+            const encoder = new TextEncoder();
+            const rawBuffer = encoder.encode(threadId + seedString);
+            const digestBuffer = await crypto.subtle.digest('SHA-256', rawBuffer);
+            const hashArray = Array.from(new Uint8Array(digestBuffer));
+            const hexString = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            return 'Anon#' + hexString.substring(0, 6);
+        }
+
+        // Listen for Form Actions and Data Pipelines
+        function bindEventListeners() {
+            document.getElementById('threadForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const titleInput = document.getElementById('threadTitle');
+                const contentInput = document.getElementById('threadContent');
+                const tId = Math.random().toString(16).substring(2, 10);
+                
+                const postNode = {
+                    id: tId,
+                    title: titleInput.value.trim(),
+                    content: contentInput.value.trim(),
+                    timestamp: Date.now(),
+                    upvotes: 1,
+                    downvotes: 0
+                };
+
+                gun.get('interactink_threads_v1').get(tId).put(postNode);
+                
+                titleInput.value = '';
+                contentInput.value = '';
+            });
+
+            document.getElementById('commentForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const commentInput = document.getElementById('commentInput');
+                if (!appState.activeThreadId) return;
+
+                const cId = Math.random().toString(16).substring(2, 10);
+                const tripString = await generateTripcode(appState.activeThreadId, appState.userSeed);
+
+                const commentNode = {
+                    id: cId,
+                    threadId: appState.activeThreadId,
+                    tripcode: tripString,
+                    text: commentInput.value.trim(),
+                    timestamp: Date.now()
+                };
+
+                gun.get('interactink_comments_v1').get(appState.activeThreadId).get(cId).put(commentNode);
+                
+                // Track interaction on global thread model graph layer to manipulate scoring algorithm
+                gun.get('interactink_threads_v1').get(appState.activeThreadId).get('upvotes').once(v => {
+                    gun.get('interactink_threads_v1').get(appState.activeThreadId).put({ upvotes: (v || 1) + 1 });
+                });
+
+                commentInput.value = '';
+            });
+        }
+
+        // Initialize Decentralized GunDB Mesh Event Subscriptions
+        function initDataPipes() {
+            // Track Peer Connectivity Matrices
+            gun.on('hi', () => updatePeerDisplay());
+            gun.on('bye', () => updatePeerDisplay());
+
+            // Listen to Globally Distributed Thread Node Graphs
+            gun.get('interactink_threads_v1').map().on((data, key) => {
+                if (data && data.id) {
+                    appState.threads[key] = data;
+                    renderThreads();
+                    
+                    // Automatically subscribe to individual comment streams for this specific key node
+                    initCommentStreamForThread(data.id);
+                }
+            });
+        }
+
+        function initCommentStreamForThread(tId) {
+            if (appState.comments[tId]) return;
+            appState.comments[tId] = {};
+            
+            gun.get('interactink_comments_v1').get(tId).map().on((cData, cKey) => {
+                if (cData && cData.id) {
+                    appState.comments[tId][cKey] = cData;
+                    // Dynamically refresh comment nodes UI if matching open active target view modal
+                    if (appState.activeThreadId === tId) {
+                        renderCommentTree();
+                    }
+                    renderThreads(); // Update reply counters inside primary dashboard views
+                }
+            });
+        }
+
+        function updatePeerDisplay() {
+            // Fallback checking implementation counting backend connectivity array indexes
+            const peers = Object.keys(gun._.opt.peers || {}).length;
+            const node = document.getElementById('connectionStatus');
+            if (peers > 0) {
+                node.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span><span>Connected to ${peers} Local Peer Relays</span>`;
+            } else {
+                node.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span><span>Local Session Mode (Mesh Offline)</span>`;
+            }
+        }
+
+        // Recalculate Time-Decay Matrices and Render Views
+        function renderThreads() {
+            const threadList = Object.values(appState.threads);
+            document.getElementById('latestCount').innerText = `${threadList.length} Connected Matrix Nodes`;
+
+            // Chronological Sorting Pipeline Routine
+            const chronological = [...threadList].sort((a, b) => b.timestamp - a.timestamp);
+            const latestContainer = document.getElementById('latestStream');
+            latestContainer.innerHTML = '';
+            
+            chronological.forEach(t => {
+                latestContainer.appendChild(createThreadElementCard(t));
+            });
+
+            // Mathematical Time-Gravity Decayed Trend Analysis Optimization Logic Loop (Past 24h Window)
+            const currentTime = Date.now();
+            const trendingContainer = document.getElementById('trendingStream');
+            trendingContainer.innerHTML = '';
+
+            const trending = [...threadList]
+                .map(t => {
+                    const ageInHours = (currentTime - t.timestamp) / (1000 * 60 * 60);
+                    const netVotes = (t.upvotes || 0) - (t.downvotes || 0);
+                    // Time-Decay Score formula
+                    const score = (netVotes + 1) / Math.pow((ageInHours + 2), 1.8);
+                    return { ...t, ageInHours, score };
+                })
+                .filter(t => t.ageInHours <= 24) // Filter out nodes outside the 24h window
+                .sort((a, b) => b.score - a.score);
+
+            if (trending.length === 0) {
+                trendingContainer.innerHTML = `<div class="text-xs text-slate-600 text-center py-6 border border-dashed border-indigo-950/60 rounded-lg">No metrics inside 24h cycle window</div>`;
+            } else {
+                trending.forEach((t, i) => {
+                    trendingContainer.appendChild(createTrendingElementCard(t, i + 1));
+                });
+            }
+        }
+
+        function createThreadElementCard(thread) {
+            const commentCount = appState.comments[thread.id] ? Object.keys(appState.comments[thread.id]).length : 0;
+            const dateStr = new Date(thread.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            const card = document.createElement('div');
+            card.className = "bg-[#050508] border border-indigo-950/60 hover:border-indigo-800/80 rounded-lg p-4 cursor-pointer transition-all hover:translate-x-1";
+            card.onclick = () => openThreadModal(thread.id);
+            
+            card.innerHTML = `
+                <div class="flex justify-between items-start gap-2 mb-2">
+                    <h3 class="font-bold text-slate-200 text-sm hover:text-indigo-400 transition-colors break-words max-w-[80%]">${escapeHTML(thread.title)}</h3>
+                    <span class="text-[10px] text-slate-600 font-sans tracking-tight shrink-0">${dateStr} [${thread.id}]</span>
+                </div>
+                <p class="text-slate-400 text-xs line-clamp-2 mb-3 leading-relaxed break-words">${escapeHTML(thread.content)}</p>
+                <div class="flex justify-between items-center text-[11px] text-slate-500 border-t border-indigo-950/40 pt-2 font-sans">
+                    <div class="flex items-center gap-3">
+                        <span class="flex items-center gap-1 text-emerald-600">▲ ${thread.upvotes || 1}</span>
+                    </div>
+                    <span class="bg-indigo-950/60 text-indigo-400 px-2 py-0.5 rounded border border-indigo-900/40 font-mono text-[10px]">Replies: ${commentCount}</span>
+                </div>
+            `;
+            return card;
+        }
+
+        function createTrendingElementCard(thread, index) {
+            const card = document.createElement('div');
+            card.className = "bg-[#050508] border border-indigo-950/40 rounded-lg p-3 cursor-pointer hover:border-rose-950 transition-colors flex gap-3 items-center";
+            card.onclick = () => openThreadModal(thread.id);
+
+            card.innerHTML = `
+                <span class="text-sm font-bold font-sans text-slate-600 w-5 shrink-0 text-center">0${index}</span>
+                <div class="flex-1 min-w-0">
+                    <h4 class="font-bold text-slate-300 text-xs truncate mb-1">${escapeHTML(thread.title)}</h4>
+                    <div class="flex gap-2 text-[10px] text-slate-500 font-sans">
+                        <span class="text-rose-500/80 font-mono font-semibold">Score: ${thread.score.toFixed(3)}</span>
+                        <span>•</span>
+                        <span>Age: ${thread.ageInHours.toFixed(1)}h</span>
+                    </div>
+                </div>
+            `;
+            return card;
+        }
+
+        // Open Thread Modal Detail Framework Display
+        function openThreadModal(tId) {
+            appState.activeThreadId = tId;
+            const thread = appState.threads[tId];
+            if (!thread) return;
+
+            document.getElementById('modalMeta').innerText = `NODE ID REFERENCE: >>${thread.id} • Posted: ${new Date(thread.timestamp).toLocaleString()}`;
+            document.getElementById('modalTitle').innerText = thread.title;
+            document.getElementById('modalOpBody').innerText = thread.content;
+            
+            document.getElementById('threadModal').classList.remove('hidden');
+            renderCommentTree();
+        }
+
+        function closeThreadModal() {
+            document.getElementById('threadModal').classList.add('hidden');
+            appState.activeThreadId = null;
+        }
+
+        // Recursive Nested Comments Tree Generator Execution Engine
+        function renderCommentTree() {
+            const container = document.getElementById('commentTreeContainer');
+            container.innerHTML = '';
+            
+            const commentsMap = appState.comments[appState.activeThreadId] || {};
+            const rawCommentsList = Object.values(commentsMap).sort((a, b) => a.timestamp - b.timestamp);
+
+            if (rawCommentsList.length === 0) {
+                container.innerHTML = `<div class="text-xs text-slate-600 text-center py-4">No structural graph interactions verified. System idle.</div>`;
+                return;
+            }
+
+            // Build hierarchical parent arrays locally based on syntax matching constraints
+            const commentMapRef = {};
+            const treeRootNodes = [];
+
+            rawCommentsList.forEach(c => {
+                commentMapRef[c.id] = { ...c, children: [] };
+            });
+
+            rawCommentsList.forEach(c => {
+                const node = commentMapRef[c.id];
+                // Check if string contains point target match sequence referencing a valid object key
+                const match = c.text.match(/^&gt;&gt;([A-Fa-f0-9]{8})/); 
+                // Handle text unescaped checking patterns
+                const rawMatch = c.text.match(/^>>([A-Fa-f0-9]{8})/);
+                const targetedParentId = (rawMatch ? rawMatch[1] : null) || (match ? match[1] : null);
+
+                if (targetedParentId && commentMapRef[targetedParentId]) {
+                    commentMapRef[targetedParentId].children.push(node);
+                } else {
+                    treeRootNodes.push(node);
+                }
+            });
+
+            // Process tree rendering arrays recursively
+            treeRootNodes.forEach(rootNode => {
+                container.appendChild(buildCommentTreeUI(rootNode, 0));
+            });
+
+            setupCrossLinkHoverPreviews();
+        }
+
+        // Recursive Engine Function management UI visual indentation trees safely
+        function buildCommentTreeUI(node, depth) {
+            const wrap = document.createElement('div');
+            wrap.className = `flex flex-col ${depth > 0 ? 'ml-4 border-l border-indigo-950/80 pl-3 mt-2' : 'border-b border-indigo-950/20 pb-2'}`;
+            
+            const item = document.createElement('div');
+            item.className = "bg-[#08080f] border border-indigo-950/40 rounded-lg p-3 text-xs shadow-inner";
+            item.id = `comment-${node.id}`;
+
+            const dateStr = new Date(node.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            // Apply high-performance Regex text matching syntax parsing parameters onto safe string components
+            const linkedProcessedText = parseCrossLinksReferences(escapeHTML(node.text));
+
+            item.innerHTML = `
+                <div class="flex justify-between items-center text-[10px] text-slate-500 font-sans mb-1.5 border-b border-indigo-950/30 pb-1">
+                    <span class="font-mono text-indigo-400 font-semibold bg-indigo-950/40 px-1 py-0.5 rounded">${node.tripcode}</span>
+                    <span>${dateStr} <span class="text-slate-600 font-mono select-all ml-1 font-bold">[>>${node.id}]</span></span>
+                </div>
+                <p class="text-slate-300 leading-relaxed break-words font-mono whitespace-pre-wrap">${linkedProcessedText}</p>
+                <div class="flex justify-end mt-1">
+                    <button onclick="appendReplyPointer('${node.id}')" class="text-[10px] text-indigo-500 hover:text-indigo-400 uppercase tracking-widest font-sans cursor-pointer font-semibold">Reply</button>
+                </div>
+            `;
+
+            wrap.appendChild(item);
+
+            // Execute deep structural verification loops safely
+            if (node.children && node.children.length > 0) {
+                node.children.forEach(child => {
+                    wrap.appendChild(buildCommentTreeUI(child, depth + 1));
+                });
+            }
+
+            return wrap;
+        }
+
+        function appendReplyPointer(cId) {
+            const input = document.getElementById('commentInput');
+            input.value = `>>${cId} ` + input.value;
+            input.focus();
+        }
+
+        // JavaScript Regex Cross-Linking Engine
+        function parseCrossLinksReferences(text) {
+            const regex = /&gt;&gt;([A-Fa-f0-9]{8})/g;
+            return text.replace(regex, (match, id) => {
+                return `<a href="#comment-${id}" data-preview-id="${id}" class="text-indigo-400 hover:text-indigo-300 underline font-bold transition-colors cross-link-node">${match}</a>`;
+            });
+        }
+
+        // Hover Floating Preview Mechanism
+        function setupCrossLinkHoverPreviews() {
+            const links = document.querySelectorAll('.cross-link-node');
+            const previewBox = document.getElementById('hoverPreviewBox');
+
+            links.forEach(link => {
+                link.addEventListener('mouseenter', (e) => {
+                    const targetId = link.getAttribute('data-preview-id');
+                    const commentsMap = appState.comments[appState.activeThreadId] || {};
+                    const targetComment = commentsMap[targetId];
+
+                    if (targetComment) {
+                        previewBox.innerHTML = `
+                            <div class="text-[10px] text-indigo-400 font-bold mb-1 font-sans">${targetComment.tripcode} [>>${targetComment.id}]</div>
+                            <p class="text-slate-300 leading-snug font-mono">${escapeHTML(targetComment.text)}</p>
+                        `;
+                        previewBox.classList.remove('hidden');
+                        
+                        // Positioning calculations
+                        const rect = link.getBoundingClientRect();
+                        previewBox.style.left = `${rect.left + window.scrollX}px`;
+                        previewBox.style.top = `${rect.top + window.scrollY - previewBox.offsetHeight - 10}px`;
+                    }
+                });
+
+                link.addEventListener('mouseleave', () => {
+                    previewBox.classList.add('hidden');
+                });
+            });
+        }
+
+        // Sanitization Layer to prevent code execution injections
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>"']/g, m => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;'
+            })[m]);
+        }
+    </script>
+</body>
+</html>
