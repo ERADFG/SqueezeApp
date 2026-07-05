@@ -121,11 +121,12 @@
     <script>
         // GunDB Infrastructure Initialization (Fallback Multi-Relay Graph Topology)
         const gun = Gun({
-            peers: [
-                'https://gun-manhattan.herokuapp.com/gun',
-                'https://relay.peer.ooo/gun'
-            ]
-        });
+    peers: [
+        'https://gun-us.herokuapp.com/gun',
+        'https://gun-eu.herokuapp.com/gun',
+        'https://peer.wall.org/gun'
+    ]
+  });
 
         const appState = {
             threads: {},
