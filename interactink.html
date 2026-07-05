@@ -17,81 +17,41 @@
 </head>
 <body class="min-h-screen font-sans antialiased selection:bg-neutral-800 selection:text-white">
 
-    <div class="max-w-7xl mx-auto flex justify-center min-h-screen">
+    <div class="max-w-2xl mx-auto min-h-screen flex flex-col border-x border-neutral-800">
         
-        <header class="w-20 xl:w-64 shrink-0 h-screen sticky top-0 flex flex-col justify-between p-3 border-r border-neutral-800">
-            <div class="flex flex-col items-center xl:items-start gap-4">
-                <a href="blogs.html" class="p-3 hover:bg-neutral-900 rounded-full inline-flex items-center justify-center transition duration-200">
-                    <i data-lucide="feather" class="w-7 h-7 text-white"></i>
-                </a>
-                
-                <nav class="w-full space-y-1">
-                    <button class="w-full p-3 hover:bg-neutral-900 rounded-full flex items-center justify-center xl:justify-start gap-4 text-xl font-bold text-white transition duration-200">
-                        <i data-lucide="home" class="w-6 h-6"></i>
-                        <span class="hidden xl:inline text-base font-medium">Home</span>
-                    </button>
-                    <button class="w-full p-3 hover:bg-neutral-900 rounded-full flex items-center justify-center xl:justify-start gap-4 text-xl text-neutral-400 hover:text-white transition duration-200">
-                        <i data-lucide="hash" class="w-6 h-6"></i>
-                        <span class="hidden xl:inline text-base font-medium">Explore</span>
-                    </button>
-                    <button class="w-full p-3 hover:bg-neutral-900 rounded-full flex items-center justify-center xl:justify-start gap-4 text-xl text-neutral-400 hover:text-white transition duration-200">
-                        <i data-lucide="globe" class="w-6 h-6"></i>
-                        <span class="hidden xl:inline text-base font-medium">Network Matrix</span>
-                    </button>
-                </nav>
-            </div>
-            
-            <div class="p-2 flex items-center justify-center xl:justify-start gap-3 rounded-full bg-neutral-900/50 border border-neutral-800 xl:px-4">
-                <span class="relative flex h-2 w-2 shrink-0">
+        <header class="sticky top-0 bg-black/80 backdrop-blur-md border-b border-neutral-800 p-4 z-40 flex justify-between items-center">
+            <h2 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                <i data-lucide="feather" class="w-5 h-5"></i> Home
+            </h2>
+            <div class="px-3 py-1 flex items-center gap-2 rounded-full bg-neutral-900 border border-neutral-800">
+                <span class="relative flex h-1.5 w-1.5 shrink-0">
                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
                 </span>
-                <span class="hidden xl:inline text-[11px] text-neutral-400 uppercase tracking-wider font-semibold">Mesh Synced</span>
+                <span class="text-[10px] text-neutral-400 uppercase tracking-wider font-semibold">Synced</span>
             </div>
         </header>
 
-        <main class="flex-1 max-w-2xl border-r border-neutral-800 min-h-screen pb-24">
-            <div class="sticky top-0 bg-black/80 backdrop-blur-md border-b border-neutral-800 p-4 z-40">
-                <h2 class="text-xl font-bold tracking-tight text-white">Home</h2>
-            </div>
-
-            <section class="p-4 border-b border-neutral-800 flex gap-3">
-                <div class="w-10 h-10 rounded-full bg-neutral-800 flex items-center justify-center shrink-0 border border-neutral-700">
-                    <i data-lucide="user" class="w-5 h-5 text-neutral-400"></i>
-                </div>
-                <form id="threadForm" class="flex-1 pt-1">
-                    <input type="text" id="threadTitle" placeholder="Thread Subject Direct Path..." required max="100" autocomplete="off"
-                           class="w-full bg-transparent text-white text-base font-bold pb-2 focus:outline-none placeholder:text-neutral-600 border-b border-neutral-900 mb-3">
-                    <textarea id="threadContent" placeholder="What is happening anonymously?" required rows="3"
-                              class="w-full bg-transparent text-white text-sm focus:outline-none placeholder:text-neutral-500 resize-none leading-relaxed"></textarea>
-                    
-                    <div class="flex justify-between items-center border-t border-neutral-950 pt-3 mt-2">
-                        <div class="text-neutral-600 flex gap-4 text-sm">
-                            <i data-lucide="shield-check" class="w-4 h-4 text-neutral-500" title="Auto-Tripcode compilation layer active"></i>
-                            <span class="text-xs text-neutral-500 hidden sm:inline">Secure Node Broadcast</span>
-                        </div>
-                        <button type="submit" class="bg-white text-black hover:bg-neutral-200 font-bold px-5 py-2 rounded-full transition duration-200 text-sm cursor-pointer shadow-sm">
-                            Post
-                        </button>
+        <section class="p-4 border-b border-neutral-800">
+            <form id="threadForm" class="pt-1">
+                <input type="text" id="threadTitle" placeholder="Thread Subject Direct Path..." required max="100" autocomplete="off"
+                       class="w-full bg-transparent text-white text-base font-bold pb-2 focus:outline-none placeholder:text-neutral-600 border-b border-neutral-900 mb-3">
+                <textarea id="threadContent" placeholder="What is happening anonymously?" required rows="3"
+                          class="w-full bg-transparent text-white text-sm focus:outline-none placeholder:text-neutral-500 resize-none leading-relaxed"></textarea>
+                
+                <div class="flex justify-between items-center border-t border-neutral-950 pt-3 mt-2">
+                    <div class="text-neutral-600 flex gap-4 text-sm">
+                        <i data-lucide="shield-check" class="w-4 h-4 text-neutral-500" title="Auto-Tripcode compilation layer active"></i>
+                        <span class="text-xs text-neutral-500 hidden sm:inline">Secure Node Broadcast</span>
                     </div>
-                </form>
-            </section>
+                    <button type="submit" class="bg-white text-black hover:bg-neutral-200 font-bold px-5 py-2 rounded-full transition duration-200 text-sm cursor-pointer shadow-sm">
+                        Post
+                    </button>
+                </div>
+            </form>
+        </section>
 
-            <div id="latestStream" class="divide-y divide-neutral-800"></div>
-        </main>
-
-        <aside class="w-80 shrink-0 hidden lg:flex flex-col gap-4 p-4 sticky top-0 h-screen overflow-y-auto">
-            <div class="relative w-full flex items-center bg-neutral-900 rounded-full px-4 py-2.5 text-neutral-400 border border-transparent focus-within:border-neutral-700 focus-within:bg-black transition duration-200">
-                <i data-lucide="search" class="w-4 h-4 mr-3"></i>
-                <input type="text" placeholder="Search Matrix Node..." class="bg-transparent w-full text-xs text-white focus:outline-none placeholder:text-neutral-500">
-            </div>
-
-            <section class="bg-neutral-900/40 border border-neutral-800/80 rounded-2xl p-4">
-                <h3 class="text-base font-bold text-white mb-4 tracking-tight">Trending Matrix (24H)</h3>
-                <div id="trendingStream" class="space-y-4"></div>
-            </section>
-        </aside>
-
+        <main id="latestStream" class="divide-y divide-neutral-800 flex-1"></main>
     </div>
 
     <div id="threadModal" class="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
@@ -107,16 +67,11 @@
             </div>
             
             <div class="flex-1 overflow-y-auto p-4 space-y-6" id="modalScrollBody">
-                <div class="flex gap-3">
-                    <div class="w-10 h-10 rounded-full bg-neutral-800 flex items-center justify-center border border-neutral-700 shrink-0">
-                        <i data-lucide="user" class="w-5 h-5 text-neutral-400"></i>
+                <div class="min-w-0">
+                    <div class="flex items-baseline gap-2 mb-2">
+                        <span id="modalTitle" class="font-bold text-white text-base truncate uppercase tracking-wide border-b border-neutral-900 pb-1 w-full">Subject Target</span>
                     </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-baseline gap-2 mb-1">
-                            <span id="modalTitle" class="font-bold text-white text-base truncate uppercase tracking-wide">Subject Target</span>
-                        </div>
-                        <p id="modalOpBody" class="text-neutral-200 text-sm leading-relaxed break-words whitespace-pre-wrap"></p>
-                    </div>
+                    <p id="modalOpBody" class="text-neutral-200 text-sm leading-relaxed break-words whitespace-pre-wrap pt-1"></p>
                 </div>
 
                 <div class="border-b border-neutral-800"></div>
@@ -126,8 +81,8 @@
 
             <div class="p-4 border-t border-neutral-800 bg-black">
                 <form id="commentForm" class="flex gap-3 items-center">
-                    <div class="w-8 h-8 rounded-full bg-neutral-900 flex items-center justify-center border border-neutral-800 shrink-0">
-                        <i data-lucide="corner-down-right" class="w-4 h-4 text-neutral-500"></i>
+                    <div class="text-neutral-500 shrink-0">
+                        <i data-lucide="corner-down-right" class="w-4 h-4"></i>
                     </div>
                     <input type="text" id="commentInput" placeholder="Post your reply... (Use >>ID to interlink node tree)" autocomplete="off" required
                            class="flex-1 bg-transparent text-sm text-white focus:outline-none placeholder:text-neutral-600">
@@ -139,7 +94,7 @@
         </div>
     </div>
 
-    <div id="hoverPreviewBox" class="absolute bg-neutral-900 border border-neutral-700 text-neutral-200 text-xs p-3 rounded-xl shadow-2xl hidden z-50 max-w-xs pointer-events-none"></div>
+    <div id="hoverPreviewBox" class="absolute bg-neutral-900 border border-neutral-700 text-neutral-200 text-xs p-3 rounded-xl shadow-2xl hidden z-50 max-w-xs pointer-events-none font-sans"></div>
 
     <script>
         const SUPABASE_URL = "https://xdshsodkuyawljzuirqt.supabase.co";
@@ -157,7 +112,7 @@
             await fetchInitialData();
             initRealtimeSync();
             renderThreads();
-            lucide.createIcons(); // Initialize the icon paths
+            lucide.createIcons();
             setInterval(() => renderThreads(), 30000);
         });
 
@@ -246,25 +201,6 @@
             const latestContainer = document.getElementById('latestStream');
             latestContainer.innerHTML = '';
             chronological.forEach(t => latestContainer.appendChild(createThreadElementCard(t)));
-
-            const currentTime = Date.now();
-            const trendingContainer = document.getElementById('trendingStream');
-            trendingContainer.innerHTML = '';
-
-            const trending = [...threadList]
-                .map(t => {
-                    const ageInHours = (currentTime - t.timestamp) / (1000 * 60 * 60);
-                    const score = ((t.upvotes || 1) + 1) / Math.pow((ageInHours + 2), 1.8);
-                    return { ...t, ageInHours, score };
-                })
-                .filter(t => t.ageInHours <= 24)
-                .sort((a, b) => b.score - a.score);
-
-            if (trending.length === 0) {
-                trendingContainer.innerHTML = `<div class="text-xs text-neutral-500 py-2">No data spikes mapped lines detected.</div>`;
-            } else {
-                trending.slice(0, 5).forEach(t => trendingContainer.appendChild(createTrendingElementCard(t)));
-            }
             lucide.createIcons();
         }
 
@@ -272,35 +208,18 @@
             const commentCount = appState.comments[thread.id] ? Object.keys(appState.comments[thread.id]).length : 0;
             const dateStr = new Date(thread.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const card = document.createElement('div');
-            card.className = "p-4 hover:bg-neutral-900/40 cursor-pointer transition duration-200 flex gap-3 items-start";
+            card.className = "p-4 hover:bg-neutral-900/40 cursor-pointer transition duration-200 flex flex-col";
             card.onclick = () => openThreadModal(thread.id);
             card.innerHTML = `
-                <div class="w-10 h-10 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center shrink-0">
-                    <i data-lucide="layers" class="w-4 h-4 text-neutral-400"></i>
+                <div class="flex items-center justify-between text-xs text-neutral-500 mb-1">
+                    <span class="font-bold text-neutral-300 uppercase tracking-wide truncate max-w-[70%]">${escapeHTML(thread.title)}</span>
+                    <span class="font-mono text-[11px]">>>${thread.id} · ${dateStr}</span>
                 </div>
-                <div class="flex-1 min-w-0">
-                    <div class="flex items-center justify-between text-xs text-neutral-500 mb-1">
-                        <span class="font-bold text-neutral-300 uppercase tracking-wide truncate max-w-[60%]">${escapeHTML(thread.title)}</span>
-                        <span class="font-mono text-[11px]">>>${thread.id} · ${dateStr}</span>
-                    </div>
-                    <p class="text-neutral-300 text-sm leading-relaxed mb-3 break-words whitespace-pre-wrap">${escapeHTML(thread.content)}</p>
-                    <div class="flex items-center gap-6 text-xs text-neutral-500">
-                        <span class="flex items-center gap-1.5 hover:text-neutral-300 transition"><i data-lucide="message-square" class="w-4 h-4"></i> ${commentCount}</span>
-                        <span class="flex items-center gap-1.5 hover:text-neutral-300 transition"><i data-lucide="zap" class="w-4 h-4"></i> ${thread.upvotes || 1}</span>
-                    </div>
+                <p class="text-neutral-300 text-sm leading-relaxed mb-3 break-words whitespace-pre-wrap">${escapeHTML(thread.content)}</p>
+                <div class="flex items-center gap-6 text-xs text-neutral-500">
+                    <span class="flex items-center gap-1.5 hover:text-neutral-300 transition"><i data-lucide="message-square" class="w-4 h-4"></i> ${commentCount}</span>
+                    <span class="flex items-center gap-1.5 hover:text-neutral-300 transition"><i data-lucide="zap" class="w-4 h-4"></i> ${thread.upvotes || 1}</span>
                 </div>
-            `;
-            return card;
-        }
-
-        function createTrendingElementCard(thread) {
-            const card = document.createElement('div');
-            card.className = "cursor-pointer p-1 hover:bg-neutral-800/30 rounded-lg transition duration-200";
-            card.onclick = () => openThreadModal(thread.id);
-            card.innerHTML = `
-                <div class="text-[11px] text-neutral-500 font-mono">>>${thread.id} · MATRIX TREND</div>
-                <h4 class="font-bold text-sm text-neutral-200 truncate uppercase mt-0.5">${escapeHTML(thread.title)}</h4>
-                <div class="text-[11px] text-neutral-500 flex items-center gap-1 mt-1"><i data-lucide="trending-up" class="w-3 h-3"></i> Dynamic Velocity ${(thread.score * 10).toFixed(1)}</div>
             `;
             return card;
         }
@@ -420,6 +339,7 @@
             });
         }
 
+        // Keep raw content clean from code injection
         function escapeHTML(str) {
             if (!str) return '';
             return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' })[m]);
