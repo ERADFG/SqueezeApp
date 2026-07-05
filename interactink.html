@@ -13,13 +13,14 @@
         ::-webkit-scrollbar-track { background: #000000; }
         ::-webkit-scrollbar-thumb { background: #202327; border-radius: 9999px; }
         input, textarea { background-color: #000000 !important; }
+        /* Style for hyperlinked content */
         .user-link { color: #3b82f6; text-decoration: underline; font-weight: 500; transition: color 0.1s ease; }
         .user-link:hover { color: #60a5fa; }
     </style>
 </head>
-<body class="min-h-screen font-sans antialiased selection:bg-neutral-800 selection:text-white flex justify-center">
+<body class="min-h-screen font-sans antialiased selection:bg-neutral-800 selection:text-white">
 
-    <div class="max-w-2xl w-full min-h-screen flex flex-col border-x border-neutral-800">
+    <div class="max-w-2xl mx-auto min-h-screen flex flex-col border-x border-neutral-800">
         
         <header class="sticky top-0 bg-black/80 backdrop-blur-md border-b border-neutral-800 p-4 z-40 flex justify-between items-center">
             <h2 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
@@ -85,6 +86,7 @@
                 </div>
 
                 <div class="border-b border-neutral-800"></div>
+
                 <div id="commentTreeContainer" class="space-y-4"></div>
             </div>
 
@@ -108,7 +110,7 @@
 
     <script>
         const SUPABASE_URL = "https://xdshsodkuyawljzuirqt.supabase.co";
-        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inxdc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
         
         let supabaseClient;
         const appState = { threads: {}, comments: {}, commentCounts: {}, activeThreadId: null, userSeed: null, cachedCounts: { threads: 0, comments: 0 } };
@@ -261,6 +263,7 @@
             card.className = "p-4 hover:bg-neutral-900/40 cursor-pointer transition duration-200 flex flex-col";
             card.onclick = () => openThreadModal(thread.id);
             
+            // Integrated link conversion parsing to content cards
             const processedContent = parseRichTextContent(escapeHTML(thread.content));
             
             card.innerHTML = `
@@ -283,6 +286,7 @@
 
             document.getElementById('modalMeta').innerText = `NODE SYSTEM: >>${thread.id} // VERIFIED PIPELINE`;
             document.getElementById('modalTitle').innerText = thread.title;
+            // Stop click bubbling on links so clicking a link doesn't reset the modal trigger state
             document.getElementById('modalOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content));
             document.getElementById('threadModal').classList.remove('hidden');
             
@@ -345,6 +349,8 @@
             item.id = `comment-${node.id}`;
 
             const dateStr = new Date(node.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            // Parse both cross-links references AND raw outer links safely inside comment items
             const structuralLinkedProcessedText = parseRichTextContent(escapeHTML(node.text));
 
             item.innerHTML = `
@@ -372,6 +378,7 @@
             input.focus();
         }
 
+        // Consolidated Rich Formatting Parser (Processes links + board cross-references)
         function parseRichTextContent(text) {
             if (!text) return '';
 
