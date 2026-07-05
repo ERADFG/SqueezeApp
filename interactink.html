@@ -25,7 +25,7 @@
             </h2>
             <div class="flex items-center gap-2">
                 <div class="px-3 py-1 text-[10px] font-mono font-semibold text-neutral-400 bg-neutral-900 border border-neutral-800 rounded-full uppercase tracking-wider">
-                    Total Posts: <span id="globalPostCount" class="text-white">0</span>
+                    Total Broadcasts: <span id="globalPostCount" class="text-white">0</span>
                 </div>
                 <div class="px-3 py-1 flex items-center gap-2 rounded-full bg-neutral-900 border border-neutral-800">
                     <span class="relative flex h-1.5 w-1.5 shrink-0">
@@ -107,11 +107,11 @@
 
     <script>
         const SUPABASE_URL = "https://xdshsodkuyawljzuirqt.supabase.co";
-        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inxdc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
         
         let supabaseClient;
-        // Optimization: appState counts are tracked directly via single digits now to conserve memory heap
-        const appState = { threads: {}, comments: {}, activeThreadId: null, userSeed: null, cachedCounts: { threads: 0, comments: 0 } };
+        // Tracking comment distributions per thread efficiently via a localized map
+        const appState = { threads: {}, comments: {}, commentCounts: {}, activeThreadId: null, userSeed: null, cachedCounts: { threads: 0, comments: 0 } };
 
         window.addEventListener('load', async () => {
             if (!window.supabase) return;
@@ -145,11 +145,17 @@
 
         async function fetchInitialData() {
             try {
-                // Performance Optimization: Grab only the latest 30 threads instead of the whole database
                 const { data: threads } = await supabaseClient.from('threads').select('*').order('timestamp', { ascending: false }).limit(30);
                 if (threads) threads.forEach(t => appState.threads[t.id] = t);
 
-                // Performance Optimization: Fetch metadata row counts via headers instead of transferring text rows
+                // Optimization: Pull minimal thread_id columns to build comment distribution mappings instantly
+                const { data: commentIds } = await supabaseClient.from('comments').select('thread_id');
+                if (commentIds) {
+                    commentIds.forEach(c => {
+                        appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
+                    });
+                }
+
                 const [threadCountRes, commentCountRes] = await Promise.all([
                     supabaseClient.from('threads').select('*', { count: 'exact', head: true }),
                     supabaseClient.from('comments').select('*', { count: 'exact', head: true })
@@ -179,7 +185,9 @@
                         const c = payload.new;
                         appState.cachedCounts.comments++;
                         
-                        // Dynamically append new comments in realtime if user is currently looking at that specific thread modal
+                        // Increment specific stream context metrics dynamically
+                        appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
+                        
                         if (appState.activeThreadId === c.thread_id) {
                             if (!appState.comments[c.thread_id]) appState.comments[c.thread_id] = {};
                             appState.comments[c.thread_id][c.id] = c;
@@ -187,6 +195,7 @@
                         }
                     }
                     updateGlobalCounterUI();
+                    renderThreads();
                 })
                 .subscribe();
         }
@@ -229,7 +238,6 @@
 
                 await supabaseClient.from('comments').insert([{ id, thread_id: appState.activeThreadId, tripcode, text: textVal, timestamp: Date.now() }]);
                 
-                // Instantly patch active local context to avoid additional round-trips
                 if (!appState.comments[appState.activeThreadId]) appState.comments[appState.activeThreadId] = {};
                 appState.comments[appState.activeThreadId][id] = { id, thread_id: appState.activeThreadId, tripcode, text: textVal, timestamp: Date.now() };
                 
@@ -251,10 +259,12 @@
 
         function createThreadElementCard(thread) {
             const dateStr = new Date(thread.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const dynamicCommentCount = appState.commentCounts[thread.id] || 0;
             const card = document.createElement('div');
             card.className = "p-4 hover:bg-neutral-900/40 cursor-pointer transition duration-200 flex flex-col";
             card.onclick = () => openThreadModal(thread.id);
             
+            // Bug Fix: "View Cluster" text swapped back with the exact dynamic matching counter values
             card.innerHTML = `
                 <div class="flex items-center justify-between text-xs text-neutral-500 mb-1">
                     <span class="font-bold text-neutral-300 uppercase tracking-wide truncate max-w-[70%]">${escapeHTML(thread.title)}</span>
@@ -262,7 +272,7 @@
                 </div>
                 <p class="text-neutral-300 text-sm leading-relaxed mb-3 break-words whitespace-pre-wrap">${escapeHTML(thread.content)}</p>
                 <div class="flex items-center gap-6 text-xs text-neutral-500">
-                    <span class="flex items-center gap-1.5 hover:text-neutral-300 transition"><i data-lucide="message-square" class="w-4 h-4"></i> View Cluster</span>
+                    <span class="flex items-center gap-1.5 hover:text-neutral-300 transition"><i data-lucide="message-square" class="w-4 h-4"></i> ${dynamicCommentCount}</span>
                 </div>
             `;
             return card;
@@ -278,7 +288,6 @@
             document.getElementById('modalOpBody').innerText = thread.content;
             document.getElementById('threadModal').classList.remove('hidden');
             
-            // Performance Optimization: Load comments for this specific thread on demand
             document.getElementById('commentTreeContainer').innerHTML = `<div class="text-xs text-neutral-600 text-center py-6 font-mono animate-pulse">Syncing linked node packets...</div>`;
             
             try {
