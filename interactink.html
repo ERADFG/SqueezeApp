@@ -105,11 +105,11 @@
     <div id="hoverPreviewBox" class="absolute bg-black border border-white text-neutral-300 text-xs p-4 shadow-2xl hidden z-50 max-w-sm pointer-events-none border-l-4 border-l-white"></div>
 
     <script>
-        // STEP 3 DETAILS: PASTE YOUR UNIQUE SUPABASE CREDS HERE
-const SUPABASE_URL = "https://xdshsodkuyawljzuirqt.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
+        // CREDENTIAL CHANNELS RE-MAPPED TO AVOID INTERNAL VARIABLE COLLISIONS
+        const SUPABASE_URL = "https://xdshsodkuyawljzuirqt.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
         
-        const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const supabaseClient = Supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         const appState = { threads: {}, comments: {}, activeThreadId: null, userSeed: null };
 
@@ -140,10 +140,10 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
         }
 
         async function fetchInitialData() {
-            const { data: threads } = await supabase.from('threads').select('*');
+            const { data: threads } = await supabaseClient.from('threads').select('*');
             if (threads) threads.forEach(t => appState.threads[t.id] = t);
 
-            const { data: comments } = await supabase.from('comments').select('*');
+            const { data: comments } = await supabaseClient.from('comments').select('*');
             if (comments) {
                 comments.forEach(c => {
                     if (!appState.comments[c.thread_id]) appState.comments[c.thread_id] = {};
@@ -153,7 +153,7 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
         }
 
         function initRealtimeSync() {
-            supabase.channel('global-changes')
+            supabaseClient.channel('global-changes')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'threads' }, payload => {
                     if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
                         appState.threads[payload.new.id] = payload.new;
@@ -179,7 +179,7 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
                 const content = document.getElementById('threadContent');
                 const id = Math.random().toString(16).substring(2, 10);
 
-                await supabase.from('threads').insert([{ id, title: title.value.trim(), content: content.value.trim(), timestamp: Date.now(), upvotes: 1 }]);
+                await supabaseClient.from('threads').insert([{ id, title: title.value.trim(), content: content.value.trim(), timestamp: Date.now(), upvotes: 1 }]);
                 title.value = ''; content.value = '';
             });
 
@@ -191,9 +191,8 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
                 const id = Math.random().toString(16).substring(2, 10);
                 const tripcode = await generateTripcode(appState.activeThreadId, appState.userSeed);
 
-                await supabase.from('comments').insert([{ id, thread_id: appState.activeThreadId, tripcode, text: input.value.trim(), timestamp: Date.now() }]);
-                await supabase.rpc('increment_upvote', { row_id: appState.activeThreadId }); // Fallback direct increment update handling:
-                await supabase.from('threads').update({ upvotes: (appState.threads[appState.activeThreadId].upvotes || 1) + 1 }).eq('id', appState.activeThreadId);
+                await supabaseClient.from('comments').insert([{ id, thread_id: appState.activeThreadId, tripcode, text: input.value.trim(), timestamp: Date.now() }]);
+                await supabaseClient.from('threads').update({ upvotes: (appState.threads[appState.activeThreadId].upvotes || 1) + 1 }).eq('id', appState.activeThreadId);
 
                 input.value = '';
             });
