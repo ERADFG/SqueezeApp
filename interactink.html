@@ -3,107 +3,143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InteractInk - Anonymous Monochromatic Textboard</title>
-    <link rel="icon" type="image/png" href="favicon2.jpg">
-    <!-- Tailwind CSS CDN -->
+    <title>InteractInk — Anonymous Realtime Board</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <!-- Supabase CDN Client Stack -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        body { background-color: #000000; color: #ffffff; }
-        ::-webkit-scrollbar { width: 4px; }
+        body { background-color: #000000; color: #e7e9ea; }
+        ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #000000; }
-        ::-webkit-scrollbar-thumb { background: #222222; }
+        ::-webkit-scrollbar-thumb { background: #202327; border-radius: 9999px; }
         input, textarea { background-color: #000000 !important; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col font-mono text-xs antialiased selection:bg-white selection:text-black">
+<body class="min-h-screen font-sans antialiased selection:bg-neutral-800 selection:text-white">
 
-    <!-- Top Navigation Header -->
-    <header class="border-b border-neutral-800 bg-black sticky top-0 z-40 px-6 py-4">
-        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <div class="flex items-center gap-4">
-                <a href="blogs.html" class="text-neutral-500 hover:text-white transition-colors no-underline">← index</a>
-                <h1 class="text-sm font-bold tracking-widest uppercase">InteractInk</h1>
-                <span class="text-[10px] border border-neutral-700 px-2 py-0.5 uppercase tracking-wider font-semibold text-neutral-400">GLOBAL REALTIME MATRIX</span>
+    <div class="max-w-7xl mx-auto flex justify-center min-h-screen">
+        
+        <header class="w-20 xl:w-64 shrink-0 h-screen sticky top-0 flex flex-col justify-between p-3 border-r border-neutral-800">
+            <div class="flex flex-col items-center xl:items-start gap-4">
+                <a href="blogs.html" class="p-3 hover:bg-neutral-900 rounded-full inline-flex items-center justify-center transition duration-200">
+                    <i data-lucide="feather" class="w-7 h-7 text-white"></i>
+                </a>
+                
+                <nav class="w-full space-y-1">
+                    <button class="w-full p-3 hover:bg-neutral-900 rounded-full flex items-center justify-center xl:justify-start gap-4 text-xl font-bold text-white transition duration-200">
+                        <i data-lucide="home" class="w-6 h-6"></i>
+                        <span class="hidden xl:inline text-base font-medium">Home</span>
+                    </button>
+                    <button class="w-full p-3 hover:bg-neutral-900 rounded-full flex items-center justify-center xl:justify-start gap-4 text-xl text-neutral-400 hover:text-white transition duration-200">
+                        <i data-lucide="hash" class="w-6 h-6"></i>
+                        <span class="hidden xl:inline text-base font-medium">Explore</span>
+                    </button>
+                    <button class="w-full p-3 hover:bg-neutral-900 rounded-full flex items-center justify-center xl:justify-start gap-4 text-xl text-neutral-400 hover:text-white transition duration-200">
+                        <i data-lucide="globe" class="w-6 h-6"></i>
+                        <span class="hidden xl:inline text-base font-medium">Network Matrix</span>
+                    </button>
+                </nav>
             </div>
-            <div class="text-[10px] text-neutral-400 font-sans tracking-wide">
-                <div id="connectionStatus" class="flex items-center gap-2">
-                    <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                    <span class="tracking-wider uppercase">ONLINE // GLOBAL SYNC ACTIVE</span>
+            
+            <div class="p-2 flex items-center justify-center xl:justify-start gap-3 rounded-full bg-neutral-900/50 border border-neutral-800 xl:px-4">
+                <span class="relative flex h-2 w-2 shrink-0">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span class="hidden xl:inline text-[11px] text-neutral-400 uppercase tracking-wider font-semibold">Mesh Synced</span>
+            </div>
+        </header>
+
+        <main class="flex-1 max-w-2xl border-r border-neutral-800 min-h-screen pb-24">
+            <div class="sticky top-0 bg-black/80 backdrop-blur-md border-b border-neutral-800 p-4 z-40">
+                <h2 class="text-xl font-bold tracking-tight text-white">Home</h2>
+            </div>
+
+            <section class="p-4 border-b border-neutral-800 flex gap-3">
+                <div class="w-10 h-10 rounded-full bg-neutral-800 flex items-center justify-center shrink-0 border border-neutral-700">
+                    <i data-lucide="user" class="w-5 h-5 text-neutral-400"></i>
                 </div>
-            </div>
-        </div>
-    </header>
-
-    <!-- Main Workspace Frame -->
-    <main class="flex-1 max-w-7xl w-full mx-auto p-6 flex flex-col lg:flex-row gap-8">
-        <div class="flex-1 flex flex-col gap-8 lg:max-w-3xl">
-            <!-- Form Shell -->
-            <section class="border border-neutral-800 p-5 bg-black">
-                <div class="text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-4 border-b border-neutral-800 pb-2">[01] Initialize New Node Pipeline</div>
-                <form id="threadForm" class="space-y-4">
-                    <input type="text" id="threadTitle" placeholder="THREAD SUBJECT / TOPIC DIRECTORY..." required max="100" autocomplete="off"
-                           class="w-full border border-neutral-800 text-white px-3 py-2 focus:outline-none focus:border-white placeholder:text-neutral-700">
-                    <textarea id="threadContent" placeholder="INPUT TEXT DATA PACKETS PACKED SECURELY..." required rows="4"
-                              class="w-full border border-neutral-800 text-white px-3 py-2 focus:outline-none focus:border-white placeholder:text-neutral-700 resize-none"></textarea>
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-1">
-                        <span class="text-[10px] text-neutral-500">Auto-Tripcode compilation layer active.</span>
-                        <button type="submit" class="w-full sm:w-auto border border-white bg-white text-black font-bold px-4 py-2 hover:bg-black hover:text-white transition-colors cursor-pointer text-[10px] uppercase tracking-wider">Commit Broadcast</button>
+                <form id="threadForm" class="flex-1 pt-1">
+                    <input type="text" id="threadTitle" placeholder="Thread Subject Direct Path..." required max="100" autocomplete="off"
+                           class="w-full bg-transparent text-white text-base font-bold pb-2 focus:outline-none placeholder:text-neutral-600 border-b border-neutral-900 mb-3">
+                    <textarea id="threadContent" placeholder="What is happening anonymously?" required rows="3"
+                              class="w-full bg-transparent text-white text-sm focus:outline-none placeholder:text-neutral-500 resize-none leading-relaxed"></textarea>
+                    
+                    <div class="flex justify-between items-center border-t border-neutral-950 pt-3 mt-2">
+                        <div class="text-neutral-600 flex gap-4 text-sm">
+                            <i data-lucide="shield-check" class="w-4 h-4 text-neutral-500" title="Auto-Tripcode compilation layer active"></i>
+                            <span class="text-xs text-neutral-500 hidden sm:inline">Secure Node Broadcast</span>
+                        </div>
+                        <button type="submit" class="bg-white text-black hover:bg-neutral-200 font-bold px-5 py-2 rounded-full transition duration-200 text-sm cursor-pointer shadow-sm">
+                            Post
+                        </button>
                     </div>
                 </form>
             </section>
 
-            <!-- Latest Threads Feed -->
-            <section class="border border-neutral-800 p-5 bg-black flex-1 flex flex-col">
-                <div class="flex justify-between items-center mb-6 border-b border-neutral-800 pb-2">
-                    <h2 class="text-[10px] font-bold uppercase tracking-widest text-neutral-400">[02] Global Live Stream</h2>
-                    <span class="text-[10px] text-neutral-500 tracking-wider" id="latestCount">0 Nodes Detected</span>
-                </div>
-                <div id="latestStream" class="space-y-4 max-h-[600px] overflow-y-auto pr-2"></div>
-            </section>
-        </div>
+            <div id="latestStream" class="divide-y divide-neutral-800"></div>
+        </main>
 
-        <!-- Trending Sidebar -->
-        <aside class="w-full lg:w-80 shrink-0 flex flex-col gap-8">
-            <section class="border border-neutral-800 p-5 bg-black sticky top-24 shadow-xl">
-                <div class="flex justify-between items-center mb-6 border-b border-neutral-800 pb-2">
-                    <h2 class="text-[10px] font-bold uppercase tracking-widest text-neutral-400">[03] Gravity Decay (24H)</h2>
-                </div>
-                <div id="trendingStream" class="space-y-3 max-h-[650px] overflow-y-auto pr-1"></div>
+        <aside class="w-80 shrink-0 hidden lg:flex flex-col gap-4 p-4 sticky top-0 h-screen overflow-y-auto">
+            <div class="relative w-full flex items-center bg-neutral-900 rounded-full px-4 py-2.5 text-neutral-400 border border-transparent focus-within:border-neutral-700 focus-within:bg-black transition duration-200">
+                <i data-lucide="search" class="w-4 h-4 mr-3"></i>
+                <input type="text" placeholder="Search Matrix Node..." class="bg-transparent w-full text-xs text-white focus:outline-none placeholder:text-neutral-500">
+            </div>
+
+            <section class="bg-neutral-900/40 border border-neutral-800/80 rounded-2xl p-4">
+                <h3 class="text-base font-bold text-white mb-4 tracking-tight">Trending Matrix (24H)</h3>
+                <div id="trendingStream" class="space-y-4"></div>
             </section>
         </aside>
-    </main>
 
-    <!-- Thread Detail Modal -->
-    <div id="threadModal" class="fixed inset-0 bg-black/95 z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-black border border-neutral-800 w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden">
-            <div class="p-5 border-b border-neutral-800 bg-black flex justify-between items-start gap-4">
-                <div class="min-w-0">
-                    <span id="modalMeta" class="text-[10px] text-neutral-500 block mb-1 tracking-wider uppercase">Thread Reference ID</span>
-                    <h3 id="modalTitle" class="text-sm font-bold text-white uppercase tracking-wide break-all">Thread Subject Target</h3>
+    </div>
+
+    <div id="threadModal" class="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-black border border-neutral-800 w-full max-w-xl rounded-2xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+            <div class="p-4 border-b border-neutral-800 flex justify-between items-center bg-black">
+                <div class="flex items-center gap-2 text-xs text-neutral-500 font-medium">
+                    <i data-lucide="cpu" class="w-3.5 h-3.5 text-neutral-500"></i>
+                    <span id="modalMeta" class="uppercase tracking-wider">Node Directory Reference</span>
                 </div>
-                <button onclick="closeThreadModal()" class="text-neutral-500 hover:text-white font-bold px-2 py-1 cursor-pointer text-sm font-sans">&times;</button>
+                <button onclick="closeThreadModal()" class="text-neutral-400 hover:text-white p-1 hover:bg-neutral-900 rounded-full transition cursor-pointer">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
             </div>
-            <div class="flex-1 overflow-y-auto p-6 space-y-6" id="modalScrollBody">
-                <div id="modalOpBody" class="p-4 border border-neutral-800 bg-black text-neutral-300 border-l-2 border-l-white leading-relaxed break-words whitespace-pre-wrap"></div>
-                <div class="space-y-4">
-                    <h4 class="text-[10px] font-bold uppercase tracking-widest text-neutral-400 border-b border-neutral-800 pb-2">Discussion Tree Matrix</h4>
-                    <div id="commentTreeContainer" class="space-y-3"></div>
+            
+            <div class="flex-1 overflow-y-auto p-4 space-y-6" id="modalScrollBody">
+                <div class="flex gap-3">
+                    <div class="w-10 h-10 rounded-full bg-neutral-800 flex items-center justify-center border border-neutral-700 shrink-0">
+                        <i data-lucide="user" class="w-5 h-5 text-neutral-400"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-baseline gap-2 mb-1">
+                            <span id="modalTitle" class="font-bold text-white text-base truncate uppercase tracking-wide">Subject Target</span>
+                        </div>
+                        <p id="modalOpBody" class="text-neutral-200 text-sm leading-relaxed break-words whitespace-pre-wrap"></p>
+                    </div>
                 </div>
+
+                <div class="border-b border-neutral-800"></div>
+
+                <div id="commentTreeContainer" class="space-y-4"></div>
             </div>
-            <div class="p-5 border-t border-neutral-800 bg-black">
-                <form id="commentForm" class="flex flex-col sm:flex-row gap-3">
-                    <input type="text" id="commentInput" placeholder="WRITE REPLY PACKET... (USE >>ID INTER-LINK SYNTAX)" autocomplete="off" required
-                           class="flex-1 border border-neutral-800 text-white px-3 py-2 text-xs focus:outline-none focus:border-white placeholder:text-neutral-700">
-                    <button type="submit" class="border border-white bg-white text-black font-bold px-5 py-2 hover:bg-black hover:text-white text-xs uppercase tracking-wider transition-colors cursor-pointer">Reply</button>
+
+            <div class="p-4 border-t border-neutral-800 bg-black">
+                <form id="commentForm" class="flex gap-3 items-center">
+                    <div class="w-8 h-8 rounded-full bg-neutral-900 flex items-center justify-center border border-neutral-800 shrink-0">
+                        <i data-lucide="corner-down-right" class="w-4 h-4 text-neutral-500"></i>
+                    </div>
+                    <input type="text" id="commentInput" placeholder="Post your reply... (Use >>ID to interlink node tree)" autocomplete="off" required
+                           class="flex-1 bg-transparent text-sm text-white focus:outline-none placeholder:text-neutral-600">
+                    <button type="submit" class="bg-white text-black hover:bg-neutral-200 font-bold px-4 py-1.5 rounded-full text-xs transition duration-200 cursor-pointer">
+                        Reply
+                    </button>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- Hover Preview Layer -->
-    <div id="hoverPreviewBox" class="absolute bg-black border border-white text-neutral-300 text-xs p-4 shadow-2xl hidden z-50 max-w-sm pointer-events-none border-l-4 border-l-white"></div>
+    <div id="hoverPreviewBox" class="absolute bg-neutral-900 border border-neutral-700 text-neutral-200 text-xs p-3 rounded-xl shadow-2xl hidden z-50 max-w-xs pointer-events-none"></div>
 
     <script>
         const SUPABASE_URL = "https://xdshsodkuyawljzuirqt.supabase.co";
@@ -113,7 +149,7 @@
         const appState = { threads: {}, comments: {}, activeThreadId: null, userSeed: null };
 
         window.addEventListener('load', async () => {
-            // Guarantee library load state sanity check
+            if (!window.supabase) return;
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             
             initSeedEngine();
@@ -121,6 +157,7 @@
             await fetchInitialData();
             initRealtimeSync();
             renderThreads();
+            lucide.createIcons(); // Initialize the icon paths
             setInterval(() => renderThreads(), 30000);
         });
 
@@ -138,20 +175,22 @@
             const rawBuffer = encoder.encode(threadId + seedString);
             const digestBuffer = await crypto.subtle.digest('SHA-256', rawBuffer);
             const hashArray = Array.from(new Uint8Array(digestBuffer));
-            return 'Anon#' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 6);
+            return 'Anon#' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 4);
         }
 
         async function fetchInitialData() {
-            const { data: threads } = await supabaseClient.from('threads').select('*');
-            if (threads) threads.forEach(t => appState.threads[t.id] = t);
+            try {
+                const { data: threads } = await supabaseClient.from('threads').select('*');
+                if (threads) threads.forEach(t => appState.threads[t.id] = t);
 
-            const { data: comments } = await supabaseClient.from('comments').select('*');
-            if (comments) {
-                comments.forEach(c => {
-                    if (!appState.comments[c.thread_id]) appState.comments[c.thread_id] = {};
-                    appState.comments[c.thread_id][c.id] = c;
-                });
-            }
+                const { data: comments } = await supabaseClient.from('comments').select('*');
+                if (comments) {
+                    comments.forEach(c => {
+                        if (!appState.comments[c.thread_id]) appState.comments[c.thread_id] = {};
+                        appState.comments[c.thread_id][c.id] = c;
+                    });
+                }
+            } catch (err) { console.error(err); }
         }
 
         function initRealtimeSync() {
@@ -202,9 +241,8 @@
 
         function renderThreads() {
             const threadList = Object.values(appState.threads);
-            document.getElementById('latestCount').innerText = `${threadList.length} NODES LOGGED`;
-
             const chronological = [...threadList].sort((a, b) => b.timestamp - a.timestamp);
+            
             const latestContainer = document.getElementById('latestStream');
             latestContainer.innerHTML = '';
             chronological.forEach(t => latestContainer.appendChild(createThreadElementCard(t)));
@@ -223,46 +261,46 @@
                 .sort((a, b) => b.score - a.score);
 
             if (trending.length === 0) {
-                trendingContainer.innerHTML = `<div class="text-[10px] text-neutral-600 text-center py-6 border border-neutral-800 uppercase tracking-widest">No activity map lines inside 24H vector matrix</div>`;
+                trendingContainer.innerHTML = `<div class="text-xs text-neutral-500 py-2">No data spikes mapped lines detected.</div>`;
             } else {
-                trending.forEach((t, i) => trendingContainer.appendChild(createTrendingElementCard(t, i + 1)));
+                trending.slice(0, 5).forEach(t => trendingContainer.appendChild(createTrendingElementCard(t)));
             }
+            lucide.createIcons();
         }
 
         function createThreadElementCard(thread) {
             const commentCount = appState.comments[thread.id] ? Object.keys(appState.comments[thread.id]).length : 0;
             const dateStr = new Date(thread.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const card = document.createElement('div');
-            card.className = "border border-neutral-800 bg-black p-4 cursor-pointer hover:border-neutral-500 transition-colors";
+            card.className = "p-4 hover:bg-neutral-900/40 cursor-pointer transition duration-200 flex gap-3 items-start";
             card.onclick = () => openThreadModal(thread.id);
             card.innerHTML = `
-                <div class="flex justify-between items-start gap-4 mb-2">
-                    <h3 class="font-bold text-white text-xs uppercase tracking-wide break-all max-w-[75%]">${escapeHTML(thread.title)}</h3>
-                    <span class="text-[10px] text-neutral-500 shrink-0 font-mono tracking-tight">${dateStr} [>>${thread.id}]</span>
+                <div class="w-10 h-10 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center shrink-0">
+                    <i data-lucide="layers" class="w-4 h-4 text-neutral-400"></i>
                 </div>
-                <p class="text-neutral-400 text-xs line-clamp-2 mb-3 leading-relaxed break-words">${escapeHTML(thread.content)}</p>
-                <div class="flex justify-between items-center text-[10px] text-neutral-500 border-t border-neutral-900 pt-2">
-                    <span class="text-neutral-400 font-bold">INTERACTIONS: ${thread.upvotes || 1}</span>
-                    <span class="border border-neutral-800 px-2 py-0.5 text-white font-mono text-[9px]">REPLIES: ${commentCount}</span>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between text-xs text-neutral-500 mb-1">
+                        <span class="font-bold text-neutral-300 uppercase tracking-wide truncate max-w-[60%]">${escapeHTML(thread.title)}</span>
+                        <span class="font-mono text-[11px]">>>${thread.id} · ${dateStr}</span>
+                    </div>
+                    <p class="text-neutral-300 text-sm leading-relaxed mb-3 break-words whitespace-pre-wrap">${escapeHTML(thread.content)}</p>
+                    <div class="flex items-center gap-6 text-xs text-neutral-500">
+                        <span class="flex items-center gap-1.5 hover:text-neutral-300 transition"><i data-lucide="message-square" class="w-4 h-4"></i> ${commentCount}</span>
+                        <span class="flex items-center gap-1.5 hover:text-neutral-300 transition"><i data-lucide="zap" class="w-4 h-4"></i> ${thread.upvotes || 1}</span>
+                    </div>
                 </div>
             `;
             return card;
         }
 
-        function createTrendingElementCard(thread, index) {
+        function createTrendingElementCard(thread) {
             const card = document.createElement('div');
-            card.className = "border border-neutral-900 hover:border-neutral-700 bg-black p-3 cursor-pointer flex gap-3 items-center transition-colors";
+            card.className = "cursor-pointer p-1 hover:bg-neutral-800/30 rounded-lg transition duration-200";
             card.onclick = () => openThreadModal(thread.id);
             card.innerHTML = `
-                <span class="text-xs font-bold text-neutral-600 w-4 shrink-0 text-center">${index.toString().padStart(2, '0')}</span>
-                <div class="flex-1 min-w-0">
-                    <h4 class="font-bold text-white text-xs truncate uppercase tracking-wider mb-1">${escapeHTML(thread.title)}</h4>
-                    <div class="flex gap-2 text-[9px] text-neutral-500 uppercase tracking-widest">
-                        <span class="text-neutral-300 font-bold">V: ${(thread.score * 10).toFixed(1)}</span>
-                        <span>/</span>
-                        <span>AGE: ${thread.ageInHours.toFixed(1)}H</span>
-                    </div>
-                </div>
+                <div class="text-[11px] text-neutral-500 font-mono">>>${thread.id} · MATRIX TREND</div>
+                <h4 class="font-bold text-sm text-neutral-200 truncate uppercase mt-0.5">${escapeHTML(thread.title)}</h4>
+                <div class="text-[11px] text-neutral-500 flex items-center gap-1 mt-1"><i data-lucide="trending-up" class="w-3 h-3"></i> Dynamic Velocity ${(thread.score * 10).toFixed(1)}</div>
             `;
             return card;
         }
@@ -272,7 +310,7 @@
             const thread = appState.threads[tId];
             if (!thread) return;
 
-            document.getElementById('modalMeta').innerText = `NODE DIRECTORY: >>${thread.id} // BROADCAST TIMELOG: ${new Date(thread.timestamp).toLocaleString().toUpperCase()}`;
+            document.getElementById('modalMeta').innerText = `NODE SYSTEM: >>${thread.id} // VERIFIED PIPELINE`;
             document.getElementById('modalTitle').innerText = thread.title;
             document.getElementById('modalOpBody').innerText = thread.content;
             document.getElementById('threadModal').classList.remove('hidden');
@@ -291,7 +329,7 @@
             const rawCommentsList = Object.values(commentsMap).sort((a, b) => a.timestamp - b.timestamp);
 
             if (rawCommentsList.length === 0) {
-                container.innerHTML = `<div class="text-[10px] text-neutral-600 text-center py-4 uppercase tracking-wider">No transactional data paths linked.</div>`;
+                container.innerHTML = `<div class="text-xs text-neutral-600 text-center py-6 font-mono">No communication packets linked to this cluster root.</div>`;
                 return;
             }
 
@@ -314,27 +352,28 @@
 
             treeRootNodes.forEach(rootNode => container.appendChild(buildCommentTreeUI(rootNode, 0)));
             setupCrossLinkHoverPreviews();
+            lucide.createIcons();
         }
 
         function buildCommentTreeUI(node, depth) {
             const wrap = document.createElement('div');
-            wrap.className = `flex flex-col ${depth > 0 ? 'ml-3 border-l border-neutral-800 pl-3 mt-2' : 'border-b border-neutral-900 pb-3'}`;
+            wrap.className = `flex flex-col ${depth > 0 ? 'ml-4 border-l border-neutral-800 pl-4 mt-3' : 'border-b border-neutral-900 pb-3'}`;
             
             const item = document.createElement('div');
-            item.className = "border border-neutral-900 bg-black p-3 text-xs";
+            item.className = "p-3 bg-neutral-950/40 rounded-xl border border-neutral-900 text-sm";
             item.id = `comment-${node.id}`;
 
             const dateStr = new Date(node.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             const linkedProcessedText = parseCrossLinksReferences(escapeHTML(node.text));
 
             item.innerHTML = `
-                <div class="flex justify-between items-center text-[9px] text-neutral-500 mb-2 border-b border-neutral-900 pb-1.5 uppercase tracking-wider">
-                    <span class="font-bold text-white border border-neutral-800 px-1 bg-black">${node.tripcode}</span>
-                    <span>${dateStr} <span class="text-neutral-400 select-all ml-1 font-bold">[>>${node.id}]</span></span>
+                <div class="flex justify-between items-center text-xs text-neutral-500 mb-2 border-b border-neutral-900 pb-1">
+                    <span class="font-bold text-neutral-300 font-mono bg-neutral-900 px-1.5 py-0.5 rounded">${node.tripcode}</span>
+                    <span class="font-mono text-[11px]">${dateStr} [>>${node.id}]</span>
                 </div>
                 <p class="text-neutral-300 leading-relaxed break-words whitespace-pre-wrap">${linkedProcessedText}</p>
                 <div class="flex justify-end mt-2">
-                    <button onclick="appendReplyPointer('${node.id}')" class="text-[9px] text-neutral-400 hover:text-white uppercase tracking-widest cursor-pointer font-bold">[REPLY]</button>
+                    <button onclick="appendReplyPointer('${node.id}')" class="text-xs text-neutral-500 hover:text-white flex items-center gap-1 font-medium cursor-pointer"><i data-lucide="reply" class="w-3.5 h-3.5"></i> Reply</button>
                 </div>
             `;
             wrap.appendChild(item);
@@ -368,7 +407,7 @@
 
                     if (targetComment) {
                         previewBox.innerHTML = `
-                            <div class="text-[9px] text-white font-bold mb-1 border-b border-neutral-800 pb-0.5 uppercase">${targetComment.tripcode} [>>${targetComment.id}]</div>
+                            <div class="text-[10px] text-white font-bold mb-1 border-b border-neutral-800 pb-0.5 uppercase font-mono">${targetComment.tripcode} [>>${targetComment.id}]</div>
                             <p class="text-neutral-400 leading-snug">${escapeHTML(targetComment.text)}</p>
                         `;
                         previewBox.classList.remove('hidden');
