@@ -4,101 +4,88 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>InteractInk — Anonymous Monochromatic Textboard</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
+    <!-- Supabase CDN Client Stack -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body {
-            background-color: #000000;
-            color: #ffffff;
-        }
-        ::-webkit-scrollbar {
-            width: 4px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #000000;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #222222;
-        }
-        input, textarea {
-            background-color: #000000 !important;
-        }
+        body { background-color: #000000; color: #ffffff; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #000000; }
+        ::-webkit-scrollbar-thumb { background: #222222; }
+        input, textarea { background-color: #000000 !important; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col font-mono text-xs antialiased selection:bg-white selection:text-black">
 
+    <!-- Top Navigation Header -->
     <header class="border-b border-neutral-800 bg-black sticky top-0 z-40 px-6 py-4">
         <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div class="flex items-center gap-4">
                 <a href="blogs.html" class="text-neutral-500 hover:text-white transition-colors no-underline">← index</a>
                 <h1 class="text-sm font-bold tracking-widest uppercase">InteractInk</h1>
-                <span class="text-[10px] border border-neutral-700 px-2 py-0.5 uppercase tracking-wider font-semibold text-neutral-400">P2P MESH</span>
+                <span class="text-[10px] border border-neutral-700 px-2 py-0.5 uppercase tracking-wider font-semibold text-neutral-400">GLOBAL REALTIME MATRIX</span>
             </div>
             <div class="text-[10px] text-neutral-400 font-sans tracking-wide">
                 <div id="connectionStatus" class="flex items-center gap-2">
-                    <span class="inline-block w-1.5 h-1.5 rounded-full bg-neutral-600 animate-pulse"></span>
-                    <span>Initializing Network Matrix...</span>
+                    <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    <span class="tracking-wider uppercase">ONLINE // GLOBAL SYNC ACTIVE</span>
                 </div>
             </div>
         </div>
     </header>
 
+    <!-- Main Workspace Frame -->
     <main class="flex-1 max-w-7xl w-full mx-auto p-6 flex flex-col lg:flex-row gap-8">
-        
         <div class="flex-1 flex flex-col gap-8 lg:max-w-3xl">
-            
-            <section class="border border-neutral-800 p-5 rounded-none bg-black">
-                <div class="text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-4 border-b border-neutral-800 pb-2">
-                    [01] Initialize New Node Pipeline
-                </div>
+            <!-- Form Shell -->
+            <section class="border border-neutral-800 p-5 bg-black">
+                <div class="text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-4 border-b border-neutral-800 pb-2">[01] Initialize New Node Pipeline</div>
                 <form id="threadForm" class="space-y-4">
                     <input type="text" id="threadTitle" placeholder="THREAD SUBJECT / TOPIC DIRECTORY..." required max="100" autocomplete="off"
-                           class="w-full border border-neutral-800 text-white px-3 py-2 focus:outline-none focus:border-white placeholder:text-neutral-700 transition-colors">
+                           class="w-full border border-neutral-800 text-white px-3 py-2 focus:outline-none focus:border-white placeholder:text-neutral-700">
                     <textarea id="threadContent" placeholder="INPUT TEXT DATA PACKETS PACKED SECURELY..." required rows="4"
-                              class="w-full border border-neutral-800 text-white px-3 py-2 focus:outline-none focus:border-white placeholder:text-neutral-700 transition-colors resize-none"></textarea>
+                              class="w-full border border-neutral-800 text-white px-3 py-2 focus:outline-none focus:border-white placeholder:text-neutral-700 resize-none"></textarea>
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-1">
                         <span class="text-[10px] text-neutral-500">Auto-Tripcode compilation layer active.</span>
-                        <button type="submit" class="w-full sm:w-auto border border-white bg-white text-black font-bold px-4 py-2 hover:bg-black hover:text-white transition-colors cursor-pointer text-[10px] uppercase tracking-wider">
-                            Commit Broadcast
-                        </button>
+                        <button type="submit" class="w-full sm:w-auto border border-white bg-white text-black font-bold px-4 py-2 hover:bg-black hover:text-white transition-colors cursor-pointer text-[10px] uppercase tracking-wider">Commit Broadcast</button>
                     </div>
                 </form>
             </section>
 
-            <section class="border border-neutral-800 p-5 rounded-none bg-black flex-1 flex flex-col">
+            <!-- Latest Threads Feed -->
+            <section class="border border-neutral-800 p-5 bg-black flex-1 flex flex-col">
                 <div class="flex justify-between items-center mb-6 border-b border-neutral-800 pb-2">
                     <h2 class="text-[10px] font-bold uppercase tracking-widest text-neutral-400">[02] Global Live Stream</h2>
                     <span class="text-[10px] text-neutral-500 tracking-wider" id="latestCount">0 Nodes Detected</span>
                 </div>
-                <div id="latestStream" class="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-                    </div>
+                <div id="latestStream" class="space-y-4 max-h-[600px] overflow-y-auto pr-2"></div>
             </section>
         </div>
 
+        <!-- Trending Sidebar -->
         <aside class="w-full lg:w-80 shrink-0 flex flex-col gap-8">
-            <section class="border border-neutral-800 p-5 rounded-none bg-black sticky top-24 shadow-xl">
+            <section class="border border-neutral-800 p-5 bg-black sticky top-24 shadow-xl">
                 <div class="flex justify-between items-center mb-6 border-b border-neutral-800 pb-2">
                     <h2 class="text-[10px] font-bold uppercase tracking-widest text-neutral-400">[03] Gravity Decay (24H)</h2>
                 </div>
-                <div id="trendingStream" class="space-y-3 max-h-[650px] overflow-y-auto pr-1">
-                    </div>
+                <div id="trendingStream" class="space-y-3 max-h-[650px] overflow-y-auto pr-1"></div>
             </section>
         </aside>
     </main>
 
-    <div id="threadModal" class="fixed inset-0 bg-black/95 z-50 hidden flex items-center justify-center p-4 sm:p-6">
-        <div class="bg-black border border-neutral-800 w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+    <!-- Thread Detail Modal -->
+    <div id="threadModal" class="fixed inset-0 bg-black/95 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-black border border-neutral-800 w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden">
             <div class="p-5 border-b border-neutral-800 bg-black flex justify-between items-start gap-4">
                 <div class="min-w-0">
                     <span id="modalMeta" class="text-[10px] text-neutral-500 block mb-1 tracking-wider uppercase">Thread Reference ID</span>
-                    <h3 id="modalTitle" class="text-sm font-bold text-white uppercase tracking-wide break-words">Thread Subject Target</h3>
+                    <h3 id="modalTitle" class="text-sm font-bold text-white uppercase tracking-wide break-all">Thread Subject Target</h3>
                 </div>
-                <button onclick="closeThreadModal()" class="text-neutral-500 hover:text-white font-bold px-2 py-1 cursor-pointer transition-colors text-sm font-sans">&times;</button>
+                <button onclick="closeThreadModal()" class="text-neutral-500 hover:text-white font-bold px-2 py-1 cursor-pointer text-sm font-sans">&times;</button>
             </div>
             <div class="flex-1 overflow-y-auto p-6 space-y-6" id="modalScrollBody">
-                <div id="modalOpBody" class="p-4 border border-neutral-800 bg-black text-neutral-300 border-l-2 border-l-white leading-relaxed break-words whitespace-pre-wrap">
-                    </div>
+                <div id="modalOpBody" class="p-4 border border-neutral-800 bg-black text-neutral-300 border-l-2 border-l-white leading-relaxed break-words whitespace-pre-wrap"></div>
                 <div class="space-y-4">
                     <h4 class="text-[10px] font-bold uppercase tracking-widest text-neutral-400 border-b border-neutral-800 pb-2">Discussion Tree Matrix</h4>
                     <div id="commentTreeContainer" class="space-y-3"></div>
@@ -107,47 +94,34 @@
             <div class="p-5 border-t border-neutral-800 bg-black">
                 <form id="commentForm" class="flex flex-col sm:flex-row gap-3">
                     <input type="text" id="commentInput" placeholder="WRITE REPLY PACKET... (USE >>ID INTER-LINK SYNTAX)" autocomplete="off" required
-                           class="flex-1 border border-neutral-800 text-white px-3 py-2 text-xs focus:outline-none focus:border-white placeholder:text-neutral-700 transition-colors">
-                    <button type="submit" class="border border-white bg-white text-black font-bold px-5 py-2 hover:bg-black hover:text-white text-xs uppercase tracking-wider transition-colors cursor-pointer">
-                        Reply
-                    </button>
+                           class="flex-1 border border-neutral-800 text-white px-3 py-2 text-xs focus:outline-none focus:border-white placeholder:text-neutral-700">
+                    <button type="submit" class="border border-white bg-white text-black font-bold px-5 py-2 hover:bg-black hover:text-white text-xs uppercase tracking-wider transition-colors cursor-pointer">Reply</button>
                 </form>
             </div>
         </div>
     </div>
 
+    <!-- Hover Preview Layer -->
     <div id="hoverPreviewBox" class="absolute bg-black border border-white text-neutral-300 text-xs p-4 shadow-2xl hidden z-50 max-w-sm pointer-events-none border-l-4 border-l-white"></div>
 
     <script>
-        // GunDB Infrastructure Initialization (Fallback Multi-Relay Graph Topology)
-        const gun = Gun({
-    peers: [
-        'https://gun-us.herokuapp.com/gun',
-        'https://gun-eu.herokuapp.com/gun',
-        'https://peer.wall.org/gun'
-    ]
-  });
+        // STEP 3 DETAILS: PASTE YOUR UNIQUE SUPABASE CREDS HERE
+const SUPABASE_URL = "https://xdshsodkuyawljzuirqt.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
+        
+        const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        const appState = {
-            threads: {},
-            comments: {},
-            activeThreadId: null,
-            userSeed: null
-        };
+        const appState = { threads: {}, comments: {}, activeThreadId: null, userSeed: null };
 
-        // Execution Core Entrypoint Routine
         window.addEventListener('DOMContentLoaded', async () => {
             initSeedEngine();
             bindEventListeners();
-            initDataPipes();
-            
-            // Continuous 30-Second Sorting Matrix Decay Engine Clock Loop Execution
-            setInterval(() => {
-                renderThreads();
-            }, 30000);
+            await fetchInitialData();
+            initRealtimeSync();
+            renderThreads();
+            setInterval(() => renderThreads(), 30000);
         });
 
-        // Initialize Internal Local Privacy Seed Engine Structures
         function initSeedEngine() {
             let seed = localStorage.getItem('ink_private_seed_key');
             if (!seed) {
@@ -157,120 +131,83 @@
             appState.userSeed = seed;
         }
 
-        // Web Crypto SHA-256 Iso-Thread Identity Generator API Wrapper Logic
         async function generateTripcode(threadId, seedString) {
             const encoder = new TextEncoder();
             const rawBuffer = encoder.encode(threadId + seedString);
             const digestBuffer = await crypto.subtle.digest('SHA-256', rawBuffer);
             const hashArray = Array.from(new Uint8Array(digestBuffer));
-            const hexString = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-            return 'Anon#' + hexString.substring(0, 6);
+            return 'Anon#' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 6);
         }
 
-        // Listen for Form Actions and Data Pipelines
+        async function fetchInitialData() {
+            const { data: threads } = await supabase.from('threads').select('*');
+            if (threads) threads.forEach(t => appState.threads[t.id] = t);
+
+            const { data: comments } = await supabase.from('comments').select('*');
+            if (comments) {
+                comments.forEach(c => {
+                    if (!appState.comments[c.thread_id]) appState.comments[c.thread_id] = {};
+                    appState.comments[c.thread_id][c.id] = c;
+                });
+            }
+        }
+
+        function initRealtimeSync() {
+            supabase.channel('global-changes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'threads' }, payload => {
+                    if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+                        appState.threads[payload.new.id] = payload.new;
+                    }
+                    renderThreads();
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, payload => {
+                    if (payload.eventType === 'INSERT') {
+                        const c = payload.new;
+                        if (!appState.comments[c.thread_id]) appState.comments[c.thread_id] = {};
+                        appState.comments[c.thread_id][c.id] = c;
+                        if (appState.activeThreadId === c.thread_id) renderCommentTree();
+                    }
+                    renderThreads();
+                })
+                .subscribe();
+        }
+
         function bindEventListeners() {
             document.getElementById('threadForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const titleInput = document.getElementById('threadTitle');
-                const contentInput = document.getElementById('threadContent');
-                const tId = Math.random().toString(16).substring(2, 10);
-                
-                const postNode = {
-                    id: tId,
-                    title: titleInput.value.trim(),
-                    content: contentInput.value.trim(),
-                    timestamp: Date.now(),
-                    upvotes: 1,
-                    downvotes: 0
-                };
+                const title = document.getElementById('threadTitle');
+                const content = document.getElementById('threadContent');
+                const id = Math.random().toString(16).substring(2, 10);
 
-                gun.get('interactink_threads_v1').get(tId).put(postNode);
-                
-                titleInput.value = '';
-                contentInput.value = '';
+                await supabase.from('threads').insert([{ id, title: title.value.trim(), content: content.value.trim(), timestamp: Date.now(), upvotes: 1 }]);
+                title.value = ''; content.value = '';
             });
 
             document.getElementById('commentForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const commentInput = document.getElementById('commentInput');
+                const input = document.getElementById('commentInput');
                 if (!appState.activeThreadId) return;
 
-                const cId = Math.random().toString(16).substring(2, 10);
-                const tripString = await generateTripcode(appState.activeThreadId, appState.userSeed);
+                const id = Math.random().toString(16).substring(2, 10);
+                const tripcode = await generateTripcode(appState.activeThreadId, appState.userSeed);
 
-                const commentNode = {
-                    id: cId,
-                    threadId: appState.activeThreadId,
-                    tripcode: tripString,
-                    text: commentInput.value.trim(),
-                    timestamp: Date.now()
-                };
+                await supabase.from('comments').insert([{ id, thread_id: appState.activeThreadId, tripcode, text: input.value.trim(), timestamp: Date.now() }]);
+                await supabase.rpc('increment_upvote', { row_id: appState.activeThreadId }); // Fallback direct increment update handling:
+                await supabase.from('threads').update({ upvotes: (appState.threads[appState.activeThreadId].upvotes || 1) + 1 }).eq('id', appState.activeThreadId);
 
-                gun.get('interactink_comments_v1').get(appState.activeThreadId).get(cId).put(commentNode);
-                
-                // Track interaction on global thread model graph layer to manipulate scoring algorithm
-                gun.get('interactink_threads_v1').get(appState.activeThreadId).get('upvotes').once(v => {
-                    gun.get('interactink_threads_v1').get(appState.activeThreadId).put({ upvotes: (v || 1) + 1 });
-                });
-
-                commentInput.value = '';
+                input.value = '';
             });
         }
 
-        // Initialize Distributed GunDB Mesh Event Subscriptions
-        function initDataPipes() {
-            gun.on('hi', () => updatePeerDisplay());
-            gun.on('bye', () => updatePeerDisplay());
-
-            gun.get('interactink_threads_v1').map().on((data, key) => {
-                if (data && data.id) {
-                    appState.threads[key] = data;
-                    renderThreads();
-                    initCommentStreamForThread(data.id);
-                }
-            });
-        }
-
-        function initCommentStreamForThread(tId) {
-            if (appState.comments[tId]) return;
-            appState.comments[tId] = {};
-            
-            gun.get('interactink_comments_v1').get(tId).map().on((cData, cKey) => {
-                if (cData && cData.id) {
-                    appState.comments[tId][cKey] = cData;
-                    if (appState.activeThreadId === tId) {
-                        renderCommentTree();
-                    }
-                    renderThreads(); 
-                }
-            });
-        }
-
-        function updatePeerDisplay() {
-            const peers = Object.keys(gun._.opt.peers || {}).length;
-            const node = document.getElementById('connectionStatus');
-            if (peers > 0) {
-                node.innerHTML = `<span class="inline-block w-1.5 h-1.5 rounded-full bg-white"></span><span class="tracking-wider uppercase">ONLINE // CONNECTED TO ${peers} NODES</span>`;
-            } else {
-                node.innerHTML = `<span class="inline-block w-1.5 h-1.5 rounded-full bg-neutral-700 animate-pulse"></span><span class="tracking-wider uppercase text-neutral-500">LOCAL GRAPH ISOLATION MODE</span>`;
-            }
-        }
-
-        // Recalculate Time-Decay Matrices and Render Views
         function renderThreads() {
             const threadList = Object.values(appState.threads);
             document.getElementById('latestCount').innerText = `${threadList.length} NODES LOGGED`;
 
-            // Chronological Sorting Pipeline Routine
             const chronological = [...threadList].sort((a, b) => b.timestamp - a.timestamp);
             const latestContainer = document.getElementById('latestStream');
             latestContainer.innerHTML = '';
-            
-            chronological.forEach(t => {
-                latestContainer.appendChild(createThreadElementCard(t));
-            });
+            chronological.forEach(t => latestContainer.appendChild(createThreadElementCard(t)));
 
-            // Mathematical Time-Gravity Decayed Trend Analysis Optimization Logic Loop (Past 24h Window)
             const currentTime = Date.now();
             const trendingContainer = document.getElementById('trendingStream');
             trendingContainer.innerHTML = '';
@@ -278,30 +215,25 @@
             const trending = [...threadList]
                 .map(t => {
                     const ageInHours = (currentTime - t.timestamp) / (1000 * 60 * 60);
-                    const netVotes = (t.upvotes || 0) - (t.downvotes || 0);
-                    const score = (netVotes + 1) / Math.pow((ageInHours + 2), 1.8);
+                    const score = ((t.upvotes || 1) + 1) / Math.pow((ageInHours + 2), 1.8);
                     return { ...t, ageInHours, score };
                 })
-                .filter(t => t.ageInHours <= 24) 
+                .filter(t => t.ageInHours <= 24)
                 .sort((a, b) => b.score - a.score);
 
             if (trending.length === 0) {
-                trendingContainer.innerHTML = `<div class="text-[10px] text-neutral-600 text-center py-6 border border-neutral-800 uppercase tracking-widest">No activity within 24H vector matrix</div>`;
+                trendingContainer.innerHTML = `<div class="text-[10px] text-neutral-600 text-center py-6 border border-neutral-800 uppercase tracking-widest">No activity map lines inside 24H vector matrix</div>`;
             } else {
-                trending.forEach((t, i) => {
-                    trendingContainer.appendChild(createTrendingElementCard(t, i + 1));
-                });
+                trending.forEach((t, i) => trendingContainer.appendChild(createTrendingElementCard(t, i + 1)));
             }
         }
 
         function createThreadElementCard(thread) {
             const commentCount = appState.comments[thread.id] ? Object.keys(appState.comments[thread.id]).length : 0;
             const dateStr = new Date(thread.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            
             const card = document.createElement('div');
-            card.className = "border border-neutral-800 bg-black p-4 cursor-pointer transition-colors hover:border-neutral-500";
+            card.className = "border border-neutral-800 bg-black p-4 cursor-pointer hover:border-neutral-500 transition-colors";
             card.onclick = () => openThreadModal(thread.id);
-            
             card.innerHTML = `
                 <div class="flex justify-between items-start gap-4 mb-2">
                     <h3 class="font-bold text-white text-xs uppercase tracking-wide break-all max-w-[75%]">${escapeHTML(thread.title)}</h3>
@@ -318,9 +250,8 @@
 
         function createTrendingElementCard(thread, index) {
             const card = document.createElement('div');
-            card.className = "border border-neutral-900 hover:border-neutral-700 bg-black p-3 cursor-pointer transition-colors flex gap-3 items-center";
+            card.className = "border border-neutral-900 hover:border-neutral-700 bg-black p-3 cursor-pointer flex gap-3 items-center transition-colors";
             card.onclick = () => openThreadModal(thread.id);
-
             card.innerHTML = `
                 <span class="text-xs font-bold text-neutral-600 w-4 shrink-0 text-center">${index.toString().padStart(2, '0')}</span>
                 <div class="flex-1 min-w-0">
@@ -335,7 +266,6 @@
             return card;
         }
 
-        // Open Thread Modal Detail Framework Display
         function openThreadModal(tId) {
             appState.activeThreadId = tId;
             const thread = appState.threads[tId];
@@ -344,7 +274,6 @@
             document.getElementById('modalMeta').innerText = `NODE DIRECTORY: >>${thread.id} // BROADCAST TIMELOG: ${new Date(thread.timestamp).toLocaleString().toUpperCase()}`;
             document.getElementById('modalTitle').innerText = thread.title;
             document.getElementById('modalOpBody').innerText = thread.content;
-            
             document.getElementById('threadModal').classList.remove('hidden');
             renderCommentTree();
         }
@@ -354,11 +283,9 @@
             appState.activeThreadId = null;
         }
 
-        // Recursive Nested Comments Tree Generator Execution Engine
         function renderCommentTree() {
             const container = document.getElementById('commentTreeContainer');
             container.innerHTML = '';
-            
             const commentsMap = appState.comments[appState.activeThreadId] || {};
             const rawCommentsList = Object.values(commentsMap).sort((a, b) => a.timestamp - b.timestamp);
 
@@ -370,10 +297,7 @@
             const commentMapRef = {};
             const treeRootNodes = [];
 
-            rawCommentsList.forEach(c => {
-                commentMapRef[c.id] = { ...c, children: [] };
-            });
-
+            rawCommentsList.forEach(c => commentMapRef[c.id] = { ...c, children: [] });
             rawCommentsList.forEach(c => {
                 const node = commentMapRef[c.id];
                 const match = c.text.match(/^&gt;&gt;([A-Fa-f0-9]{8})/); 
@@ -387,14 +311,10 @@
                 }
             });
 
-            treeRootNodes.forEach(rootNode => {
-                container.appendChild(buildCommentTreeUI(rootNode, 0));
-            });
-
+            treeRootNodes.forEach(rootNode => container.appendChild(buildCommentTreeUI(rootNode, 0)));
             setupCrossLinkHoverPreviews();
         }
 
-        // Recursive Engine Function management UI visual indentation trees safely
         function buildCommentTreeUI(node, depth) {
             const wrap = document.createElement('div');
             wrap.className = `flex flex-col ${depth > 0 ? 'ml-3 border-l border-neutral-800 pl-3 mt-2' : 'border-b border-neutral-900 pb-3'}`;
@@ -408,7 +328,7 @@
 
             item.innerHTML = `
                 <div class="flex justify-between items-center text-[9px] text-neutral-500 mb-2 border-b border-neutral-900 pb-1.5 uppercase tracking-wider">
-                    <span class="font-bold text-white border border-neutral-800 px-1 rounded-none bg-black">${node.tripcode}</span>
+                    <span class="font-bold text-white border border-neutral-800 px-1 bg-black">${node.tripcode}</span>
                     <span>${dateStr} <span class="text-neutral-400 select-all ml-1 font-bold">[>>${node.id}]</span></span>
                 </div>
                 <p class="text-neutral-300 leading-relaxed break-words whitespace-pre-wrap">${linkedProcessedText}</p>
@@ -416,15 +336,11 @@
                     <button onclick="appendReplyPointer('${node.id}')" class="text-[9px] text-neutral-400 hover:text-white uppercase tracking-widest cursor-pointer font-bold">[REPLY]</button>
                 </div>
             `;
-
             wrap.appendChild(item);
 
             if (node.children && node.children.length > 0) {
-                node.children.forEach(child => {
-                    wrap.appendChild(buildCommentTreeUI(child, depth + 1));
-                });
+                node.children.forEach(child => wrap.appendChild(buildCommentTreeUI(child, depth + 1)));
             }
-
             return wrap;
         }
 
@@ -434,15 +350,11 @@
             input.focus();
         }
 
-        // JavaScript Regex Cross-Linking Engine
         function parseCrossLinksReferences(text) {
             const regex = /&gt;&gt;([A-Fa-f0-9]{8})/g;
-            return text.replace(regex, (match, id) => {
-                return `<a href="#comment-${id}" data-preview-id="${id}" class="text-white underline font-bold transition-colors cross-link-node">${match}</a>`;
-            });
+            return text.replace(regex, (match, id) => `<a href="#comment-${id}" data-preview-id="${id}" class="text-white underline font-bold cross-link-node">${match}</a>`);
         }
 
-        // Hover Floating Preview Mechanism
         function setupCrossLinkHoverPreviews() {
             const links = document.querySelectorAll('.cross-link-node');
             const previewBox = document.getElementById('hoverPreviewBox');
@@ -459,25 +371,18 @@
                             <p class="text-neutral-400 leading-snug">${escapeHTML(targetComment.text)}</p>
                         `;
                         previewBox.classList.remove('hidden');
-                        
                         const rect = link.getBoundingClientRect();
                         previewBox.style.left = `${rect.left + window.scrollX}px`;
                         previewBox.style.top = `${rect.top + window.scrollY - previewBox.offsetHeight - 10}px`;
                     }
                 });
-
-                link.addEventListener('mouseleave', () => {
-                    previewBox.classList.add('hidden');
-                });
+                link.addEventListener('mouseleave', () => previewBox.classList.add('hidden'));
             });
         }
 
-        // Sanitization Layer
         function escapeHTML(str) {
             if (!str) return '';
-            return str.replace(/[&<>"']/g, m => ({
-                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;'
-            })[m]);
+            return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' })[m]);
         }
     </script>
 </body>
