@@ -34,19 +34,22 @@
 
         <section class="p-4 border-b border-neutral-800">
             <form id="threadForm" class="pt-1">
-                <input type="text" id="threadTitle" placeholder="Thread Subject..." required max="100" autocomplete="off"
+                <input type="text" id="threadTitle" placeholder="Your Name (Optional)..." maxlength="50" autocomplete="off"
                        class="w-full bg-transparent text-white text-base font-bold pb-2 focus:outline-none placeholder:text-neutral-600 border-b border-neutral-900 mb-3">
-                <textarea id="threadContent" placeholder="What is happening?" required rows="3"
+                <textarea id="threadContent" placeholder="What is happening?" required rows="3" maxlength="1000"
                           class="w-full bg-transparent text-white text-sm focus:outline-none placeholder:text-neutral-500 resize-none leading-relaxed"></textarea>
                 
                 <div class="flex justify-between items-center border-t border-neutral-950 pt-3 mt-2">
-                    <div class="text-neutral-600 flex gap-4 text-sm">
+                    <div class="text-neutral-600 flex gap-4 items-center text-sm">
                         <i data-lucide="shield-check" class="w-4 h-4 text-neutral-500" title="Auto-Tripcode compilation layer active"></i>
                         <span class="text-xs text-neutral-500 hidden sm:inline">Secure Broadcast</span>
                     </div>
-                    <button type="submit" class="bg-white text-black hover:bg-neutral-200 font-bold px-5 py-2 rounded-full transition duration-200 text-sm cursor-pointer shadow-sm">
-                        Post
-                    </button>
+                    <div class="flex items-center gap-3">
+                        <span id="threadCharCounter" class="text-[11px] font-mono text-neutral-600">0/1000</span>
+                        <button type="submit" class="bg-white text-black hover:bg-neutral-200 font-bold px-5 py-2 rounded-full transition duration-200 text-sm cursor-pointer shadow-sm">
+                            Post
+                        </button>
+                    </div>
                 </div>
             </form>
         </section>
@@ -84,9 +87,10 @@
                     <div class="text-neutral-500 shrink-0">
                         <i data-lucide="corner-down-right" class="w-4 h-4"></i>
                     </div>
-                    <input type="text" id="commentInput" placeholder="Post your reply... (Use >>ID to interlink node tree)" autocomplete="off" required
+                    <input type="text" id="commentInput" placeholder="Post your reply... (Use >>ID to interlink node tree)" autocomplete="off" required maxlength="300"
                            class="flex-1 bg-transparent text-sm text-white focus:outline-none placeholder:text-neutral-600">
-                    <button type="submit" class="bg-white text-black hover:bg-neutral-200 font-bold px-4 py-1.5 rounded-full text-xs transition duration-200 cursor-pointer">
+                    <span id="commentCharCounter" class="text-[11px] font-mono text-neutral-600 shrink-0 select-none">0/300</span>
+                    <button type="submit" class="bg-white text-black hover:bg-neutral-200 font-bold px-4 py-1.5 rounded-full text-xs transition duration-200 cursor-pointer shrink-0">
                         Reply
                     </button>
                 </form>
@@ -169,28 +173,44 @@
         }
 
         function bindEventListeners() {
+            // Live Counter Monitors
+            const threadContent = document.getElementById('threadContent');
+            const threadCharCounter = document.getElementById('threadCharCounter');
+            threadContent.addEventListener('input', () => {
+                threadCharCounter.innerText = `${threadContent.value.length}/1000`;
+            });
+
+            const commentInput = document.getElementById('commentInput');
+            const commentCharCounter = document.getElementById('commentCharCounter');
+            commentInput.addEventListener('input', () => {
+                commentCharCounter.innerText = `${commentInput.value.length}/300`;
+            });
+
             document.getElementById('threadForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const title = document.getElementById('threadTitle');
-                const content = document.getElementById('threadContent');
                 const id = Math.random().toString(16).substring(2, 10);
+                
+                // Defaults to Anonymous if Name field is left blank
+                const parsedTitle = title.value.trim() || 'Anonymous';
 
-                await supabaseClient.from('threads').insert([{ id, title: title.value.trim(), content: content.value.trim(), timestamp: Date.now(), upvotes: 1 }]);
-                title.value = ''; content.value = '';
+                await supabaseClient.from('threads').insert([{ id, title: parsedTitle, content: threadContent.value.trim(), timestamp: Date.now(), upvotes: 1 }]);
+                title.value = ''; threadContent.value = '';
+                threadCharCounter.innerText = '0/1000';
             });
 
             document.getElementById('commentForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const input = document.getElementById('commentInput');
                 if (!appState.activeThreadId) return;
 
                 const id = Math.random().toString(16).substring(2, 10);
                 const tripcode = await generateTripcode(appState.activeThreadId, appState.userSeed);
 
-                await supabaseClient.from('comments').insert([{ id, thread_id: appState.activeThreadId, tripcode, text: input.value.trim(), timestamp: Date.now() }]);
+                await supabaseClient.from('comments').insert([{ id, thread_id: appState.activeThreadId, tripcode, text: commentInput.value.trim(), timestamp: Date.now() }]);
                 await supabaseClient.from('threads').update({ upvotes: (appState.threads[appState.activeThreadId].upvotes || 1) + 1 }).eq('id', appState.activeThreadId);
 
-                input.value = '';
+                commentInput.value = '';
+                commentCharCounter.innerText = '0/300';
             });
         }
 
@@ -239,6 +259,8 @@
         function closeThreadModal() {
             document.getElementById('threadModal').classList.add('hidden');
             appState.activeThreadId = null;
+            document.getElementById('commentInput').value = '';
+            document.getElementById('commentCharCounter').innerText = '0/300';
         }
 
         function renderCommentTree() {
@@ -306,6 +328,8 @@
         function appendReplyPointer(cId) {
             const input = document.getElementById('commentInput');
             input.value = `>>${cId} ` + input.value;
+            // Update counter manually when appending reference link
+            document.getElementById('commentCharCounter').innerText = `${input.value.length}/300`;
             input.focus();
         }
 
@@ -339,7 +363,6 @@
             });
         }
 
-        // Keep raw content clean from code injection
         function escapeHTML(str) {
             if (!str) return '';
             return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' })[m]);
