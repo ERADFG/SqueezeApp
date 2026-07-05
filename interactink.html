@@ -13,6 +13,9 @@
         ::-webkit-scrollbar-track { background: #000000; }
         ::-webkit-scrollbar-thumb { background: #202327; border-radius: 9999px; }
         input, textarea { background-color: #000000 !important; }
+        /* Style for hyperlinked content */
+        .user-link { color: #3b82f6; text-decoration: underline; font-weight: 500; transition: color 0.1s ease; }
+        .user-link:hover { color: #60a5fa; }
     </style>
 </head>
 <body class="min-h-screen font-sans antialiased selection:bg-neutral-800 selection:text-white">
@@ -41,7 +44,7 @@
             <form id="threadForm" class="pt-1">
                 <input type="text" id="threadTitle" placeholder="Your Name (Optional)..." maxlength="50" autocomplete="off"
                        class="w-full bg-transparent text-white text-base font-bold pb-2 focus:outline-none placeholder:text-neutral-600 border-b border-neutral-900 mb-3">
-                <textarea id="threadContent" placeholder="What is happening?" required rows="3" maxlength="1000"
+                <textarea id="threadContent" placeholder="What is happening? Links are automatically hyperlinked..." required rows="3" maxlength="1000"
                           class="w-full bg-transparent text-white text-sm focus:outline-none placeholder:text-neutral-500 resize-none leading-relaxed"></textarea>
                 
                 <div class="flex justify-between items-center border-t border-neutral-950 pt-3 mt-2">
@@ -107,7 +110,6 @@
 
     <script>
         const SUPABASE_URL = "https://xdshsodkuyawljzuirqt.supabase.co";
-        // Fixed anonymized authorization credentials key typo string reference signature
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
         
         let supabaseClient;
@@ -261,12 +263,15 @@
             card.className = "p-4 hover:bg-neutral-900/40 cursor-pointer transition duration-200 flex flex-col";
             card.onclick = () => openThreadModal(thread.id);
             
+            // Integrated link conversion parsing to content cards
+            const processedContent = parseRichTextContent(escapeHTML(thread.content));
+            
             card.innerHTML = `
                 <div class="flex items-center justify-between text-xs text-neutral-500 mb-1">
                     <span class="font-bold text-neutral-300 uppercase tracking-wide truncate max-w-[70%]">${escapeHTML(thread.title)}</span>
                     <span class="font-mono text-[11px]">>>${thread.id} · ${dateStr}</span>
                 </div>
-                <p class="text-neutral-300 text-sm leading-relaxed mb-3 break-words whitespace-pre-wrap">${escapeHTML(thread.content)}</p>
+                <div class="text-neutral-300 text-sm leading-relaxed mb-3 break-words whitespace-pre-wrap">${processedContent}</div>
                 <div class="flex items-center gap-6 text-xs text-neutral-500">
                     <span class="flex items-center gap-1.5 hover:text-neutral-300 transition"><i data-lucide="message-square" class="w-4 h-4"></i> ${dynamicCommentCount}</span>
                 </div>
@@ -281,7 +286,8 @@
 
             document.getElementById('modalMeta').innerText = `NODE SYSTEM: >>${thread.id} // VERIFIED PIPELINE`;
             document.getElementById('modalTitle').innerText = thread.title;
-            document.getElementById('modalOpBody').innerText = thread.content;
+            // Stop click bubbling on links so clicking a link doesn't reset the modal trigger state
+            document.getElementById('modalOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content));
             document.getElementById('threadModal').classList.remove('hidden');
             
             document.getElementById('commentTreeContainer').innerHTML = `<div class="text-xs text-neutral-600 text-center py-6 font-mono animate-pulse">Syncing linked node packets...</div>`;
@@ -343,14 +349,16 @@
             item.id = `comment-${node.id}`;
 
             const dateStr = new Date(node.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            const linkedProcessedText = parseCrossLinksReferences(escapeHTML(node.text));
+            
+            // Parse both cross-links references AND raw outer links safely inside comment items
+            const structuralLinkedProcessedText = parseRichTextContent(escapeHTML(node.text));
 
             item.innerHTML = `
                 <div class="flex justify-between items-center text-xs text-neutral-500 mb-2 border-b border-neutral-900 pb-1">
                     <span class="font-bold text-neutral-300 font-mono bg-neutral-900 px-1.5 py-0.5 rounded">${node.tripcode}</span>
                     <span class="font-mono text-[11px]">${dateStr} [>>${node.id}]</span>
                 </div>
-                <p class="text-neutral-300 leading-relaxed break-words whitespace-pre-wrap">${linkedProcessedText}</p>
+                <div class="text-neutral-300 leading-relaxed break-words whitespace-pre-wrap">${structuralLinkedProcessedText}</div>
                 <div class="flex justify-end mt-2">
                     <button onclick="appendReplyPointer('${node.id}')" class="text-xs text-neutral-500 hover:text-white flex items-center gap-1 font-medium cursor-pointer"><i data-lucide="reply" class="w-3.5 h-3.5"></i> Reply</button>
                 </div>
@@ -370,9 +378,23 @@
             input.focus();
         }
 
-        function parseCrossLinksReferences(text) {
-            const regex = /&gt;&gt;([A-Fa-f0-9]{8})/g;
-            return text.replace(regex, (match, id) => `<a href="#comment-${id}" data-preview-id="${id}" class="text-white underline font-bold cross-link-node">${match}</a>`);
+        // Consolidated Rich Formatting Parser (Processes links + board cross-references)
+        function parseRichTextContent(text) {
+            if (!text) return '';
+
+            // 1. Process board cross-links layout engines (>>ID codes)
+            const nodeCrossRegex = /&gt;&gt;([A-Fa-f0-9]{8})/g;
+            text = text.replace(nodeCrossRegex, (match, id) => {
+                return `<a href="#comment-${id}" data-preview-id="${id}" class="text-white underline font-bold cross-link-node" onclick="event.stopPropagation();">${match}</a>`;
+            });
+
+            // 2. Safe URL matching layout regex parser
+            const rawUrlRegex = /(https?:\/\/[^\s]+)/g;
+            text = text.replace(rawUrlRegex, (url) => {
+                return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="user-link" onclick="event.stopPropagation();">${url}</a>`;
+            });
+
+            return text;
         }
 
         function setupCrossLinkHoverPreviews() {
@@ -400,7 +422,6 @@
             });
         }
 
-        // Sanitization Layer
         function escapeHTML(str) {
             if (!str) return '';
             return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' })[m]);
