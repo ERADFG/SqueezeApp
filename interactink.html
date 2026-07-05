@@ -23,12 +23,17 @@
             <h2 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
                 <i data-lucide="feather" class="w-5 h-5"></i> Home
             </h2>
-            <div class="px-3 py-1 flex items-center gap-2 rounded-full bg-neutral-900 border border-neutral-800">
-                <span class="relative flex h-1.5 w-1.5 shrink-0">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-                </span>
-                <span class="text-[10px] text-neutral-400 uppercase tracking-wider font-semibold">Online</span>
+            <div class="flex items-center gap-2">
+                <div class="px-3 py-1 text-[10px] font-mono font-semibold text-neutral-400 bg-neutral-900 border border-neutral-800 rounded-full uppercase tracking-wider">
+                    Total Broadcasts: <span id="globalPostCount" class="text-white">0</span>
+                </div>
+                <div class="px-3 py-1 flex items-center gap-2 rounded-full bg-neutral-900 border border-neutral-800">
+                    <span class="relative flex h-1.5 w-1.5 shrink-0">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                    </span>
+                    <span class="text-[10px] text-neutral-400 uppercase tracking-wider font-semibold">Online</span>
+                </div>
             </div>
         </header>
 
@@ -102,7 +107,7 @@
 
     <script>
         const SUPABASE_URL = "https://xdshsodkuyawljzuirqt.supabase.co";
-        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inxdc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
         
         let supabaseClient;
         const appState = { threads: {}, comments: {}, activeThreadId: null, userSeed: null };
@@ -149,6 +154,7 @@
                         appState.comments[c.thread_id][c.id] = c;
                     });
                 }
+                updateGlobalCounter();
             } catch (err) { console.error(err); }
         }
 
@@ -158,6 +164,7 @@
                     if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
                         appState.threads[payload.new.id] = payload.new;
                     }
+                    updateGlobalCounter();
                     renderThreads();
                 })
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, payload => {
@@ -167,13 +174,23 @@
                         appState.comments[c.thread_id][c.id] = c;
                         if (appState.activeThreadId === c.thread_id) renderCommentTree();
                     }
+                    updateGlobalCounter();
                     renderThreads();
                 })
                 .subscribe();
         }
 
+        // Calculates entire structural grid footprints (Threads + Responses)
+        function updateGlobalCounter() {
+            const threadCount = Object.keys(appState.threads).length;
+            let commentCount = 0;
+            Object.values(appState.comments).forEach(threadMap => {
+                commentCount += Object.keys(threadMap).length;
+            });
+            document.getElementById('globalPostCount').innerText = threadCount + commentCount;
+        }
+
         function bindEventListeners() {
-            // Live Counter Monitors
             const threadContent = document.getElementById('threadContent');
             const threadCharCounter = document.getElementById('threadCharCounter');
             threadContent.addEventListener('input', () => {
@@ -190,11 +207,10 @@
                 e.preventDefault();
                 const title = document.getElementById('threadTitle');
                 const id = Math.random().toString(16).substring(2, 10);
-                
-                // Defaults to Anonymous if Name field is left blank
                 const parsedTitle = title.value.trim() || 'Anonymous';
 
-                await supabaseClient.from('threads').insert([{ id, title: parsedTitle, content: threadContent.value.trim(), timestamp: Date.now(), upvotes: 1 }]);
+                // Initialized views attribute field entry as 0
+                await supabaseClient.from('threads').insert([{ id, title: parsedTitle, content: threadContent.value.trim(), timestamp: Date.now(), upvotes: 1, views: 0 }]);
                 title.value = ''; threadContent.value = '';
                 threadCharCounter.innerText = '0/1000';
             });
@@ -207,9 +223,7 @@
                 const tripcode = await generateTripcode(appState.activeThreadId, appState.userSeed);
 
                 await supabaseClient.from('comments').insert([{ id, thread_id: appState.activeThreadId, tripcode, text: commentInput.value.trim(), timestamp: Date.now() }]);
-                await supabaseClient.from('threads').update({ upvotes: (appState.threads[appState.activeThreadId].upvotes || 1) + 1 }).eq('id', appState.activeThreadId);
-
-                commentInput.value = '';
+                input.value = '';
                 commentCharCounter.innerText = '0/300';
             });
         }
@@ -230,6 +244,8 @@
             const card = document.createElement('div');
             card.className = "p-4 hover:bg-neutral-900/40 cursor-pointer transition duration-200 flex flex-col";
             card.onclick = () => openThreadModal(thread.id);
+            
+            // Replaced lucide-zap with lucide-eye vector asset
             card.innerHTML = `
                 <div class="flex items-center justify-between text-xs text-neutral-500 mb-1">
                     <span class="font-bold text-neutral-300 uppercase tracking-wide truncate max-w-[70%]">${escapeHTML(thread.title)}</span>
@@ -238,13 +254,13 @@
                 <p class="text-neutral-300 text-sm leading-relaxed mb-3 break-words whitespace-pre-wrap">${escapeHTML(thread.content)}</p>
                 <div class="flex items-center gap-6 text-xs text-neutral-500">
                     <span class="flex items-center gap-1.5 hover:text-neutral-300 transition"><i data-lucide="message-square" class="w-4 h-4"></i> ${commentCount}</span>
-                    <span class="flex items-center gap-1.5 hover:text-neutral-300 transition"><i data-lucide="zap" class="w-4 h-4"></i> ${thread.upvotes || 1}</span>
+                    <span class="flex items-center gap-1.5 hover:text-neutral-300 transition"><i data-lucide="eye" class="w-4 h-4"></i> ${thread.views || 0}</span>
                 </div>
             `;
             return card;
         }
 
-        function openThreadModal(tId) {
+        async function openThreadModal(tId) {
             appState.activeThreadId = tId;
             const thread = appState.threads[tId];
             if (!thread) return;
@@ -254,6 +270,16 @@
             document.getElementById('modalOpBody').innerText = thread.content;
             document.getElementById('threadModal').classList.remove('hidden');
             renderCommentTree();
+
+            // Increment individual localized view matrix pipelines down to database storage tier
+            const currentViews = thread.views || 0;
+            const updatedViews = currentViews + 1;
+            
+            // Local state updates instantly for UI responsiveness
+            appState.threads[tId].views = updatedViews;
+            
+            // Background push operation to database
+            await supabaseClient.from('threads').update({ views: updatedViews }).eq('id', tId);
         }
 
         function closeThreadModal() {
@@ -328,7 +354,6 @@
         function appendReplyPointer(cId) {
             const input = document.getElementById('commentInput');
             input.value = `>>${cId} ` + input.value;
-            // Update counter manually when appending reference link
             document.getElementById('commentCharCounter').innerText = `${input.value.length}/300`;
             input.focus();
         }
