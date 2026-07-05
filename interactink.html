@@ -3,24 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InteractInk - Anonymous Text Board</title>
+    <title>InteractInk — Anonymous Realtime Board</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         body { background-color: #000000; color: #e7e9ea; }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #000000; }
         ::-webkit-scrollbar-thumb { background: #202327; border-radius: 9999px; }
         input, textarea { background-color: #000000 !important; }
-        /* Style for hyperlinked content */
         .user-link { color: #3b82f6; text-decoration: underline; font-weight: 500; transition: color 0.1s ease; }
         .user-link:hover { color: #60a5fa; }
+        .embedded-img { max-height: 220px; object-fit: cover; border-radius: 12px; cursor: zoom-in; border: 1px solid #262626; transition: border-color 0.15s ease; }
+        .embedded-img:hover { border-color: #404040; }
+        #qrcode img { display: inline-block !important; border: 8px solid white; border-radius: 8px; }
     </style>
 </head>
-<body class="min-h-screen font-sans antialiased selection:bg-neutral-800 selection:text-white">
+<body class="min-h-screen font-sans antialiased selection:bg-neutral-800 selection:text-white flex justify-center">
 
-    <div class="max-w-2xl mx-auto min-h-screen flex flex-col border-x border-neutral-800">
+    <aside class="hidden lg:flex flex-col w-64 border-r border-neutral-800 p-4 sticky top-0 h-screen overflow-y-auto space-y-6 shrink-0">
+        <div>
+            <h3 class="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                <i data-lucide="bookmark" class="w-3.5 h-3.5"></i> Pinned Clusters
+            </h3>
+            <div id="pinsVaultContainer" class="space-y-2 text-xs font-mono text-neutral-400">
+                </div>
+        </div>
+        
+        <div class="border-t border-neutral-900 pt-4">
+            <h3 class="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                <i data-lucide="qr-code" class="w-3.5 h-3.5"></i> Node Link QR
+            </h3>
+            <div class="space-y-3">
+                <input type="text" id="qrInput" placeholder="Paste URL / Data..." 
+                       class="w-full text-xs bg-transparent border border-neutral-800 rounded-lg p-2 text-white focus:outline-none focus:border-neutral-600">
+                <div id="qrcode" class="text-center p-2 min-h-[144px] flex items-center justify-center bg-neutral-950 rounded-xl border border-neutral-900"></div>
+            </div>
+        </div>
+    </aside>
+
+    <div class="max-w-2xl w-full min-h-screen flex flex-col border-x border-neutral-800">
         
         <header class="sticky top-0 bg-black/80 backdrop-blur-md border-b border-neutral-800 p-4 z-40 flex justify-between items-center">
             <h2 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
@@ -28,7 +52,7 @@
             </h2>
             <div class="flex items-center gap-2">
                 <div class="px-3 py-1 text-[10px] font-mono font-semibold text-neutral-400 bg-neutral-900 border border-neutral-800 rounded-full uppercase tracking-wider">
-                    Total Posts: <span id="globalPostCount" class="text-white">0</span>
+                    Total Broadcasts: <span id="globalPostCount" class="text-white">0</span>
                 </div>
                 <div class="px-3 py-1 flex items-center gap-2 rounded-full bg-neutral-900 border border-neutral-800">
                     <span class="relative flex h-1.5 w-1.5 shrink-0">
@@ -44,9 +68,16 @@
             <form id="threadForm" class="pt-1">
                 <input type="text" id="threadTitle" placeholder="Your Name (Optional)..." maxlength="50" autocomplete="off"
                        class="w-full bg-transparent text-white text-base font-bold pb-2 focus:outline-none placeholder:text-neutral-600 border-b border-neutral-900 mb-3">
-                <textarea id="threadContent" placeholder="What is happening? Links are automatically hyperlinked..." required rows="3" maxlength="1000"
+                <textarea id="threadContent" placeholder="What is happening? Direct image links (.jpg, .png, .gif) will render inline..." required rows="3" maxlength="1000"
                           class="w-full bg-transparent text-white text-sm focus:outline-none placeholder:text-neutral-500 resize-none leading-relaxed"></textarea>
                 
+                <div class="flex gap-2 mb-3 mt-1 select-none">
+                    <button type="button" onclick="formatInputText('threadContent', 'upper')" class="text-[10px] px-2 py-0.5 border border-neutral-900 rounded bg-neutral-950 text-neutral-400 hover:text-white font-mono">UPPER</button>
+                    <button type="button" onclick="formatInputText('threadContent', 'lower')" class="text-[10px] px-2 py-0.5 border border-neutral-900 rounded bg-neutral-950 text-neutral-400 hover:text-white font-mono">lower</button>
+                    <button type="button" onclick="formatInputText('threadContent', 'title')" class="text-[10px] px-2 py-0.5 border border-neutral-900 rounded bg-neutral-950 text-neutral-400 hover:text-white font-mono">Title</button>
+                    <button type="button" onclick="formatInputText('threadContent', 'trim')" class="text-[10px] px-2 py-0.5 border border-neutral-900 rounded bg-neutral-950 text-neutral-400 hover:text-white font-mono">Trim Clean</button>
+                </div>
+
                 <div class="flex justify-between items-center border-t border-neutral-950 pt-3 mt-2">
                     <div class="text-neutral-600 flex gap-4 items-center text-sm">
                         <i data-lucide="shield-check" class="w-4 h-4 text-neutral-500" title="Auto-Tripcode compilation layer active"></i>
@@ -68,9 +99,12 @@
     <div id="threadModal" class="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-black border border-neutral-800 w-full max-w-xl rounded-2xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
             <div class="p-4 border-b border-neutral-800 flex justify-between items-center bg-black">
-                <div class="flex items-center gap-2 text-xs text-neutral-500 font-medium">
+                <div class="flex items-center gap-3 text-xs text-neutral-500 font-medium">
                     <i data-lucide="cpu" class="w-3.5 h-3.5 text-neutral-500"></i>
                     <span id="modalMeta" class="uppercase tracking-wider">Node Directory Reference</span>
+                    <button id="pinModalBtn" onclick="togglePinActiveThread()" class="text-neutral-500 hover:text-amber-400 transition cursor-pointer">
+                        <i data-lucide="bookmark" class="w-4 h-4"></i>
+                    </button>
                 </div>
                 <button onclick="closeThreadModal()" class="text-neutral-400 hover:text-white p-1 hover:bg-neutral-900 rounded-full transition cursor-pointer">
                     <i data-lucide="x" class="w-5 h-5"></i>
@@ -82,44 +116,54 @@
                     <div class="flex items-baseline gap-2 mb-2">
                         <span id="modalTitle" class="font-bold text-white text-base truncate uppercase tracking-wide border-b border-neutral-900 pb-1 w-full">Subject Target</span>
                     </div>
-                    <p id="modalOpBody" class="text-neutral-200 text-sm leading-relaxed break-words whitespace-pre-wrap pt-1"></p>
+                    <div id="modalOpBody" class="text-neutral-200 text-sm leading-relaxed break-words whitespace-pre-wrap pt-1 flex flex-col gap-3"></div>
                 </div>
 
                 <div class="border-b border-neutral-800"></div>
-
                 <div id="commentTreeContainer" class="space-y-4"></div>
             </div>
 
             <div class="p-4 border-t border-neutral-800 bg-black">
-                <form id="commentForm" class="flex gap-3 items-center">
-                    <div class="text-neutral-500 shrink-0">
-                        <i data-lucide="corner-down-right" class="w-4 h-4"></i>
+                <form id="commentForm" class="flex flex-col gap-2">
+                    <div class="flex gap-3 items-center">
+                        <div class="text-neutral-500 shrink-0"><i data-lucide="corner-down-right" class="w-4 h-4"></i></div>
+                        <input type="text" id="commentInput" placeholder="Post your reply..." autocomplete="off" required maxlength="300"
+                               class="flex-1 bg-transparent text-sm text-white focus:outline-none placeholder:text-neutral-600">
+                        <span id="commentCharCounter" class="text-[11px] font-mono text-neutral-600 shrink-0 select-none">0/300</span>
+                        <button type="submit" class="bg-white text-black hover:bg-neutral-200 font-bold px-4 py-1.5 rounded-full text-xs transition duration-200 cursor-pointer shrink-0">
+                            Reply
+                        </button>
                     </div>
-                    <input type="text" id="commentInput" placeholder="Post your reply... (Use >>ID to interlink node tree)" autocomplete="off" required maxlength="300"
-                           class="flex-1 bg-transparent text-sm text-white focus:outline-none placeholder:text-neutral-600">
-                    <span id="commentCharCounter" class="text-[11px] font-mono text-neutral-600 shrink-0 select-none">0/300</span>
-                    <button type="submit" class="bg-white text-black hover:bg-neutral-200 font-bold px-4 py-1.5 rounded-full text-xs transition duration-200 cursor-pointer shrink-0">
-                        Reply
-                    </button>
+                    <div class="flex gap-2 pl-7">
+                        <button type="button" onclick="formatInputText('commentInput', 'upper')" class="text-[9px] px-1.5 py-0.5 border border-neutral-900 rounded bg-neutral-950 text-neutral-500 font-mono">UPPER</button>
+                        <button type="button" onclick="formatInputText('commentInput', 'lower')" class="text-[9px] px-1.5 py-0.5 border border-neutral-900 rounded bg-neutral-950 text-neutral-500 font-mono">lower</button>
+                    </div>
                 </form>
             </div>
         </div>
+    </div>
+
+    <div id="imageLightbox" class="fixed inset-0 bg-black/90 z-50 hidden flex items-center justify-center p-4 cursor-zoom-out" onclick="this.classList.add('hidden')">
+        <img id="lightboxTarget" src="" class="max-w-full max-h-[90vh] rounded-lg shadow-2xl border border-neutral-800">
     </div>
 
     <div id="hoverPreviewBox" class="absolute bg-neutral-900 border border-neutral-700 text-neutral-200 text-xs p-3 rounded-xl shadow-2xl hidden z-50 max-w-xs pointer-events-none font-sans"></div>
 
     <script>
         const SUPABASE_URL = "https://xdshsodkuyawljzuirqt.supabase.co";
-        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inxdc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
         
         let supabaseClient;
-        const appState = { threads: {}, comments: {}, commentCounts: {}, activeThreadId: null, userSeed: null, cachedCounts: { threads: 0, comments: 0 } };
+        let qrGeneratorInstance = null;
+        const appState = { threads: {}, comments: {}, commentCounts: {}, activeThreadId: null, userSeed: null, cachedCounts: { threads: 0, comments: 0 }, pinnedNodes: [] };
 
         window.addEventListener('load', async () => {
             if (!window.supabase) return;
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             
             initSeedEngine();
+            initPinsEngine();
+            initQRDeck();
             bindEventListeners();
             await fetchInitialData();
             initRealtimeSync();
@@ -135,6 +179,37 @@
                 localStorage.setItem('ink_private_seed_key', seed);
             }
             appState.userSeed = seed;
+        }
+
+        // Idea No.10 local storage pipeline initializers
+        function initPinsEngine() {
+            const raw = localStorage.getItem('ink_pinned_nodes');
+            if (raw) appState.pinnedNodes = JSON.parse(raw);
+            renderPinsVaultUI();
+        }
+
+        // Idea No.9 UI runtime execution bindings
+        function initQRDeck() {
+            const qrBox = document.getElementById("qrcode");
+            qrGeneratorInstance = new QRCode(qrBox, { text: window.location.href, width: 128, height: 128, colorDark: "#000000", colorLight: "#ffffff" });
+            
+            document.getElementById("qrInput").addEventListener("input", (e) => {
+                const text = e.target.value.trim() || window.location.href;
+                qrGeneratorInstance.clear();
+                qrGeneratorInstance.makeCode(text);
+            });
+        }
+
+        // Idea No.7 Local transformation pipeline string processor matches
+        function formatInputText(elementId, filter) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            let val = el.value;
+            if (filter === 'upper') val = val.toUpperCase();
+            if (filter === 'lower') val = val.toLowerCase();
+            if (filter === 'trim') val = val.replace(/\s+/g, ' ').trim();
+            if (filter === 'title') val = val.replace(/\w\S*/g, (t) => t.charAt(0).toUpperCase() + t.substr(1).toLowerCase());
+            el.value = val;
         }
 
         async function generateTripcode(threadId, seedString) {
@@ -263,7 +338,6 @@
             card.className = "p-4 hover:bg-neutral-900/40 cursor-pointer transition duration-200 flex flex-col";
             card.onclick = () => openThreadModal(thread.id);
             
-            // Integrated link conversion parsing to content cards
             const processedContent = parseRichTextContent(escapeHTML(thread.content));
             
             card.innerHTML = `
@@ -286,10 +360,17 @@
 
             document.getElementById('modalMeta').innerText = `NODE SYSTEM: >>${thread.id} // VERIFIED PIPELINE`;
             document.getElementById('modalTitle').innerText = thread.title;
-            // Stop click bubbling on links so clicking a link doesn't reset the modal trigger state
             document.getElementById('modalOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content));
-            document.getElementById('threadModal').classList.remove('hidden');
             
+            // Sync status indicators for local storage favorites bookmark indicator states
+            const pinBtn = document.getElementById('pinModalBtn');
+            if (appState.pinnedNodes.includes(tId)) {
+                pinBtn.className = "text-amber-400 cursor-pointer";
+            } else {
+                pinBtn.className = "text-neutral-500 hover:text-amber-400 cursor-pointer";
+            }
+
+            document.getElementById('threadModal').classList.remove('hidden');
             document.getElementById('commentTreeContainer').innerHTML = `<div class="text-xs text-neutral-600 text-center py-6 font-mono animate-pulse">Syncing linked node packets...</div>`;
             
             try {
@@ -298,6 +379,41 @@
                 if (comments) comments.forEach(c => appState.comments[tId][c.id] = c);
                 renderCommentTree();
             } catch (err) { console.error(err); }
+        }
+
+        // Idea No.10 Toggle action mappings definitions
+        function togglePinActiveThread() {
+            const id = appState.activeThreadId;
+            if (!id) return;
+            const index = appState.pinnedNodes.indexOf(id);
+            if (index > -1) {
+                appState.pinnedNodes.splice(index, 1);
+            } else {
+                appState.pinnedNodes.push(id);
+            }
+            localStorage.setItem('ink_pinned_nodes', JSON.stringify(appState.pinnedNodes));
+            renderPinsVaultUI();
+            
+            const pinBtn = document.getElementById('pinModalBtn');
+            pinBtn.className = appState.pinnedNodes.includes(id) ? "text-amber-400 cursor-pointer" : "text-neutral-500 hover:text-amber-400 cursor-pointer";
+        }
+
+        function renderPinsVaultUI() {
+            const container = document.getElementById("pinsVaultContainer");
+            if (!container) return;
+            container.innerHTML = "";
+            if (appState.pinnedNodes.length === 0) {
+                container.innerHTML = `<div class="text-[11px] text-neutral-600 italic">No pinned threads locally.</div>`;
+                return;
+            }
+            appState.pinnedNodes.forEach(id => {
+                const item = document.createElement("div");
+                item.className = "flex items-center justify-between p-1.5 rounded bg-neutral-950 border border-neutral-900 text-[11px] hover:border-neutral-700 transition cursor-pointer";
+                item.onclick = () => openThreadModal(id);
+                item.innerHTML = `<span>>>${id}</span> <i data-lucide="external-link" class="w-3 h-3 text-neutral-600"></i>`;
+                container.appendChild(item);
+            });
+            lucide.createIcons();
         }
 
         function closeThreadModal() {
@@ -349,8 +465,6 @@
             item.id = `comment-${node.id}`;
 
             const dateStr = new Date(node.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            
-            // Parse both cross-links references AND raw outer links safely inside comment items
             const structuralLinkedProcessedText = parseRichTextContent(escapeHTML(node.text));
 
             item.innerHTML = `
@@ -378,7 +492,14 @@
             input.focus();
         }
 
-        // Consolidated Rich Formatting Parser (Processes links + board cross-references)
+        // Idea No.3 Media extraction layout expansion function handler block mapping
+        function triggerImageLightbox(src) {
+            const lightbox = document.getElementById('imageLightbox');
+            const img = document.getElementById('lightboxTarget');
+            img.src = src;
+            lightbox.classList.remove('hidden');
+        }
+
         function parseRichTextContent(text) {
             if (!text) return '';
 
@@ -391,6 +512,10 @@
             // 2. Safe URL matching layout regex parser
             const rawUrlRegex = /(https?:\/\/[^\s]+)/g;
             text = text.replace(rawUrlRegex, (url) => {
+                // Match raw image extensions securely for inline rendering layouts
+                if (url.match(/\.(jpeg|jpg|gif|png|webp)($|\?)/i)) {
+                    return `<div class="mt-2 mb-1"><img src="${url}" class="embedded-img" onclick="event.stopPropagation(); triggerImageLightbox('${url}')" alt="Embedded Node Attachment"></div>`;
+                }
                 return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="user-link" onclick="event.stopPropagation();">${url}</a>`;
             });
 
