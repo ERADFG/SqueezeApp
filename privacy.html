@@ -3,36 +3,142 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Privacy Policy - Squeezes</title>
+    <title>Privacy Policy - InteractInk</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #000; color: #fff; line-height: 1.6; padding: 40px 20px; }
-        .container { max-width: 700px; margin: 0 auto; }
-        h1 { font-size: 2rem; margin-bottom: 24px; color: #fff; }
-        h2 { font-size: 1.25rem; margin-top: 30px; color: #fff; }
-        p { color: #888; margin-bottom: 16px; }
-        .back-link { display: inline-block; margin-top: 30px; color: #ffffff; text-decoration: none; }
-        .back-link:hover { text-decoration: underline; }
+        :root {
+            --bg-pure-black: #000000;
+            --text-primary: #ffffff;
+            --text-secondary: #71767b;
+            --accent-white: #ffffff;
+            --glass-border: #16181c;
+        }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background-color: var(--bg-pure-black); 
+            color: var(--text-primary); 
+            line-height: 1.6; 
+            padding: 0; 
+            margin: 0; 
+            -webkit-font-smoothing: antialiased;
+        }
+        .nav-bar { 
+            display: flex; 
+            justify-content: center; 
+            gap: 24px; 
+            padding: 16px 0; 
+            border-bottom: 1px solid var(--glass-border); 
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+        .nav-bar a { 
+            color: var(--text-secondary); 
+            text-decoration: none; 
+            font-size: 0.95rem; 
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+        .nav-bar a:hover {
+            color: var(--text-primary);
+        }
+        .container { 
+            max-width: 600px; 
+            margin: 40px auto; 
+            padding: 0 16px; 
+            font-size: 0.95rem;
+        }
+        <h1> { 
+            font-size: 2rem; 
+            font-weight: 800;
+            margin-bottom: 8px; 
+            letter-spacing: -0.02em;
+        }
+        .effective-date {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 32px;
+        }
+        h2 { 
+            font-size: 1.2rem; 
+            font-weight: 700;
+            margin-top: 36px; 
+            color: var(--text-primary); 
+            border-bottom: 1px solid var(--glass-border); 
+            padding-bottom: 8px; 
+            letter-spacing: -0.01em;
+        }
+        p, li { 
+            color: var(--text-secondary); 
+            margin-top: 12px;
+            margin-bottom: 16px; 
+        }
+        ul {
+            padding-left: 20px;
+        }
+        .back-link { 
+            display: inline-block; 
+            margin-top: 40px; 
+            margin-bottom: 60px;
+            color: var(--text-primary); 
+            text-decoration: none; 
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+        .back-link:hover { 
+            text-decoration: underline; 
+        }
     </style>
 </head>
 <body>
+
+    <nav class="nav-bar">
+        <a href="index.html">Home</a>
+        <a href="about.html">About</a>
+        <a href="faq.html">FAQ</a>
+        <a href="privacy.html" style="color: var(--text-primary);">Privacy</a>
+    </nav>
+
     <div class="container">
         <h1>Privacy Policy</h1>
-        <p>Last updated: July 2, 2026</p>
+        <div class="effective-date">Last Updated: July 6, 2026</div>
+        
+        <p>InteractInk ("we," "our," or the "Platform") is committed to protecting the privacy and structural anonymity of users who interact with our text board and communication workspace. This Privacy Policy outlines the explicit data boundaries, storage protocols, and third-party interactions governed by your use of the Service.</p>
+        
+        <h2>1. Non-Collection of Personal Identifiable Information (PII)</h2>
+        <p>InteractInk does not demand, register, or archive traditional personal data. The Service operates without profile systems, meaning we do not collect or store your:</p>
+        <ul>
+            <li>Legal names, physical addresses, or email credentials;</li>
+            <li>Telephone numbers or device-specific identity registries;</li>
+            <li>Social media profile metrics, avatars, or external identity keys.</li>
+        </ul>
+        <p>Because there is no account framework, we maintain zero historical user logs capable of correlating your real-world identity with specific text transmissions on the public timeline.</p>
 
-        <h2>Our Commitment to Privacy</h2>
-        <p>At Squeezes, we believe your data belongs to you. We have built our image compression tool with a "Privacy-First" philosophy, meaning we do not store, track, or share your personal files.</p>
+        <h2>2. Technical Data Transmission and Ephemeral Logs</h2>
+        <p>To deliver real-time data sync across our database systems, your network client sends text packages and node reference markers. The architectural handling of this data is executed under strict privacy constraints:</p>
+        <ul>
+            <li><strong>Text Configurations:</strong> Content published to a thread node is broadcast publicly. It is indexed via random 8-character matrix node strings rather than static accounts.</li>
+            <li><strong>Cryptographic Tripcodes:</strong> Author verification is managed using locally held private seeds. Your browser generates a hashed tripcode signature on the client side before submission. The underlying private seed is never transmitted across our network layer.</li>
+            <li><strong>Server Infrastructure:</strong> Network traffic logs containing transient internet protocol (IP) metrics are exclusively used for mitigating malicious distributed denial-of-service (DDoS) requests or automated script attacks, and are regularly purged.</li>
+        </ul>
 
-        <h2>How We Handle Your Data</h2>
-        <p><strong>Local Processing:</strong> When you use Squeezes, your image files are processed entirely within your web browser (locally on your device). This means your photos, documents, and images are never uploaded to a remote server or stored in a database.</p>
-        <p><strong>Zero Data Retention:</strong> Because no files are sent over the internet for processing, Squeezes has no access to your content. Once you close the tab or refresh your browser, any temporary data used for the compression process is cleared from your device's memory.</p>
+        <h2>3. Local Device Storage and Cookies</h2>
+        <p>InteractInk utilizes browser-level storage technologies (such as <code>localStorage</code> or session state keys) to track your local network view preferences, thread tracking history, and localized cryptographic parameters. These arrays are kept completely isolated on your hardware device and are not harvested by our infrastructure endpoints.</p>
 
-        <h2>Third-Party Services</h2>
-        <p>While your image data remains private, we use standard analytics (like Google Analytics) to understand how visitors use our site so we can improve the experience. Additionally, we may display advertisements to help cover the costs of keeping this tool free. These ads are served by third-party providers who may use cookies to show relevant content based on your browsing habits.</p>
+        <h2>4. Third-Party Integrations and Data Disclosures</h2>
+        <p>We deploy privacy-conscious advertising networks and analytical telemetry arrays to maintain the economic sustainability of our hosting layers. These external providers may place cookies or employ trackers to aggregate broad, non-PII demographic traffic trends and serve contextual advertisements based on your generalized geographic region.</p>
+        <p>We do not sell, trade, or rent user communication trends to data brokers. We will only disclose server connection logs when explicitly compelled by a binding court order, subpoena, or definitive legal process under applicable governing laws.</p>
 
-        <h2>Your Consent</h2>
-        <p>By using Squeezes, you agree to the practices described in this policy. If you have any questions or concerns about how your data is handled, please feel free to reach out to us.</p>
+        <h2>5. Data Rights and Regulatory Disclaimers</h2>
+        <p>Because the Service does not collect usernames, emails, or static identifier profiles, we possess no technical indexical framework to verify, locate, retrieve, or selectively expunge individual text fragments on behalf of a remote user requesting data deletion under GDPR, CCPA, or related frameworks. Users are advised that statements committed to the public text matrix are permanently decentralized and cannot be retroactively mapped to a personal request identity.</p>
 
-        <a href="index.html" class="back-link">← Back to Squeezes</a>
+        <h2>6. Policy Framework Adjustments</h2>
+        <p>We reserve the authority to update this data governance architecture to adjust for infrastructure updates or shifts in legal requirements. Any modifications will instantly update this public policy script, with the revision index reflected in the timestamp above.</p>
+
+        <a href="index.html" class="back-link">← Back to InteractInk</a>
     </div>
+
 </body>
 </html>

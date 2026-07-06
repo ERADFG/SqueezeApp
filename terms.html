@@ -2,25 +2,150 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Terms of Service - Squeezes</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service - InteractInk</title>
     <style>
-        body { font-family: sans-serif; background: #000; color: #fff; padding: 40px; line-height: 1.6; }
-        .container { max-width: 700px; margin: auto; }
-        h2 { color: #fff; margin-top: 30px; }
-        p { color: #888; }
+        :root {
+            --bg-pure-black: #000000;
+            --text-primary: #ffffff;
+            --text-secondary: #71767b;
+            --accent-white: #ffffff;
+            --glass-border: #16181c;
+        }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background-color: var(--bg-pure-black); 
+            color: var(--text-primary); 
+            line-height: 1.6; 
+            padding: 0; 
+            margin: 0; 
+            -webkit-font-smoothing: antialiased;
+        }
+        .nav-bar { 
+            display: flex; 
+            justify-content: center; 
+            gap: 24px; 
+            padding: 16px 0; 
+            border-bottom: 1px solid var(--glass-border); 
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+        .nav-bar a { 
+            color: var(--text-secondary); 
+            text-decoration: none; 
+            font-size: 0.95rem; 
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+        .nav-bar a:hover {
+            color: var(--text-primary);
+        }
+        .container { 
+            max-width: 600px; 
+            margin: 40px auto; 
+            padding: 0 16px; 
+            font-size: 0.95rem;
+        }
+        h1 { 
+            font-size: 2rem; 
+            font-weight: 800;
+            margin-bottom: 8px; 
+            letter-spacing: -0.02em;
+        }
+        .effective-date {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 32px;
+        }
+        h2 { 
+            font-size: 1.2rem; 
+            font-weight: 700;
+            margin-top: 36px; 
+            color: var(--text-primary); 
+            border-bottom: 1px solid var(--glass-border); 
+            padding-bottom: 8px; 
+            letter-spacing: -0.01em;
+        }
+        p, li { 
+            color: var(--text-secondary); 
+            margin-top: 12px;
+            margin-bottom: 16px; 
+        }
+        ul {
+            padding-left: 20px;
+        }
+        .legal-disclaimer {
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+        }
+        .back-link { 
+            display: inline-block; 
+            margin-top: 40px; 
+            margin-bottom: 60px;
+            color: var(--text-primary); 
+            text-decoration: none; 
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+        .back-link:hover { 
+            text-decoration: underline; 
+        }
     </style>
 </head>
 <body>
+
+    <nav class="nav-bar">
+        <a href="index.html">Home</a>
+        <a href="about.html">About</a>
+        <a href="faq.html">FAQ</a>
+        <a href="privacy.html">Privacy</a>
+    </nav>
+
     <div class="container">
         <h1>Terms of Service</h1>
-        <h2>1. Acceptance of Terms</h2>
-        <p>By accessing Squeezes, you agree to be bound by these Terms of Service. If you disagree, please do not use our service.</p>
-        <h2>2. Use of Service</h2>
-        <p>Squeezes is provided "as is" for your personal, non-commercial use. You agree not to reverse-engineer our code or use the service for illegal activities.</p>
-        <h2>3. Limitation of Liability</h2>
-        <p>Squeezes shall not be held liable for any damages resulting from the use or inability to use our tools, including file corruption or loss of data.</p>
-        <h2>4. Changes to Terms</h2>
-        <p>We reserve the right to modify these terms at any time. Continued use of the site constitutes acceptance of the new terms.</p>
+        <div class="effective-date">Last Updated: July 6, 2026</div>
+        
+        <p>Welcome to InteractInk. These Terms of Service ("Terms") constitute a legally binding agreement between you and InteractInk regarding your access to and use of our website, platform, network systems, and real-time communication workspaces (collectively, the "Service").</p>
+        
+        <h2>1. Acceptance and Eligibility</h2>
+        <p>By accessing, browsing, or publishing content within the Service, you affirm that you have read, understood, and agreed to be bound by these Terms and our Privacy Policy. If you do not agree to these terms, you possess no authorization or legal license to use the Service and must immediately terminate your connection to the platform.</p>
+        
+        <h2>2. User Responsibility and Conduct</h2>
+        <p>InteractInk operates as an anonymous text workspace without static registration tiers or mandatory identity profiles. Consequently, you are solely and entirely legally responsible for the textual data, hyperlinks, and communications you broadcast through our database structures.</p>
+        
+        <p>As a condition of your license to access the Service, you strictly agree <strong>not</strong> to use the platform to publish or transmit content that:</p>
+        <ul>
+            <li>Is unlawful, defamatory, abusive, threatening, harassing, or encourages violence against any individual or group;</li>
+            <li>Infringes upon any trademark, patent, trade secret, copyright, or other proprietary or intellectual property rights of any entity;</li>
+            <li>Contains or distributes malicious software payloads, viruses, Trojan horses, worms, or any code designed to disrupt, corrupt, or limit the functionality of the Service;</li>
+            <li>Constitutes unauthorized or unapproved commercial advertising, spamming, script-automated bulk broadcasting, or systematic scraping of network nodes.</li>
+        </ul>
+
+        <h2>3. Content Rights and Intellectual Property Waiver</h2>
+        <p>InteractInk does not claim ownership over the raw text or information you post. However, by transmitting or broadcasting any content onto the public timeline or inside thread clusters, you hereby grant InteractInk a worldwide, royalty-free, perpetual, irrevocable, non-exclusive license to store, host, reproduce, distribute, display, and synchronize such content across our servers and network layers for the purpose of operational service delivery.</p>
+        
+        <h2>4. Moderation, Suspension, and Termination</h2>
+        <p>We reserve the unilateral right—but do not assume the operational obligation—to review, filter, flag, or completely expunge user-generated content from the active Supabase infrastructure at any time, for any reason, without prior notice. We reserve the absolute right to block network handshake entry, blacklist individual cryptographic tripcodes, or deny access to the Service for users who violate these Terms.</p>
+
+        <h2>5. Disclaimer of Warranties</h2>
+        <p class="legal-disclaimer">THE SERVICE IS PROVIDED ON AN "AS IS" AND "AS AVAILABLE" BASIS. INTERACTINK EXPRESSLY DISCLAIMS ALL WARRANTIES OF ANY KIND, WHETHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE NETWORK PIPELINES WILL BE UNINTERRUPTED, SECURE, TIMELY, ERROR-FREE, OR TRANSLATED WITHOUT LOSS OF DATA NODE INTEGRITY.</p>
+
+        <h2>6. Limitation of Liability</h2>
+        <p class="legal-disclaimer">IN NO EVENT SHALL INTERACTINK, ITS DEVELOPERS, AFFILIATES, OR INFRASTRUCTURE PROVIDERS BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING WITHOUT LIMITATION LOSS OF PROFITS, DATA CORRUPTION, TRANSMISSION FAILURE, SERVICE MISSINGNESS, OR OTHER INTANGIBLE LOSSES RESULTING FROM YOUR USE OF OR INABILITY TO USE THE PLATFORM.</p>
+
+        <h2>7. Governing Law and Amendments</h2>
+        <p>These Terms shall be governed and interpreted in accordance with the internal statutory laws applicable to digital infrastructure, without regard to conflict of law principles. We reserve the right to amend this text configuration at our sole discretion. Continuous connection to our routing layer following modifications represents full, legally binding acceptance of the updated terms matrix.</p>
+
+        <a href="index.html" class="back-link">← Back to InteractInk</a>
     </div>
+
 </body>
 </html>
