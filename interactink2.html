@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Squeezes - Anonymous Text Board & Social Workspace</title>
+    <meta name="description" content="Squeezes Workspace - Connect securely and privately through the decentralized, anonymous network interface.">
+    <meta name="google-adsense-account" content="ca-pub-9357677827244243">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9357677827244243" crossorigin="anonymous"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-527BWKF63G"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-527BWKF63G');
+    </script>
+    <meta name="google-site-verification" content="DOvTKyh77YUQreg4Dg6SaL1wEM33Da783l6lqsLek7Q" />
+    <link rel="icon" type="image/png" href="favicon.png">
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            --bg-pure-black: #000000;
+            --glass-bg: rgba(255, 255, 255, 0.02);
+            --glass-border: rgba(255, 255, 255, 0.06);
+            --glass-border-glow: rgba(255, 255, 255, 0.35);
+            --text-primary: #ffffff;
+            --text-secondary: #6e6e73;
+            --accent-green: #30d158;
+            --accent-blue: #0a84ff;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-pure-black);
+            color: var(--text-primary);
+            font-family: var(--font-family);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 16px;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        nav a {
+            transition: color 0.2s ease;
+        }
+        nav a:hover {
+            color: var(--text-primary) !important;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 720px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8);
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 24px;
+        }
+
+        h1 {
+            font-size: 1.45rem;
+            font-weight: 700;
+            letter-spacing: -0.6px;
+            color: var(--text-primary);
+        }
+
+        /* Thread styling adaptations */
+        .thread-row {
+            padding: 16px 0;
+            border-bottom: 1px solid var(--glass-border);
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        .thread-row:hover {
+            background: rgba(255, 255, 255, 0.01);
+        }
+        
+        .user-link { 
+            color: #3b82f6; 
+            text-decoration: underline; 
+            font-weight: 500; 
+            transition: color 0.1s ease; 
+        }
+        .user-link:hover { color: #60a5fa; }
+
+        input, textarea { 
+            background-color: transparent !important; 
+            border: none;
+            color: white;
+            outline: none;
+        }
+
+        /* Modal Styles */
+        .donation-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            padding: 20px;
+        }
+
+        .donation-modal.active { opacity: 1; pointer-events: auto; }
+
+        .modal-card {
+            background: #0d0d0e;
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            width: 100%;
+            max-width: 520px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.9);
+        }
+
+        .comment-node {
+            background: rgba(255, 255, 255, 0.01);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <nav style="display: flex; justify-content: center; gap: 20px; padding: 20px 0; background: var(--bg-pure-black); width: 100%;">
+        <a href="index.html" style="color: var(--text-primary); text-decoration: none; font-size: 0.9rem; font-weight: 600;">Home</a>
+        <a href="interactink.html" style="color: var(--text-secondary); text-decoration: none; font-size: 0.9rem;">InteractInk</a>
+        <a href="about.html" style="color: var(--text-secondary); text-decoration: none; font-size: 0.9rem;">About</a>
+        <a href="faq.html" style="color: var(--text-secondary); text-decoration: none; font-size: 0.9rem;">FAQ</a>
+        <a href="privacy.html" style="color: var(--text-secondary); text-decoration: none; font-size: 0.9rem;">Privacy</a>
+    </nav>
+
+    <div class="app-container">
+        <header class="glass-panel">
+            <div class="brand">
+                <img src="logo.png" alt="Squeezes Logo" style="height: 50px; width: auto; object-fit: contain;">
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="padding: 4px 12px; font-size: 0.75rem; font-family: monospace; color: var(--text-secondary); background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 50px;">
+                    Posts: <span id="globalPostCount" style="color: white; font-weight: bold;">0</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px; padding: 4px 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 50px;">
+                    <span style="position: relative; display: flex; h: 6px; w: 6px; width: 6px; height: 6px;">
+                        <span style="position: absolute; width: 100%; height: 100%; background: #34c759; border-radius: 50%; opacity: 0.75;" class="animate-ping"></span>
+                        <span style="position: relative; display: inline-flex; border-radius: 50%; width: 6px; height: 6px; background: #34c759;"></span>
+                    </span>
+                    <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase;">Live</span>
+                </div>
+            </div>
+        </header>
+
+        <section class="glass-panel">
+            <form id="threadForm">
+                <input type="text" id="threadTitle" placeholder="Your Name (Optional)..." maxlength="50" autocomplete="off"
+                       style="width: 100%; font-size: 1.1rem; font-weight: bold; padding-bottom: 8px; margin-bottom: 12px; border-bottom: 1px solid var(--glass-border);">
+                
+                <textarea id="threadContent" placeholder="What is happening? Links are automatically hyperlinked..." required rows="3" maxlength="1000"
+                          style="width: 100%; font-size: 0.9rem; line-height: 1.6; color: #e7e9ea; resize: none;"></textarea>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; border-t: 1px solid var(--glass-border); pt-3; margin-top: 12px; padding-top: 12px;">
+                    <div style="color: var(--text-secondary); display: flex; gap: 6px; align-items: center; font-size: 0.8rem;">
+                        <i data-lucide="shield-check" style="width: 16px; height: 16px;"></i>
+                        <span>Secure Broadcast Layer</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span id="threadCharCounter" style="font-family: monospace; font-size: 0.75rem; color: var(--text-secondary);">0/1000</span>
+                        <button type="submit" style="background: #ffffff; color: #000000; font-weight: bold; padding: 8px 20px; border-radius: 50px; font-size: 0.85rem; cursor: pointer;">
+                            Post
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </section>
+
+        <section class="glass-panel" style="padding-top: 8px; padding-bottom: 8px;">
+            <div id="latestStream">
+                <div style="padding: 20px; text-align: center; color: var(--text-secondary); font-size: 0.85rem;">Connecting to network...</div>
+            </div>
+        </section>
+    </div>
+
+    <div id="threadModal" class="donation-modal">
+        <div class="modal-card" style="height: 80vh; max-height: 700px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 1px solid var(--glass-border); margin-bottom: 16px;">
+                <div style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--text-secondary); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">
+                    <i data-lucide="cpu" style="width: 14px; height: 14px;"></i>
+                    <span id="modalMeta">Node Inspector</span>
+                </div>
+                <button onclick="closeThreadModal()" style="background: transparent; color: var(--text-secondary); padding: 4px; cursor: pointer; border-radius: 50%;">
+                    <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+                </button>
+            </div>
+            
+            <div style="flex: 1; overflow-y: auto; padding-right: 4px; margin-bottom: 16px;" id="modalScrollBody">
+                <div style="margin-bottom: 16px;">
+                    <h3 id="modalTitle" style="font-size: 1.1rem; font-weight: bold; color: white; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 4px;">Subject Target</h3>
+                    <p id="modalOpBody" style="color: #d1d1d6; font-size: 0.9rem; line-height: 1.5; white-space: pre-wrap; word-break: break-words;"></p>
+                </div>
+                <div style="height: 1px; background: var(--glass-border); margin-bottom: 16px;"></div>
+                <div id="commentTreeContainer"></div>
+            </div>
+
+            <div style="padding-top: 12px; border-top: 1px solid var(--glass-border);">
+                <form id="commentForm" style="display: flex; align-items: center; gap: 12px;">
+                    <i data-lucide="corner-down-right" style="width: 16px; height: 16px; color: var(--text-secondary);"></i>
+                    <input type="text" id="commentInput" placeholder="Post your reply... (Use >>ID to reference tree nodes)" required maxlength="300"
+                           style="flex: 1; font-size: 0.85rem; color: white;">
+                    <span id="commentCharCounter" style="font-family: monospace; font-size: 0.75rem; color: var(--text-secondary);">0/300</span>
+                    <button type="submit" style="background: white; color: black; font-weight: bold; padding: 6px 16px; border-radius: 50px; font-size: 0.75rem; cursor: pointer;">
+                        Reply
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="hoverPreviewBox" class="absolute bg-neutral-900 border border-neutral-700 text-neutral-200 text-xs p-3 rounded-xl shadow-2xl hidden z-50 max-w-xs pointer-events-none font-sans" style="position: absolute;"></div>
+
+    <script>
+        const SUPABASE_URL = "https://xdshsodkuyawljzuirqt.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inxdc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
+        
+        let supabaseClient;
+        const appState = { threads: {}, comments: {}, commentCounts: {}, activeThreadId: null, userSeed: null, cachedCounts: { threads: 0, comments: 0 } };
+
+        window.addEventListener('load', async () => {
+            if (window.supabase) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                initSeedEngine();
+                bindEventListeners();
+                await fetchInitialData();
+                initRealtimeSync();
+                renderThreads();
+            }
+            lucide.createIcons();
+            setInterval(() => renderThreads(), 30000);
+        });
+
+        function initSeedEngine() {
+            let seed = localStorage.getItem('ink_private_seed_key');
+            if (!seed) {
+                seed = [...Array(32)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
+                localStorage.setItem('ink_private_seed_key', seed);
+            }
+            appState.userSeed = seed;
+        }
+
+        async function generateTripcode(threadId, seedString) {
+            const encoder = new TextEncoder();
+            const rawBuffer = encoder.encode(threadId + seedString);
+            const digestBuffer = await crypto.subtle.digest('SHA-256', rawBuffer);
+            const hashArray = Array.from(new Uint8Array(digestBuffer));
+            return 'Anon#' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 4);
+        }
+
+        async function fetchInitialData() {
+            try {
+                const { data: threads } = await supabaseClient.from('threads').select('*').order('timestamp', { ascending: false }).limit(30);
+                if (threads) threads.forEach(t => appState.threads[t.id] = t);
+
+                const { data: commentIds } = await supabaseClient.from('comments').select('thread_id');
+                if (commentIds) {
+                    commentIds.forEach(c => {
+                        appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
+                    });
+                }
+
+                const [threadCountRes, commentCountRes] = await Promise.all([
+                    supabaseClient.from('threads').select('*', { count: 'exact', head: true }),
+                    supabaseClient.from('comments').select('*', { count: 'exact', head: true })
+                ]);
+
+                appState.cachedCounts.threads = threadCountRes.count || 0;
+                appState.cachedCounts.comments = commentCountRes.count || 0;
+                
+                updateGlobalCounterUI();
+            } catch (err) { console.error(err); }
+        }
+
+        function initRealtimeSync() {
+            supabaseClient.channel('global-changes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'threads' }, payload => {
+                    if (payload.eventType === 'INSERT') {
+                        appState.threads[payload.new.id] = payload.new;
+                        appState.cachedCounts.threads++;
+                    } else if (payload.eventType === 'UPDATE') {
+                        appState.threads[payload.new.id] = payload.new;
+                    }
+                    updateGlobalCounterUI();
+                    renderThreads();
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, payload => {
+                    if (payload.eventType === 'INSERT') {
+                        const c = payload.new;
+                        appState.cachedCounts.comments++;
+                        appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
+                        if (appState.activeThreadId === c.thread_id) {
+                            if (!appState.comments[c.thread_id]) appState.comments[c.thread_id] = {};
+                            appState.comments[c.thread_id][c.id] = c;
+                            renderCommentTree();
+                        }
+                    }
+                    updateGlobalCounterUI();
+                    renderThreads();
+                })
+                .subscribe();
+        }
+
+        function updateGlobalCounterUI() {
+            document.getElementById('globalPostCount').innerText = appState.cachedCounts.threads + appState.cachedCounts.comments;
+        }
+
+        function bindEventListeners() {
+            const threadContent = document.getElementById('threadContent');
+            const threadCharCounter = document.getElementById('threadCharCounter');
+            threadContent.addEventListener('input', () => {
+                threadCharCounter.innerText = `${threadContent.value.length}/1000`;
+            });
+
+            const commentInput = document.getElementById('commentInput');
+            const commentCharCounter = document.getElementById('commentCharCounter');
+            commentInput.addEventListener('input', () => {
+                commentCharCounter.innerText = `${commentInput.value.length}/300`;
+            });
+
+            document.getElementById('threadForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const title = document.getElementById('threadTitle');
+                const id = Math.random().toString(16).substring(2, 10);
+                const parsedTitle = title.value.trim() || 'Anonymous';
+                await supabaseClient.from('threads').insert([{ id, title: parsedTitle, content: threadContent.value.trim(), timestamp: Date.now(), upvotes: 1 }]);
+                title.value = '';
+                threadContent.value = '';
+                threadCharCounter.innerText = '0/1000';
+            });
+
+            document.getElementById('commentForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!appState.activeThreadId) return;
+                const id = Math.random().toString(16).substring(2, 10);
+                const tripcode = await generateTripcode(appState.activeThreadId, appState.userSeed);
+                await supabaseClient.from('comments').insert([{ id, thread_id: appState.activeThreadId, tripcode, text: commentInput.value.trim(), timestamp: Date.now() }]);
+                commentInput.value = '';
+                commentCharCounter.innerText = '0/300';
+            });
+        }
+
+        function formatTime(ms) {
+            const diff = Date.now() - ms;
+            if (diff < 60000) return 'Just now';
+            const mins = Math.floor(diff / 60000);
+            if (mins < 60) return `${mins}m ago`;
+            const hours = Math.floor(mins / 60);
+            if (hours < 24) return `${hours}h ago`;
+            return new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        }
+
+        function renderThreads() {
+            const target = document.getElementById('latestStream');
+            const sorted = Object.values(appState.threads).sort((a,b) => b.timestamp - a.timestamp);
+            if(sorted.length === 0) {
+                target.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--text-secondary); font-size: 0.85rem;">No active node matrix broadcasts. Start one above.</div>`;
+                return;
+            }
+            target.innerHTML = sorted.map(t => {
+                const count = appState.commentCounts[t.id] || 0;
+                return `
+                    <div class="thread-row" onclick="openThreadModal('${t.id}')" style="display: flex; flex-direction: column; gap: 6px; padding: 14px 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                            <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary); text-transform: uppercase; tracking-wider: 0.5px;">${escapeHTML(t.title)}</span>
+                            <span style="font-size: 0.7rem; color: var(--text-secondary); font-family: monospace;">${formatTime(t.timestamp)}</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #ced1d6; line-height: 1.4; white-space: pre-wrap; word-break: break-words;">${parseBodyContent(t.content)}</p>
+                        <div style="display: flex; align-items: center; gap: 4px; font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">
+                            <i data-lucide="message-square" style="width: 12px; height: 12px;"></i>
+                            <span style="font-family: monospace; font-weight: 600;">${count} comments</span>
+                            <span style="color: rgba(255,255,255,0.15);">•</span>
+                            <span style="font-family: monospace; font-size: 0.7rem;">ID: ${t.id}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        async function openThreadModal(id) {
+            appState.activeThreadId = id;
+            const thread = appState.threads[id];
+            if (!thread) return;
+
+            document.getElementById('modalTitle').innerText = thread.title;
+            document.getElementById('modalOpBody').innerHTML = parseBodyContent(thread.content);
+            document.getElementById('modalMeta').innerText = `Inspector Layer Node [${id}]`;
+            document.getElementById('commentTreeContainer').innerHTML = `<div style="color: var(--text-secondary); text-align: center; font-size: 0.8rem; padding: 12px;">Syncing nodes...</div>`;
+            document.getElementById('threadModal').classList.add('active');
+
+            try {
+                const { data: comments } = await supabaseClient.from('comments').select('*').eq('thread_id', id).order('timestamp', { ascending: true });
+                appState.comments[id] = {};
+                if (comments) comments.forEach(c => appState.comments[id][c.id] = c);
+                renderCommentTree();
+            } catch(e) { console.error(e); }
+        }
+
+        function closeThreadModal() {
+            document.getElementById('threadModal').classList.remove('active');
+            appState.activeThreadId = null;
+        }
+
+        function renderCommentTree() {
+            const container = document.getElementById('commentTreeContainer');
+            const commentsMap = appState.comments[appState.activeThreadId] || {};
+            const list = Object.values(commentsMap);
+
+            if(list.length === 0) {
+                container.innerHTML = `<div style="color: var(--text-secondary); text-align: center; font-size: 0.8rem; padding: 12px;">No cluster notes attached.</div>`;
+                return;
+            }
+
+            container.innerHTML = list.map(c => `
+                <div class="comment-node">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.7rem; font-family: monospace; color: var(--text-secondary); margin-bottom: 6px;">
+                        <span style="font-weight: bold; color: #a3a3a3;">${c.tripcode}</span>
+                        <span>[>>${c.id}]</span>
+                    </div>
+                    <p style="font-size: 0.82rem; color: #e4e4e7; line-height: 1.4; word-break: break-words;">${parseBodyContent(c.text)}</p>
+                </div>
+            `).join('');
+            bindHoverPreviews();
+        }
+
+        function parseBodyContent(str) {
+            if (!str) return '';
+            let html = escapeHTML(str);
+            // Hyperlinks
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            html = html.replace(urlRegex, url => `<a href="${url}" target="_blank" rel="noopener noreferrer" class="user-link">${url}</a>`);
+            // Node Interlinking references
+            const referenceRegex = /&gt;&gt;([a-f0-9]{8})/g;
+            html = html.replace(referenceRegex, (match, targetId) => `<a href="#" class="user-link tree-ref" data-preview-id="${targetId}">${match}</a>`);
+            return html;
+        }
+
+        function bindHoverPreviews() {
+            const previewBox = document.getElementById('hoverPreviewBox');
+            const links = document.querySelectorAll('.tree-ref');
+
+            links.forEach(link => {
+                link.addEventListener('mouseenter', (e) => {
+                    const targetId = link.getAttribute('data-preview-id');
+                    const commentsMap = appState.comments[appState.activeThreadId] || {};
+                    const targetComment = commentsMap[targetId];
+
+                    if (targetComment) {
+                        previewBox.innerHTML = `
+                            <div style="font-family: monospace; font-size: 10px; color: white; font-weight: bold; margin-bottom: 4px; border-bottom: 1px solid #262626; padding-bottom: 2px;">${targetComment.tripcode} [>>${targetComment.id}]</div>
+                            <p style="color: #a3a3a3; line-height: 1.3;">${escapeHTML(targetComment.text)}</p>
+                        `;
+                        previewBox.classList.remove('hidden');
+                        const rect = link.getBoundingClientRect();
+                        previewBox.style.left = `${rect.left + window.scrollX}px`;
+                        previewBox.style.top = `${rect.top + window.scrollY - previewBox.offsetHeight - 10}px`;
+                    }
+                });
+                link.addEventListener('mouseleave', () => previewBox.classList.add('hidden'));
+            });
+        }
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>\"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' })[m]);
+        }
+    </script>
+</body>
+</html>
