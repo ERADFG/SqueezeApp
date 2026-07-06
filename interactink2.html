@@ -17,7 +17,6 @@
     <meta name="google-site-verification" content="DOvTKyh77YUQreg4Dg6SaL1wEM33Da783l6lqsLek7Q" />
     <link rel="icon" type="image/png" href="favicon.png">
 
-    <!-- Dependencies for InteractInk Features -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 
@@ -268,6 +267,56 @@
             border-bottom: 1px solid var(--x-border);
         }
 
+        /* Numbered Pagination Layout Container */
+        .pagination-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 24px 16px;
+            border-bottom: 1px solid var(--x-border);
+            user-select: none;
+        }
+
+        .page-btn {
+            background: transparent;
+            border: 1px solid var(--x-border);
+            color: var(--x-text-main);
+            min-width: 36px;
+            height: 36px;
+            padding: 0 6px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .page-btn:hover:not(:disabled):not(.active) {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-color: #333;
+        }
+
+        .page-btn.active {
+            background-color: var(--x-white);
+            color: var(--bg-black);
+            border-color: var(--x-white);
+        }
+
+        .page-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .page-ellipsis {
+            color: var(--x-text-muted);
+            padding: 0 4px;
+            font-weight: 600;
+        }
+
         /* X-Style Overlay Modal Layer */
         .x-modal-backdrop {
             position: fixed;
@@ -360,7 +409,6 @@
 </head>
 <body>
 
-    <!-- X-Style Top Bar Navigation -->
     <nav>
         <a href="index.html" class="active">Home</a>
         <a href="interactink.html">InteractInk</a>
@@ -369,10 +417,8 @@
         <a href="privacy.html">Privacy</a>
     </nav>
 
-    <!-- Main X Timeline Container -->
     <div class="feed-container">
         
-        <!-- Sticky Header Configuration -->
         <header>
             <div class="brand">
                 <img src="logo.png" alt="Squeezes Logo">
@@ -384,7 +430,6 @@
             </div>
         </header>
 
-        <!-- X Inline Post Composer -->
         <section class="composer-section">
             <div class="composer-body">
                 <form id="threadForm">
@@ -405,17 +450,13 @@
             </div>
         </section>
 
-        <!-- Dynamic Timeline Feed Stream -->
         <div id="latestStream">
             <div class="timeline-indicator">Synchronizing secure handshake...</div>
         </div>
 
-        <!-- Performant Infinite Scroll Loading Trigger -->
-        <div id="infiniteScrollTrigger" style="height: 10px; width: 100%;"></div>
-        <div id="paginationIndicator" class="timeline-indicator" style="display: none;">Loading more updates...</div>
+        <div id="paginationControls" class="pagination-container"></div>
     </div>
 
-    <!-- Full Context Thread View Overlaid Box (Modal) -->
     <div id="threadModal" class="x-modal-backdrop">
         <div class="x-modal-card">
             <div class="x-modal-header">
@@ -426,7 +467,6 @@
             </div>
             
             <div class="x-modal-content" id="modalScrollBody">
-                <!-- OP Main Thread Target Card Layout -->
                 <div style="display: flex; flex-direction: column; width: 100%;">
                     <span id="modalTitle" style="font-weight: 800; font-size: 1.05rem;"></span>
                     <div style="color: var(--x-text-muted); font-size: 0.85rem; margin-bottom: 12px;" id="modalTimestamp"></div>
@@ -435,11 +475,9 @@
 
                 <div style="height: 1px; background: var(--x-border); margin: 16px 0;"></div>
                 
-                <!-- Inner Comment Stream Architecture -->
                 <div id="commentTreeContainer"></div>
             </div>
 
-            <!-- Thread Inline Reply Composer -->
             <div class="x-modal-footer">
                 <form id="commentForm" style="display: flex; gap: 12px; align-items: center;">
                     <input type="text" id="commentInput" placeholder="Post your reply..." required maxlength="300"
@@ -451,7 +489,6 @@
         </div>
     </div>
 
-    <!-- Active Node Anchor Element Hover Container -->
     <div id="hoverPreviewBox"></div>
 
     <script>
@@ -466,22 +503,17 @@
             activeThreadId: null, 
             userSeed: null, 
             cachedCounts: { threads: 0, comments: 0 },
-            oldestLoadedTimestamp: null,
-            hasMoreThreads: true,
-            isLoadingBatch: false
+            currentPage: 1,
+            threadsPerPage: 15
         };
-
-        const BATCH_LIMIT = 15;
 
         window.addEventListener('load', async () => {
             if (window.supabase) {
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
                 initSeedEngine();
                 bindEventListeners();
-                setupInfiniteScroll();
-                await fetchInitialData();
+                await fetchCountAndPage(1);
                 initRealtimeSync();
-                renderThreads();
             }
             lucide.createIcons();
         });
@@ -503,28 +535,12 @@
             return 'Anon#' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 4);
         }
 
-        async function fetchInitialData() {
+        async function fetchCountAndPage(pageNumber) {
+            document.getElementById('latestStream').innerHTML = `<div class="timeline-indicator">Synchronizing secure handshake...</div>`;
+            appState.currentPage = pageNumber;
+            
             try {
-                const { data: threads } = await supabaseClient.from('threads')
-                    .select('*')
-                    .order('timestamp', { ascending: false })
-                    .limit(BATCH_LIMIT);
-                
-                if (threads && threads.length > 0) {
-                    appState.threads = threads;
-                    appState.oldestLoadedTimestamp = threads[threads.length - 1].timestamp;
-                    if (threads.length < BATCH_LIMIT) appState.hasMoreThreads = false;
-                } else {
-                    appState.hasMoreThreads = false;
-                }
-
-                const { data: commentIds } = await supabaseClient.from('comments').select('thread_id');
-                if (commentIds) {
-                    commentIds.forEach(c => {
-                        appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
-                    });
-                }
-
+                // Fetch up-to-date total metrics for pagination context calculations
                 const [threadCountRes, commentCountRes] = await Promise.all([
                     supabaseClient.from('threads').select('*', { count: 'exact', head: true }),
                     supabaseClient.from('comments').select('*', { count: 'exact', head: true })
@@ -532,61 +548,95 @@
 
                 appState.cachedCounts.threads = threadCountRes.count || 0;
                 appState.cachedCounts.comments = commentCountRes.count || 0;
-                
                 updateGlobalCounterUI();
+
+                // Pull exact partitioned window range to maximize optimization speeds
+                const fromIndex = (pageNumber - 1) * appState.threadsPerPage;
+                const toIndex = fromIndex + appState.threadsPerPage - 1;
+
+                const { data: threads } = await supabaseClient.from('threads')
+                    .select('*')
+                    .order('timestamp', { ascending: false })
+                    .range(fromIndex, toIndex);
+                
+                appState.threads = threads || [];
+
+                // Load contextual reply metrics mappings
+                const { data: commentIds } = await supabaseClient.from('comments').select('thread_id');
+                appState.commentCounts = {};
+                if (commentIds) {
+                    commentIds.forEach(c => {
+                        appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
+                    });
+                }
+
+                renderThreads();
+                renderPaginationControls();
             } catch (err) { console.error(err); }
         }
 
-        async function fetchNextBatch() {
-            if (appState.isLoadingBatch || !appState.hasMoreThreads) return;
+        function renderPaginationControls() {
+            const container = document.getElementById('paginationControls');
+            const totalPages = Math.ceil(appState.cachedCounts.threads / appState.threadsPerPage) || 1;
+            const current = appState.currentPage;
             
-            appState.isLoadingBatch = true;
-            document.getElementById('paginationIndicator').style.display = 'block';
-
-            try {
-                const { data: threads } = await supabaseClient.from('threads')
-                    .select('*')
-                    .lt('timestamp', appState.oldestLoadedTimestamp)
-                    .order('timestamp', { ascending: false })
-                    .limit(BATCH_LIMIT);
-
-                if (threads && threads.length > 0) {
-                    appState.threads = [...appState.threads, ...threads];
-                    appState.oldestLoadedTimestamp = threads[threads.length - 1].timestamp;
-                    if (threads.length < BATCH_LIMIT) appState.hasMoreThreads = false;
-                    renderThreads();
-                } else {
-                    appState.hasMoreThreads = false;
-                }
-            } catch (err) {
-                console.error("Error loading next network pagination batch:", err);
-            } finally {
-                appState.isLoadingBatch = false;
-                document.getElementById('paginationIndicator').style.display = 'none';
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
             }
-        }
 
-        function setupInfiniteScroll() {
-            const trigger = document.getElementById('infiniteScrollTrigger');
-            const observer = new IntersectionObserver((entries) => {
-                if (entries[0].isIntersecting && !appState.isLoadingBatch && appState.hasMoreThreads) {
-                    fetchNextBatch();
+            let html = `
+                <button class="page-btn" ${current === 1 ? 'disabled' : ''} onclick="fetchCountAndPage(${current - 1})">
+                    <i data-lucide="chevron-left" style="width:16px; height:16px;"></i>
+                </button>
+            `;
+
+            const delta = 1; // Range window configs around active selection block
+            let pages = [];
+
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= current - delta && i <= current + delta)) {
+                    pages.push(i);
+                } else if (pages[pages.length - 1] !== '...') {
+                    pages.push('...');
                 }
-            }, { rootMargin: '200px' });
-            observer.observe(trigger);
+            }
+
+            pages.forEach(p => {
+                if (p === '...') {
+                    html += `<span class="page-ellipsis">...</span>`;
+                } else {
+                    html += `
+                        <button class="page-btn ${p === current ? 'active' : ''}" onclick="fetchCountAndPage(${p})">
+                            ${p}
+                        </button>
+                    `;
+                }
+            });
+
+            html += `
+                <button class="page-btn" ${current === totalPages ? 'disabled' : ''} onclick="fetchCountAndPage(${current + 1})">
+                    <i data-lucide="chevron-right" style="width:16px; height:16px;"></i>
+                </button>
+            `;
+
+            container.innerHTML = html;
+            lucide.createIcons();
         }
 
         function initRealtimeSync() {
             supabaseClient.channel('global-changes')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'threads' }, payload => {
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'threads' }, async payload => {
                     if (payload.eventType === 'INSERT') {
-                        if (!appState.threads.some(t => t.id === payload.new.id)) {
-                            appState.threads.unshift(payload.new);
-                            appState.cachedCounts.threads++;
-                        }
+                        appState.cachedCounts.threads++;
                     }
                     updateGlobalCounterUI();
-                    renderThreads();
+                    // Live refresh the view matrix state if standing on page 1
+                    if (appState.currentPage === 1) {
+                        await fetchCountAndPage(1);
+                    } else {
+                        renderPaginationControls();
+                    }
                 })
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, payload => {
                     if (payload.eventType === 'INSERT') {
@@ -796,14 +846,11 @@
             return str.replace(/[&<>\"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' })[m]);
         }
     </script>
-    </div>
-</div>
-</footer>
 
-<footer style="width: 100%; text-align: center; padding: 40px 0; margin-top: 40px; border-top: 1px solid var(--glass-border); color: var(--text-secondary);">
-    <a href="privacy.html" style="color: var(--text-primary); text-decoration: none; margin: 0 20px; font-weight: 500; font-size: 0.9rem; transition: opacity 0.2s;">Privacy Policy</a>
-    <a href="faq.html" style="color: var(--text-primary); text-decoration: none; margin: 0 20px; font-weight: 500; font-size: 0.9rem; transition: opacity 0.2s;">FAQ</a>
-    <p style="margin-top: 24px; font-size: 0.85rem;">&copy; 2026 InteractInk. All rights reserved.</p>
-</footer>
+    <footer style="width: 100%; text-align: center; padding: 40px 0; margin-top: 40px; border-top: 1px solid var(--x-border); color: var(--x-text-muted);">
+        <a href="privacy.html" style="color: var(--x-text-main); text-decoration: none; margin: 0 20px; font-weight: 500; font-size: 0.9rem; transition: opacity 0.2s;">Privacy Policy</a>
+        <a href="faq.html" style="color: var(--x-text-main); text-decoration: none; margin: 0 20px; font-weight: 500; font-size: 0.9rem; transition: opacity 0.2s;">FAQ</a>
+        <p style="margin-top: 24px; font-size: 0.85rem;">&copy; 2026 InteractInk. All rights reserved.</p>
+    </footer>
 </body>
 </html>
