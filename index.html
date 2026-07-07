@@ -18,7 +18,7 @@
     <link rel="icon" type="image/png" href="favicon.png">
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/country-flag-emoji-polyfill@0.1.8/dist/TwemojiCountryFlags.css">
-    
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 
@@ -112,6 +112,45 @@
             object-fit: contain;
         }
 
+        /* Feed Feed Toggle Tabs (Latest vs Trending) */
+        .feed-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--x-border);
+            background: var(--bg-black);
+        }
+
+        .feed-tab {
+            flex: 1;
+            text-align: center;
+            padding: 15px 0;
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--x-text-muted);
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s;
+            position: relative;
+        }
+
+        .feed-tab:hover {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+
+        .feed-tab.active {
+            color: var(--x-text-main);
+        }
+
+        .feed-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 4px;
+            background-color: var(--x-blue);
+            border-radius: 9999px;
+        }
+
         /* X Composer Input Block */
         .composer-section {
             padding: 16px;
@@ -152,6 +191,34 @@
 
         .composer-input-text::placeholder {
             color: var(--x-text-muted);
+        }
+
+        /* Text Customization Formatting Toolbar */
+        .format-toolbar {
+            display: flex;
+            gap: 8px;
+            margin-top: 4px;
+            margin-bottom: 12px;
+        }
+
+        .format-btn {
+            background: #16181c;
+            border: 1px solid #2f3336;
+            color: var(--x-text-main);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .format-btn:hover {
+            background: #202429;
+            border-color: var(--x-text-muted);
         }
 
         .composer-actions {
@@ -216,6 +283,14 @@
         .tweet-author {
             font-weight: 700;
             color: var(--x-text-main);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .flag-badge {
+            font-style: normal;
+            font-size: 1.05rem;
         }
 
         .tweet-meta {
@@ -231,6 +306,10 @@
             word-break: break-words;
             margin-top: 2px;
         }
+
+        .tweet-content b { font-weight: 700; color: #fff; }
+        .tweet-content i { font-style: italic; }
+        .tweet-content code { background: #16181c; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.85rem; color: #ff79c6; }
 
         .tweet-footer {
             display: flex;
@@ -431,12 +510,23 @@
             </div>
         </header>
 
+        <div class="feed-tabs">
+            <div class="feed-tab active" id="tabLatest" onclick="switchFeedTab('latest')">Latest</div>
+            <div class="feed-tab" id="tabTrending" onclick="switchFeedTab('trending')">Trending (24h)</div>
+        </div>
+
         <section class="composer-section">
             <div class="composer-body">
                 <form id="threadForm">
                     <input type="text" id="threadTitle" placeholder="Alias Name (Optional)..." maxlength="50" autocomplete="off" class="composer-input-name">
                     <textarea id="threadContent" placeholder="What is happening?!" required rows="3" maxlength="1000" class="composer-input-text"></textarea>
                     
+                    <div class="format-toolbar">
+                        <button type="button" class="format-btn" onclick="applyFormat('**')"><b>B</b> Bold</button>
+                        <button type="button" class="format-btn" onclick="applyFormat('*')"><i>I</i> Italic</button>
+                        <button type="button" class="format-btn" onclick="applyFormat('`')"><code>C</code> Code</button>
+                    </div>
+
                     <div class="composer-actions">
                         <div style="color: var(--x-text-muted); display: flex; align-items: center; gap: 4px; font-size: 0.85rem;">
                             <i data-lucide="shield" style="width: 16px; height: 16px; color: var(--x-text-muted);"></i>
@@ -505,7 +595,9 @@
             userSeed: null, 
             cachedCounts: { threads: 0, comments: 0 },
             currentPage: 1,
-            threadsPerPage: 15
+            threadsPerPage: 15,
+            currentFeedMode: 'latest', // 'latest' or 'trending'
+            userCountryFlag: ''       // Populated automatically via geolocation payload
         };
 
         window.addEventListener('load', async () => {
@@ -513,11 +605,25 @@
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
                 initSeedEngine();
                 bindEventListeners();
+                await fetchCountryFlag(); // Auto geolocation tracking on structural bootstrap
                 await fetchCountAndPage(1);
                 initRealtimeSync();
             }
             lucide.createIcons();
         });
+
+        // GEOLOCATION: Free localized flag tracking endpoint handler
+        async function fetchCountryFlag() {
+            try {
+                const response = await fetch('https://ipwho.is/');
+                const data = await response.json();
+                if (data && data.flag && data.success) {
+                    appState.userCountryFlag = data.flag.emoji || '';
+                }
+            } catch (err) {
+                console.error("Geolocation fetch initialization bypassed:", err);
+            }
+        }
 
         function initSeedEngine() {
             let seed = localStorage.getItem('ink_private_seed_key');
@@ -536,6 +642,36 @@
             return 'Anon#' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 4);
         }
 
+        // TEXT EDITOR TOOLBAR: Wraps highlighted strings or appends tag characters directly inside the editor matrix
+        function applyFormat(marker) {
+            const textarea = document.getElementById('threadContent');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const text = textarea.value;
+
+            const selectedText = text.substring(start, end);
+            const replacement = marker + selectedText + marker;
+
+            textarea.value = text.substring(0, start) + replacement + text.substring(end);
+            textarea.focus();
+            textarea.selectionStart = start + marker.length;
+            textarea.selectionEnd = start + marker.length + selectedText.length;
+            
+            // Re-trigger counter validation parameters
+            document.getElementById('threadCharCounter').innerText = `${textarea.value.length}/1000`;
+        }
+
+        // TOGGLE CHANNELS: Handles swap changes between stream distributions
+        async function switchFeedTab(mode) {
+            if (appState.currentFeedMode === mode) return;
+            appState.currentFeedMode = mode;
+            
+            document.getElementById('tabLatest').classList.toggle('active', mode === 'latest');
+            document.getElementById('tabTrending').classList.toggle('active', mode === 'trending');
+            
+            await fetchCountAndPage(1);
+        }
+
         async function fetchCountAndPage(pageNumber) {
             document.getElementById('latestStream').innerHTML = `<div class="timeline-indicator">Synchronizing secure handshake...</div>`;
             appState.currentPage = pageNumber;
@@ -550,22 +686,45 @@
                 appState.cachedCounts.comments = commentCountRes.count || 0;
                 updateGlobalCounterUI();
 
-                const fromIndex = (pageNumber - 1) * appState.threadsPerPage;
-                const toIndex = fromIndex + appState.threadsPerPage - 1;
-
-                const { data: threads } = await supabaseClient.from('threads')
-                    .select('*')
-                    .order('timestamp', { ascending: false })
-                    .range(fromIndex, toIndex);
-                
-                appState.threads = threads || [];
-
+                // Load contextual reply metrics mappings to arrange sorting algorithms
                 const { data: commentIds } = await supabaseClient.from('comments').select('thread_id');
                 appState.commentCounts = {};
                 if (commentIds) {
                     commentIds.forEach(c => {
                         appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
                     });
+                }
+
+                if (appState.currentFeedMode === 'trending') {
+                    // TRENDING ENGINE: Sort by past 24 hours engagement metrics
+                    const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
+                    const { data: trendingThreads } = await supabaseClient.from('threads')
+                        .select('*')
+                        .gte('timestamp', oneDayAgo);
+
+                    let compiled = trendingThreads || [];
+                    // Prioritize by engagement (Total comments + calculated upvote parameters)
+                    compiled.sort((a, b) => {
+                        const engagementA = (appState.commentCounts[a.id] || 0) + (a.upvotes || 0);
+                        const engagementB = (appState.commentCounts[b.id] || 0) + (b.upvotes || 0);
+                        return engagementB - engagementA;
+                    });
+
+                    // Manual partitioning implementation layer for trending list arrays
+                    const fromIndex = (pageNumber - 1) * appState.threadsPerPage;
+                    appState.threads = compiled.slice(fromIndex, fromIndex + appState.threadsPerPage);
+                    appState.cachedCounts.threads = compiled.length; // Overwrite total count for pagination scaling
+                } else {
+                    // LATEST TIMELINE STREAM ENGINE
+                    const fromIndex = (pageNumber - 1) * appState.threadsPerPage;
+                    const toIndex = fromIndex + appState.threadsPerPage - 1;
+
+                    const { data: threads } = await supabaseClient.from('threads')
+                        .select('*')
+                        .order('timestamp', { ascending: false })
+                        .range(fromIndex, toIndex);
+                    
+                    appState.threads = threads || [];
                 }
 
                 renderThreads();
@@ -638,8 +797,6 @@
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, payload => {
                     if (payload.eventType === 'INSERT') {
                         const c = payload.new;
-                        if (appState.comments[c.thread_id] && appState.comments[c.thread_id][c.id]) return;
-
                         appState.cachedCounts.comments++;
                         appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
                         if (appState.activeThreadId === c.thread_id) {
@@ -677,12 +834,14 @@
                 const id = Math.random().toString(16).substring(2, 10);
                 const parsedTitle = title.value.trim() || 'Anonymous';
                 
+                // IP GEOLOCATION PAYLOAD: Inserts geolocation payload flag emoji values directly into table data streams
                 await supabaseClient.from('threads').insert([{ 
                     id, 
                     title: parsedTitle, 
                     content: threadContent.value.trim(), 
                     timestamp: Date.now(), 
-                    upvotes: 1 
+                    upvotes: 1,
+                    country_flag: appState.userCountryFlag 
                 }]);
                 
                 title.value = '';
@@ -695,28 +854,14 @@
                 if (!appState.activeThreadId) return;
                 const id = Math.random().toString(16).substring(2, 10);
                 const tripcode = await generateTripcode(appState.activeThreadId, appState.userSeed);
-                const commentText = commentInput.value.trim();
-
-                const newCommentObj = { 
+                
+                await supabaseClient.from('comments').insert([{ 
                     id, 
                     thread_id: appState.activeThreadId, 
                     tripcode, 
-                    text: commentText, 
+                    text: commentInput.value.trim(), 
                     timestamp: Date.now() 
-                };
-
-                if (!appState.comments[appState.activeThreadId]) {
-                    appState.comments[appState.activeThreadId] = {};
-                }
-                appState.comments[appState.activeThreadId][id] = newCommentObj;
-                appState.cachedCounts.comments++;
-                appState.commentCounts[appState.activeThreadId] = (appState.commentCounts[appState.activeThreadId] || 0) + 1;
-                
-                renderCommentTree();
-                updateGlobalCounterUI();
-                renderThreads();
-
-                await supabaseClient.from('comments').insert([newCommentObj]);
+                }]);
                 
                 commentInput.value = '';
                 commentCharCounter.innerText = '0/300';
@@ -742,12 +887,14 @@
             
             target.innerHTML = appState.threads.map(t => {
                 const count = appState.commentCounts[t.id] || 0;
+                // Print country flag string payload seamlessly beside identity metrics profiles
+                const flagMarkup = t.country_flag ? `<span class="flag-badge" title="Location Verified">${t.country_flag}</span>` : '';
                 return `
                     <div class="tweet-card" onclick="openThreadModal('${t.id}')">
                         <div class="tweet-main">
                             <div class="tweet-header">
                                 <div>
-                                    <span class="tweet-author">${escapeHTML(t.title)}</span>
+                                    <span class="tweet-author">${flagMarkup} ${escapeHTML(t.title)}</span>
                                     <span class="tweet-meta">· ${formatTime(t.timestamp)}</span>
                                 </div>
                             </div>
@@ -794,19 +941,6 @@
             appState.activeThreadId = null;
         }
 
-        // ADDED: Interactive macro reference injector function
-        function insertCommentReference(commentId) {
-            const input = document.getElementById('commentInput');
-            if (input) {
-                const refText = `>>${commentId} `;
-                if (!input.value.startsWith(refText) && !input.value.includes(refText)) {
-                    input.value = refText + input.value;
-                }
-                input.focus();
-                input.dispatchEvent(new Event('input')); // Fire counter listener layout rules
-            }
-        }
-
         function renderCommentTree() {
             const container = document.getElementById('commentTreeContainer');
             const commentsMap = appState.comments[appState.activeThreadId] || {};
@@ -817,17 +951,12 @@
                 return;
             }
 
-            // MODIFIED: Added a pointer cursor, hover effects, and click triggers to comment node IDs
             container.innerHTML = list.map(c => `
                 <div class="comment-node">
                     <div style="display: flex; flex-direction: column; width: 100%;">
                         <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px;">
                             <span style="font-weight: 700; color: var(--x-text-main);">${c.tripcode}</span>
-                            <span style="font-family: monospace; color: var(--x-text-muted); font-size: 0.75rem; cursor: pointer; user-select: none; transition: color 0.15s;" 
-                                  title="Click to Reply to this comment"
-                                  onmouseover="this.style.color='var(--x-blue)'" 
-                                  onmouseout="this.style.color='var(--x-text-muted)'"
-                                  onclick="insertCommentReference('${c.id}')">>>${c.id}</span>
+                            <span style="font-family: monospace; color: var(--x-text-muted); font-size: 0.75rem;">>>${c.id}</span>
                         </div>
                         <p style="font-size: 0.95rem; color: var(--x-text-main); line-height: 1.4; word-break: break-words;">${parseBodyContent(c.text)}</p>
                     </div>
@@ -837,9 +966,18 @@
             bindHoverPreviews();
         }
 
+        // TEXT RENDERING PARSER: Converts custom toolbar modifiers into clean structural markdown styling tags
         function parseBodyContent(str) {
             if (!str) return '';
             let html = escapeHTML(str);
+            
+            // Format bold text (**text**)
+            html = html.replace(/\*\*([\s\S]+?)\*\*/g, '<b>$1</b>');
+            // Format italic text (*text*)
+            html = html.replace(/\*([\s\S]+?)\*/g, '<i>$1</i>');
+            // Format code markers (`text`)
+            html = html.replace(/`([\s\S]+?)`/g, '<code>$1</code>');
+
             const urlRegex = /(https?:\/\/[^\s]+)/g;
             html = html.replace(urlRegex, url => `<a href="${url}" target="_blank" rel="noopener noreferrer" class="user-link">${url}</a>`);
             const referenceRegex = /&gt;&gt;([a-f0-9]{8})/g;
