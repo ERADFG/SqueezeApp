@@ -50,7 +50,6 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        /* Fixed Top Navigation Bar */
         nav {
             display: flex;
             justify-content: center;
@@ -78,7 +77,6 @@
             color: var(--x-text-main);
         }
 
-        /* Central X-Style Feed Wrapper */
         .feed-container {
             width: 100%;
             max-width: 600px;
@@ -89,7 +87,6 @@
             flex-direction: column;
         }
 
-        /* X Brand Header layout */
         header {
             display: flex;
             align-items: center;
@@ -110,7 +107,6 @@
             object-fit: contain;
         }
 
-        /* X Composer Input Block */
         .composer-section {
             padding: 16px;
             border-bottom: 1px solid var(--x-border);
@@ -152,6 +148,21 @@
             color: var(--x-text-muted);
         }
 
+        .file-upload-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--x-blue);
+            font-size: 0.85rem;
+            cursor: pointer;
+            margin-top: 6px;
+            width: fit-content;
+        }
+
+        .file-upload-input {
+            display: none;
+        }
+
         .composer-actions {
             display: flex;
             justify-content: space-between;
@@ -182,7 +193,6 @@
             cursor: not-allowed;
         }
 
-        /* Post Items (Tweets) Layout */
         .tweet-card {
             border-bottom: 1px solid var(--x-border);
             padding: 12px 16px;
@@ -214,6 +224,13 @@
         .tweet-author {
             font-weight: 700;
             color: var(--x-text-main);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .flag-icon {
+            font-style: normal;
         }
 
         .tweet-meta {
@@ -230,7 +247,6 @@
             margin-top: 2px;
         }
 
-        /* Image & GIF Container Styles */
         .attached-media-container {
             margin-top: 8px;
             display: inline-block;
@@ -282,7 +298,6 @@
             text-decoration: underline;
         }
 
-        /* Loading / Infinity Status indicators */
         .timeline-indicator {
             padding: 24px;
             text-align: center;
@@ -291,7 +306,6 @@
             border-bottom: 1px solid var(--x-border);
         }
 
-        /* Numbered Pagination Layout Container */
         .pagination-container {
             display: flex;
             align-items: center;
@@ -341,7 +355,6 @@
             font-weight: 600;
         }
 
-        /* X-Style Overlay Modal Layer */
         .x-modal-backdrop {
             position: fixed;
             inset: 0;
@@ -414,7 +427,6 @@
             flex-direction: column;
         }
 
-        /* Hover Node Anchor Preview Box */
         #hoverPreviewBox {
             position: absolute;
             background: var(--bg-black);
@@ -459,7 +471,11 @@
                     <input type="text" id="threadTitle" placeholder="Alias Name (Optional)..." maxlength="50" autocomplete="off" class="composer-input-name">
                     <textarea id="threadContent" placeholder="What is happening?!" required rows="3" maxlength="1000" class="composer-input-text"></textarea>
                     
-                    <input type="url" id="threadImageUrl" placeholder="Paste Image or GIF URL (Optional)..." autocomplete="off" class="composer-input-name" style="font-size: 0.85rem; font-weight: 400; border-bottom: none; padding-top: 4px; color: var(--x-blue);">
+                    <label class="file-upload-label">
+                        <i data-lucide="image" style="width: 16px; height: 16px;"></i>
+                        <span id="threadFileStatus">Upload Image/GIF from device</span>
+                        <input type="file" id="threadFile" accept="image/*,image/gif" class="file-upload-input">
+                    </label>
 
                     <div class="composer-actions">
                         <div style="color: var(--x-text-muted); display: flex; align-items: center; gap: 4px; font-size: 0.85rem;">
@@ -493,7 +509,7 @@
             
             <div class="x-modal-content" id="modalScrollBody">
                 <div style="display: flex; flex-direction: column; width: 100%;">
-                    <span id="modalTitle" style="font-weight: 800; font-size: 1.05rem;"></span>
+                    <span id="modalTitle" style="font-weight: 800; font-size: 1.05rem; display: inline-flex; align-items: center; gap: 8px;"></span>
                     <div style="color: var(--x-text-muted); font-size: 0.85rem; margin-bottom: 12px;" id="modalTimestamp"></div>
                     <p id="modalOpBody" style="font-size: 1.25rem; line-height: 1.5; color: var(--x-text-main); white-space: pre-wrap; word-break: break-words;"></p>
                     <div id="modalOpMedia" class="attached-media-container"></div>
@@ -512,8 +528,11 @@
                         <span id="commentCharCounter" style="font-size: 0.8rem; color: var(--x-text-muted); font-family: monospace;">0/300</span>
                         <button type="submit" class="composer-btn" style="padding: 6px 16px; font-size: 0.85rem;">Reply</button>
                     </div>
-                    <input type="url" id="commentImageUrl" placeholder="Paste optional Image/GIF URL for reply..." autocomplete="off"
-                           style="background: transparent; border: none; outline: none; color: var(--x-blue); font-size: 0.8rem; padding-left: 16px;">
+                    <label class="file-upload-label" style="padding-left: 16px;">
+                        <i data-lucide="image" style="width: 14px; height: 14px;"></i>
+                        <span id="commentFileStatus">Attach file</span>
+                        <input type="file" id="commentFile" accept="image/*,image/gif" class="file-upload-input">
+                    </label>
                 </form>
             </div>
         </div>
@@ -534,7 +553,8 @@
             userSeed: null, 
             cachedCounts: { threads: 0, comments: 0 },
             currentPage: 1,
-            threadsPerPage: 15
+            threadsPerPage: 15,
+            userFlag: "🇺🇿"
         };
 
         window.addEventListener('load', async () => {
@@ -563,6 +583,15 @@
             const digestBuffer = await crypto.subtle.digest('SHA-256', rawBuffer);
             const hashArray = Array.from(new Uint8Array(digestBuffer));
             return 'Anon#' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 4);
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
         }
 
         async function fetchCountAndPage(pageNumber) {
@@ -703,12 +732,36 @@
                 commentCharCounter.innerText = `${commentInput.value.length}/300`;
             });
 
+            const threadFile = document.getElementById('threadFile');
+            threadFile.addEventListener('change', () => {
+                if(threadFile.files.length > 0) {
+                    document.getElementById('threadFileStatus').innerText = threadFile.files[0].name;
+                } else {
+                    document.getElementById('threadFileStatus').innerText = "Upload Image/GIF from device";
+                }
+            });
+
+            const commentFile = document.getElementById('commentFile');
+            commentFile.addEventListener('change', () => {
+                if(commentFile.files.length > 0) {
+                    document.getElementById('commentFileStatus').innerText = commentFile.files[0].name;
+                } else {
+                    document.getElementById('commentFileStatus').innerText = "Attach file";
+                }
+            });
+
             document.getElementById('threadForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const title = document.getElementById('threadTitle');
-                const imageInput = document.getElementById('threadImageUrl');
                 const id = Math.random().toString(16).substring(2, 10);
                 const parsedTitle = title.value.trim() || 'Anonymous';
+                
+                let b64Media = null;
+                if(threadFile.files.length > 0) {
+                    try {
+                        b64Media = await fileToBase64(threadFile.files[0]);
+                    } catch(err) { console.error(err); }
+                }
                 
                 await supabaseClient.from('threads').insert([{ 
                     id, 
@@ -716,12 +769,14 @@
                     content: threadContent.value.trim(), 
                     timestamp: Date.now(), 
                     upvotes: 1,
-                    image_url: imageInput.value.trim() || null
+                    image_url: b64Media,
+                    flag: appState.userFlag
                 }]);
                 
                 title.value = '';
                 threadContent.value = '';
-                imageInput.value = '';
+                threadFile.value = '';
+                document.getElementById('threadFileStatus').innerText = "Upload Image/GIF from device";
                 threadCharCounter.innerText = '0/1000';
             });
 
@@ -729,20 +784,28 @@
                 e.preventDefault();
                 if (!appState.activeThreadId) return;
                 const id = Math.random().toString(16).substring(2, 10);
-                const commentImageInput = document.getElementById('commentImageUrl');
                 const tripcode = await generateTripcode(appState.activeThreadId, appState.userSeed);
                 
+                let b64Media = null;
+                if(commentFile.files.length > 0) {
+                    try {
+                        b64Media = await fileToBase64(commentFile.files[0]);
+                    } catch(err) { console.error(err); }
+                }
+
                 await supabaseClient.from('comments').insert([{ 
                     id, 
                     thread_id: appState.activeThreadId, 
                     tripcode, 
                     text: commentInput.value.trim(), 
                     timestamp: Date.now(),
-                    image_url: commentImageInput.value.trim() || null
+                    image_url: b64Media,
+                    flag: appState.userFlag
                 }]);
                 
                 commentInput.value = '';
-                commentImageInput.value = '';
+                commentFile.value = '';
+                document.getElementById('commentFileStatus').innerText = "Attach file";
                 commentCharCounter.innerText = '0/300';
             });
         }
@@ -770,16 +833,17 @@
                 if(t.image_url) {
                     mediaMarkup = `
                         <div class="attached-media-container">
-                            <img src="${escapeHTML(t.image_url)}" class="posted-media" onclick="toggleImageExpand(event)" alt="Thread image content" onerror="this.parentElement.remove();">
+                            <img src="${t.image_url}" class="posted-media" onclick="toggleImageExpand(event)" alt="Thread image content" onerror="this.parentElement.remove();">
                         </div>
                     `;
                 }
+                const displayFlag = t.flag || "🇺🇿";
                 return `
                     <div class="tweet-card" onclick="openThreadModal('${t.id}')">
                         <div class="tweet-main">
                             <div class="tweet-header">
                                 <div>
-                                    <span class="tweet-author">${escapeHTML(t.title)}</span>
+                                    <span class="tweet-author"><span class="flag-icon">${displayFlag}</span> ${escapeHTML(t.title)}</span>
                                     <span class="tweet-meta">· ${formatTime(t.timestamp)}</span>
                                 </div>
                             </div>
@@ -807,14 +871,15 @@
             const thread = appState.threads.find(t => t.id === id);
             if (!thread) return;
 
-            document.getElementById('modalTitle').innerText = thread.title;
+            const opFlag = thread.flag || "🇺🇿";
+            document.getElementById('modalTitle').innerHTML = `<span class="flag-icon">${opFlag}</span> ` + escapeHTML(thread.title);
             document.getElementById('modalTimestamp').innerText = new Date(thread.timestamp).toLocaleString();
             document.getElementById('modalOpBody').innerHTML = parseBodyContent(thread.content);
             document.getElementById('modalMeta').innerText = `Post Instance Node [${id}]`;
             
             const modalMediaContainer = document.getElementById('modalOpMedia');
             if(thread.image_url) {
-                modalMediaContainer.innerHTML = `<img src="${escapeHTML(thread.image_url)}" class="posted-media" onclick="toggleImageExpand(event)" alt="Thread image attachment">`;
+                modalMediaContainer.innerHTML = `<img src="${thread.image_url}" class="posted-media" onclick="toggleImageExpand(event)" alt="Thread image attachment">`;
             } else {
                 modalMediaContainer.innerHTML = '';
             }
@@ -850,15 +915,16 @@
                 if(c.image_url) {
                     replyMediaMarkup = `
                         <div class="attached-media-container">
-                            <img src="${escapeHTML(c.image_url)}" class="posted-media" onclick="toggleImageExpand(event)" alt="Reply attachment" onerror="this.parentElement.remove();">
+                            <img src="${c.image_url}" class="posted-media" onclick="toggleImageExpand(event)" alt="Reply attachment" onerror="this.parentElement.remove();">
                         </div>
                     `;
                 }
+                const commentFlag = c.flag || "🇺🇿";
                 return `
                     <div class="comment-node">
                         <div style="display: flex; flex-direction: column; width: 100%;">
                             <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px;">
-                                <span style="font-weight: 700; color: var(--x-text-main);">${c.tripcode}</span>
+                                <span style="font-weight: 700; color: var(--x-text-main); display: inline-flex; align-items: center; gap: 4px;"><span class="flag-icon">${commentFlag}</span> ${c.tripcode}</span>
                                 <span style="font-family: monospace; color: var(--x-text-muted); font-size: 0.75rem;">>>${c.id}</span>
                             </div>
                             <p style="font-size: 0.95rem; color: var(--x-text-main); line-height: 1.4; word-break: break-words;">${parseBodyContent(c.text)}</p>
@@ -875,7 +941,6 @@
             if (!str) return '';
             let html = escapeHTML(str);
             
-            // Auto-embed image links directly in text descriptions if matching common types
             const urlRegex = /(https?:\/\/[^\s]+)/g;
             html = html.replace(urlRegex, url => {
                 const lowerUrl = url.toLowerCase();
