@@ -864,80 +864,86 @@
         }
 
         function bindEventListeners() {
-            const threadContent = document.getElementById('threadContent');
-            const threadCharCounter = document.getElementById('threadCharCounter');
-            threadContent.addEventListener('input', () => {
-                threadCharCounter.innerText = `${threadContent.value.length}/1000`;
-            });
-
-            const commentInput = document.getElementById('commentInput');
-            const commentCharCounter = document.getElementById('commentCharCounter');
-            commentInput.addEventListener('input', () => {
-                commentCharCounter.innerText = `${commentInput.value.length}/300`;
-            });
-
-            // Local Media Stream Compression Reader
-            document.getElementById('composerFileInput').addEventListener('change', function(e) {
-    const targetFile = e.target.files[0];
-    if (!targetFile) return;
-
-    const fileReader = new FileReader();
-    fileReader.onload = function(event) {
-        attachedImageBase64 = event.target.result;
-        console.log("Image captured! String length:", attachedImageBase64.length); // DEBUG: If this is 0, the image didn't load
-        document.getElementById('composerImageElement').src = attachedImageBase64;
-        document.getElementById('composerImageContainer').style.display = 'inline-block';
-    };
-    fileReader.readAsDataURL(targetFile);
-});
-
-            document.getElementById('threadForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const title = document.getElementById('threadTitle');
-    const id = Math.random().toString(16).substring(2, 10);
-                const parsedTitle = title.value.trim() || 'Anonymous';
-                
-                // Query country code precisely right before execution broadcast
-                console.log("Attempting to post image data length:", attachedImageBase64 ? attachedImageBase64.length : "NO DATA");
-                const { data, error } = await supabaseClient.from('threads').insert([{ 
-        id: id, 
-        title: title.value.trim() || 'Anonymous', 
-        content: threadContent.value.trim(), 
-        timestamp: Date.now(), 
-        upvotes: 1,
-        flag: await getRealUserCountry(),
-        image: attachedImageBase64 // <-- Ensure this is mapped correctly
-    }]);
+    const threadContent = document.getElementById('threadContent');
+    const threadCharCounter = document.getElementById('threadCharCounter');
     
-     
-                
-                title.value = '';
-                threadContent.value = '';
-                threadCharCounter.innerText = '0/1000';
-                clearSelectedComposerImage();
-            });
+    threadContent.addEventListener('input', () => {
+        threadCharCounter.innerText = `${threadContent.value.length}/1000`;
+    });
 
-            document.getElementById('commentForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                if (!appState.activeThreadId) return;
-                const id = Math.random().toString(16).substring(2, 10);
-                const tripcode = await generateTripcode(appState.activeThreadId, appState.userSeed);
-                
-                const countryCode = await getRealUserCountry();
-                
-                await supabaseClient.from('comments').insert([{ 
-                    id, 
-                    thread_id: appState.activeThreadId, 
-                    tripcode, 
-                    text: commentInput.value.trim(), 
-                    timestamp: Date.now(),
-                    flag: countryCode
-                }]);
-                
-                commentInput.value = '';
-                commentCharCounter.innerText = '0/300';
-            });
+    const commentInput = document.getElementById('commentInput');
+    const commentCharCounter = document.getElementById('commentCharCounter');
+    commentInput.addEventListener('input', () => {
+        commentCharCounter.innerText = `${commentInput.value.length}/300`;
+    });
+
+    // File Upload Listener
+    document.getElementById('composerFileInput').addEventListener('change', function(e) {
+        const targetFile = e.target.files[0];
+        if (!targetFile) return;
+
+        const fileReader = new FileReader();
+        fileReader.onload = function(event) {
+            attachedImageBase64 = event.target.result;
+            console.log("Image captured! String length:", attachedImageBase64.length);
+            document.getElementById('composerImageElement').src = attachedImageBase64;
+            document.getElementById('composerImageContainer').style.display = 'inline-block';
+        };
+        fileReader.readAsDataURL(targetFile);
+    });
+
+    // Single Thread Form Submit Listener
+    document.getElementById('threadForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const title = document.getElementById('threadTitle');
+        const id = Math.random().toString(16).substring(2, 10);
+        
+        console.log("Attempting to post, image length:", attachedImageBase64 ? attachedImageBase64.length : "NO DATA");
+        
+        const { data, error } = await supabaseClient.from('threads').insert([{ 
+            id: id, 
+            title: title.value.trim() || 'Anonymous', 
+            content: threadContent.value.trim(), 
+            timestamp: Date.now(), 
+            upvotes: 1,
+            flag: await getRealUserCountry(),
+            image: attachedImageBase64 
+        }]);
+
+        if (error) {
+            console.error("Supabase Insert Error:", error);
+            alert("Failed to post: " + error.message);
+        } else {
+            console.log("Post successful!");
+            title.value = '';
+            threadContent.value = '';
+            threadCharCounter.innerText = '0/1000';
+            clearSelectedComposerImage();
         }
+    });
+
+    // Comment Form Submit Listener (Must be its own separate block)
+    document.getElementById('commentForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!appState.activeThreadId) return;
+        const id = Math.random().toString(16).substring(2, 10);
+        const tripcode = await generateTripcode(appState.activeThreadId, appState.userSeed);
+        
+        const countryCode = await getRealUserCountry();
+        
+        await supabaseClient.from('comments').insert([{ 
+            id, 
+            thread_id: appState.activeThreadId, 
+            tripcode, 
+            text: commentInput.value.trim(), 
+            timestamp: Date.now(),
+            flag: countryCode
+        }]);
+        
+        commentInput.value = '';
+        commentCharCounter.innerText = '0/300';
+    });
+}
 
         async function triggerPostUpvote(event, id) {
             event.stopPropagation();
