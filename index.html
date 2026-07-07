@@ -226,11 +226,13 @@
             color: var(--x-text-main);
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
         }
 
-        .flag-icon {
-            font-style: normal;
+        .flag-label {
+            color: var(--x-text-muted);
+            font-weight: 500;
+            font-size: 0.85rem;
         }
 
         .tweet-meta {
@@ -509,7 +511,7 @@
             
             <div class="x-modal-content" id="modalScrollBody">
                 <div style="display: flex; flex-direction: column; width: 100%;">
-                    <span id="modalTitle" style="font-weight: 800; font-size: 1.05rem; display: inline-flex; align-items: center; gap: 8px;"></span>
+                    <span id="modalTitle" style="font-weight: 800; font-size: 1.05rem; display: inline-flex; align-items: center; gap: 4px;"></span>
                     <div style="color: var(--x-text-muted); font-size: 0.85rem; margin-bottom: 12px;" id="modalTimestamp"></div>
                     <p id="modalOpBody" style="font-size: 1.25rem; line-height: 1.5; color: var(--x-text-main); white-space: pre-wrap; word-break: break-words;"></p>
                     <div id="modalOpMedia" class="attached-media-container"></div>
@@ -554,10 +556,11 @@
             cachedCounts: { threads: 0, comments: 0 },
             currentPage: 1,
             threadsPerPage: 15,
-            userFlag: "🇺🇿"
+            userFlag: "US"
         };
 
         window.addEventListener('load', async () => {
+            detectUserLocation();
             if (window.supabase) {
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
                 initSeedEngine();
@@ -567,6 +570,19 @@
             }
             lucide.createIcons();
         });
+
+        function detectUserLocation() {
+            try {
+                const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                if (tz.includes("Tashkent") || tz.includes("Samarkand")) appState.userFlag = "UZ";
+                else if (tz.includes("London") || tz.includes("Europe/London")) appState.userFlag = "UK";
+                else if (tz.includes("Europe")) appState.userFlag = "EU";
+                else if (tz.includes("Asia")) appState.userFlag = "AS";
+                else appState.userFlag = "US";
+            } catch (e) {
+                appState.userFlag = "GL";
+            }
+        }
 
         function initSeedEngine() {
             let seed = localStorage.getItem('ink_private_seed_key');
@@ -837,13 +853,13 @@
                         </div>
                     `;
                 }
-                const displayFlag = t.flag || "🇺🇿";
+                const displayFlag = t.flag || "US";
                 return `
                     <div class="tweet-card" onclick="openThreadModal('${t.id}')">
                         <div class="tweet-main">
                             <div class="tweet-header">
                                 <div>
-                                    <span class="tweet-author"><span class="flag-icon">${displayFlag}</span> ${escapeHTML(t.title)}</span>
+                                    <span class="tweet-author">${escapeHTML(t.title)} · <span class="flag-label">[${displayFlag}]</span></span>
                                     <span class="tweet-meta">· ${formatTime(t.timestamp)}</span>
                                 </div>
                             </div>
@@ -871,8 +887,8 @@
             const thread = appState.threads.find(t => t.id === id);
             if (!thread) return;
 
-            const opFlag = thread.flag || "🇺🇿";
-            document.getElementById('modalTitle').innerHTML = `<span class="flag-icon">${opFlag}</span> ` + escapeHTML(thread.title);
+            const opFlag = thread.flag || "US";
+            document.getElementById('modalTitle').innerHTML = escapeHTML(thread.title) + ` · <span class="flag-label">[${opFlag}]</span>`;
             document.getElementById('modalTimestamp').innerText = new Date(thread.timestamp).toLocaleString();
             document.getElementById('modalOpBody').innerHTML = parseBodyContent(thread.content);
             document.getElementById('modalMeta').innerText = `Post Instance Node [${id}]`;
@@ -919,12 +935,12 @@
                         </div>
                     `;
                 }
-                const commentFlag = c.flag || "🇺🇿";
+                const commentFlag = c.flag || "US";
                 return `
                     <div class="comment-node">
                         <div style="display: flex; flex-direction: column; width: 100%;">
                             <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px;">
-                                <span style="font-weight: 700; color: var(--x-text-main); display: inline-flex; align-items: center; gap: 4px;"><span class="flag-icon">${commentFlag}</span> ${c.tripcode}</span>
+                                <span style="font-weight: 700; color: var(--x-text-main); display: inline-flex; align-items: center; gap: 4px;">${c.tripcode} · <span class="flag-label">[${commentFlag}]</span></span>
                                 <span style="font-family: monospace; color: var(--x-text-muted); font-size: 0.75rem;">>>${c.id}</span>
                             </div>
                             <p style="font-size: 0.95rem; color: var(--x-text-main); line-height: 1.4; word-break: break-words;">${parseBodyContent(c.text)}</p>
