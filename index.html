@@ -909,16 +909,7 @@
         image: attachedImageBase64 // <-- Ensure this is mapped correctly
     }]);
     
-     if (error) {
-        console.error("Supabase Insert Error:", error);
-        alert("Failed to post: " + error.message);
-    } else {
-        console.log("Post successful!");
-        title.value = '';
-        threadContent.value = '';
-        clearSelectedComposerImage();
-    }
-});
+     
                 
                 title.value = '';
                 threadContent.value = '';
