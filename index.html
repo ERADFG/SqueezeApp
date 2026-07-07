@@ -878,17 +878,18 @@
 
             // Local Media Stream Compression Reader
             document.getElementById('composerFileInput').addEventListener('change', function(e) {
-                const targetFile = e.target.files[0];
-                if (!targetFile) return;
+    const targetFile = e.target.files[0];
+    if (!targetFile) return;
 
-                const fileReader = new FileReader();
-                fileReader.onload = function(event) {
-                    attachedImageBase64 = event.target.result;
-                    document.getElementById('composerImageElement').src = attachedImageBase64;
-                    document.getElementById('composerImageContainer').style.display = 'inline-block';
-                };
-                fileReader.readAsDataURL(targetFile);
-            });
+    const fileReader = new FileReader();
+    fileReader.onload = function(event) {
+        attachedImageBase64 = event.target.result;
+        console.log("Image captured! String length:", attachedImageBase64.length); // DEBUG: If this is 0, the image didn't load
+        document.getElementById('composerImageElement').src = attachedImageBase64;
+        document.getElementById('composerImageContainer').style.display = 'inline-block';
+    };
+    fileReader.readAsDataURL(targetFile);
+});
 
             document.getElementById('threadForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -968,41 +969,33 @@
         function renderThreads() {
     const target = document.getElementById('latestStream');
     if(appState.threads.length === 0) {
-        target.innerHTML = `<div class="timeline-indicator">No active matrix broadcasts. Start one above.</div>`;
+        target.innerHTML = `<div class="timeline-indicator">No active matrix broadcasts.</div>`;
         return;
     }
     
     target.innerHTML = appState.threads.map(t => {
         const count = appState.commentCounts[t.id] || 0;
-        const imgTag = t.image ? `<img class="tweet-media-attachment" src="${t.image}" alt="Attachment Stream Canvas">` : '';
+        
+        // This checks if the image exists and is not just an empty string
+        const imgTag = (t.image && t.image.length > 10) 
+            ? `<img class="tweet-media-attachment" src="${t.image}" alt="Attachment" style="max-width: 100%; border-radius: 8px; margin-top: 10px;">` 
+            : '';
+
         return `
             <div class="tweet-card" onclick="openThreadModal('${t.id}')">
                 <div class="tweet-main">
                     <div class="tweet-header">
-                        <div>
-                            <span class="tweet-author-wrapper">
-                                <span class="tweet-author">${escapeHTML(t.title)}</span>${makeFlagHtml(t.flag)}
-                            </span>
-                            <span class="tweet-meta">· ${formatTime(t.timestamp)}</span>
-                        </div>
+                        <span class="tweet-author">${escapeHTML(t.title)}</span>
                     </div>
                     <p class="tweet-content">${parseBodyContent(t.content)}</p>
                     ${imgTag}
                     <div class="tweet-footer">
-                        <div class="tweet-action-item">
-                            <i data-lucide="message-circle" style="width: 16px; height: 16px;"></i>
-                            <span>${count}</span>
-                        </div>
-                        <div class="tweet-action-item" style="cursor: default; hover: none;">
-                            <i data-lucide="shield-check" style="width: 16px; height: 16px;"></i>
-                            <span style="font-size: 0.75rem; font-family: monospace;">SECURE</span>
-                        </div>
+                        <span>Comments: ${count}</span>
                     </div>
                 </div>
             </div>
         `;
     }).join('');
-    lucide.createIcons();
 }
 
         async function openThreadModal(id) {
