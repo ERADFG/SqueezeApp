@@ -966,48 +966,44 @@
         }
 
         function renderThreads() {
-            const target = document.getElementById('latestStream');
-            if(appState.threads.length === 0) {
-                target.innerHTML = `<div class="timeline-indicator">No active matrix broadcasts. Start one above.</div>`;
-                return;
-            }
-            
-            target.innerHTML = appState.threads.map(t => {
-                const count = appState.commentCounts[t.id] || 0;
-                const imgTag = t.image ? `<img class="tweet-media-attachment" src="${t.image}" alt="Attachment Stream Canvas">` : '';
-                return `
-                    <div class="tweet-card" onclick="openThreadModal('${t.id}')">
-                        <div class="tweet-main">
-                            <div class="tweet-header">
-                                <div>
-                                    <span class="tweet-author-wrapper">
-                                        <span class="tweet-author">${escapeHTML(t.title)}</span>${makeFlagHtml(t.flag)}
-                                    </span>
-                                    <span class="tweet-meta">· ${formatTime(t.timestamp)}</span>
-                                </div>
-                            </div>
-                            <p class="tweet-content">${parseBodyContent(t.content)}</p>
-                            ${imgTag}
-                            <div class="tweet-footer">
-                                <div class="tweet-action-item">
-                                    <i data-lucide="message-circle" style="width: 16px; height: 16px;"></i>
-                                    <span>${count}</span>
-                                </div>
-                                <button type="button" class="tweet-action-item" id="upvoteBtn-${t.id}" onclick="triggerPostUpvote(event, '${t.id}')">
-                                    <i data-lucide="heart" style="width: 16px; height: 16px;"></i>
-                                    <span class="upvote-count-label">${t.upvotes || 1}</span>
-                                </button>
-                                <div class="tweet-action-item" style="cursor: default; hover: none;">
-                                    <i data-lucide="shield-check" style="width: 16px; height: 16px;"></i>
-                                    <span style="font-size: 0.75rem; font-family: monospace;">SECURE</span>
-                                </div>
-                            </div>
+    const target = document.getElementById('latestStream');
+    if(appState.threads.length === 0) {
+        target.innerHTML = `<div class="timeline-indicator">No active matrix broadcasts. Start one above.</div>`;
+        return;
+    }
+    
+    target.innerHTML = appState.threads.map(t => {
+        const count = appState.commentCounts[t.id] || 0;
+        const imgTag = t.image ? `<img class="tweet-media-attachment" src="${t.image}" alt="Attachment Stream Canvas">` : '';
+        return `
+            <div class="tweet-card" onclick="openThreadModal('${t.id}')">
+                <div class="tweet-main">
+                    <div class="tweet-header">
+                        <div>
+                            <span class="tweet-author-wrapper">
+                                <span class="tweet-author">${escapeHTML(t.title)}</span>${makeFlagHtml(t.flag)}
+                            </span>
+                            <span class="tweet-meta">· ${formatTime(t.timestamp)}</span>
                         </div>
                     </div>
-                `;
-            }).join('');
-            lucide.createIcons();
-        }
+                    <p class="tweet-content">${parseBodyContent(t.content)}</p>
+                    ${imgTag}
+                    <div class="tweet-footer">
+                        <div class="tweet-action-item">
+                            <i data-lucide="message-circle" style="width: 16px; height: 16px;"></i>
+                            <span>${count}</span>
+                        </div>
+                        <div class="tweet-action-item" style="cursor: default; hover: none;">
+                            <i data-lucide="shield-check" style="width: 16px; height: 16px;"></i>
+                            <span style="font-size: 0.75rem; font-family: monospace;">SECURE</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    lucide.createIcons();
+}
 
         async function openThreadModal(id) {
             appState.activeThreadId = id;
