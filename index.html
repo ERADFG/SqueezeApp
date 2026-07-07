@@ -892,23 +892,33 @@
 });
 
             document.getElementById('threadForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const title = document.getElementById('threadTitle');
-                const id = Math.random().toString(16).substring(2, 10);
+    e.preventDefault();
+    const title = document.getElementById('threadTitle');
+    const id = Math.random().toString(16).substring(2, 10);
                 const parsedTitle = title.value.trim() || 'Anonymous';
                 
                 // Query country code precisely right before execution broadcast
-                const countryCode = await getRealUserCountry();
-                
-                await supabaseClient.from('threads').insert([{ 
-                    id, 
-                    title: parsedTitle, 
-                    content: threadContent.value.trim(), 
-                    timestamp: Date.now(), 
-                    upvotes: 1,
-                    flag: countryCode,
-                    image: attachedImageBase64 // Base64 payload column linkage
-                }]);
+                console.log("Attempting to post image data length:", attachedImageBase64 ? attachedImageBase64.length : "NO DATA");
+                const { data, error } = await supabaseClient.from('threads').insert([{ 
+        id: id, 
+        title: title.value.trim() || 'Anonymous', 
+        content: threadContent.value.trim(), 
+        timestamp: Date.now(), 
+        upvotes: 1,
+        flag: await getRealUserCountry(),
+        image: attachedImageBase64 // <-- Ensure this is mapped correctly
+    }]);
+    
+     if (error) {
+        console.error("Supabase Insert Error:", error);
+        alert("Failed to post: " + error.message);
+    } else {
+        console.log("Post successful!");
+        title.value = '';
+        threadContent.value = '';
+        clearSelectedComposerImage();
+    }
+});
                 
                 title.value = '';
                 threadContent.value = '';
