@@ -50,6 +50,7 @@
             -webkit-font-smoothing: antialiased;
         }
 
+        /* Fixed Top Navigation Bar */
         nav {
             display: flex;
             justify-content: center;
@@ -77,6 +78,7 @@
             color: var(--x-text-main);
         }
 
+        /* Central X-Style Feed Wrapper */
         .feed-container {
             width: 100%;
             max-width: 600px;
@@ -87,6 +89,7 @@
             flex-direction: column;
         }
 
+        /* X Brand Header layout */
         header {
             display: flex;
             align-items: center;
@@ -145,6 +148,7 @@
             border-radius: 9999px;
         }
 
+        /* X Composer Input Block */
         .composer-section {
             padding: 16px;
             border-bottom: 1px solid var(--x-border);
@@ -186,6 +190,7 @@
             color: var(--x-text-muted);
         }
 
+        /* Format Toolbar Layout */
         .format-toolbar {
             display: flex;
             flex-wrap: wrap;
@@ -214,6 +219,7 @@
             border-color: var(--x-text-muted);
         }
 
+        /* Flag Checkbox Toggle Switch Container */
         .flag-toggle-container {
             display: flex;
             align-items: center;
@@ -261,6 +267,7 @@
             cursor: not-allowed;
         }
 
+        /* Post Items (Tweets) Layout */
         .tweet-card {
             border-bottom: 1px solid var(--x-border);
             padding: 12px 16px;
@@ -305,7 +312,7 @@
             font-weight: 400;
         }
 
-        /* SVG Vector Image Styles to Ensure Scaling & Loading Independence */
+        /* Dynamic SVG Country Vector Flags */
         .flag-wrapper {
             display: inline-flex;
             align-items: center;
@@ -337,6 +344,7 @@
             margin-top: 2px;
         }
 
+        /* Formatting tag support inside board body content */
         .tweet-content b { font-weight: 700; color: #fff; }
         .tweet-content i { font-style: italic; }
         .tweet-content u { text-decoration: underline; }
@@ -386,6 +394,7 @@
             text-decoration: underline;
         }
 
+        /* Loading / Infinity Status indicators */
         .timeline-indicator {
             padding: 24px;
             text-align: center;
@@ -394,6 +403,7 @@
             border-bottom: 1px solid var(--x-border);
         }
 
+        /* Numbered Pagination Layout Container */
         .pagination-container {
             display: flex;
             align-items: center;
@@ -443,6 +453,7 @@
             font-weight: 600;
         }
 
+        /* X-Style Overlay Modal Layer */
         .x-modal-backdrop {
             position: fixed;
             inset: 0;
@@ -515,6 +526,7 @@
             flex-direction: column;
         }
 
+        /* Hover Node Anchor Preview Box */
         #hoverPreviewBox {
             position: absolute;
             background: var(--bg-black);
@@ -643,7 +655,7 @@
             currentPage: 1,
             threadsPerPage: 15,
             currentFeedMode: 'latest',
-            userCountryCode: '' 
+            userCountryCode: ''
         };
 
         window.addEventListener('load', async () => {
@@ -651,7 +663,7 @@
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
                 initSeedEngine();
                 bindEventListeners();
-                await fetchCountryCode(); 
+                await fetchCountryCode();
                 await fetchCountAndPage(1);
                 initRealtimeSync();
             }
@@ -663,11 +675,10 @@
                 const response = await fetch('https://ipwho.is/');
                 const data = await response.json();
                 if (data && data.success && data.country_code) {
-                    // Force clean lowercase conversion to prevent mismatch strings mapping to paths
                     appState.userCountryCode = String(data.country_code).trim().toLowerCase();
                 }
             } catch (err) {
-                console.error("Geolocation verification bypassed:", err);
+                console.error("Geolocation check bypassed:", err);
             }
         }
 
@@ -720,6 +731,7 @@
             appState.currentPage = pageNumber;
             
             try {
+                // Fetch up-to-date total metrics for pagination context calculations
                 const [threadCountRes, commentCountRes] = await Promise.all([
                     supabaseClient.from('threads').select('*', { count: 'exact', head: true }),
                     supabaseClient.from('comments').select('*', { count: 'exact', head: true })
@@ -729,6 +741,7 @@
                 appState.cachedCounts.comments = commentCountRes.count || 0;
                 updateGlobalCounterUI();
 
+                // Load contextual reply metrics mappings
                 const { data: commentIds } = await supabaseClient.from('comments').select('thread_id');
                 appState.commentCounts = {};
                 if (commentIds) {
@@ -754,6 +767,7 @@
                     appState.threads = compiled.slice(fromIndex, fromIndex + appState.threadsPerPage);
                     appState.cachedCounts.threads = compiled.length; 
                 } else {
+                    // Pull exact partitioned window range to maximize optimization speeds
                     const fromIndex = (pageNumber - 1) * appState.threadsPerPage;
                     const toIndex = fromIndex + appState.threadsPerPage - 1;
 
@@ -786,7 +800,7 @@
                 </button>
             `;
 
-            const delta = 1; 
+            const delta = 1; // Range window configs around active selection block
             let pages = [];
 
             for (let i = 1; i <= totalPages; i++) {
@@ -826,6 +840,7 @@
                         appState.cachedCounts.threads++;
                     }
                     updateGlobalCounterUI();
+                    // Live refresh the view matrix state if standing on page 1
                     if (appState.currentPage === 1) {
                         await fetchCountAndPage(1);
                     } else {
@@ -873,7 +888,6 @@
                 const id = Math.random().toString(16).substring(2, 10);
                 const parsedTitle = title.value.trim() || 'Anonymous';
                 
-                // Sanitize string mapping to always be precise lowercase
                 const flagValueToUpload = (includeFlag && appState.userCountryCode) ? String(appState.userCountryCode).toLowerCase() : '';
 
                 await supabaseClient.from('threads').insert([{ 
@@ -929,7 +943,6 @@
             target.innerHTML = appState.threads.map(t => {
                 const count = appState.commentCounts[t.id] || 0;
                 
-                // Use explicit reliable vector files directly from the open-source CDN endpoint based on standard lowercase codes
                 let flagMarkup = '';
                 if (t.country_flag && String(t.country_flag).trim().length === 2) {
                     const code = String(t.country_flag).trim().toLowerCase();
@@ -994,6 +1007,18 @@
             appState.activeThreadId = null;
         }
 
+        function appendReplyReference(commentId) {
+            const commentInput = document.getElementById('commentInput');
+            if (commentInput) {
+                const targetText = ` >>${commentId} `;
+                if (!commentInput.value.includes(targetText.trim())) {
+                    commentInput.value += targetText;
+                    commentInput.focus();
+                    document.getElementById('commentCharCounter').innerText = `${commentInput.value.length}/300`;
+                }
+            }
+        }
+
         function renderCommentTree() {
             const container = document.getElementById('commentTreeContainer');
             const commentsMap = appState.comments[appState.activeThreadId] || {};
@@ -1009,7 +1034,7 @@
                     <div style="display: flex; flex-direction: column; width: 100%;">
                         <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px;">
                             <span style="font-weight: 700; color: var(--x-text-main);">${c.tripcode}</span>
-                            <span style="font-family: monospace; color: var(--x-text-muted); font-size: 0.75rem;">>>${c.id}</span>
+                            <span style="font-family: monospace; color: var(--x-blue); font-size: 0.75rem; cursor: pointer; user-select: none;" onclick="event.stopPropagation(); appendReplyReference('${c.id}')">>>${c.id}</span>
                         </div>
                         <p style="font-size: 0.95rem; color: var(--x-text-main); line-height: 1.4; word-break: break-words;">${parseBodyContent(c.text)}</p>
                     </div>
@@ -1032,6 +1057,7 @@
 
             const urlRegex = /(https?:\/\/[^\s]+)/g;
             html = html.replace(urlRegex, url => `<a href="${url}" target="_blank" rel="noopener noreferrer" class="user-link">${url}</a>`);
+            
             const referenceRegex = /&gt;&gt;([a-f0-9]{8})/g;
             html = html.replace(referenceRegex, (match, targetId) => `<a href="#" class="user-link tree-ref" data-preview-id="${targetId}">${match}</a>`);
             return html;
