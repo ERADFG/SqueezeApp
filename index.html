@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>InteractInk - Anonymous Text Board & Social Workspace</title>
-    <meta name="description" content="InteractInk Workspace - Connect securely and privately through the decentralized, anonymous network interface.">
+    <meta name="description" content="Squeezes Workspace - Connect securely and privately through the decentralized, anonymous network interface.">
     <meta name="google-adsense-account" content="ca-pub-9357677827244243">
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9357677827244243" crossorigin="anonymous"></script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-527BWKF63G"></script>
@@ -16,7 +16,9 @@
     </script>
     <meta name="google-site-verification" content="DOvTKyh77YUQreg4Dg6SaL1wEM33Da783l6lqsLek7Q" />
     <link rel="icon" type="image/png" href="favicon.png">
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/country-flag-emoji-polyfill@0.1.8/dist/TwemojiCountryFlags.css">
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 
@@ -30,7 +32,8 @@
             --x-white: #ffffff;
             --x-white-hover: #e6e6e6;
             --x-blue: #1d9bf0;
-            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            /* FIXED: Added "Twemoji Country Flags" to render country emojis correctly on Windows/all platforms */
+            --font-family: "Twemoji Country Flags", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
         * {
@@ -405,16 +408,6 @@
             display: none;
             z-index: 200;
         }
-
-        /* ADD THE NEW CLASS HERE */
-        .tweet-flag {
-            font-size: 1.1rem;
-            user-select: none;
-            margin-left: 6px;
-            display: inline-block;
-            vertical-align: middle;
-            font-family: "Twemoji Country Flags", "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
-        }
     </style>
 </head>
 <body>
@@ -442,7 +435,7 @@
         <section class="composer-section">
             <div class="composer-body">
                 <form id="threadForm">
-                    <input type="text" id="threadTitle" placeholder="Name (Optional)..." maxlength="50" autocomplete="off" class="composer-input-name">
+                    <input type="text" id="threadTitle" placeholder="Alias Name (Optional)..." maxlength="50" autocomplete="off" class="composer-input-name">
                     <textarea id="threadContent" placeholder="What is happening?!" required rows="3" maxlength="1000" class="composer-input-text"></textarea>
                     
                     <div class="composer-actions">
@@ -502,463 +495,373 @@
 
     <script>
         const SUPABASE_URL = "https://xdshsodkuyawljzuirqt.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
+        
+        let supabaseClient;
+        const appState = { 
+            threads: [], 
+            comments: {}, 
+            commentCounts: {}, 
+            activeThreadId: null, 
+            userSeed: null, 
+            cachedCounts: { threads: 0, comments: 0 },
+            currentPage: 1,
+            threadsPerPage: 15
+        };
 
-let supabaseClient;
-const appState = { 
-    threads: [], 
-    comments: {}, 
-    commentCounts: {}, 
-    activeThreadId: null, 
-    userSeed: null, 
-    cachedCounts: { threads: 0, comments: 0 },
-    currentPage: 1,
-    threadsPerPage: 15,
-    feedMode: 'latest', 
-    userCountryFlag: '' 
-};
-
-window.addEventListener('load', async () => {
-    if (window.supabase) {
-        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        initSeedEngine();
-        await detectUserCountry();
-        bindEventListeners();
-        await fetchCountAndPage(1);
-        initRealtimeSync();
-    }
-    lucide.createIcons();
-});
-
-function initSeedEngine() {
-    let seed = localStorage.getItem('ink_private_seed_key');
-    if (!seed) {
-        seed = [...Array(32)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
-        localStorage.setItem('ink_private_seed_key', seed);
-    }
-    appState.userSeed = seed;
-}
-
-async function detectUserCountry() {
-    try {
-        const response = await fetch('https://ipapi.co/json/');
-        const data = await response.json();
-        if (data && data.country_code) {
-            appState.userCountryFlag = countryCodeToEmoji(data.country_code);
-            document.getElementById('localFlagIndicator').innerText = `(${appState.userCountryFlag})`;
-        }
-    } catch (err) {
-        console.warn("Country identification unreachable:", err);
-    }
-}
-
-function countryCodeToEmoji(countryCode) {
-    const codePoints = countryCode
-        .toUpperCase()
-        .split('')
-        .map(char =>  127397 + char.charCodeAt(0));
-    return String.fromCodePoint(...codePoints);
-}
-
-function wrapSelectedText(before, after) {
-    const txtArea = document.getElementById('threadContent');
-    const start = txtArea.selectionStart;
-    const end = txtArea.selectionEnd;
-    const text = txtArea.value;
-    
-    const selectedText = text.substring(start, end);
-    const replacement = before + selectedText + after;
-    
-    txtArea.value = text.substring(0, start) + replacement + text.substring(end);
-    txtArea.focus();
-    txtArea.setSelectionRange(start + before.length, start + before.length + selectedText.length);
-    
-    document.getElementById('threadCharCounter').innerText = `${txtArea.value.length}/1000`;
-}
-
-async function generateTripcode(threadId, seedString) {
-    const encoder = new TextEncoder();
-    const rawBuffer = encoder.encode(threadId + seedString);
-    const digestBuffer = await crypto.subtle.digest('SHA-256', rawBuffer);
-    const hashArray = Array.from(new Uint8Array(digestBuffer));
-    return 'Anon#' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 4);
-}
-
-async function switchFeedMode(mode) {
-    if (appState.feedMode === mode) return;
-    appState.feedMode = mode;
-    
-    document.getElementById('tabLatest').classList.toggle('active', mode === 'latest');
-    document.getElementById('tabTrending').classList.toggle('active', mode === 'trending');
-    
-    await fetchCountAndPage(1);
-}
-
-async function fetchCountAndPage(pageNumber) {
-    document.getElementById('latestStream').innerHTML = `<div class="timeline-indicator">Synchronizing secure handshake...</div>`;
-    appState.currentPage = pageNumber;
-    
-    try {
-        // Fetch global raw count metrics mapping first
-        const { data: allCommentIds } = await supabaseClient.from('comments').select('thread_id');
-        appState.commentCounts = {};
-        if (allCommentIds) {
-            allCommentIds.forEach(c => {
-                appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
-            });
-        }
-
-        const commentCountRes = await supabaseClient.from('comments').select('*', { count: 'exact', head: true });
-        appState.cachedCounts.comments = commentCountRes.count || 0;
-
-        const fromIndex = (pageNumber - 1) * appState.threadsPerPage;
-        const toIndex = fromIndex + appState.threadsPerPage - 1;
-
-        if (appState.feedMode === 'trending') {
-            // 1. Get comments from the past 24 hours
-            const past24HoursTimestamp = Date.now() - (24 * 60 * 60 * 1000);
-            const { data: recentComments } = await supabaseClient
-                .from('comments')
-                .select('thread_id')
-                .gte('timestamp', past24HoursTimestamp);
-
-            // 2. Count comments per thread to calculate velocity
-            const trendingWeights = {};
-            if (recentComments) {
-                recentComments.forEach(c => {
-                    trendingWeights[c.thread_id] = (trendingWeights[c.thread_id] || 0) + 1;
-                });
+        window.addEventListener('load', async () => {
+            if (window.supabase) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                initSeedEngine();
+                bindEventListeners();
+                await fetchCountAndPage(1);
+                initRealtimeSync();
             }
+            lucide.createIcons();
+        });
 
-            // 3. Extract thread IDs sorted by most comments first
-            const sortedThreadIds = Object.keys(trendingWeights).sort((a, b) => trendingWeights[b] - trendingWeights[a]);
-            appState.cachedCounts.threads = sortedThreadIds.length;
-            updateGlobalCounterUI();
+        function initSeedEngine() {
+            let seed = localStorage.getItem('ink_private_seed_key');
+            if (!seed) {
+                seed = [...Array(32)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
+                localStorage.setItem('ink_private_seed_key', seed);
+            }
+            appState.userSeed = seed;
+        }
 
-            if (sortedThreadIds.length === 0) {
-                appState.threads = [];
+        async function generateTripcode(threadId, seedString) {
+            const encoder = new TextEncoder();
+            const rawBuffer = encoder.encode(threadId + seedString);
+            const digestBuffer = await crypto.subtle.digest('SHA-256', rawBuffer);
+            const hashArray = Array.from(new Uint8Array(digestBuffer));
+            return 'Anon#' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 4);
+        }
+
+        async function fetchCountAndPage(pageNumber) {
+            document.getElementById('latestStream').innerHTML = `<div class="timeline-indicator">Synchronizing secure handshake...</div>`;
+            appState.currentPage = pageNumber;
+            
+            try {
+                const [threadCountRes, commentCountRes] = await Promise.all([
+                    supabaseClient.from('threads').select('*', { count: 'exact', head: true }),
+                    supabaseClient.from('comments').select('*', { count: 'exact', head: true })
+                ]);
+
+                appState.cachedCounts.threads = threadCountRes.count || 0;
+                appState.cachedCounts.comments = commentCountRes.count || 0;
+                updateGlobalCounterUI();
+
+                const fromIndex = (pageNumber - 1) * appState.threadsPerPage;
+                const toIndex = fromIndex + appState.threadsPerPage - 1;
+
+                const { data: threads } = await supabaseClient.from('threads')
+                    .select('*')
+                    .order('timestamp', { ascending: false })
+                    .range(fromIndex, toIndex);
+                
+                appState.threads = threads || [];
+
+                const { data: commentIds } = await supabaseClient.from('comments').select('thread_id');
+                appState.commentCounts = {};
+                if (commentIds) {
+                    commentIds.forEach(c => {
+                        appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
+                    });
+                }
+
                 renderThreads();
                 renderPaginationControls();
+            } catch (err) { console.error(err); }
+        }
+
+        function renderPaginationControls() {
+            const container = document.getElementById('paginationControls');
+            const totalPages = Math.ceil(appState.cachedCounts.threads / appState.threadsPerPage) || 1;
+            const current = appState.currentPage;
+            
+            if (totalPages <= 1) {
+                container.innerHTML = '';
                 return;
             }
 
-            // 4. Page through sorted trending IDs and fetch thread objects
-            const pagedThreadIds = sortedThreadIds.slice(fromIndex, toIndex + 1);
-            const { data: threads } = await supabaseClient
-                .from('threads')
-                .select('*')
-                .in('id', pagedThreadIds);
-
-            // 5. Enforce order alignment because `.in()` matching strips sorting structures
-            if (threads) {
-                threads.sort((a, b) => trendingWeights[b.id] - trendingWeights[a.id]);
-            }
-            appState.threads = threads || [];
-
-        } else {
-            // Standard chronologically structured latest view logic
-            const threadCountRes = await supabaseClient.from('threads').select('*', { count: 'exact', head: true });
-            appState.cachedCounts.threads = threadCountRes.count || 0;
-            updateGlobalCounterUI();
-
-            const { data: threads } = await supabaseClient
-                .from('threads')
-                .select('*')
-                .order('timestamp', { ascending: false })
-                .range(fromIndex, toIndex);
-            
-            appState.threads = threads || [];
-        }
-
-        renderThreads();
-        renderPaginationControls();
-    } catch (err) { console.error(err); }
-}
-
-function renderPaginationControls() {
-    const container = document.getElementById('paginationControls');
-    const totalPages = Math.ceil(appState.cachedCounts.threads / appState.threadsPerPage) || 1;
-    const current = appState.currentPage;
-    
-    if (totalPages <= 1) {
-        container.innerHTML = '';
-        return;
-    }
-
-    let html = `
-        <button class="page-btn" ${current === 1 ? 'disabled' : ''} onclick="fetchCountAndPage(${current - 1})">
-            <i data-lucide="chevron-left" style="width:16px; height:16px;"></i>
-        </button>
-    `;
-
-    const delta = 1;
-    let pages = [];
-
-    for (let i = 1; i <= totalPages; i++) {
-        if (i === 1 || i === totalPages || (i >= current - delta && i <= current + delta)) {
-            pages.push(i);
-        } else if (pages[pages.length - 1] !== '...') {
-            pages.push('...');
-        }
-    }
-
-    pages.forEach(p => {
-        if (p === '...') {
-            html += `<span class="page-ellipsis">...</span>`;
-        } else {
-            html += `
-                <button class="page-btn ${p === current ? 'active' : ''}" onclick="fetchCountAndPage(${p})">
-                    ${p}
+            let html = `
+                <button class="page-btn" ${current === 1 ? 'disabled' : ''} onclick="fetchCountAndPage(${current - 1})">
+                    <i data-lucide="chevron-left" style="width:16px; height:16px;"></i>
                 </button>
             `;
-        }
-    });
 
-    html += `
-        <button class="page-btn" ${current === totalPages ? 'disabled' : ''} onclick="fetchCountAndPage(${current + 1})">
-            <i data-lucide="chevron-right" style="width:16px; height:16px;"></i>
-        </button>
-    `;
+            const delta = 1; 
+            let pages = [];
 
-    container.innerHTML = html;
-    lucide.createIcons();
-}
-
-function initRealtimeSync() {
-    supabaseClient.channel('global-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'threads' }, async payload => {
-            if (payload.eventType === 'INSERT') {
-                appState.cachedCounts.threads++;
-            }
-            updateGlobalCounterUI();
-            if (appState.currentPage === 1) {
-                await fetchCountAndPage(1);
-            } else {
-                renderPaginationControls();
-            }
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, async payload => {
-            if (payload.eventType === 'INSERT') {
-                const c = payload.new;
-                appState.cachedCounts.comments++;
-                appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
-                if (appState.activeThreadId === c.thread_id) {
-                    if (!appState.comments[c.thread_id]) appState.comments[c.thread_id] = {};
-                    appState.comments[c.thread_id][c.id] = c;
-                    renderCommentTree();
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= current - delta && i <= current + delta)) {
+                    pages.push(i);
+                } else if (pages[pages.length - 1] !== '...') {
+                    pages.push('...');
                 }
             }
-            updateGlobalCounterUI();
-            if (appState.feedMode === 'trending') {
-                await fetchCountAndPage(appState.currentPage);
-            } else {
+
+            pages.forEach(p => {
+                if (p === '...') {
+                    html += `<span class="page-ellipsis">...</span>`;
+                } else {
+                    html += `
+                        <button class="page-btn ${p === current ? 'active' : ''}" onclick="fetchCountAndPage(${p})">
+                            ${p}
+                        </button>
+                    `;
+                }
+            });
+
+            html += `
+                <button class="page-btn" ${current === totalPages ? 'disabled' : ''} onclick="fetchCountAndPage(${current + 1})">
+                    <i data-lucide="chevron-right" style="width:16px; height:16px;"></i>
+                </button>
+            `;
+
+            container.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function initRealtimeSync() {
+            supabaseClient.channel('global-changes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'threads' }, async payload => {
+                    if (payload.eventType === 'INSERT') {
+                        appState.cachedCounts.threads++;
+                    }
+                    updateGlobalCounterUI();
+                    if (appState.currentPage === 1) {
+                        await fetchCountAndPage(1);
+                    } else {
+                        renderPaginationControls();
+                    }
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, payload => {
+                    if (payload.eventType === 'INSERT') {
+                        const c = payload.new;
+                        // Avoid duplicates if already added instantly through local state logic below
+                        if (appState.comments[c.thread_id] && appState.comments[c.thread_id][c.id]) return;
+
+                        appState.cachedCounts.comments++;
+                        appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
+                        if (appState.activeThreadId === c.thread_id) {
+                            if (!appState.comments[c.thread_id]) appState.comments[c.thread_id] = {};
+                            appState.comments[c.thread_id][c.id] = c;
+                            renderCommentTree();
+                        }
+                    }
+                    updateGlobalCounterUI();
+                    renderThreads();
+                })
+                .subscribe();
+        }
+
+        function updateGlobalCounterUI() {
+            document.getElementById('globalPostCount').innerText = appState.cachedCounts.threads + appState.cachedCounts.comments;
+        }
+
+        function bindEventListeners() {
+            const threadContent = document.getElementById('threadContent');
+            const threadCharCounter = document.getElementById('threadCharCounter');
+            threadContent.addEventListener('input', () => {
+                threadCharCounter.innerText = `${threadContent.value.length}/1000`;
+            });
+
+            const commentInput = document.getElementById('commentInput');
+            const commentCharCounter = document.getElementById('commentCharCounter');
+            commentInput.addEventListener('input', () => {
+                commentCharCounter.innerText = `${commentInput.value.length}/300`;
+            });
+
+            document.getElementById('threadForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const title = document.getElementById('threadTitle');
+                const id = Math.random().toString(16).substring(2, 10);
+                const parsedTitle = title.value.trim() || 'Anonymous';
+                
+                await supabaseClient.from('threads').insert([{ 
+                    id, 
+                    title: parsedTitle, 
+                    content: threadContent.value.trim(), 
+                    timestamp: Date.now(), 
+                    upvotes: 1 
+                }]);
+                
+                title.value = '';
+                threadContent.value = '';
+                threadCharCounter.innerText = '0/1000';
+            });
+
+            document.getElementById('commentForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!appState.activeThreadId) return;
+                const id = Math.random().toString(16).substring(2, 10);
+                const tripcode = await generateTripcode(appState.activeThreadId, appState.userSeed);
+                const commentText = commentInput.value.trim();
+
+                const newCommentObj = { 
+                    id, 
+                    thread_id: appState.activeThreadId, 
+                    tripcode, 
+                    text: commentText, 
+                    timestamp: Date.now() 
+                };
+
+                // FIXED: Instantly inject comment into UI local state container so it works with or without realtime replication channels active
+                if (!appState.comments[appState.activeThreadId]) {
+                    appState.comments[appState.activeThreadId] = {};
+                }
+                appState.comments[appState.activeThreadId][id] = newCommentObj;
+                appState.cachedCounts.comments++;
+                appState.commentCounts[appState.activeThreadId] = (appState.commentCounts[appState.activeThreadId] || 0) + 1;
+                
+                renderCommentTree();
+                updateGlobalCounterUI();
                 renderThreads();
+
+                // Send network insert block request payload
+                await supabaseClient.from('comments').insert([newCommentObj]);
+                
+                commentInput.value = '';
+                commentCharCounter.innerText = '0/300';
+            });
+        }
+
+        function formatTime(ms) {
+            const diff = Date.now() - ms;
+            if (diff < 60000) return 'Just now';
+            const mins = Math.floor(diff / 60000);
+            if (mins < 60) return `${mins}m`;
+            const hours = Math.floor(mins / 60);
+            if (hours < 24) return `${hours}h`;
+            return new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        }
+
+        function renderThreads() {
+            const target = document.getElementById('latestStream');
+            if(appState.threads.length === 0) {
+                target.innerHTML = `<div class="timeline-indicator">No active matrix broadcasts. Start one above.</div>`;
+                return;
             }
-        })
-        .subscribe();
-}
-
-function updateGlobalCounterUI() {
-    document.getElementById('globalPostCount').innerText = appState.cachedCounts.threads + appState.cachedCounts.comments;
-}
-
-function bindEventListeners() {
-    const threadContent = document.getElementById('threadContent');
-    const threadCharCounter = document.getElementById('threadCharCounter');
-    threadContent.addEventListener('input', () => {
-        threadCharCounter.innerText = `${threadContent.value.length}/1000`;
-    });
-
-    const commentInput = document.getElementById('commentInput');
-    const commentCharCounter = document.getElementById('commentCharCounter');
-    commentInput.addEventListener('input', () => {
-        commentCharCounter.innerText = `${commentInput.value.length}/300`;
-    });
-
-    document.getElementById('threadForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const title = document.getElementById('threadTitle');
-        const id = Math.random().toString(16).substring(2, 10);
-        const parsedTitle = title.value.trim() || 'Anonymous';
-        
-        await supabaseClient.from('threads').insert([{ 
-            id, 
-            title: parsedTitle, 
-            content: threadContent.value.trim(), 
-            timestamp: Date.now(), 
-            upvotes: 1,
-            country_flag: appState.userCountryFlag || '' 
-        }]);
-        
-        title.value = '';
-        threadContent.value = '';
-        threadCharCounter.innerText = '0/1000';
-    });
-
-    document.getElementById('commentForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (!appState.activeThreadId) return;
-        const id = Math.random().toString(16).substring(2, 10);
-        const tripcode = await generateTripcode(appState.activeThreadId, appState.userSeed);
-        
-        await supabaseClient.from('comments').insert([{ 
-            id, 
-            thread_id: appState.activeThreadId, 
-            tripcode, 
-            text: commentInput.value.trim(), 
-            timestamp: Date.now() 
-        }]);
-        
-        commentInput.value = '';
-        commentCharCounter.innerText = '0/300';
-    });
-}
-
-function formatTime(ms) {
-    const diff = Date.now() - ms;
-    if (diff < 60000) return 'Just now';
-    const mins = Math.floor(diff / 60000);
-    if (mins < 60) return `${mins}m`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h`;
-    return new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-}
-
-function renderThreads() {
-    const target = document.getElementById('latestStream');
-    if(appState.threads.length === 0) {
-        target.innerHTML = `<div class="timeline-indicator">No active matrix broadcasts here. Start one above.</div>`;
-        return;
-    }
-    
-    target.innerHTML = appState.threads.map(t => {
-        const count = appState.commentCounts[t.id] || 0;
-        const flagDisplay = t.country_flag ? `<span class="tweet-flag">${t.country_flag}</span>` : '';
-        return `
-            <div class="tweet-card" onclick="openThreadModal('${t.id}')">
-                <div class="tweet-main">
-                    <div class="tweet-header">
-                        <div class="tweet-author-wrapper">
-                            <span class="tweet-author">${escapeHTML(t.title)}</span>
-                            ${flagDisplay}
-                            <span class="tweet-meta">· ${formatTime(t.timestamp)}</span>
+            
+            target.innerHTML = appState.threads.map(t => {
+                const count = appState.commentCounts[t.id] || 0;
+                return `
+                    <div class="tweet-card" onclick="openThreadModal('${t.id}')">
+                        <div class="tweet-main">
+                            <div class="tweet-header">
+                                <div>
+                                    <span class="tweet-author">${escapeHTML(t.title)}</span>
+                                    <span class="tweet-meta">· ${formatTime(t.timestamp)}</span>
+                                </div>
+                            </div>
+                            <p class="tweet-content">${parseBodyContent(t.content)}</p>
+                            <div class="tweet-footer">
+                                <div class="tweet-action-item">
+                                    <i data-lucide="message-circle" style="width: 16px; height: 16px;"></i>
+                                    <span>${count}</span>
+                                </div>
+                                <div class="tweet-action-item">
+                                    <i data-lucide="shield-check" style="width: 16px; height: 16px;"></i>
+                                    <span style="font-size: 0.75rem; font-family: monospace;">SECURE</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <p class="tweet-content">${parseBodyContent(t.content)}</p>
-                    <div class="tweet-footer">
-                        <div class="tweet-action-item">
-                            <i data-lucide="message-circle" style="width: 16px; height: 16px;"></i>
-                            <span>${count}</span>
-                        </div>
-                        <div class="tweet-action-item">
-                            <i data-lucide="shield-check" style="width: 16px; height: 16px;"></i>
-                            <span style="font-size: 0.75rem; font-family: monospace;">SECURE</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join('');
-    lucide.createIcons();
-}
-
-async function openThreadModal(id) {
-    appState.activeThreadId = id;
-    const thread = appState.threads.find(t => t.id === id);
-    if (!thread) return;
-
-    document.getElementById('modalTitle').innerText = thread.title;
-    document.getElementById('modalFlag').innerText = thread.country_flag || '';
-    document.getElementById('modalTimestamp').innerText = new Date(thread.timestamp).toLocaleString();
-    document.getElementById('modalOpBody').innerHTML = parseBodyContent(thread.content);
-    document.getElementById('modalMeta').innerText = `Post Instance Node [${id}]`;
-    document.getElementById('commentTreeContainer').innerHTML = `<div class="timeline-indicator">Streaming tree nodes...</div>`;
-    document.getElementById('threadModal').classList.add('active');
-
-    try {
-        const { data: comments } = await supabaseClient.from('comments').select('*').eq('thread_id', id).order('timestamp', { ascending: true });
-        appState.comments[id] = {};
-        if (comments) comments.forEach(c => appState.comments[id][c.id] = c);
-        renderCommentTree();
-    } catch(e) { console.error(e); }
-}
-
-function closeThreadModal() {
-    document.getElementById('threadModal').classList.remove('active');
-    appState.activeThreadId = null;
-}
-
-function renderCommentTree() {
-    const container = document.getElementById('commentTreeContainer');
-    const commentsMap = appState.comments[appState.activeThreadId] || {};
-    const list = Object.values(commentsMap);
-
-    if(list.length === 0) {
-        container.innerHTML = `<div style="color: var(--x-text-muted); text-align: center; font-size: 0.9rem; padding: 16px 0;">Be the first to reply to this node cluster.</div>`;
-        return;
-    }
-
-    container.innerHTML = list.map(c => `
-        <div class="comment-node">
-            <div style="display: flex; flex-direction: column; width: 100%;">
-                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px;">
-                    <span style="font-weight: 700; color: var(--x-text-main);">${c.tripcode}</span>
-                    <span style="font-family: monospace; color: var(--x-text-muted); font-size: 0.75rem;">>>${c.id}</span>
-                </div>
-                <p style="font-size: 0.95rem; color: var(--x-text-main); line-height: 1.4; word-break: break-words;">${parseBodyContent(c.text)}</p>
-            </div>
-        </div>
-    `).join('');
-    lucide.createIcons();
-    bindHoverPreviews();
-}
-
-function parseBodyContent(str) {
-    if (!str) return '';
-    let html = escapeHTML(str);
-    
-    html = html.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
-    html = html.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
-    html = html.replace(/`([^`\n]+)`/g, '<code>$1</code>');
-
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    html = html.replace(urlRegex, url => `<a href="${url}" target="_blank" rel="noopener noreferrer" class="user-link">${url}</a>`);
-    
-    const referenceRegex = /&gt;&gt;([a-f0-9]{8})/g;
-    html = html.replace(referenceRegex, (match, targetId) => `<a href="#" class="user-link tree-ref" data-preview-id="${targetId}">${match}</a>`);
-    
-    return html;
-}
-
-function bindHoverPreviews() {
-    const previewBox = document.getElementById('hoverPreviewBox');
-    const links = document.querySelectorAll('.tree-ref');
-
-    links.forEach(link => {
-        link.addEventListener('mouseenter', (e) => {
-            const targetId = link.getAttribute('data-preview-id');
-            const commentsMap = appState.comments[appState.activeThreadId] || {};
-            const targetComment = commentsMap[targetId];
-
-            if (targetComment) {
-                previewBox.innerHTML = `
-                    <div style="font-family: monospace; font-size: 11px; color: var(--x-blue); font-weight: bold; margin-bottom: 4px;">${targetComment.tripcode} [>>${targetComment.id}]</div>
-                    <p style="color: var(--x-text-main); line-height: 1.4;">${escapeHTML(targetComment.text)}</p>
                 `;
-                previewBox.style.display = 'block';
-                const rect = link.getBoundingClientRect();
-                previewBox.style.left = `${rect.left + window.scrollX}px`;
-                previewBox.style.top = `${rect.top + window.scrollY - previewBox.offsetHeight - 10}px`;
-            }
-        });
-        link.addEventListener('mouseleave', () => previewBox.style.display = 'none');
-    });
-}
+            }).join('');
+            lucide.createIcons();
+        }
 
-function escapeHTML(str) {
-    if (!str) return '';
-    return str.replace(/[&<>\"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' })[m]);
-}
+        async function openThreadModal(id) {
+            appState.activeThreadId = id;
+            const thread = appState.threads.find(t => t.id === id);
+            if (!thread) return;
+
+            document.getElementById('modalTitle').innerText = thread.title;
+            document.getElementById('modalTimestamp').innerText = new Date(thread.timestamp).toLocaleString();
+            document.getElementById('modalOpBody').innerHTML = parseBodyContent(thread.content);
+            document.getElementById('modalMeta').innerText = `Post Instance Node [${id}]`;
+            document.getElementById('commentTreeContainer').innerHTML = `<div class="timeline-indicator">Streaming tree nodes...</div>`;
+            document.getElementById('threadModal').classList.add('active');
+
+            try {
+                const { data: comments } = await supabaseClient.from('comments').select('*').eq('thread_id', id).order('timestamp', { ascending: true });
+                appState.comments[id] = {};
+                if (comments) comments.forEach(c => appState.comments[id][c.id] = c);
+                renderCommentTree();
+            } catch(e) { console.error(e); }
+        }
+
+        function closeThreadModal() {
+            document.getElementById('threadModal').classList.remove('active');
+            appState.activeThreadId = null;
+        }
+
+        function renderCommentTree() {
+            const container = document.getElementById('commentTreeContainer');
+            const commentsMap = appState.comments[appState.activeThreadId] || {};
+            const list = Object.values(commentsMap);
+
+            if(list.length === 0) {
+                container.innerHTML = `<div style="color: var(--x-text-muted); text-align: center; font-size: 0.9rem; padding: 16px 0;">Be the first to reply to this node cluster.</div>`;
+                return;
+            }
+
+            container.innerHTML = list.map(c => `
+                <div class="comment-node">
+                    <div style="display: flex; flex-direction: column; width: 100%;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px;">
+                            <span style="font-weight: 700; color: var(--x-text-main);">${c.tripcode}</span>
+                            <span style="font-family: monospace; color: var(--x-text-muted); font-size: 0.75rem;">>>${c.id}</span>
+                        </div>
+                        <p style="font-size: 0.95rem; color: var(--x-text-main); line-height: 1.4; word-break: break-words;">${parseBodyContent(c.text)}</p>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+            bindHoverPreviews();
+        }
+
+        function parseBodyContent(str) {
+            if (!str) return '';
+            let html = escapeHTML(str);
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            html = html.replace(urlRegex, url => `<a href="${url}" target="_blank" rel="noopener noreferrer" class="user-link">${url}</a>`);
+            const referenceRegex = /&gt;&gt;([a-f0-9]{8})/g;
+            html = html.replace(referenceRegex, (match, targetId) => `<a href="#" class="user-link tree-ref" data-preview-id="${targetId}">${match}</a>`);
+            return html;
+        }
+
+        function bindHoverPreviews() {
+            const previewBox = document.getElementById('hoverPreviewBox');
+            const links = document.querySelectorAll('.tree-ref');
+
+            links.forEach(link => {
+                link.addEventListener('mouseenter', (e) => {
+                    const targetId = link.getAttribute('data-preview-id');
+                    const commentsMap = appState.comments[appState.activeThreadId] || {};
+                    const targetComment = commentsMap[targetId];
+
+                    if (targetComment) {
+                        previewBox.innerHTML = `
+                            <div style="font-family: monospace; font-size: 11px; color: var(--x-blue); font-weight: bold; margin-bottom: 4px;">${targetComment.tripcode} [>>${targetComment.id}]</div>
+                            <p style="color: var(--x-text-main); line-height: 1.4;">${escapeHTML(targetComment.text)}</p>
+                        `;
+                        previewBox.style.display = 'block';
+                        const rect = link.getBoundingClientRect();
+                        previewBox.style.left = `${rect.left + window.scrollX}px`;
+                        previewBox.style.top = `${rect.top + window.scrollY - previewBox.offsetHeight - 10}px`;
+                    }
+                });
+                link.addEventListener('mouseleave', () => previewBox.style.display = 'none');
+            });
+        }
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>\"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' })[m]);
+        }
     </script>
 
     <footer style="width: 100%; text-align: center; padding: 40px 0; margin-top: 40px; border-top: 1px solid var(--x-border); color: var(--x-text-muted);">
