@@ -17,9 +17,6 @@
     <meta name="google-site-verification" content="DOvTKyh77YUQreg4Dg6SaL1wEM33Da783l6lqsLek7Q" />
     <link rel="icon" type="image/png" href="favicon.png">
 
-    <!-- CSS/SVG Flag-Icons Kit -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.3/css/flag-icons.min.css"/>
-
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 
@@ -53,7 +50,6 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        /* Fixed Top Navigation Bar */
         nav {
             display: flex;
             justify-content: center;
@@ -81,7 +77,6 @@
             color: var(--x-text-main);
         }
 
-        /* Central Wrapper */
         .feed-container {
             width: 100%;
             max-width: 600px;
@@ -191,7 +186,6 @@
             color: var(--x-text-muted);
         }
 
-        /* Formatting Toolbar */
         .format-toolbar {
             display: flex;
             flex-wrap: wrap;
@@ -220,7 +214,6 @@
             border-color: var(--x-text-muted);
         }
 
-        /* Flag Toggle Option Switch Container */
         .flag-toggle-container {
             display: flex;
             align-items: center;
@@ -312,7 +305,7 @@
             font-weight: 400;
         }
 
-        /* SVG Flag Wrapper styles */
+        /* SVG Vector Image Styles to Ensure Scaling & Loading Independence */
         .flag-wrapper {
             display: inline-flex;
             align-items: center;
@@ -320,11 +313,14 @@
             vertical-align: middle;
         }
 
-        .flag-wrapper .fi {
+        .flag-vector-img {
             border-radius: 2px;
-            width: 16px;
-            height: 12px;
-            box-shadow: 0 0 2px rgba(255, 255, 255, 0.2);
+            width: 18px;
+            height: auto;
+            max-height: 13px;
+            box-shadow: 0 0 3px rgba(255, 255, 255, 0.25);
+            display: block;
+            object-fit: cover;
         }
 
         .tweet-meta {
@@ -578,7 +574,6 @@
                     </div>
 
                     <div class="composer-actions">
-                        <!-- Flag inclusion preference check option -->
                         <label class="flag-toggle-container">
                             <input type="checkbox" id="includeFlagCheckbox" checked>
                             <span>Include my location flag</span>
@@ -668,7 +663,8 @@
                 const response = await fetch('https://ipwho.is/');
                 const data = await response.json();
                 if (data && data.success && data.country_code) {
-                    appState.userCountryCode = data.country_code.toLowerCase();
+                    // Force clean lowercase conversion to prevent mismatch strings mapping to paths
+                    appState.userCountryCode = String(data.country_code).trim().toLowerCase();
                 }
             } catch (err) {
                 console.error("Geolocation verification bypassed:", err);
@@ -877,8 +873,8 @@
                 const id = Math.random().toString(16).substring(2, 10);
                 const parsedTitle = title.value.trim() || 'Anonymous';
                 
-                // If the checkbox is unchecked, we do not upload the country code tracking values
-                const flagValueToUpload = includeFlag ? appState.userCountryCode : '';
+                // Sanitize string mapping to always be precise lowercase
+                const flagValueToUpload = (includeFlag && appState.userCountryCode) ? String(appState.userCountryCode).toLowerCase() : '';
 
                 await supabaseClient.from('threads').insert([{ 
                     id, 
@@ -933,13 +929,17 @@
             target.innerHTML = appState.threads.map(t => {
                 const count = appState.commentCounts[t.id] || 0;
                 
-                // Formats as requested: [Name] · [Flag] only if flag exists
-                const flagMarkup = t.country_flag ? `
-                    <span class="tweet-author-divider">·</span>
-                    <span class="flag-wrapper" title="Country: ${t.country_flag.toUpperCase()}">
-                        <span class="fi fi-${t.country_flag}"></span>
-                    </span>
-                ` : '';
+                // Use explicit reliable vector files directly from the open-source CDN endpoint based on standard lowercase codes
+                let flagMarkup = '';
+                if (t.country_flag && String(t.country_flag).trim().length === 2) {
+                    const code = String(t.country_flag).trim().toLowerCase();
+                    flagMarkup = `
+                        <span class="tweet-author-divider">·</span>
+                        <span class="flag-wrapper" title="Location Node: ${code.toUpperCase()}">
+                            <img src="https://purecatamphetamine.github.io/country-flag-icons/3x2/${code.toUpperCase()}.svg" class="flag-vector-img" alt="" onerror="this.parentElement.remove();" />
+                        </span>
+                    `;
+                }
 
                 return `
                     <div class="tweet-card" onclick="openThreadModal('${t.id}')">
