@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>InteractInk - Anonymous Text Board & Social Workspace</title>
-    <meta name="description" content="InteractInk Workspace - Connect securely and privately through the decentralized, anonymous network interface.">
+    <meta name="description" content="Squeezes Workspace - Connect securely and privately through the decentralized, anonymous network interface.">
     <meta name="google-adsense-account" content="ca-pub-9357677827244243">
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9357677827244243" crossorigin="anonymous"></script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-527BWKF63G"></script>
@@ -32,7 +32,6 @@
             --x-white: #ffffff;
             --x-white-hover: #e6e6e6;
             --x-blue: #1d9bf0;
-            /* FIXED: Added "Twemoji Country Flags" to render country emojis correctly on Windows/all platforms */
             --font-family: "Twemoji Country Flags", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
@@ -435,7 +434,7 @@
         <section class="composer-section">
             <div class="composer-body">
                 <form id="threadForm">
-                    <input type="text" id="threadTitle" placeholder="Name (Optional)..." maxlength="50" autocomplete="off" class="composer-input-name">
+                    <input type="text" id="threadTitle" placeholder="Alias Name (Optional)..." maxlength="50" autocomplete="off" class="composer-input-name">
                     <textarea id="threadContent" placeholder="What is happening?!" required rows="3" maxlength="1000" class="composer-input-text"></textarea>
                     
                     <div class="composer-actions">
@@ -639,7 +638,6 @@
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, payload => {
                     if (payload.eventType === 'INSERT') {
                         const c = payload.new;
-                        // Avoid duplicates if already added instantly through local state logic below
                         if (appState.comments[c.thread_id] && appState.comments[c.thread_id][c.id]) return;
 
                         appState.cachedCounts.comments++;
@@ -707,7 +705,6 @@
                     timestamp: Date.now() 
                 };
 
-                // FIXED: Instantly inject comment into UI local state container so it works with or without realtime replication channels active
                 if (!appState.comments[appState.activeThreadId]) {
                     appState.comments[appState.activeThreadId] = {};
                 }
@@ -719,7 +716,6 @@
                 updateGlobalCounterUI();
                 renderThreads();
 
-                // Send network insert block request payload
                 await supabaseClient.from('comments').insert([newCommentObj]);
                 
                 commentInput.value = '';
@@ -798,6 +794,19 @@
             appState.activeThreadId = null;
         }
 
+        // ADDED: Interactive macro reference injector function
+        function insertCommentReference(commentId) {
+            const input = document.getElementById('commentInput');
+            if (input) {
+                const refText = `>>${commentId} `;
+                if (!input.value.startsWith(refText) && !input.value.includes(refText)) {
+                    input.value = refText + input.value;
+                }
+                input.focus();
+                input.dispatchEvent(new Event('input')); // Fire counter listener layout rules
+            }
+        }
+
         function renderCommentTree() {
             const container = document.getElementById('commentTreeContainer');
             const commentsMap = appState.comments[appState.activeThreadId] || {};
@@ -808,12 +817,17 @@
                 return;
             }
 
+            // MODIFIED: Added a pointer cursor, hover effects, and click triggers to comment node IDs
             container.innerHTML = list.map(c => `
                 <div class="comment-node">
                     <div style="display: flex; flex-direction: column; width: 100%;">
                         <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px;">
                             <span style="font-weight: 700; color: var(--x-text-main);">${c.tripcode}</span>
-                            <span style="font-family: monospace; color: var(--x-text-muted); font-size: 0.75rem;">>>${c.id}</span>
+                            <span style="font-family: monospace; color: var(--x-text-muted); font-size: 0.75rem; cursor: pointer; user-select: none; transition: color 0.15s;" 
+                                  title="Click to Reply to this comment"
+                                  onmouseover="this.style.color='var(--x-blue)'" 
+                                  onmouseout="this.style.color='var(--x-text-muted)'"
+                                  onclick="insertCommentReference('${c.id}')">>>${c.id}</span>
                         </div>
                         <p style="font-size: 0.95rem; color: var(--x-text-main); line-height: 1.4; word-break: break-words;">${parseBodyContent(c.text)}</p>
                     </div>
