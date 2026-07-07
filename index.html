@@ -110,6 +110,45 @@
             object-fit: contain;
         }
 
+        /* Filter Tab Bar Subnavigation Layout */
+        .feed-filter-tabs {
+            display: flex;
+            width: 100%;
+            border-bottom: 1px solid var(--x-border);
+        }
+
+        .filter-tab {
+            flex: 1;
+            text-align: center;
+            padding: 16px 0;
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--x-text-muted);
+            cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            position: relative;
+        }
+
+        .filter-tab:hover {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+
+        .filter-tab.active {
+            color: var(--x-text-main);
+        }
+
+        .filter-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 4px;
+            background-color: var(--x-blue);
+            border-radius: 9999px;
+        }
+
         /* X Composer Input Block */
         .composer-section {
             padding: 16px;
@@ -152,6 +191,42 @@
             color: var(--x-text-muted);
         }
 
+        /* Media Upload Preview Block Container */
+        .composer-image-preview-wrapper {
+            position: relative;
+            margin-top: 12px;
+            display: inline-block;
+            max-width: fit-content;
+        }
+
+        .composer-image-preview {
+            max-width: 100%;
+            max-height: 280px;
+            border-radius: 12px;
+            border: 1px solid var(--x-border);
+            object-fit: cover;
+        }
+
+        .composer-image-remove {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background: rgba(0, 0, 0, 0.75);
+            border: none;
+            color: white;
+            padding: 6px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .composer-image-remove:hover {
+            background: rgba(255, 0, 0, 0.85);
+        }
+
         .composer-actions {
             display: flex;
             justify-content: space-between;
@@ -159,6 +234,30 @@
             margin-top: 12px;
             padding-top: 12px;
             border-top: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .composer-tools-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            color: var(--x-blue);
+        }
+
+        .tool-icon-btn {
+            background: transparent;
+            border: none;
+            color: var(--x-blue);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+
+        .tool-icon-btn:hover {
+            background-color: rgba(29, 155, 240, 0.1);
         }
 
         .composer-btn {
@@ -214,7 +313,7 @@
         .tweet-author-wrapper {
             display: inline-flex;
             align-items: center;
-            gap: 5px;
+            gap: 6px;
         }
 
         .tweet-author {
@@ -245,6 +344,15 @@
             margin-top: 2px;
         }
 
+        .tweet-media-attachment {
+            margin-top: 10px;
+            max-height: 340px;
+            width: 100%;
+            object-fit: cover;
+            border-radius: 12px;
+            border: 1px solid var(--x-border);
+        }
+
         .tweet-footer {
             display: flex;
             align-items: center;
@@ -259,10 +367,18 @@
             align-items: center;
             gap: 6px;
             transition: color 0.2s ease;
+            background: transparent;
+            border: none;
+            color: var(--x-text-muted);
+            cursor: pointer;
         }
 
         .tweet-action-item:hover {
             color: var(--x-blue);
+        }
+
+        .tweet-action-item.upvoted-active {
+            color: #f91880;
         }
 
         .user-link {
@@ -444,16 +560,35 @@
             </div>
         </header>
 
+        <div class="feed-filter-tabs">
+            <div class="filter-tab active" id="tabLatest" onclick="switchFeedFilter('latest')">Latest</div>
+            <div class="filter-tab" id="tabTrending" onclick="switchFeedFilter('trending')">Trending (24h)</div>
+        </div>
+
         <section class="composer-section">
             <div class="composer-body">
                 <form id="threadForm">
                     <input type="text" id="threadTitle" placeholder="Alias Name (Optional)..." maxlength="50" autocomplete="off" class="composer-input-name">
                     <textarea id="threadContent" placeholder="What is happening?!" required rows="3" maxlength="1000" class="composer-input-text"></textarea>
                     
+                    <input type="file" id="composerFileInput" accept="image/*" style="display: none;">
+                    
+                    <div id="composerImageContainer" class="composer-image-preview-wrapper" style="display: none;">
+                        <img src="" id="composerImageElement" class="composer-image-preview" alt="Upload Canvas Preview">
+                        <button type="button" class="composer-image-remove" onclick="clearSelectedComposerImage()">
+                            <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+                        </button>
+                    </div>
+
                     <div class="composer-actions">
-                        <div style="color: var(--x-text-muted); display: flex; align-items: center; gap: 4px; font-size: 0.85rem;">
-                            <i data-lucide="shield" style="width: 16px; height: 16px; color: var(--x-text-muted);"></i>
-                            <span>Decentralized Network Layer</span>
+                        <div class="composer-tools-left">
+                            <button type="button" class="tool-icon-btn" onclick="document.getElementById('composerFileInput').click()">
+                                <i data-lucide="image" style="width: 20px; height: 20px;"></i>
+                            </button>
+                            <div style="color: var(--x-text-muted); display: flex; align-items: center; gap: 4px; font-size: 0.85rem;">
+                                <i data-lucide="shield" style="width: 16px; height: 16px; color: var(--x-text-muted);"></i>
+                                <span>Secured Matrix Node</span>
+                            </div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 12px;">
                             <span id="threadCharCounter" style="font-size: 0.8rem; color: var(--x-text-muted);">0/1000</span>
@@ -485,6 +620,7 @@
                     <div id="modalTitle" style="font-weight: 800; font-size: 1.05rem;"></div>
                     <div style="color: var(--x-text-muted); font-size: 0.85rem; margin-bottom: 12px;" id="modalTimestamp"></div>
                     <p id="modalOpBody" style="font-size: 1.25rem; line-height: 1.5; color: var(--x-text-main); white-space: pre-wrap; word-break: break-words;"></p>
+                    <img id="modalOpImage" class="tweet-media-attachment" src="" style="display: none; margin-top: 12px; max-height: 400px;">
                 </div>
 
                 <div style="height: 1px; background: var(--x-border); margin: 16px 0;"></div>
@@ -510,6 +646,8 @@
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
         
         let supabaseClient;
+        let attachedImageBase64 = null;
+
         const appState = { 
             threads: [], 
             comments: {}, 
@@ -518,7 +656,8 @@
             userSeed: null, 
             cachedCounts: { threads: 0, comments: 0 },
             currentPage: 1,
-            threadsPerPage: 15
+            threadsPerPage: 15,
+            feedFilter: 'latest' // Options: 'latest' or 'trending'
         };
 
         window.addEventListener('load', async () => {
@@ -549,7 +688,7 @@
             return 'Anon#' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 4);
         }
 
-        // Live Lookup User Country Code Code safely without fallbacks
+        // Live Lookup User Country Code safely without fake placeholders
         async function getRealUserCountry() {
             try {
                 const res = await fetch('https://ipapi.co/json/');
@@ -563,10 +702,20 @@
             return null;
         }
 
-        // Helper to format custom structured layout format cleanly
+        // Structure clean layout format wrapper for flag embedding
         function makeFlagHtml(countryCode) {
             if (!countryCode) return '';
             return ` · <img src="https://flagcdn.com/16x12/${countryCode.toLowerCase()}.png" class="author-flag-img" alt="${countryCode} Flag">`;
+        }
+
+        function switchFeedFilter(filterType) {
+            if (appState.feedFilter === filterType) return;
+            appState.feedFilter = filterType;
+            
+            document.getElementById('tabLatest').classList.toggle('active', filterType === 'latest');
+            document.getElementById('tabTrending').classList.toggle('active', filterType === 'trending');
+            
+            fetchCountAndPage(1);
         }
 
         async function fetchCountAndPage(pageNumber) {
@@ -583,22 +732,39 @@
                 appState.cachedCounts.comments = commentCountRes.count || 0;
                 updateGlobalCounterUI();
 
-                const fromIndex = (pageNumber - 1) * appState.threadsPerPage;
-                const toIndex = fromIndex + appState.threadsPerPage - 1;
-
-                const { data: threads } = await supabaseClient.from('threads')
-                    .select('*')
-                    .order('timestamp', { ascending: false })
-                    .range(fromIndex, toIndex);
-                
-                appState.threads = threads || [];
-
                 const { data: commentIds } = await supabaseClient.from('comments').select('thread_id');
                 appState.commentCounts = {};
                 if (commentIds) {
                     commentIds.forEach(c => {
                         appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
                     });
+                }
+
+                const fromIndex = (pageNumber - 1) * appState.threadsPerPage;
+                const toIndex = fromIndex + appState.threadsPerPage - 1;
+
+                if (appState.feedFilter === 'trending') {
+                    // Trending Filter: Past 24 hours calculation weight score windowing
+                    const rollingDayCutoff = Date.now() - (24 * 60 * 60 * 1000);
+                    const { data: rawThreads } = await supabaseClient.from('threads')
+                        .select('*')
+                        .gte('timestamp', rollingDayCutoff);
+
+                    let metricsThreads = rawThreads || [];
+                    metricsThreads.forEach(t => {
+                        const replyMetric = appState.commentCounts[t.id] || 0;
+                        t.trendingScore = (t.upvotes || 1) + (replyMetric * 2);
+                    });
+
+                    metricsThreads.sort((x, y) => y.trendingScore - x.trendingScore);
+                    appState.threads = metricsThreads.slice(fromIndex, toIndex + 1);
+                } else {
+                    // Default Standard Latest Sorting Configuration
+                    const { data: threads } = await supabaseClient.from('threads')
+                        .select('*')
+                        .order('timestamp', { ascending: false })
+                        .range(fromIndex, toIndex);
+                    appState.threads = threads || [];
                 }
 
                 renderThreads();
@@ -608,7 +774,8 @@
 
         function renderPaginationControls() {
             const container = document.getElementById('paginationControls');
-            const totalPages = Math.ceil(appState.cachedCounts.threads / appState.threadsPerPage) || 1;
+            const totalItems = appState.feedFilter === 'trending' ? appState.threads.length : appState.cachedCounts.threads;
+            const totalPages = Math.ceil(totalItems / appState.threadsPerPage) || 1;
             const current = appState.currentPage;
             
             if (totalPages <= 1) {
@@ -662,7 +829,7 @@
                         appState.cachedCounts.threads++;
                     }
                     updateGlobalCounterUI();
-                    if (appState.currentPage === 1) {
+                    if (appState.currentPage === 1 && appState.feedFilter === 'latest') {
                         await fetchCountAndPage(1);
                     } else {
                         renderPaginationControls();
@@ -689,6 +856,13 @@
             document.getElementById('globalPostCount').innerText = appState.cachedCounts.threads + appState.cachedCounts.comments;
         }
 
+        function clearSelectedComposerImage() {
+            attachedImageBase64 = null;
+            document.getElementById('composerFileInput').value = '';
+            document.getElementById('composerImageContainer').style.display = 'none';
+            document.getElementById('composerImageElement').src = '';
+        }
+
         function bindEventListeners() {
             const threadContent = document.getElementById('threadContent');
             const threadCharCounter = document.getElementById('threadCharCounter');
@@ -702,13 +876,27 @@
                 commentCharCounter.innerText = `${commentInput.value.length}/300`;
             });
 
+            // Local Media Stream Compression Reader
+            document.getElementById('composerFileInput').addEventListener('change', function(e) {
+                const targetFile = e.target.files[0];
+                if (!targetFile) return;
+
+                const fileReader = new FileReader();
+                fileReader.onload = function(event) {
+                    attachedImageBase64 = event.target.result;
+                    document.getElementById('composerImageElement').src = attachedImageBase64;
+                    document.getElementById('composerImageContainer').style.display = 'inline-block';
+                };
+                fileReader.readAsDataURL(targetFile);
+            });
+
             document.getElementById('threadForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const title = document.getElementById('threadTitle');
                 const id = Math.random().toString(16).substring(2, 10);
                 const parsedTitle = title.value.trim() || 'Anonymous';
                 
-                // Track country identifier dynamically right upon generation dispatch
+                // Query country code precisely right before execution broadcast
                 const countryCode = await getRealUserCountry();
                 
                 await supabaseClient.from('threads').insert([{ 
@@ -717,12 +905,14 @@
                     content: threadContent.value.trim(), 
                     timestamp: Date.now(), 
                     upvotes: 1,
-                    flag: countryCode
+                    flag: countryCode,
+                    image: attachedImageBase64 // Base64 payload column linkage
                 }]);
                 
                 title.value = '';
                 threadContent.value = '';
                 threadCharCounter.innerText = '0/1000';
+                clearSelectedComposerImage();
             });
 
             document.getElementById('commentForm').addEventListener('submit', async (e) => {
@@ -731,7 +921,6 @@
                 const id = Math.random().toString(16).substring(2, 10);
                 const tripcode = await generateTripcode(appState.activeThreadId, appState.userSeed);
                 
-                // Track country identifier dynamically right upon generation dispatch
                 const countryCode = await getRealUserCountry();
                 
                 await supabaseClient.from('comments').insert([{ 
@@ -746,6 +935,24 @@
                 commentInput.value = '';
                 commentCharCounter.innerText = '0/300';
             });
+        }
+
+        async function triggerPostUpvote(event, id) {
+            event.stopPropagation();
+            try {
+                const targetBtn = document.getElementById(`upvoteBtn-${id}`);
+                if (targetBtn.classList.contains('upvoted-active')) return;
+
+                const thread = appState.threads.find(t => t.id === id);
+                if (!thread) return;
+
+                const nextVotes = (thread.upvotes || 1) + 1;
+                await supabaseClient.from('threads').update({ upvotes: nextVotes }).eq('id', id);
+                
+                thread.upvotes = nextVotes;
+                targetBtn.classList.add('upvoted-active');
+                targetBtn.querySelector('.upvote-count-label').innerText = nextVotes;
+            } catch(err) { console.error(err); }
         }
 
         function formatTime(ms) {
@@ -767,6 +974,7 @@
             
             target.innerHTML = appState.threads.map(t => {
                 const count = appState.commentCounts[t.id] || 0;
+                const imgTag = t.image ? `<img class="tweet-media-attachment" src="${t.image}" alt="Attachment Stream Canvas">` : '';
                 return `
                     <div class="tweet-card" onclick="openThreadModal('${t.id}')">
                         <div class="tweet-main">
@@ -779,12 +987,17 @@
                                 </div>
                             </div>
                             <p class="tweet-content">${parseBodyContent(t.content)}</p>
+                            ${imgTag}
                             <div class="tweet-footer">
                                 <div class="tweet-action-item">
                                     <i data-lucide="message-circle" style="width: 16px; height: 16px;"></i>
                                     <span>${count}</span>
                                 </div>
-                                <div class="tweet-action-item">
+                                <button type="button" class="tweet-action-item" id="upvoteBtn-${t.id}" onclick="triggerPostUpvote(event, '${t.id}')">
+                                    <i data-lucide="heart" style="width: 16px; height: 16px;"></i>
+                                    <span class="upvote-count-label">${t.upvotes || 1}</span>
+                                </button>
+                                <div class="tweet-action-item" style="cursor: default; hover: none;">
                                     <i data-lucide="shield-check" style="width: 16px; height: 16px;"></i>
                                     <span style="font-size: 0.75rem; font-family: monospace;">SECURE</span>
                                 </div>
@@ -805,6 +1018,16 @@
             document.getElementById('modalTimestamp').innerText = new Date(thread.timestamp).toLocaleString();
             document.getElementById('modalOpBody').innerHTML = parseBodyContent(thread.content);
             document.getElementById('modalMeta').innerText = `Post Instance Node [${id}]`;
+            
+            const modalImg = document.getElementById('modalOpImage');
+            if (thread.image) {
+                modalImg.src = thread.image;
+                modalImg.style.display = 'block';
+            } else {
+                modalImg.style.display = 'none';
+                modalImg.src = '';
+            }
+
             document.getElementById('commentTreeContainer').innerHTML = `<div class="timeline-indicator">Streaming tree nodes...</div>`;
             document.getElementById('threadModal').classList.add('active');
 
