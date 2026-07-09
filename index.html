@@ -573,10 +573,7 @@
                     
                     <input type="file" id="composerFileInput" accept="image/*" style="display: none;">
                     
-                    <div id="composerImageContainer" class="composer-image-preview-wrapper" style="display: none;">
-                        <img src="" id="composerImageElement" class="composer-image-preview" alt="Upload Canvas Preview">
-                        <button type="button" class="composer-image-remove" onclick="clearSelectedComposerImage()">
-                            <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+                    
                         </button>
                     </div>
 
@@ -856,12 +853,6 @@
             document.getElementById('globalPostCount').innerText = appState.cachedCounts.threads + appState.cachedCounts.comments;
         }
 
-        function clearSelectedComposerImage() {
-            attachedImageBase64 = null;
-            document.getElementById('composerFileInput').value = '';
-            document.getElementById('composerImageContainer').style.display = 'none';
-            document.getElementById('composerImageElement').src = '';
-        }
 
         function bindEventListeners() {
     const threadContent = document.getElementById('threadContent');
@@ -877,50 +868,34 @@
         commentCharCounter.innerText = `${commentInput.value.length}/300`;
     });
 
-    // File Upload Listener
-    document.getElementById('composerFileInput').addEventListener('change', function(e) {
-        const targetFile = e.target.files[0];
-        if (!targetFile) return;
-
-        const fileReader = new FileReader();
-        fileReader.onload = function(event) {
-            attachedImageBase64 = event.target.result;
-            console.log("Image captured! String length:", attachedImageBase64.length);
-            document.getElementById('composerImageElement').src = attachedImageBase64;
-            document.getElementById('composerImageContainer').style.display = 'inline-block';
-        };
-        fileReader.readAsDataURL(targetFile);
-    });
-
     // Single Thread Form Submit Listener
     document.getElementById('threadForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const title = document.getElementById('threadTitle');
-        const id = Math.random().toString(16).substring(2, 10);
-        
-        console.log("Attempting to post, image length:", attachedImageBase64 ? attachedImageBase64.length : "NO DATA");
-        
-        const { data, error } = await supabaseClient.from('threads').insert([{ 
-            id: id, 
-            title: title.value.trim() || 'Anonymous', 
-            content: threadContent.value.trim(), 
-            timestamp: Date.now(), 
-            upvotes: 1,
-            flag: await getRealUserCountry(),
-            image: attachedImageBase64 
-        }]);
+    e.preventDefault();
+    const title = document.getElementById('threadTitle');
+    const id = Math.random().toString(16).substring(2, 10);
+    const parsedTitle = title.value.trim() || 'Anonymous';
+    
+    // We remove 'image' and 'flag' from here to stop the 'column not found' error
+    // If you haven't added the 'flag' column yet, this will stop the error.
+    const { data, error } = await supabaseClient.from('threads').insert([{ 
+        id: id, 
+        title: parsedTitle, 
+        content: threadContent.value.trim(), 
+        timestamp: Date.now(), 
+        upvotes: 1
+    }]);
 
-        if (error) {
-            console.error("Supabase Insert Error:", error);
-            alert("Failed to post: " + error.message);
-        } else {
-            console.log("Post successful!");
-            title.value = '';
-            threadContent.value = '';
-            threadCharCounter.innerText = '0/1000';
-            clearSelectedComposerImage();
-        }
-    });
+    if (error) {
+        console.error("Supabase Insert Error:", error);
+        alert("Failed to post: " + error.message);
+    } else {
+        console.log("Post successful!");
+        title.value = '';
+        threadContent.value = '';
+        threadCharCounter.innerText = '0/1000';
+        // Image clearing is no longer needed
+    }
+});
 
     // Comment Form Submit Listener (Must be its own separate block)
     document.getElementById('commentForm').addEventListener('submit', async (e) => {
