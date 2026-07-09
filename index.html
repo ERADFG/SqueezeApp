@@ -751,7 +751,7 @@
                     const { data: threads } = await supabaseClient.from('threads')
                         .select('*')
                         .order('timestamp', { ascending: false })
-                        .range(fromIndex, toIndex);
+                        .order('timestamp', { ascending: false });
                     appState.threads = threads || [];
                 }
 
