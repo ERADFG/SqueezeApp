@@ -566,35 +566,26 @@
         </div>
 
         <section class="composer-section">
-            <div class="composer-body">
-                <form id="threadForm">
-                    <input type="text" id="threadTitle" placeholder="Alias Name (Optional)..." maxlength="50" autocomplete="off" class="composer-input-name">
-                    <textarea id="threadContent" placeholder="What is happening?!" required rows="3" maxlength="1000" class="composer-input-text"></textarea>
-                    
-                    <input type="file" id="composerFileInput" accept="image/*" style="display: none;">
-                    
-                    
-                        </button>
+    <div class="composer-body">
+        <form id="threadForm">
+            <input type="text" id="threadTitle" placeholder="Alias Name (Optional)..." maxlength="50" class="composer-input-name">
+            <textarea id="threadContent" placeholder="What is happening?!" required rows="3" maxlength="1000" class="composer-input-text"></textarea>
+            
+            <div class="composer-actions">
+                <div class="composer-tools-left">
+                    <div style="color: var(--x-text-muted); display: flex; align-items: center; gap: 4px; font-size: 0.85rem;">
+                        <i data-lucide="shield" style="width: 16px; height: 16px;"></i>
+                        <span>Secure Node</span>
                     </div>
-
-                    <div class="composer-actions">
-                        <div class="composer-tools-left">
-                            <button type="button" class="tool-icon-btn" onclick="document.getElementById('composerFileInput').click()">
-                                <i data-lucide="image" style="width: 20px; height: 20px;"></i>
-                            </button>
-                            <div style="color: var(--x-text-muted); display: flex; align-items: center; gap: 4px; font-size: 0.85rem;">
-                                <i data-lucide="shield" style="width: 16px; height: 16px; color: var(--x-text-muted);"></i>
-                                <span>Secured Matrix Node</span>
-                            </div>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <span id="threadCharCounter" style="font-size: 0.8rem; color: var(--x-text-muted);">0/1000</span>
-                            <button type="submit" class="composer-btn">Post</button>
-                        </div>
-                    </div>
-                </form>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span id="threadCharCounter" style="font-size: 0.8rem; color: var(--x-text-muted);">0/1000</span>
+                    <button type="submit" id="submitBtn" class="composer-btn">Post</button>
+                </div>
             </div>
-        </section>
+        </form>
+    </div>
+</section>
 
         <div id="latestStream">
             <div class="timeline-indicator">Synchronizing secure handshake...</div>
@@ -873,27 +864,31 @@
     // Cleaned Thread Form Submit
     document.getElementById('threadForm').addEventListener('submit', async (e) => {
         e.preventDefault();
+        const submitBtn = document.getElementById('submitBtn');
         const title = document.getElementById('threadTitle');
         const content = document.getElementById('threadContent');
-        const id = Math.random().toString(16).substring(2, 10);
         
-        // ONLY sending essential fields to avoid "column not found" errors
-        const { data, error } = await supabaseClient.from('threads').insert([{ 
-            id: id, 
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Posting...";
+
+        const { error } = await supabaseClient.from('threads').insert([{ 
+            id: Math.random().toString(16).substring(2, 10), 
             title: title.value.trim() || 'Anonymous', 
             content: content.value.trim(), 
             timestamp: Date.now(), 
             upvotes: 1
         }]);
 
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Post";
+
         if (error) {
             console.error("Supabase Error:", error);
-            alert("Posting failed. Check console for details.");
+            alert("Posting failed: " + error.message);
         } else {
             title.value = '';
             content.value = '';
-            threadCharCounter.innerText = '0/1000';
-            console.log("Post successful");
+            document.getElementById('threadCharCounter').innerText = '0/1000';
         }
     });
 
@@ -904,22 +899,19 @@
     document.getElementById('commentForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!appState.activeThreadId) return;
-        const id = Math.random().toString(16).substring(2, 10);
-        const tripcode = await generateTripcode(appState.activeThreadId, appState.userSeed);
         
-        const countryCode = await getRealUserCountry();
-        
-        await supabaseClient.from('comments').insert([{ 
-            id, 
-            thread_id: appState.activeThreadId, 
-            tripcode, 
-            text: commentInput.value.trim(), 
-            timestamp: Date.now(),
-            flag: countryCode
+        const input = document.getElementById('commentInput');
+        const { error } = await supabaseClient.from('comments').insert([{
+            id: Math.random().toString(16).substring(2, 10),
+            thread_id: appState.activeThreadId,
+            content: input.value.trim(),
+            timestamp: Date.now()
         }]);
-        
-        commentInput.value = '';
-        commentCharCounter.innerText = '0/300';
+
+        if (!error) {
+            input.value = '';
+            document.getElementById('commentCharCounter').innerText = '0/300';
+        }
     });
 }
 
