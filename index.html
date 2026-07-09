@@ -707,58 +707,45 @@
         }
 
         async function fetchCountAndPage(pageNumber) {
-            document.getElementById('latestStream').innerHTML = `<div class="timeline-indicator">Synchronizing secure handshake...</div>`;
-            appState.currentPage = pageNumber;
-            
-            try {
-                const [threadCountRes, commentCountRes] = await Promise.all([
-                    supabaseClient.from('threads').select('*', { count: 'exact', head: true }),
-                    supabaseClient.from('comments').select('*', { count: 'exact', head: true })
-                ]);
+    const stream = document.getElementById('latestStream');
+    stream.innerHTML = `<div class="timeline-indicator">Synchronizing secure handshake...</div>`;
+    appState.currentPage = pageNumber;
+    
+    try {
+        console.log("Attempting to fetch from Supabase...");
 
-                appState.cachedCounts.threads = threadCountRes.count || 0;
-                appState.cachedCounts.comments = commentCountRes.count || 0;
-                updateGlobalCounterUI();
+        // Combine count and data into one clear request to debug
+        const { data, count, error } = await supabaseClient
+            .from('threads')
+            .select('*', { count: 'exact' })
+            .order('timestamp', { ascending: false })
+            .range((pageNumber - 1) * appState.threadsPerPage, (pageNumber * appState.threadsPerPage) - 1);
 
-                const { data: commentIds } = await supabaseClient.from('comments').select('thread_id');
-                appState.commentCounts = {};
-                if (commentIds) {
-                    commentIds.forEach(c => {
-                        appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
-                    });
-                }
-
-                const fromIndex = (pageNumber - 1) * appState.threadsPerPage;
-                const toIndex = fromIndex + appState.threadsPerPage - 1;
-
-                if (appState.feedFilter === 'trending') {
-                    // Trending Filter: Past 24 hours calculation weight score windowing
-                    const rollingDayCutoff = Date.now() - (24 * 60 * 60 * 1000);
-                    const { data: rawThreads } = await supabaseClient.from('threads')
-                        .select('*')
-                        .gte('timestamp', rollingDayCutoff);
-
-                    let metricsThreads = rawThreads || [];
-                    metricsThreads.forEach(t => {
-                        const replyMetric = appState.commentCounts[t.id] || 0;
-                        t.trendingScore = (t.upvotes || 1) + (replyMetric * 2);
-                    });
-
-                    metricsThreads.sort((x, y) => y.trendingScore - x.trendingScore);
-                    appState.threads = metricsThreads.slice(fromIndex, toIndex + 1);
-                } else {
-                    // Default Standard Latest Sorting Configuration
-                    const { data: threads } = await supabaseClient.from('threads')
-                        .select('*')
-                        .order('timestamp', { ascending: false })
-                        .order('timestamp', { ascending: false });
-                    appState.threads = threads || [];
-                }
-
-                renderThreads();
-                renderPaginationControls();
-            } catch (err) { console.error(err); }
+        if (error) {
+            console.error("DEBUG ERROR:", error);
+            stream.innerHTML = `<div class="timeline-indicator" style="color: red;">Error: ${error.message}</div>`;
+            return;
         }
+
+        console.log("Fetched Data:", data);
+        console.log("Total Count:", count);
+
+        appState.cachedCounts.threads = count || 0;
+        appState.threads = data || [];
+        updateGlobalCounterUI();
+
+        if (appState.threads.length === 0) {
+            stream.innerHTML = `<div class="timeline-indicator">No posts found.</div>`;
+        } else {
+            renderThreads();
+        }
+        renderPaginationControls();
+
+    } catch (err) {
+        console.error("System Error:", err);
+        stream.innerHTML = `<div class="timeline-indicator" style="color: red;">System error. Check console.</div>`;
+    }
+}
 
         function renderPaginationControls() {
             const container = document.getElementById('paginationControls');
