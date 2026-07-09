@@ -871,29 +871,24 @@
     // Single Thread Form Submit Listener
     document.getElementById('threadForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const title = document.getElementById('threadTitle');
+    const title = document.getElementById('threadTitle').value.trim() || 'Anonymous';
+    const content = document.getElementById('threadContent').value.trim();
     const id = Math.random().toString(16).substring(2, 10);
-    const parsedTitle = title.value.trim() || 'Anonymous';
-    
-    // We remove 'image' and 'flag' from here to stop the 'column not found' error
-    // If you haven't added the 'flag' column yet, this will stop the error.
+
     const { data, error } = await supabaseClient.from('threads').insert([{ 
         id: id, 
-        title: parsedTitle, 
-        content: threadContent.value.trim(), 
+        title: title, 
+        content: content, 
         timestamp: Date.now(), 
         upvotes: 1
     }]);
 
     if (error) {
-        console.error("Supabase Insert Error:", error);
-        alert("Failed to post: " + error.message);
+        console.error("Supabase Error:", error);
+        alert("Insert Error: " + error.message);
     } else {
-        console.log("Post successful!");
-        title.value = '';
-        threadContent.value = '';
-        threadCharCounter.innerText = '0/1000';
-        // Image clearing is no longer needed
+        alert("Post successful!");
+        location.reload(); // Quick way to clear and refresh
     }
 });
 
