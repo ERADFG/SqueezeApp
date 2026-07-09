@@ -859,12 +859,11 @@
         submitBtn.innerText = "Posting...";
 
         const { error } = await supabaseClient.from('threads').insert([{ 
-            id: Math.random().toString(16).substring(2, 10), 
-            title: title.value.trim() || 'Anonymous', 
-            content: content.value.trim(), 
-            timestamp: Date.now(), 
-            upvotes: 1
-        }]);
+    title: title.value.trim() || 'Anonymous', 
+    content: content.value.trim(), 
+    timestamp: Date.now(), 
+    upvotes: 1
+}]);
 
         submitBtn.disabled = false;
         submitBtn.innerText = "Post";
