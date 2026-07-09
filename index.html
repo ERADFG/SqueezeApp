@@ -868,29 +868,37 @@
         commentCharCounter.innerText = `${commentInput.value.length}/300`;
     });
 
-    // Single Thread Form Submit Listener
+    // Removed the File Input listener entirely
+
+    // Cleaned Thread Form Submit
     document.getElementById('threadForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const title = document.getElementById('threadTitle').value.trim() || 'Anonymous';
-    const content = document.getElementById('threadContent').value.trim();
-    const id = Math.random().toString(16).substring(2, 10);
+        e.preventDefault();
+        const title = document.getElementById('threadTitle');
+        const content = document.getElementById('threadContent');
+        const id = Math.random().toString(16).substring(2, 10);
+        
+        // ONLY sending essential fields to avoid "column not found" errors
+        const { data, error } = await supabaseClient.from('threads').insert([{ 
+            id: id, 
+            title: title.value.trim() || 'Anonymous', 
+            content: content.value.trim(), 
+            timestamp: Date.now(), 
+            upvotes: 1
+        }]);
 
-    const { data, error } = await supabaseClient.from('threads').insert([{ 
-        id: id, 
-        title: title, 
-        content: content, 
-        timestamp: Date.now(), 
-        upvotes: 1
-    }]);
+        if (error) {
+            console.error("Supabase Error:", error);
+            alert("Posting failed. Check console for details.");
+        } else {
+            title.value = '';
+            content.value = '';
+            threadCharCounter.innerText = '0/1000';
+            console.log("Post successful");
+        }
+    });
 
-    if (error) {
-        console.error("Supabase Error:", error);
-        alert("Insert Error: " + error.message);
-    } else {
-        alert("Post successful!");
-        location.reload(); // Quick way to clear and refresh
-    }
-});
+    // Keep your existing commentForm logic here
+}
 
     // Comment Form Submit Listener (Must be its own separate block)
     document.getElementById('commentForm').addEventListener('submit', async (e) => {
