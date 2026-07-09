@@ -857,6 +857,18 @@
         
         submitBtn.disabled = true;
         submitBtn.innerText = "Posting...";
+        document.getElementById('postForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const { error } = await supabase.from('threads').insert([{
+                title: document.getElementById('title').value,
+                content: document.getElementById('content').value,
+                timestamp: Date.now()
+            }]);
+            if (error) alert("Post Error: " + error.message);
+            else loadPosts();
+        });
+
+        loadPosts();
 
         const { error } = await supabaseClient.from('threads').insert([{ 
     title: title.value.trim() || 'Anonymous', 
@@ -900,6 +912,21 @@
         }
     });
 }
+
+async function loadPosts() {
+            const { data, error } = await supabase.from('threads').select('*').order('timestamp', { ascending: false });
+            if (error) {
+                console.error("Fetch Error:", error);
+                document.getElementById('feed').innerText = "Error: " + error.message;
+                return;
+            }
+            document.getElementById('feed').innerHTML = data.map(post => `
+                <div class="post-card">
+                    <h3>${post.title}</h3>
+                    <p>${post.content}</p>
+                </div>
+            `).join('');
+        }
 
         async function triggerPostUpvote(event, id) {
             event.stopPropagation();
