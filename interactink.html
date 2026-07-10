@@ -13,7 +13,6 @@
         ::-webkit-scrollbar-track { background: #000000; }
         ::-webkit-scrollbar-thumb { background: #202327; border-radius: 9999px; }
         input, textarea { background-color: #000000 !important; }
-        /* Style for hyperlinked content */
         .user-link { color: #3b82f6; text-decoration: underline; font-weight: 500; transition: color 0.1s ease; }
         .user-link:hover { color: #60a5fa; }
     </style>
@@ -62,7 +61,14 @@
             </form>
         </section>
 
+        <div class="flex border-b border-neutral-800 text-sm font-bold bg-neutral-950/30">
+            <button id="tabLatest" onclick="switchFeedFilter('latest')" class="flex-1 text-center py-3.5 text-white border-b-2 border-emerald-500 transition">Latest</button>
+            <button id="tabTrending" onclick="switchFeedFilter('trending')" class="flex-1 text-center py-3.5 text-neutral-500 border-b-2 border-transparent hover:bg-neutral-900 hover:text-white transition">Trending</button>
+        </div>
+
         <main id="latestStream" class="divide-y divide-neutral-800 flex-1"></main>
+        
+        <div id="paginationControls" class="flex justify-center items-center gap-2 p-6 border-t border-neutral-800 mb-8"></div>
     </div>
 
     <div id="threadModal" class="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
@@ -95,7 +101,7 @@
                     <div class="text-neutral-500 shrink-0">
                         <i data-lucide="corner-down-right" class="w-4 h-4"></i>
                     </div>
-                    <input type="text" id="commentInput" placeholder="Post your reply... (Use >>ID to interlink node tree)" autocomplete="off" required maxlength="300"
+                    <input type="text" id="commentInput" placeholder="Post your reply... (Use >>ID to interlink)" autocomplete="off" required maxlength="300"
                            class="flex-1 bg-transparent text-sm text-white focus:outline-none placeholder:text-neutral-600">
                     <span id="commentCharCounter" class="text-[11px] font-mono text-neutral-600 shrink-0 select-none">0/300</span>
                     <button type="submit" class="bg-white text-black hover:bg-neutral-200 font-bold px-4 py-1.5 rounded-full text-xs transition duration-200 cursor-pointer shrink-0">
@@ -113,7 +119,17 @@
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
         
         let supabaseClient;
-        const appState = { threads: {}, comments: {}, commentCounts: {}, activeThreadId: null, userSeed: null, cachedCounts: { threads: 0, comments: 0 } };
+        const appState = { 
+            threads: {}, 
+            comments: {}, 
+            commentCounts: {}, 
+            activeThreadId: null, 
+            userSeed: null, 
+            cachedCounts: { threads: 0, comments: 0 },
+            feedFilter: 'latest', 
+            currentPage: 1, 
+            threadsPerPage: 10 
+        };
 
         window.addEventListener('load', async () => {
             if (!window.supabase) return;
@@ -147,7 +163,8 @@
 
         async function fetchInitialData() {
             try {
-                const { data: threads } = await supabaseClient.from('threads').select('*').order('timestamp', { ascending: false }).limit(30);
+                // Fetch more limit to allow pagination to work visually
+                const { data: threads } = await supabaseClient.from('threads').select('*').order('timestamp', { ascending: false }).limit(100);
                 if (threads) threads.forEach(t => appState.threads[t.id] = t);
 
                 const { data: commentIds } = await supabaseClient.from('comments').select('thread_id');
@@ -203,6 +220,27 @@
             document.getElementById('globalPostCount').innerText = appState.cachedCounts.threads + appState.cachedCounts.comments;
         }
 
+        function switchFeedFilter(filter) {
+            appState.feedFilter = filter;
+            appState.currentPage = 1; // Reset to page 1 on filter switch
+            
+            document.getElementById('tabLatest').className = filter === 'latest' 
+                ? 'flex-1 text-center py-3.5 text-white border-b-2 border-emerald-500 transition' 
+                : 'flex-1 text-center py-3.5 text-neutral-500 border-b-2 border-transparent hover:bg-neutral-900 hover:text-white transition';
+                
+            document.getElementById('tabTrending').className = filter === 'trending' 
+                ? 'flex-1 text-center py-3.5 text-white border-b-2 border-emerald-500 transition' 
+                : 'flex-1 text-center py-3.5 text-neutral-500 border-b-2 border-transparent hover:bg-neutral-900 hover:text-white transition';
+                
+            renderThreads();
+        }
+
+        function changePage(page) {
+            appState.currentPage = page;
+            renderThreads();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
         function bindEventListeners() {
             const threadContent = document.getElementById('threadContent');
             const threadCharCounter = document.getElementById('threadCharCounter');
@@ -248,12 +286,72 @@
 
         function renderThreads() {
             const threadList = Object.values(appState.threads);
-            const chronological = [...threadList].sort((a, b) => b.timestamp - a.timestamp);
+            let sorted = [];
+            
+            // Sorting Logic (Latest vs Trending)
+            if (appState.feedFilter === 'trending') {
+                sorted = [...threadList].sort((a, b) => {
+                    const scoreA = appState.commentCounts[a.id] || 0;
+                    const scoreB = appState.commentCounts[b.id] || 0;
+                    if (scoreA === scoreB) return b.timestamp - a.timestamp; // Tie breaker
+                    return scoreB - scoreA;
+                });
+            } else {
+                sorted = [...threadList].sort((a, b) => b.timestamp - a.timestamp);
+            }
+
+            // Pagination Logic
+            const startIndex = (appState.currentPage - 1) * appState.threadsPerPage;
+            const paginatedList = sorted.slice(startIndex, startIndex + appState.threadsPerPage);
             
             const latestContainer = document.getElementById('latestStream');
             latestContainer.innerHTML = '';
-            chronological.forEach(t => latestContainer.appendChild(createThreadElementCard(t)));
+            
+            if (paginatedList.length === 0) {
+                latestContainer.innerHTML = '<div class="text-neutral-500 text-center py-10 text-sm">No threads found.</div>';
+            } else {
+                paginatedList.forEach(t => latestContainer.appendChild(createThreadElementCard(t)));
+            }
+
+            renderPaginationControls(sorted.length);
             lucide.createIcons();
+        }
+
+        function renderPaginationControls(totalItems) {
+            const container = document.getElementById('paginationControls');
+            const totalPages = Math.ceil(totalItems / appState.threadsPerPage) || 1;
+            
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+
+            let html = `<button onclick="changePage(${Math.max(1, appState.currentPage - 1)})" 
+                                class="p-2 border border-neutral-800 rounded hover:bg-neutral-900 text-white transition ${appState.currentPage === 1 ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}" 
+                                ${appState.currentPage === 1 ? 'disabled' : ''}>
+                            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                        </button>`;
+            
+            // Generate numbered slides
+            for(let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= appState.currentPage - 1 && i <= appState.currentPage + 1)) {
+                    html += `<button onclick="changePage(${i})" 
+                                     class="w-9 h-9 flex items-center justify-center border border-neutral-800 rounded text-sm transition cursor-pointer 
+                                     ${i === appState.currentPage ? 'bg-white text-black font-bold' : 'hover:bg-neutral-900 text-neutral-400'}">
+                                ${i}
+                             </button>`;
+                } else if (i === appState.currentPage - 2 || i === appState.currentPage + 2) {
+                    html += `<span class="text-neutral-600 px-1">...</span>`;
+                }
+            }
+
+            html += `<button onclick="changePage(${Math.min(totalPages, appState.currentPage + 1)})" 
+                                class="p-2 border border-neutral-800 rounded hover:bg-neutral-900 text-white transition ${appState.currentPage === totalPages ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}" 
+                                ${appState.currentPage === totalPages ? 'disabled' : ''}>
+                            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                        </button>`;
+            
+            container.innerHTML = html;
         }
 
         function createThreadElementCard(thread) {
@@ -263,7 +361,6 @@
             card.className = "p-4 hover:bg-neutral-900/40 cursor-pointer transition duration-200 flex flex-col";
             card.onclick = () => openThreadModal(thread.id);
             
-            // Integrated link conversion parsing to content cards
             const processedContent = parseRichTextContent(escapeHTML(thread.content));
             
             card.innerHTML = `
@@ -273,7 +370,7 @@
                 </div>
                 <div class="text-neutral-300 text-sm leading-relaxed mb-3 break-words whitespace-pre-wrap">${processedContent}</div>
                 <div class="flex items-center gap-6 text-xs text-neutral-500">
-                    <span class="flex items-center gap-1.5 hover:text-neutral-300 transition"><i data-lucide="message-square" class="w-4 h-4"></i> ${dynamicCommentCount}</span>
+                    <span class="flex items-center gap-1.5 hover:text-neutral-300 transition"><i data-lucide="message-square" class="w-4 h-4"></i> ${dynamicCommentCount} Replies</span>
                 </div>
             `;
             return card;
@@ -286,7 +383,6 @@
 
             document.getElementById('modalMeta').innerText = `NODE SYSTEM: >>${thread.id} // VERIFIED PIPELINE`;
             document.getElementById('modalTitle').innerText = thread.title;
-            // Stop click bubbling on links so clicking a link doesn't reset the modal trigger state
             document.getElementById('modalOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content));
             document.getElementById('threadModal').classList.remove('hidden');
             
@@ -349,8 +445,6 @@
             item.id = `comment-${node.id}`;
 
             const dateStr = new Date(node.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            
-            // Parse both cross-links references AND raw outer links safely inside comment items
             const structuralLinkedProcessedText = parseRichTextContent(escapeHTML(node.text));
 
             item.innerHTML = `
@@ -378,22 +472,16 @@
             input.focus();
         }
 
-        // Consolidated Rich Formatting Parser (Processes links + board cross-references)
         function parseRichTextContent(text) {
             if (!text) return '';
-
-            // 1. Process board cross-links layout engines (>>ID codes)
             const nodeCrossRegex = /&gt;&gt;([A-Fa-f0-9]{8})/g;
             text = text.replace(nodeCrossRegex, (match, id) => {
                 return `<a href="#comment-${id}" data-preview-id="${id}" class="text-white underline font-bold cross-link-node" onclick="event.stopPropagation();">${match}</a>`;
             });
-
-            // 2. Safe URL matching layout regex parser
             const rawUrlRegex = /(https?:\/\/[^\s]+)/g;
             text = text.replace(rawUrlRegex, (url) => {
                 return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="user-link" onclick="event.stopPropagation();">${url}</a>`;
             });
-
             return text;
         }
 
