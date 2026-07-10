@@ -4,8 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>InteractInk - Anonymous Text Board & Social Workspace</title>
+    
     <meta name="description" content="Squeezes Workspace - Connect securely and privately through the decentralized, anonymous network interface.">
     <meta name="google-adsense-account" content="ca-pub-9357677827244243">
+    <meta name="google-site-verification" content="DOvTKyh77YUQreg4Dg6SaL1wEM33Da783l6lqsLek7Q" />
+    
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9357677827244243" crossorigin="anonymous"></script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-527BWKF63G"></script>
     <script>
@@ -14,607 +17,125 @@
       gtag('js', new Date());
       gtag('config', 'G-527BWKF63G');
     </script>
-    <meta name="google-site-verification" content="DOvTKyh77YUQreg4Dg6SaL1wEM33Da783l6lqsLek7Q" />
-    <link rel="icon" type="image/png" href="favicon.png">
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.3/css/flag-icons.min.css"/>
-
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
-        :root {
-            --bg-black: #000000;
-            --x-border: #16181c;
-            --x-dark-gray: #0f1419;
-            --x-text-muted: #71767b;
-            --x-text-main: #e7e9ea;
-            --x-white: #ffffff;
-            --x-white-hover: #e6e6e6;
-            --x-blue: #1d9bf0;
-            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            background-color: var(--bg-black);
-            color: var(--x-text-main);
-            font-family: var(--font-family);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        /* Fixed Top Navigation Bar */
-        nav {
-            display: flex;
-            justify-content: center;
-            gap: 24px;
-            padding: 16px 0;
-            background: rgba(0, 0, 0, 0.65);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--x-border);
-            width: 100%;
-            position: sticky;
-            top: 0;
-            z-index: 50;
-        }
-
-        nav a {
-            color: var(--x-text-muted);
-            text-decoration: none;
-            font-size: 0.95rem;
-            font-weight: 500;
-            transition: color 0.2s ease;
-        }
-
-        nav a:hover, nav a.active {
-            color: var(--x-text-main);
-        }
-
-        /* Central Wrapper */
-        .feed-container {
-            width: 100%;
-            max-width: 600px;
-            border-left: 1px solid var(--x-border);
-            border-right: 1px solid var(--x-border);
-            min-height: calc(100vh - 54px);
-            display: flex;
-            flex-direction: column;
-        }
-
-        header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--x-border);
-            position: sticky;
-            top: 53px;
-            background: rgba(0, 0, 0, 0.65);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            z-index: 40;
-        }
-
-        .brand img {
-            height: 32px;
-            width: auto;
-            object-fit: contain;
-        }
-
-        .feed-tabs {
-            display: flex;
-            border-bottom: 1px solid var(--x-border);
-            background: var(--bg-black);
-        }
-
-        .feed-tab {
-            flex: 1;
-            text-align: center;
-            padding: 15px 0;
-            font-weight: 700;
-            font-size: 0.95rem;
-            color: var(--x-text-muted);
-            cursor: pointer;
-            transition: background-color 0.2s, color 0.2s;
-            position: relative;
-        }
-
-        .feed-tab:hover {
-            background-color: rgba(255, 255, 255, 0.03);
-        }
-
-        .feed-tab.active {
-            color: var(--x-text-main);
-        }
-
-        .feed-tab.active::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 40px;
-            height: 4px;
-            background-color: var(--x-blue);
-            border-radius: 9999px;
-        }
-
-        .composer-section {
-            padding: 16px;
-            border-bottom: 1px solid var(--x-border);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .composer-body {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .composer-input-name {
-            background: transparent;
-            border: none;
-            color: var(--x-text-main);
-            font-size: 1rem;
-            font-weight: 600;
-            outline: none;
-            padding-bottom: 6px;
-            margin-bottom: 8px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-        }
-
-        .composer-input-text {
-            background: transparent;
-            border: none;
-            color: var(--x-text-main);
-            font-size: 1.25rem;
-            line-height: 1.5;
-            outline: none;
-            resize: none;
-            width: 100%;
-            min-height: 52px;
-        }
-
-        .composer-input-text::placeholder {
-            color: var(--x-text-muted);
-        }
-
-        /* Enhanced Formatting Toolbar */
-        .format-toolbar {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 6px;
-            margin-bottom: 12px;
-        }
-
-        .format-btn {
-            background: #16181c;
-            border: 1px solid #2f3336;
-            color: var(--x-text-main);
-            padding: 5px 10px;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.15s ease;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .format-btn:hover {
-            background: #202429;
-            border-color: var(--x-text-muted);
-        }
-
-        .composer-actions {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px solid rgba(255, 255, 255, 0.03);
-        }
-
-        .composer-btn {
-            background-color: var(--x-white);
-            color: var(--bg-black);
-            font-weight: 700;
-            padding: 8px 18px;
-            border-radius: 9999px;
-            font-size: 0.95rem;
-            cursor: pointer;
-            border: none;
-            transition: background-color 0.2s ease;
-        }
-
-        .composer-btn:hover:not(:disabled) {
-            background-color: var(--x-white-hover);
-        }
-
-        .composer-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .tweet-card {
-            border-bottom: 1px solid var(--x-border);
-            padding: 12px 16px;
-            display: flex;
-            flex-direction: column;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-        }
-
-        .tweet-card:hover {
-            background-color: rgba(255, 255, 255, 0.015);
-        }
-
-        .tweet-main {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            width: 100%;
-        }
-
-        .tweet-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 4px;
-            font-size: 0.95rem;
-        }
-
-        .tweet-author-wrapper {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .tweet-author {
-            font-weight: 700;
-            color: var(--x-text-main);
-        }
-
-        .tweet-author-divider {
-            color: var(--x-text-muted);
-            font-weight: 400;
-        }
-
-        /* SVG Flag Wrapper styles */
-        .flag-wrapper {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            vertical-align: middle;
-        }
-
-        .flag-wrapper .fi {
-            border-radius: 2px;
-            width: 16px;
-            height: 12px;
-            box-shadow: 0 0 2px rgba(255, 255, 255, 0.2);
-        }
-
-        .tweet-meta {
-            color: var(--x-text-muted);
-            font-size: 0.9rem;
-        }
-
-        /* Body Content Custom Elements */
-        .tweet-content {
-            font-size: 0.95rem;
-            line-height: 1.5;
-            color: var(--x-text-main);
-            white-space: pre-wrap;
-            word-break: break-words;
-            margin-top: 2px;
-        }
-
-        .tweet-content b { font-weight: 700; color: #fff; }
-        .tweet-content i { font-style: italic; }
-        .tweet-content u { text-decoration: underline; }
-        .tweet-content s { text-decoration: line-through; color: var(--x-text-muted); }
-        .tweet-content code { background: #16181c; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.85rem; color: #ff79c6; }
-        
-        /* Interactive Blur Spoiler tag */
-        .tweet-content .spoiler {
-            background: #25282c;
-            color: transparent;
-            cursor: pointer;
-            padding: 0 4px;
-            border-radius: 4px;
-            transition: all 0.2s ease;
-            user-select: none;
-        }
-        .tweet-content .spoiler.revealed {
-            background: transparent;
-            color: inherit;
-            user-select: auto;
-        }
-
-        .tweet-footer {
-            display: flex;
-            align-items: center;
-            gap: 48px;
-            color: var(--x-text-muted);
-            margin-top: 10px;
-            font-size: 0.85rem;
-        }
-
-        .tweet-action-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: color 0.2s ease;
-        }
-
-        .tweet-action-item:hover {
-            color: var(--x-blue);
-        }
-
-        .user-link {
-            color: var(--x-blue);
-            text-decoration: none;
-        }
-        .user-link:hover {
-            text-decoration: underline;
-        }
-
-        .timeline-indicator {
-            padding: 24px;
-            text-align: center;
-            color: var(--x-text-muted);
-            font-size: 0.9rem;
-            border-bottom: 1px solid var(--x-border);
-        }
-
-        .pagination-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            padding: 24px 16px;
-            border-bottom: 1px solid var(--x-border);
-            user-select: none;
-        }
-
-        .page-btn {
-            background: transparent;
-            border: 1px solid var(--x-border);
-            color: var(--x-text-main);
-            min-width: 36px;
-            height: 36px;
-            padding: 0 6px;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-        }
-
-        .page-btn:hover:not(:disabled):not(.active) {
-            background-color: rgba(255, 255, 255, 0.05);
-            border-color: #333;
-        }
-
-        .page-btn.active {
-            background-color: var(--x-white);
-            color: var(--bg-black);
-            border-color: var(--x-white);
-        }
-
-        .page-btn:disabled {
-            opacity: 0.3;
-            cursor: not-allowed;
-        }
-
-        .page-ellipsis {
-            color: var(--x-text-muted);
-            padding: 0 4px;
-            font-weight: 600;
-        }
-
-        /* Overlay Modals */
-        .x-modal-backdrop {
-            position: fixed;
-            inset: 0;
-            background: rgba(91, 112, 131, 0.4);
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            z-index: 100;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s ease;
-            padding-top: 5vh;
-        }
-
-        .x-modal-backdrop.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .x-modal-card {
-            background: var(--bg-black);
-            border-radius: 16px;
-            width: 100%;
-            max-width: 600px;
-            max-height: 85vh;
-            display: flex;
-            flex-direction: column;
-            border: 1px solid #2f3336;
-            box-shadow: 0 0 15px rgba(255,255,255,0.1);
-        }
-
-        .x-modal-header {
-            display: flex;
-            align-items: center;
-            padding: 8px 16px;
-            border-bottom: 1px solid var(--x-border);
-        }
-
-        .x-modal-close {
-            background: transparent;
-            border: none;
-            color: var(--x-text-main);
-            cursor: pointer;
-            padding: 8px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .x-modal-close:hover {
-            background-color: rgba(255,255,255,0.1);
-        }
-
-        .x-modal-content {
-            flex-grow: 1;
-            overflow-y: auto;
-            padding: 16px;
-        }
-
-        .x-modal-footer {
-            padding: 12px 16px;
-            border-top: 1px solid var(--x-border);
-        }
-
-        .comment-node {
-            padding: 12px 0;
-            border-bottom: 1px solid var(--x-border);
-            display: flex;
-            flex-direction: column;
-        }
-
-        #hoverPreviewBox {
-            position: absolute;
-            background: var(--bg-black);
-            border: 1px solid #2f3336;
-            color: var(--x-text-main);
-            font-size: 0.8rem;
-            padding: 12px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(255,255,255,0.05);
-            max-width: 280px;
-            pointer-events: none;
-            display: none;
-            z-index: 200;
-        }
+        body { background-color: #000000; color: #e7e9ea; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #000000; }
+        ::-webkit-scrollbar-thumb { background: #202327; border-radius: 9999px; }
+        input, textarea { background-color: #000000 !important; }
+        .user-link { color: #3b82f6; text-decoration: underline; font-weight: 500; transition: color 0.1s ease; }
+        .user-link:hover { color: #60a5fa; }
     </style>
 </head>
-<body>
+<body class="min-h-screen font-sans antialiased selection:bg-neutral-800 selection:text-white">
 
-    <nav>
-        <a href="index.html" class="active">Home</a>
-        <a href="about.html">About</a>
-        <a href="faq.html">FAQ</a>
-        <a href="privacy.html">Privacy</a>
+    <nav class="sticky top-0 z-50 w-full bg-black/95 backdrop-blur-md border-b border-neutral-800 flex justify-center gap-8 py-3.5">
+        <a href="index.html" class="text-white text-sm font-bold tracking-wide">Home</a>
+        <a href="about.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">About</a>
+        <a href="faq.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">FAQ</a>
+        <a href="privacy.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Privacy</a>
     </nav>
 
-    <div class="feed-container">
-        
-        <header>
-            <div class="brand">
-                <img src="logo.png" alt="Squeezes Logo">
-            </div>
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="font-size: 0.85rem; color: var(--x-text-muted); background: #16181c; padding: 4px 12px; border-radius: 9999px;">
-                    Total Posts: <span id="globalPostCount" style="color: var(--x-text-main); font-weight: 700;">0</span>
-                </div>
-            </div>
-        </header>
+    <div class="max-w-2xl mx-auto min-h-screen flex flex-col border-x border-neutral-800">
+        <header class="sticky top-[49px] bg-black/90 backdrop-blur-md border-b border-neutral-800 p-4 z-40 flex justify-between items-center">
+    <h2 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+        <img src="logo.png" alt="Logo" class="w-6 h-6"> InteractInk
+    </h2>
 
-        <div class="feed-tabs">
-            <div class="feed-tab active" id="tabLatest" onclick="switchFeedTab('latest')">Latest</div>
-            <div class="feed-tab" id="tabTrending" onclick="switchFeedTab('trending')">Trending (24h)</div>
+    <div class="flex items-center gap-2">
+        <div class="px-3 py-1 text-[10px] font-mono font-semibold text-neutral-400 bg-neutral-900 border border-neutral-800 rounded-full uppercase tracking-wider">
+            Total Posts: <span id="globalPostCount" class="text-white">0</span>
         </div>
+        
+        <div class="px-3 py-1 flex items-center gap-2 rounded-full bg-neutral-900 border border-neutral-800">
+            <span class="relative flex h-1.5 w-1.5 shrink-0">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+            </span>
+            <span class="text-[10px] text-neutral-400 uppercase tracking-wider font-semibold">Online</span>
+        </div>
+    </div>
+</header>
 
-        <section class="composer-section">
-            <div class="composer-body">
-                <form id="threadForm">
-                    <input type="text" id="threadTitle" placeholder="Alias Name (Optional)..." maxlength="50" autocomplete="off" class="composer-input-name">
-                    <textarea id="threadContent" placeholder="What is happening?!" required rows="3" maxlength="1000" class="composer-input-text"></textarea>
-                    
-                    <div class="format-toolbar">
-                        <button type="button" class="format-btn" onclick="applyFormat('**')"><b>B</b> Bold</button>
-                        <button type="button" class="format-btn" onclick="applyFormat('*')"><i>I</i> Italic</button>
-                        <button type="button" class="format-btn" onclick="applyFormat('__')"><u>U</u> Underline</button>
-                        <button type="button" class="format-btn" onclick="applyFormat('~~')"><s>S</s> Strike</button>
-                        <button type="button" class="format-btn" onclick="applyFormat('`')"><code>C</code> Code</button>
-                        <button type="button" class="format-btn" onclick="applyFormat('||')"><span style="background:#555; padding:0 2px; border-radius:2px;">Spoiler</span></button>
+        <section class="p-4 border-b border-neutral-800">
+            <form id="threadForm" class="pt-1">
+                <input type="text" id="threadTitle" placeholder="Your Name (Optional)..." maxlength="50" autocomplete="off"
+                       class="w-full bg-transparent text-white text-base font-bold pb-2 focus:outline-none placeholder:text-neutral-600 border-b border-neutral-900 mb-3">
+                <textarea id="threadContent" placeholder="What is happening? Links are automatically hyperlinked..." required rows="3" maxlength="1000"
+                          class="w-full bg-transparent text-white text-sm focus:outline-none placeholder:text-neutral-500 resize-none leading-relaxed"></textarea>
+                
+                <div class="flex justify-between items-center border-t border-neutral-950 pt-3 mt-2">
+                    <div class="text-neutral-600 flex gap-4 items-center text-sm">
+                        <i data-lucide="shield-check" class="w-4 h-4 text-neutral-500" title="Auto-Tripcode compilation layer active"></i>
+                        <span class="text-xs text-neutral-500 hidden sm:inline">Secure Broadcast</span>
                     </div>
-
-                    <div class="composer-actions">
-                        <div style="color: var(--x-text-muted); display: flex; align-items: center; gap: 4px; font-size: 0.85rem;">
-                            <i data-lucide="shield" style="width: 16px; height: 16px; color: var(--x-text-muted);"></i>
-                            <span>Decentralized Network Layer</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <span id="threadCharCounter" style="font-size: 0.8rem; color: var(--x-text-muted);">0/1000</span>
-                            <button type="submit" class="composer-btn">Post</button>
-                        </div>
+                    <div class="flex items-center gap-3">
+                        <span id="threadCharCounter" class="text-[11px] font-mono text-neutral-600">0/1000</span>
+                        <button type="submit" class="bg-white text-black hover:bg-neutral-200 font-bold px-5 py-2 rounded-full transition duration-200 text-sm cursor-pointer shadow-sm">
+                            Post
+                        </button>
                     </div>
-                </form>
-            </div>
+                </div>
+            </form>
         </section>
 
-        <div id="latestStream">
-            <div class="timeline-indicator">Synchronizing secure handshake...</div>
+        <div class="flex border-b border-neutral-800 text-sm font-bold bg-neutral-950/30">
+            <button id="tabLatest" onclick="switchFeedFilter('latest')" class="flex-1 text-center py-3.5 text-white border-b-2 border-emerald-500 transition">Latest</button>
+            <button id="tabTrending" onclick="switchFeedFilter('trending')" class="flex-1 text-center py-3.5 text-neutral-500 border-b-2 border-transparent hover:bg-neutral-900 hover:text-white transition">Trending</button>
         </div>
 
-        <div id="paginationControls" class="pagination-container"></div>
+        <main id="latestStream" class="divide-y divide-neutral-800 flex-1"></main>
+        
+        <div id="paginationControls" class="flex justify-center items-center gap-2 p-6 border-t border-neutral-800 mb-8"></div>
     </div>
 
-    <div id="threadModal" class="x-modal-backdrop">
-        <div class="x-modal-card">
-            <div class="x-modal-header">
-                <button onclick="closeThreadModal()" class="x-modal-close">
-                    <i data-lucide="arrow-left" style="width: 20px; height: 20px;"></i>
+    <div id="threadModal" class="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-black border border-neutral-800 w-full max-w-xl rounded-2xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+            <div class="p-4 border-b border-neutral-800 flex justify-between items-center bg-black">
+                <div class="flex items-center gap-2 text-xs text-neutral-500 font-medium">
+                    <i data-lucide="cpu" class="w-3.5 h-3.5 text-neutral-500"></i>
+                    <span id="modalMeta" class="uppercase tracking-wider">Node Directory Reference</span>
+                </div>
+                <button onclick="closeThreadModal()" class="text-neutral-400 hover:text-white p-1 hover:bg-neutral-900 rounded-full transition cursor-pointer">
+                    <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
-                <span id="modalMeta" style="margin-left: 16px; font-weight: 700; font-size: 1.1rem;">Post</span>
             </div>
             
-            <div class="x-modal-content" id="modalScrollBody">
-                <div style="display: flex; flex-direction: column; width: 100%;">
-                    <span id="modalTitle" style="font-weight: 800; font-size: 1.05rem;"></span>
-                    <div style="color: var(--x-text-muted); font-size: 0.85rem; margin-bottom: 12px;" id="modalTimestamp"></div>
-                    <p id="modalOpBody" style="font-size: 1.25rem; line-height: 1.5; color: var(--x-text-main); white-space: pre-wrap; word-break: break-words;"></p>
+            <div class="flex-1 overflow-y-auto p-4 space-y-6" id="modalScrollBody">
+                <div class="min-w-0">
+                    <div class="flex items-baseline gap-2 mb-2">
+                        <span id="modalTitle" class="font-bold text-white text-base truncate uppercase tracking-wide border-b border-neutral-900 pb-1 w-full">Subject Target</span>
+                    </div>
+                    <p id="modalOpBody" class="text-neutral-200 text-sm leading-relaxed break-words whitespace-pre-wrap pt-1"></p>
                 </div>
 
-                <div style="height: 1px; background: var(--x-border); margin: 16px 0;"></div>
-                
-                <div id="commentTreeContainer"></div>
+                <div class="border-b border-neutral-800"></div>
+
+                <div id="commentTreeContainer" class="space-y-4"></div>
             </div>
 
-            <div class="x-modal-footer">
-                <form id="commentForm" style="display: flex; gap: 12px; align-items: center;">
-                    <input type="text" id="commentInput" placeholder="Post your reply..." required maxlength="300"
-                           style="flex: 1; background: #16181c; border: none; color: white; padding: 10px 16px; border-radius: 9999px; outline: none; font-size: 0.95rem;">
-                    <span id="commentCharCounter" style="font-size: 0.8rem; color: var(--x-text-muted); font-family: monospace;">0/300</span>
-                    <button type="submit" class="composer-btn" style="padding: 6px 16px; font-size: 0.85rem;">Reply</button>
+            <div class="p-4 border-t border-neutral-800 bg-black">
+                <form id="commentForm" class="flex gap-3 items-center">
+                    <div class="text-neutral-500 shrink-0">
+                        <i data-lucide="corner-down-right" class="w-4 h-4"></i>
+                    </div>
+                    <input type="text" id="commentInput" placeholder="Post your reply... (Use >>ID to interlink)" autocomplete="off" required maxlength="300"
+                           class="flex-1 bg-transparent text-sm text-white focus:outline-none placeholder:text-neutral-600">
+                    <span id="commentCharCounter" class="text-[11px] font-mono text-neutral-600 shrink-0 select-none">0/300</span>
+                    <button type="submit" class="bg-white text-black hover:bg-neutral-200 font-bold px-4 py-1.5 rounded-full text-xs transition duration-200 cursor-pointer shrink-0">
+                        Reply
+                    </button>
                 </form>
             </div>
         </div>
     </div>
 
-    <div id="hoverPreviewBox"></div>
+    <div id="hoverPreviewBox" class="absolute bg-neutral-900 border border-neutral-700 text-neutral-200 text-xs p-3 rounded-xl shadow-2xl hidden z-50 max-w-xs pointer-events-none font-sans"></div>
 
     <script>
         const SUPABASE_URL = "https://xdshsodkuyawljzuirqt.supabase.co";
@@ -622,42 +143,29 @@
         
         let supabaseClient;
         const appState = { 
-            threads: [], 
+            threads: {}, 
             comments: {}, 
             commentCounts: {}, 
             activeThreadId: null, 
             userSeed: null, 
             cachedCounts: { threads: 0, comments: 0 },
-            currentPage: 1,
-            threadsPerPage: 15,
-            currentFeedMode: 'latest',
-            userCountryCode: '' // Stores ISO code format now (e.g. 'uz', 'us')
+            feedFilter: 'latest', 
+            currentPage: 1, 
+            threadsPerPage: 10 
         };
 
         window.addEventListener('load', async () => {
-            if (window.supabase) {
-                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-                initSeedEngine();
-                bindEventListeners();
-                await fetchCountryCode(); 
-                await fetchCountAndPage(1);
-                initRealtimeSync();
-            }
+            if (!window.supabase) return;
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            
+            initSeedEngine();
+            bindEventListeners();
+            await fetchInitialData();
+            initRealtimeSync();
+            renderThreads();
             lucide.createIcons();
+            setInterval(() => renderThreads(), 30000);
         });
-
-        // Geolocation system utilizing raw ISO codes 
-        async function fetchCountryCode() {
-            try {
-                const response = await fetch('https://ipwho.is/');
-                const data = await response.json();
-                if (data && data.success && data.country_code) {
-                    appState.userCountryCode = data.country_code.toLowerCase();
-                }
-            } catch (err) {
-                console.error("Geolocation verification bypassed:", err);
-            }
-        }
 
         function initSeedEngine() {
             let seed = localStorage.getItem('ink_private_seed_key');
@@ -676,38 +184,19 @@
             return 'Anon#' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 4);
         }
 
-        function applyFormat(marker) {
-            const textarea = document.getElementById('threadContent');
-            const start = textarea.selectionStart;
-            const end = textarea.selectionEnd;
-            const text = textarea.value;
-
-            const selectedText = text.substring(start, end);
-            const replacement = marker + selectedText + marker;
-
-            textarea.value = text.substring(0, start) + replacement + text.substring(end);
-            textarea.focus();
-            textarea.selectionStart = start + marker.length;
-            textarea.selectionEnd = start + marker.length + selectedText.length;
-            
-            document.getElementById('threadCharCounter').innerText = `${textarea.value.length}/1000`;
-        }
-
-        async function switchFeedTab(mode) {
-            if (appState.currentFeedMode === mode) return;
-            appState.currentFeedMode = mode;
-            
-            document.getElementById('tabLatest').classList.toggle('active', mode === 'latest');
-            document.getElementById('tabTrending').classList.toggle('active', mode === 'trending');
-            
-            await fetchCountAndPage(1);
-        }
-
-        async function fetchCountAndPage(pageNumber) {
-            document.getElementById('latestStream').innerHTML = `<div class="timeline-indicator">Synchronizing secure handshake...</div>`;
-            appState.currentPage = pageNumber;
-            
+        async function fetchInitialData() {
             try {
+                // Fetch more limit to allow pagination to work visually
+                const { data: threads } = await supabaseClient.from('threads').select('*').order('timestamp', { ascending: false }).limit(100);
+                if (threads) threads.forEach(t => appState.threads[t.id] = t);
+
+                const { data: commentIds } = await supabaseClient.from('comments').select('thread_id');
+                if (commentIds) {
+                    commentIds.forEach(c => {
+                        appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
+                    });
+                }
+
                 const [threadCountRes, commentCountRes] = await Promise.all([
                     supabaseClient.from('threads').select('*', { count: 'exact', head: true }),
                     supabaseClient.from('comments').select('*', { count: 'exact', head: true })
@@ -715,116 +204,29 @@
 
                 appState.cachedCounts.threads = threadCountRes.count || 0;
                 appState.cachedCounts.comments = commentCountRes.count || 0;
+                
                 updateGlobalCounterUI();
-
-                const { data: commentIds } = await supabaseClient.from('comments').select('thread_id');
-                appState.commentCounts = {};
-                if (commentIds) {
-                    commentIds.forEach(c => {
-                        appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
-                    });
-                }
-
-                if (appState.currentFeedMode === 'trending') {
-                    const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
-                    const { data: trendingThreads } = await supabaseClient.from('threads')
-                        .select('*')
-                        .gte('timestamp', oneDayAgo);
-
-                    let compiled = trendingThreads || [];
-                    compiled.sort((a, b) => {
-                        const engagementA = (appState.commentCounts[a.id] || 0) + (a.upvotes || 0);
-                        const engagementB = (appState.commentCounts[b.id] || 0) + (b.upvotes || 0);
-                        return engagementB - engagementA;
-                    });
-
-                    const fromIndex = (pageNumber - 1) * appState.threadsPerPage;
-                    appState.threads = compiled.slice(fromIndex, fromIndex + appState.threadsPerPage);
-                    appState.cachedCounts.threads = compiled.length; 
-                } else {
-                    const fromIndex = (pageNumber - 1) * appState.threadsPerPage;
-                    const toIndex = fromIndex + appState.threadsPerPage - 1;
-
-                    const { data: threads } = await supabaseClient.from('threads')
-                        .select('*')
-                        .order('timestamp', { ascending: false })
-                        .range(fromIndex, toIndex);
-                    
-                    appState.threads = threads || [];
-                }
-
-                renderThreads();
-                renderPaginationControls();
             } catch (err) { console.error(err); }
-        }
-
-        function renderPaginationControls() {
-            const container = document.getElementById('paginationControls');
-            const totalPages = Math.ceil(appState.cachedCounts.threads / appState.threadsPerPage) || 1;
-            const current = appState.currentPage;
-            
-            if (totalPages <= 1) {
-                container.innerHTML = '';
-                return;
-            }
-
-            let html = `
-                <button class="page-btn" ${current === 1 ? 'disabled' : ''} onclick="fetchCountAndPage(${current - 1})">
-                    <i data-lucide="chevron-left" style="width:16px; height:16px;"></i>
-                </button>
-            `;
-
-            const delta = 1; 
-            let pages = [];
-
-            for (let i = 1; i <= totalPages; i++) {
-                if (i === 1 || i === totalPages || (i >= current - delta && i <= current + delta)) {
-                    pages.push(i);
-                } else if (pages[pages.length - 1] !== '...') {
-                    pages.push('...');
-                }
-            }
-
-            pages.forEach(p => {
-                if (p === '...') {
-                    html += `<span class="page-ellipsis">...</span>`;
-                } else {
-                    html += `
-                        <button class="page-btn ${p === current ? 'active' : ''}" onclick="fetchCountAndPage(${p})">
-                            ${p}
-                        </button>
-                    `;
-                }
-            });
-
-            html += `
-                <button class="page-btn" ${current === totalPages ? 'disabled' : ''} onclick="fetchCountAndPage(${current + 1})">
-                    <i data-lucide="chevron-right" style="width:16px; height:16px;"></i>
-                </button>
-            `;
-
-            container.innerHTML = html;
-            lucide.createIcons();
         }
 
         function initRealtimeSync() {
             supabaseClient.channel('global-changes')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'threads' }, async payload => {
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'threads' }, payload => {
                     if (payload.eventType === 'INSERT') {
+                        appState.threads[payload.new.id] = payload.new;
                         appState.cachedCounts.threads++;
+                    } else if (payload.eventType === 'UPDATE') {
+                        appState.threads[payload.new.id] = payload.new;
                     }
                     updateGlobalCounterUI();
-                    if (appState.currentPage === 1) {
-                        await fetchCountAndPage(1);
-                    } else {
-                        renderPaginationControls();
-                    }
+                    renderThreads();
                 })
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, payload => {
                     if (payload.eventType === 'INSERT') {
                         const c = payload.new;
                         appState.cachedCounts.comments++;
                         appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
+                        
                         if (appState.activeThreadId === c.thread_id) {
                             if (!appState.comments[c.thread_id]) appState.comments[c.thread_id] = {};
                             appState.comments[c.thread_id][c.id] = c;
@@ -839,6 +241,27 @@
 
         function updateGlobalCounterUI() {
             document.getElementById('globalPostCount').innerText = appState.cachedCounts.threads + appState.cachedCounts.comments;
+        }
+
+        function switchFeedFilter(filter) {
+            appState.feedFilter = filter;
+            appState.currentPage = 1; // Reset to page 1 on filter switch
+            
+            document.getElementById('tabLatest').className = filter === 'latest' 
+                ? 'flex-1 text-center py-3.5 text-white border-b-2 border-emerald-500 transition' 
+                : 'flex-1 text-center py-3.5 text-neutral-500 border-b-2 border-transparent hover:bg-neutral-900 hover:text-white transition';
+                
+            document.getElementById('tabTrending').className = filter === 'trending' 
+                ? 'flex-1 text-center py-3.5 text-white border-b-2 border-emerald-500 transition' 
+                : 'flex-1 text-center py-3.5 text-neutral-500 border-b-2 border-transparent hover:bg-neutral-900 hover:text-white transition';
+                
+            renderThreads();
+        }
+
+        function changePage(page) {
+            appState.currentPage = page;
+            renderThreads();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function bindEventListeners() {
@@ -859,171 +282,235 @@
                 const title = document.getElementById('threadTitle');
                 const id = Math.random().toString(16).substring(2, 10);
                 const parsedTitle = title.value.trim() || 'Anonymous';
-                
-                // Stores raw ISO string code inside table row
-                await supabaseClient.from('threads').insert([{ 
-                    id, 
-                    title: parsedTitle, 
-                    content: threadContent.value.trim(), 
-                    timestamp: Date.now(), 
-                    upvotes: 1,
-                    country_flag: appState.userCountryCode 
-                }]);
-                
-                title.value = '';
-                threadContent.value = '';
+
+                await supabaseClient.from('threads').insert([{ id, title: parsedTitle, content: threadContent.value.trim(), timestamp: Date.now(), upvotes: 1 }]);
+                title.value = ''; threadContent.value = '';
                 threadCharCounter.innerText = '0/1000';
             });
 
             document.getElementById('commentForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 if (!appState.activeThreadId) return;
+
                 const id = Math.random().toString(16).substring(2, 10);
                 const tripcode = await generateTripcode(appState.activeThreadId, appState.userSeed);
+                const textVal = commentInput.value.trim();
+
+                await supabaseClient.from('comments').insert([{ id, thread_id: appState.activeThreadId, tripcode, text: textVal, timestamp: Date.now() }]);
                 
-                await supabaseClient.from('comments').insert([{ 
-                    id, 
-                    thread_id: appState.activeThreadId, 
-                    tripcode, 
-                    text: commentInput.value.trim(), 
-                    timestamp: Date.now() 
-                }]);
+                if (!appState.comments[appState.activeThreadId]) appState.comments[appState.activeThreadId] = {};
+                appState.comments[appState.activeThreadId][id] = { id, thread_id: appState.activeThreadId, tripcode, text: textVal, timestamp: Date.now() };
                 
+                renderCommentTree();
                 commentInput.value = '';
                 commentCharCounter.innerText = '0/300';
             });
         }
 
-        function formatTime(ms) {
-            const diff = Date.now() - ms;
-            if (diff < 60000) return 'Just now';
-            const mins = Math.floor(diff / 60000);
-            if (mins < 60) return `${mins}m`;
-            const hours = Math.floor(mins / 60);
-            if (hours < 24) return `${hours}h`;
-            return new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-        }
-
         function renderThreads() {
-            const target = document.getElementById('latestStream');
-            if(appState.threads.length === 0) {
-                target.innerHTML = `<div class="timeline-indicator">No active matrix broadcasts. Start one above.</div>`;
-                return;
-            }
+            const threadList = Object.values(appState.threads);
+            let sorted = [];
             
-            target.innerHTML = appState.threads.map(t => {
-                const count = appState.commentCounts[t.id] || 0;
-                
-                // Layout pattern matching: [Name] · [Flag] utilizing CSS/SVG background sprites
-                const flagMarkup = t.country_flag ? `
-                    <span class="tweet-author-divider">·</span>
-                    <span class="flag-wrapper" title="Country: ${t.country_flag.toUpperCase()}">
-                        <span class="fi fi-${t.country_flag}"></span>
-                    </span>
-                ` : '';
+            // Sorting Logic (Latest vs Trending)
+            if (appState.feedFilter === 'trending') {
+                sorted = [...threadList].sort((a, b) => {
+                    const scoreA = appState.commentCounts[a.id] || 0;
+                    const scoreB = appState.commentCounts[b.id] || 0;
+                    if (scoreA === scoreB) return b.timestamp - a.timestamp; // Tie breaker
+                    return scoreB - scoreA;
+                });
+            } else {
+                sorted = [...threadList].sort((a, b) => b.timestamp - a.timestamp);
+            }
 
-                return `
-                    <div class="tweet-card" onclick="openThreadModal('${t.id}')">
-                        <div class="tweet-main">
-                            <div class="tweet-header">
-                                <div class="tweet-author-wrapper">
-                                    <span class="tweet-author">${escapeHTML(t.title)}</span>
-                                    ${flagMarkup}
-                                    <span class="tweet-meta">· ${formatTime(t.timestamp)}</span>
-                                </div>
-                            </div>
-                            <p class="tweet-content">${parseBodyContent(t.content)}</p>
-                            <div class="tweet-footer">
-                                <div class="tweet-action-item">
-                                    <i data-lucide="message-circle" style="width: 16px; height: 16px;"></i>
-                                    <span>${count}</span>
-                                </div>
-                                <div class="tweet-action-item">
-                                    <i data-lucide="shield-check" style="width: 16px; height: 16px;"></i>
-                                    <span style="font-size: 0.75rem; font-family: monospace;">SECURE</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+            // Pagination Logic
+            const startIndex = (appState.currentPage - 1) * appState.threadsPerPage;
+            const paginatedList = sorted.slice(startIndex, startIndex + appState.threadsPerPage);
+            
+            const latestContainer = document.getElementById('latestStream');
+            latestContainer.innerHTML = '';
+            
+            if (paginatedList.length === 0) {
+                latestContainer.innerHTML = '<div class="text-neutral-500 text-center py-10 text-sm">No threads found.</div>';
+            } else {
+                paginatedList.forEach(t => latestContainer.appendChild(createThreadElementCard(t)));
+            }
+
+            renderPaginationControls(sorted.length);
             lucide.createIcons();
         }
 
-        async function openThreadModal(id) {
-            appState.activeThreadId = id;
-            const thread = appState.threads.find(t => t.id === id);
+        function renderPaginationControls(totalItems) {
+            const container = document.getElementById('paginationControls');
+            const totalPages = Math.ceil(totalItems / appState.threadsPerPage) || 1;
+            
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+
+            let html = `<button onclick="changePage(${Math.max(1, appState.currentPage - 1)})" 
+                                class="p-2 border border-neutral-800 rounded hover:bg-neutral-900 text-white transition ${appState.currentPage === 1 ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}" 
+                                ${appState.currentPage === 1 ? 'disabled' : ''}>
+                            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                        </button>`;
+            
+            // Generate numbered slides
+            for(let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= appState.currentPage - 1 && i <= appState.currentPage + 1)) {
+                    html += `<button onclick="changePage(${i})" 
+                                     class="w-9 h-9 flex items-center justify-center border border-neutral-800 rounded text-sm transition cursor-pointer 
+                                     ${i === appState.currentPage ? 'bg-white text-black font-bold' : 'hover:bg-neutral-900 text-neutral-400'}">
+                                ${i}
+                             </button>`;
+                } else if (i === appState.currentPage - 2 || i === appState.currentPage + 2) {
+                    html += `<span class="text-neutral-600 px-1">...</span>`;
+                }
+            }
+
+            html += `<button onclick="changePage(${Math.min(totalPages, appState.currentPage + 1)})" 
+                                class="p-2 border border-neutral-800 rounded hover:bg-neutral-900 text-white transition ${appState.currentPage === totalPages ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}" 
+                                ${appState.currentPage === totalPages ? 'disabled' : ''}>
+                            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                        </button>`;
+            
+            container.innerHTML = html;
+        }
+
+        function createThreadElementCard(thread) {
+            const dateStr = new Date(thread.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const dynamicCommentCount = appState.commentCounts[thread.id] || 0;
+            const card = document.createElement('div');
+            card.className = "p-4 hover:bg-neutral-900/40 cursor-pointer transition duration-200 flex flex-col";
+            card.onclick = () => openThreadModal(thread.id);
+            
+            const processedContent = parseRichTextContent(escapeHTML(thread.content));
+            
+            card.innerHTML = `
+                <div class="flex items-center justify-between text-xs text-neutral-500 mb-1">
+                    <span class="font-bold text-neutral-300 uppercase tracking-wide truncate max-w-[70%]">${escapeHTML(thread.title)}</span>
+                    <span class="font-mono text-[11px]">>>${thread.id} · ${dateStr}</span>
+                </div>
+                <div class="text-neutral-300 text-sm leading-relaxed mb-3 break-words whitespace-pre-wrap">${processedContent}</div>
+                <div class="flex items-center gap-6 text-xs text-neutral-500">
+                    <span class="flex items-center gap-1.5 hover:text-neutral-300 transition"><i data-lucide="message-square" class="w-4 h-4"></i> ${dynamicCommentCount} Replies</span>
+                </div>
+            `;
+            return card;
+        }
+
+        async function openThreadModal(tId) {
+            appState.activeThreadId = tId;
+            const thread = appState.threads[tId];
             if (!thread) return;
 
+            document.getElementById('modalMeta').innerText = `NODE SYSTEM: >>${thread.id} // VERIFIED PIPELINE`;
             document.getElementById('modalTitle').innerText = thread.title;
-            document.getElementById('modalTimestamp').innerText = new Date(thread.timestamp).toLocaleString();
-            document.getElementById('modalOpBody').innerHTML = parseBodyContent(thread.content);
-            document.getElementById('modalMeta').innerText = `Post Instance Node [${id}]`;
-            document.getElementById('commentTreeContainer').innerHTML = `<div class="timeline-indicator">Streaming tree nodes...</div>`;
-            document.getElementById('threadModal').classList.add('active');
-
+            document.getElementById('modalOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content));
+            document.getElementById('threadModal').classList.remove('hidden');
+            
+            document.getElementById('commentTreeContainer').innerHTML = `<div class="text-xs text-neutral-600 text-center py-6 font-mono animate-pulse">Syncing linked node packets...</div>`;
+            
             try {
-                const { data: comments } = await supabaseClient.from('comments').select('*').eq('thread_id', id).order('timestamp', { ascending: true });
-                appState.comments[id] = {};
-                if (comments) comments.forEach(c => appState.comments[id][c.id] = c);
+                const { data: comments } = await supabaseClient.from('comments').select('*').eq('thread_id', tId);
+                appState.comments[tId] = {};
+                if (comments) comments.forEach(c => appState.comments[tId][c.id] = c);
                 renderCommentTree();
-            } catch(e) { console.error(e); }
+            } catch (err) { console.error(err); }
         }
 
         function closeThreadModal() {
-            document.getElementById('threadModal').classList.remove('active');
+            document.getElementById('threadModal').classList.add('hidden');
             appState.activeThreadId = null;
+            document.getElementById('commentInput').value = '';
+            document.getElementById('commentCharCounter').innerText = '0/300';
         }
 
         function renderCommentTree() {
             const container = document.getElementById('commentTreeContainer');
+            container.innerHTML = '';
             const commentsMap = appState.comments[appState.activeThreadId] || {};
-            const list = Object.values(commentsMap);
+            const rawCommentsList = Object.values(commentsMap).sort((a, b) => a.timestamp - b.timestamp);
 
-            if(list.length === 0) {
-                container.innerHTML = `<div style="color: var(--x-text-muted); text-align: center; font-size: 0.9rem; padding: 16px 0;">Be the first to reply to this node cluster.</div>`;
+            if (rawCommentsList.length === 0) {
+                container.innerHTML = `<div class="text-xs text-neutral-600 text-center py-6 font-mono">No communication packets linked to this cluster root.</div>`;
                 return;
             }
 
-            container.innerHTML = list.map(c => `
-                <div class="comment-node">
-                    <div style="display: flex; flex-direction: column; width: 100%;">
-                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px;">
-                            <span style="font-weight: 700; color: var(--x-text-main);">${c.tripcode}</span>
-                            <span style="font-family: monospace; color: var(--x-text-muted); font-size: 0.75rem;">>>${c.id}</span>
-                        </div>
-                        <p style="font-size: 0.95rem; color: var(--x-text-main); line-height: 1.4; word-break: break-words;">${parseBodyContent(c.text)}</p>
-                    </div>
-                </div>
-            `).join('');
+            const commentMapRef = {};
+            const treeRootNodes = [];
+
+            rawCommentsList.forEach(c => commentMapRef[c.id] = { ...c, children: [] });
+            rawCommentsList.forEach(c => {
+                const node = commentMapRef[c.id];
+                const match = c.text.match(/^&gt;&gt;([A-Fa-f0-9]{8})/); 
+                const rawMatch = c.text.match(/^>>([A-Fa-f0-9]{8})/);
+                const targetedParentId = (rawMatch ? rawMatch[1] : null) || (match ? match[1] : null);
+
+                if (targetedParentId && commentMapRef[targetedParentId]) {
+                    commentMapRef[targetedParentId].children.push(node);
+                } else {
+                    treeRootNodes.push(node);
+                }
+            });
+
+            treeRootNodes.forEach(rootNode => container.appendChild(buildCommentTreeUI(rootNode, 0)));
+            setupCrossLinkHoverPreviews();
             lucide.createIcons();
-            bindHoverPreviews();
         }
 
-        // Expanded Structural Regex Parser Core engine
-        function parseBodyContent(str) {
-            if (!str) return '';
-            let html = escapeHTML(str);
+        function buildCommentTreeUI(node, depth) {
+            const wrap = document.createElement('div');
+            wrap.className = `flex flex-col ${depth > 0 ? 'ml-4 border-l border-neutral-800 pl-4 mt-3' : 'border-b border-neutral-900 pb-3'}`;
             
-            html = html.replace(/\*\*([\s\S]+?)\*\*/g, '<b>$1</b>');
-            html = html.replace(/__([\s\S]+?)__/g, '<u>$1</u>'); // Underline markup token
-            html = html.replace(/\*([\s\S]+?)\*/g, '<i>$1</i>');
-            html = html.replace(/~~([\s\S]+?)~~/g, '<s>$1</s>'); // Strikethrough markup token
-            html = html.replace(/`([\s\S]+?)`/g, '<code>$1</code>');
-            
-            // Spoiler markup conversion (wraps into click-to-reveal container element)
-            html = html.replace(/\|\|([\s\S]+?)\|\|/g, '<span class="spoiler" onclick="this.classList.add(\'revealed\')">$1</span>');
+            const item = document.createElement('div');
+            item.className = "p-3 bg-neutral-950/40 rounded-xl border border-neutral-900 text-sm";
+            item.id = `comment-${node.id}`;
 
-            const urlRegex = /(https?:\/\/[^\s]+)/g;
-            html = html.replace(urlRegex, url => `<a href="${url}" target="_blank" rel="noopener noreferrer" class="user-link">${url}</a>`);
-            const referenceRegex = /&gt;&gt;([a-f0-9]{8})/g;
-            html = html.replace(referenceRegex, (match, targetId) => `<a href="#" class="user-link tree-ref" data-preview-id="${targetId}">${match}</a>`);
-            return html;
+            const dateStr = new Date(node.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const structuralLinkedProcessedText = parseRichTextContent(escapeHTML(node.text));
+
+            item.innerHTML = `
+                <div class="flex justify-between items-center text-xs text-neutral-500 mb-2 border-b border-neutral-900 pb-1">
+                    <span class="font-bold text-neutral-300 font-mono bg-neutral-900 px-1.5 py-0.5 rounded">${node.tripcode}</span>
+                    <span class="font-mono text-[11px]">${dateStr} [>>${node.id}]</span>
+                </div>
+                <div class="text-neutral-300 leading-relaxed break-words whitespace-pre-wrap">${structuralLinkedProcessedText}</div>
+                <div class="flex justify-end mt-2">
+                    <button onclick="appendReplyPointer('${node.id}')" class="text-xs text-neutral-500 hover:text-white flex items-center gap-1 font-medium cursor-pointer"><i data-lucide="reply" class="w-3.5 h-3.5"></i> Reply</button>
+                </div>
+            `;
+            wrap.appendChild(item);
+
+            if (node.children && node.children.length > 0) {
+                node.children.forEach(child => wrap.appendChild(buildCommentTreeUI(child, depth + 1)));
+            }
+            return wrap;
         }
 
-        function bindHoverPreviews() {
+        function appendReplyPointer(cId) {
+            const input = document.getElementById('commentInput');
+            input.value = `>>${cId} ` + input.value;
+            document.getElementById('commentCharCounter').innerText = `${input.value.length}/300`;
+            input.focus();
+        }
+
+        function parseRichTextContent(text) {
+            if (!text) return '';
+            const nodeCrossRegex = /&gt;&gt;([A-Fa-f0-9]{8})/g;
+            text = text.replace(nodeCrossRegex, (match, id) => {
+                return `<a href="#comment-${id}" data-preview-id="${id}" class="text-white underline font-bold cross-link-node" onclick="event.stopPropagation();">${match}</a>`;
+            });
+            const rawUrlRegex = /(https?:\/\/[^\s]+)/g;
+            text = text.replace(rawUrlRegex, (url) => {
+                return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="user-link" onclick="event.stopPropagation();">${url}</a>`;
+            });
+            return text;
+        }
+
+        function setupCrossLinkHoverPreviews() {
+            const links = document.querySelectorAll('.cross-link-node');
             const previewBox = document.getElementById('hoverPreviewBox');
-            const links = document.querySelectorAll('.tree-ref');
 
             links.forEach(link => {
                 link.addEventListener('mouseenter', (e) => {
@@ -1033,22 +520,22 @@
 
                     if (targetComment) {
                         previewBox.innerHTML = `
-                            <div style="font-family: monospace; font-size: 11px; color: var(--x-blue); font-weight: bold; margin-bottom: 4px;">${targetComment.tripcode} [>>${targetComment.id}]</div>
-                            <p style="color: var(--x-text-main); line-height: 1.4;">${escapeHTML(targetComment.text)}</p>
+                            <div class="text-[10px] text-white font-bold mb-1 border-b border-neutral-800 pb-0.5 uppercase font-mono">${targetComment.tripcode} [>>${targetComment.id}]</div>
+                            <p class="text-neutral-400 leading-snug">${escapeHTML(targetComment.text)}</p>
                         `;
-                        previewBox.style.display = 'block';
+                        previewBox.classList.remove('hidden');
                         const rect = link.getBoundingClientRect();
                         previewBox.style.left = `${rect.left + window.scrollX}px`;
                         previewBox.style.top = `${rect.top + window.scrollY - previewBox.offsetHeight - 10}px`;
                     }
                 });
-                link.addEventListener('mouseleave', () => previewBox.style.display = 'none');
+                link.addEventListener('mouseleave', () => previewBox.classList.add('hidden'));
             });
         }
 
         function escapeHTML(str) {
             if (!str) return '';
-            return str.replace(/[&<>\"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' })[m]);
+            return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' })[m]);
         }
     </script>
 
