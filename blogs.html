@@ -3,221 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InteractInk Engineering Blog | The Master Optimization Archive</title>
-    <meta name="description" content="The complete archive of technical deep-dives into client-side image processing, high-performance web optimization, browser canvas rendering, and serverless asset privacy.">
+    <title>Blog - InteractInk</title>
+    <meta name="description" content="Articles on anonymity, online privacy, and how InteractInk works.">
+    <meta name="google-adsense-account" content="ca-pub-9357677827244243">
+    <meta name="google-site-verification" content="DOvTKyh77YUQreg4Dg6SaL1wEM33Da783l6lqsLek7Q" />
+
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9357677827244243" crossorigin="anonymous"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-527BWKF63G"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-527BWKF63G');
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
     <style>
-        :root {
-            --bg-color: #000000;
-            --accent-color: #ffffff;
-            --text-main: #f5f5f7;
-            --text-muted: #71767b;
-            --card-bg: rgba(255, 255, 255, 0.01);
-            --card-border: #16181c;
-            --hover-border: #333333;
-        }
-        
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            line-height: 1.6;
-            padding: 40px 20px;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        .container {
-            max-width: 700px;
-            margin: 0 auto;
-        }
-
-        header {
-            margin-bottom: 50px;
-            border-bottom: 1px solid var(--card-border);
-            padding-bottom: 30px;
-        }
-
-        header a {
-            color: var(--text-muted);
-            text-decoration: none;
-            font-size: 0.95rem;
-            display: inline-block;
-            margin-bottom: 15px;
-            transition: color 0.2s ease;
-        }
-
-        header a:hover {
-            color: var(--text-main);
-        }
-
-        h1 {
-            font-size: 2.2rem;
-            letter-spacing: -0.03em;
-            font-weight: 800;
-            margin-bottom: 10px;
-        }
-
-        .subtitle {
-            color: var(--text-muted);
-            font-size: 1.05rem;
-            max-width: 600px;
-        }
-
-        .blog-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 24px;
-        }
-
-        .blog-card {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 16px;
-            padding: 28px;
-            text-decoration: none;
-            color: inherit;
-            transition: transform 0.2s ease, border-color 0.2s ease;
-            display: block;
-        }
-
-        .blog-card:hover {
-            transform: translateY(-1px);
-            border-color: var(--hover-border);
-        }
-
-        .meta {
-            display: flex;
-            gap: 16px;
-            font-size: 0.75rem;
-            color: var(--text-main);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 12px;
-            font-weight: 600;
-        }
-
-        .meta span.category {
-            background: rgba(255, 255, 255, 0.06);
-            padding: 2px 8px;
-            border-radius: 4px;
-            border: 1px solid rgba(255, 255, 255, 0.04);
-        }
-
-        .blog-card h2 {
-            font-size: 1.35rem;
-            font-weight: 700;
-            margin-bottom: 10px;
-            line-height: 1.3;
-            letter-spacing: -0.01em;
-            transition: color 0.2s ease;
-        }
-
-        .blog-card:hover h2 {
-            color: var(--text-main);
-        }
-
-        .blog-card p {
-            color: var(--text-muted);
-            font-size: 0.95rem;
-            line-height: 1.5;
-        }
-
-        footer {
-            margin-top: 60px;
-            text-align: center;
-            padding-top: 30px;
-            border-top: 1px solid var(--card-border);
-            color: var(--text-muted);
-            font-size: 0.85rem;
-        }
+        body { background-color: #000000; color: #e7e9ea; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #000000; }
+        ::-webkit-scrollbar-thumb { background: #202327; border-radius: 9999px; }
+        .inline-link { color: #3b82f6; text-decoration: underline; font-weight: 500; transition: color 0.1s ease; }
+        .inline-link:hover { color: #60a5fa; }
+        .footer-link { color: #e7e9ea; text-decoration: none; margin: 0 14px; font-weight: 500; font-size: 0.85rem; transition: opacity 0.2s; display: inline-block; margin-bottom: 8px; }
+        .footer-link:hover { opacity: 0.7; }
     </style>
 </head>
-<body>
-
-    <div class="container">
-        <header>
-            <a href="index.html">← Back to Workspace App</a>
-            <h1>The Complete InteractInk Knowledge Library</h1>
-            <p class="subtitle">Every guide, technical blueprint, and performance roadmap engineered for local client-side file architectures.</p>
+<body class="min-h-screen font-sans antialiased selection:bg-neutral-800 selection:text-white">
+    <nav class="sticky top-0 z-50 w-full bg-black/95 backdrop-blur-md border-b border-neutral-800 flex justify-center flex-wrap gap-6 px-4 py-3.5">
+        <a href="../index.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Home</a>
+        <a href="../about.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">About</a>
+        <a href="../faq.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">FAQ</a>
+        <a href="../blog/index.html" class="text-white text-sm font-medium transition tracking-wide">Blog</a>
+        <a href="../contact.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Contact</a>
+        <a href="../privacy.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Privacy</a>
+    </nav>
+    <div class="max-w-2xl mx-auto min-h-screen flex flex-col border-x border-neutral-800">
+        <header class="sticky top-[49px] bg-black/90 backdrop-blur-md border-b border-neutral-800 p-4 z-40 flex items-center gap-2">
+            <img src="../logo.png" alt="Logo" class="w-6 h-6">
+            <h1 class="text-lg font-bold tracking-tight text-white">Blog</h1>
         </header>
+        <main class="px-5 py-6 flex-1">
 
-        <main class="blog-grid">
+<p class="text-neutral-300 text-sm leading-relaxed mb-4">Notes on anonymity, privacy, and how InteractInk works.</p>
+<div class="border border-neutral-800 rounded-xl overflow-hidden divide-y divide-neutral-800 mt-4">
 
-            <a href="blog-why-local-compression-matters.html" class="blog-card" style="border-left: 2px solid var(--text-main);">
-                <div class="meta">
-                    <span class="category">Core Architecture</span>
-                </div>
-                <h2>Why Client-Side Local Compression Matters</h2>
-                <p>An engineering breakdown of serverless web architectures, privacy vulnerabilities inherent in remote cloud computing, and how local runtime canvas isolating protects user assets.</p>
-            </a>
-            
-            <a href="compress-png-locally.html" class="blog-card">
-                <div class="meta">
-                    <span class="category">Programmatic Module</span>
-                </div>
-                <h2>Secure PNG Compressor Locally: Multi-Channel Optimization</h2>
-                <p>A deep look at stripping alpha-channel transparency maps and optimizing bit depths without data payloads touching public networks.</p>
-            </a>
-
-            <a href="alternative-to-tinypng.html" class="blog-card">
-                <div class="meta">
-                    <span class="category">Acquisition Cluster</span>
-                </div>
-                <h2>The Ultimate Free TinyPNG Alternative with Zero File Queue Limits</h2>
-                <p>An architectural analysis of localized browser context processing vs cloud-server execution streams. Learn how bypassing upload paywalls simplifies batch operations.</p>
-            </a>
-
-            <a href="compress-jpeg-alternatives.html" class="blog-card">
-                <div class="meta">
-                    <span class="category">Image Mechanics</span>
-                </div>
-                <h2>Evaluating Free Compress JPEG Alternatives for Professional Workflows</h2>
-                <p>A deep dive into local chromatic subsampling arrays and lossy quantization matrix overrides. Shrink visual asset files up to 80% using native browser window hardware context.</p>
-            </a>
-
-            <a href="squoosh-app-alternatives.html" class="blog-card">
-                <div class="meta">
-                    <span class="category">Web Architecture</span>
-                </div>
-                <h2>The Ultimate Squoosh App Alternative for Bulk Batch Processing</h2>
-                <p>How combining vanilla JavaScript execution loops with the native HTML5 Canvas API eliminates single-file optimization bottlenecks for development teams.</p>
-            </a>
-
-            <a href="photoshop-export-vs-local-compressor.html" class="blog-card">
-                <div class="meta">
-                    <span class="category">Performance Optimization</span>
-                </div>
-                <h2>Photoshop Export WebP vs. InteractInk In-Browser Compression Engines</h2>
-                <p>Bypass resource-heavy layout software pipelines. Discover how serverless predictive coding modules compile web-ready graphics instantly while maximizing Core Web Vitals marks.</p>
-            </a>
-
-            <a href="secure-confidential-image-compressors.html" class="blog-card">
-                <div class="meta">
-                    <span class="category">Data Privacy</span>
-                </div>
-                <h2>Secure Image Compression for Confidential and Sensitive Documentation</h2>
-                <p>How an isolated RAM memory structure blocks corporate data leak surfaces. Process identity cards, high-security invoices, and private assets with complete security compliance.</p>
-            </a>
-
-            <a href="free-iloveimg-alternatives.html" class="blog-card">
-                <div class="meta">
-                    <span class="category">Legacy Guides</span>
-                </div>
-                <h2>The Free iLoveIMG Batch Alternative Strategy Blueprint</h2>
-                <p>Configuring fast, concurrent browser canvas queues to compress hundreds of photos simultaneously without artificial server queue throttling.</p>
-            </a>
+    <a href="how-anonymous-posting-works.html" class="block p-4 hover:bg-neutral-950/50 transition border-b border-neutral-800">
+        <h3 class="text-white font-bold text-sm mb-1">How Anonymous Posting Actually Works</h3>
+        <p class="text-neutral-500 text-xs leading-relaxed">What anonymity on a text board actually protects you from, and what it doesn't.</p>
+    </a>
+    <a href="tripcodes-explained.html" class="block p-4 hover:bg-neutral-950/50 transition border-b border-neutral-800">
+        <h3 class="text-white font-bold text-sm mb-1">Tripcodes Explained: A Practical Guide</h3>
+        <p class="text-neutral-500 text-xs leading-relaxed">How InteractInk lets you follow anonymous conversations without accounts.</p>
+    </a>
+    <a href="online-privacy-basics.html" class="block p-4 hover:bg-neutral-950/50 transition border-b border-neutral-800">
+        <h3 class="text-white font-bold text-sm mb-1">Online Privacy Basics for Anonymous Communities</h3>
+        <p class="text-neutral-500 text-xs leading-relaxed">Practical habits for staying private beyond any single platform.</p>
+    </a>
+    <a href="history-of-anonymous-boards.html" class="block p-4 hover:bg-neutral-950/50 transition border-b border-neutral-800">
+        <h3 class="text-white font-bold text-sm mb-1">A Short History of Anonymous Message Boards</h3>
+        <p class="text-neutral-500 text-xs leading-relaxed">From BBS systems to imageboards: where the anonymous board format came from.</p>
+    </a>
+    <a href="how-to-use-interactink-safely.html" class="block p-4 hover:bg-neutral-950/50 transition border-b border-neutral-800">
+        <h3 class="text-white font-bold text-sm mb-1">How to Use InteractInk Safely</h3>
+        <p class="text-neutral-500 text-xs leading-relaxed">A practical guide to posting, replying, and reporting on the board.</p>
+    </a>
+</div>
 
         </main>
-
-        <footer>
-            <p>&copy; 2026 InteractInk Engine. 100% Client-Side. 0% Server Overhead.</p>
-        </footer>
     </div>
 
+    <footer style="width: 100%; text-align: center; padding: 40px 20px; margin-top: 24px; border-top: 1px solid #262626; color: #71767b;">
+        <a href="../about.html" class="footer-link">About</a>
+        <a href="../faq.html" class="footer-link">FAQ</a>
+        <a href="../blog/index.html" class="footer-link">Blog</a>
+        <a href="../contact.html" class="footer-link">Contact</a>
+        <a href="../terms.html" class="footer-link">Terms</a>
+        <a href="../guidelines.html" class="footer-link">Guidelines</a>
+        <a href="../privacy.html" class="footer-link">Privacy Policy</a>
+        <p style="margin-top: 20px; font-size: 0.85rem;">&copy; 2026 InteractInk. All rights reserved.</p>
+    </footer>
+
+    <script>
+        if (window.lucide) lucide.createIcons();
+    </script>
 </body>
 </html>
