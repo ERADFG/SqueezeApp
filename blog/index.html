@@ -5,27 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Blog - InteractInk</title>
     <meta name="description" content="Articles on anonymity, online privacy, and how InteractInk works.">
-    <link rel="canonical" href="https://interactink.vercel.app/blog/index.html">
-
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="Blog - InteractInk">
-    <meta property="og:description" content="Articles on anonymity, online privacy, and how InteractInk works.">
-    <meta property="og:url" content="https://interactink.vercel.app/blog/index.html">
-    <meta property="og:site_name" content="InteractInk">
-    <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="Blog - InteractInk">
-    <meta name="twitter:description" content="Articles on anonymity, online privacy, and how InteractInk works.">
-
     <meta name="google-adsense-account" content="ca-pub-9357677827244243">
     <meta name="google-site-verification" content="DOvTKyh77YUQreg4Dg6SaL1wEM33Da783l6lqsLek7Q" />
 
-    <!-- Preconnect to third-party origins so the browser opens these connections early instead of discovering them mid-render -->
-    <link rel="preconnect" href="https://pagead2.googlesyndication.com">
-    <link rel="preconnect" href="https://www.googletagmanager.com">
-    <link rel="preconnect" href="https://unpkg.com">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9357677827244243" crossorigin="anonymous"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-527BWKF63G"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-527BWKF63G');
+    </script>
 
-    <!-- Self-hosted, pre-compiled Tailwind CSS (replaces the @tailwindcss/browser runtime JIT compiler) -->
-    <link rel="stylesheet" href="../styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
         body { background-color: #000000; color: #e7e9ea; }
@@ -37,20 +30,19 @@
         .footer-link { color: #e7e9ea; text-decoration: none; margin: 0 14px; font-weight: 500; font-size: 0.85rem; transition: opacity 0.2s; display: inline-block; margin-bottom: 8px; }
         .footer-link:hover { opacity: 0.7; }
     </style>
-
-    
 </head>
 <body class="min-h-screen font-sans antialiased selection:bg-neutral-800 selection:text-white">
     <nav class="sticky top-0 z-50 w-full bg-black/95 backdrop-blur-md border-b border-neutral-800 flex justify-center flex-wrap gap-6 px-4 py-3.5">
         <a href="../index.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Home</a>
         <a href="../about.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">About</a>
         <a href="../faq.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">FAQ</a>
-        <a href="../blog.html" class="text-white text-sm font-medium transition tracking-wide">Blog</a>
+        <a href="../blog/index.html" class="text-white text-sm font-medium transition tracking-wide">Blog</a>
         <a href="../contact.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Contact</a>
+        <a href="../privacy.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Privacy</a>
     </nav>
     <div class="max-w-2xl mx-auto min-h-screen flex flex-col border-x border-neutral-800">
         <header class="sticky top-[49px] bg-black/90 backdrop-blur-md border-b border-neutral-800 p-4 z-40 flex items-center gap-2">
-            <img src="../logo.png" alt="InteractInk logo" width="24" height="24" class="w-6 h-6">
+            <img src="../logo.png" alt="Logo" class="w-6 h-6">
             <h1 class="text-lg font-bold tracking-tight text-white">Blog</h1>
         </header>
         <main class="px-5 py-6 flex-1">
@@ -86,7 +78,7 @@
     <footer style="width: 100%; text-align: center; padding: 40px 20px; margin-top: 24px; border-top: 1px solid #262626; color: #71767b;">
         <a href="../about.html" class="footer-link">About</a>
         <a href="../faq.html" class="footer-link">FAQ</a>
-        <a href="../blog.html" class="footer-link">Blog</a>
+        <a href="../blog/index.html" class="footer-link">Blog</a>
         <a href="../contact.html" class="footer-link">Contact</a>
         <a href="../terms.html" class="footer-link">Terms</a>
         <a href="../guidelines.html" class="footer-link">Guidelines</a>
@@ -94,20 +86,8 @@
         <p style="margin-top: 20px; font-size: 0.85rem;">&copy; 2026 InteractInk. All rights reserved.</p>
     </footer>
 
-    <!-- Analytics + ads loaded at the end, async, so they never block first paint -->
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9357677827244243" crossorigin="anonymous"></script>
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-527BWKF63G"></script>
     <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-527BWKF63G');
-    </script>
-    <script defer src="https://unpkg.com/lucide@latest"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            if (window.lucide) lucide.createIcons();
-        });
+        if (window.lucide) lucide.createIcons();
     </script>
 </body>
 </html>

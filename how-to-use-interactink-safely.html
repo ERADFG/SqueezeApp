@@ -3,83 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>How Anonymous Posting Actually Works | InteractInk Blog</title>
-    <meta name="description" content="A plain-language look at what 'anonymous' really means on a text board, what data still moves behind the scenes, and how to think about it.">
-    <link rel="canonical" href="https://interactink.vercel.app/blog/how-anonymous-posting-works.html" />
-    <meta name="robots" content="index, follow">
-    <meta property="og:type" content="article">
-    <meta property="og:site_name" content="InteractInk">
-    <meta property="og:title" content="How Anonymous Posting Actually Works">
-    <meta property="og:description" content="What 'anonymous' really means on a text board, and what data still moves behind the scenes.">
-    <meta property="og:url" content="https://interactink.vercel.app/blog/how-anonymous-posting-works.html">
-    <meta property="og:image" content="https://interactink.vercel.app/logo.png">
+    <title>How to Use InteractInk Safely - InteractInk</title>
+    <meta name="description" content="A practical guide to posting, replying, and reporting on the board.">
     <meta name="google-adsense-account" content="ca-pub-9357677827244243">
     <meta name="google-site-verification" content="DOvTKyh77YUQreg4Dg6SaL1wEM33Da783l6lqsLek7Q" />
 
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "Article",
-      "headline": "How Anonymous Posting Actually Works",
-      "description": "A plain-language look at what 'anonymous' really means on a text board, and what data still moves behind the scenes.",
-      "author": { "@type": "Organization", "name": "InteractInk" },
-      "publisher": { "@type": "Organization", "name": "InteractInk", "logo": { "@type": "ImageObject", "url": "https://interactink.vercel.app/logo.png" } },
-      "datePublished": "2026-07-11",
-      "dateModified": "2026-07-11",
-      "mainEntityOfPage": "https://interactink.vercel.app/blog/how-anonymous-posting-works.html"
-    }
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9357677827244243" crossorigin="anonymous"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-527BWKF63G"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-527BWKF63G');
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
     <style>
         body { background-color: #000000; color: #e7e9ea; }
-        .inline-link { color: #3b82f6; text-decoration: underline; font-weight: 500; }
-        .footer-link { color: #e7e9ea; text-decoration: none; margin: 0 14px; font-weight: 500; font-size: 0.85rem; display: inline-block; margin-bottom: 8px; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #000000; }
+        ::-webkit-scrollbar-thumb { background: #202327; border-radius: 9999px; }
+        .inline-link { color: #3b82f6; text-decoration: underline; font-weight: 500; transition: color 0.1s ease; }
+        .inline-link:hover { color: #60a5fa; }
+        .footer-link { color: #e7e9ea; text-decoration: none; margin: 0 14px; font-weight: 500; font-size: 0.85rem; transition: opacity 0.2s; display: inline-block; margin-bottom: 8px; }
         .footer-link:hover { opacity: 0.7; }
     </style>
 </head>
-<body class="min-h-screen font-sans antialiased">
+<body class="min-h-screen font-sans antialiased selection:bg-neutral-800 selection:text-white">
     <nav class="sticky top-0 z-50 w-full bg-black/95 backdrop-blur-md border-b border-neutral-800 flex justify-center flex-wrap gap-6 px-4 py-3.5">
         <a href="../index.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Home</a>
         <a href="../about.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">About</a>
         <a href="../faq.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">FAQ</a>
-        <a href="index.html" class="text-white text-sm font-medium transition tracking-wide">Blog</a>
+        <a href="../blog/index.html" class="text-white text-sm font-medium transition tracking-wide">Blog</a>
         <a href="../contact.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Contact</a>
+        <a href="../privacy.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Privacy</a>
     </nav>
     <div class="max-w-2xl mx-auto min-h-screen flex flex-col border-x border-neutral-800">
-        <header class="p-4 border-b border-neutral-800">
-            <p class="text-xs text-neutral-500 mb-1"><a href="index.html" class="hover:text-white">Blog</a> / July 11, 2026</p>
-            <h1 class="text-xl font-bold tracking-tight text-white">How Anonymous Posting Actually Works</h1>
+        <header class="sticky top-[49px] bg-black/90 backdrop-blur-md border-b border-neutral-800 p-4 z-40 flex items-center gap-2">
+            <img src="../logo.png" alt="Logo" class="w-6 h-6">
+            <h1 class="text-lg font-bold tracking-tight text-white">Blog</h1>
         </header>
-        <main class="px-5 py-6 flex-1 text-sm leading-relaxed text-neutral-300 space-y-4">
+        <main class="px-5 py-6 flex-1">
 
-<p>"Anonymous" gets used loosely online, so it helps to be precise about what it means on a text board like InteractInk.</p>
-
-<h2 class="text-white font-bold text-lg mt-6 mb-2">No account means no stored identity</h2>
-<p>On most social platforms, anonymity is really pseudonymity &mdash; you have a persistent handle that ties your posts together over time. A true anonymous board skips that entirely. There's no username, no password, and no profile page linking your posts. Each post stands on its own.</p>
-
-<h2 class="text-white font-bold text-lg mt-6 mb-2">What still gets logged</h2>
-<p>Being anonymous to other users isn't the same as being invisible to the server. Most anonymous boards, including InteractInk, still log basic technical data like IP addresses for a limited time, purely to prevent spam and abuse. That data isn't shown to other users and isn't tied to a public profile &mdash; but it's worth understanding it exists. Check a platform's privacy policy to see exactly what's kept and for how long.</p>
-
-<h2 class="text-white font-bold text-lg mt-6 mb-2">Thread-level identifiers</h2>
-<p>Some boards generate a short, temporary ID (sometimes called a tripcode) so people can follow a back-and-forth conversation within a single thread. This ID resets or is scoped to that thread only &mdash; it isn't a persistent account and can't be used to trace your other posts elsewhere on the site.</p>
-
-<h2 class="text-white font-bold text-lg mt-6 mb-2">Why it matters</h2>
-<p>Removing profiles and follower counts changes how people write. Posts get judged on content instead of who posted them, and there's less incentive to build a persona. That's the core appeal of anonymous boards over conventional social platforms.</p>
-
-<p>Want to see it in practice? Head back to the <a href="../index.html" class="inline-link">InteractInk homepage</a> and post without signing up.</p>
+<div class="inline-block px-3 py-1 text-[10px] font-mono font-semibold text-neutral-400 bg-neutral-900 border border-neutral-800 rounded-full uppercase tracking-wider mb-6">Published [Date]</div>
+<h2 class="text-white font-bold text-2xl mb-5 tracking-tight leading-tight">How to Use InteractInk Safely</h2>
+<p class="text-neutral-300 text-sm leading-relaxed mb-4">A quick, practical guide to getting the most out of an anonymous board without running into avoidable problems &mdash; whether you're new to this kind of platform or just want a refresher.</p><h2 class="text-white font-bold text-lg mt-8 mb-3 tracking-tight first:mt-0">Before you post</h2><ul class="list-disc list-outside pl-5 text-neutral-300 text-sm leading-relaxed mb-4 space-y-1"><li class="mb-1.5">Re-read your post for identifying details you didn't mean to include</li><li class="mb-1.5">Check the thread's existing tone &mdash; replying constructively gets better engagement than piling onto an already heated thread</li><li class="mb-1.5">Remember posts are public and can be screenshotted; don't post anything you'd be uncomfortable seeing outside the platform</li></ul><h2 class="text-white font-bold text-lg mt-8 mb-3 tracking-tight first:mt-0">Understanding tripcodes</h2><p class="text-neutral-300 text-sm leading-relaxed mb-4">If you want to be recognizable across a single thread without an account, the automatic tripcode does that for you. If you want continuity across multiple sessions, you can generate one from a private passphrase &mdash; see <a href="../blog/tripcodes-explained.html" class="inline-link">Tripcodes Explained</a> for details. Neither option creates a recoverable account, so there's no password reset if you lose access to a passphrase you chose.</p><h2 class="text-white font-bold text-lg mt-8 mb-3 tracking-tight first:mt-0">Using reply anchors</h2><p class="text-neutral-300 text-sm leading-relaxed mb-4">Typing &gt;&gt; followed by a post ID links directly to that post, which keeps threads readable even when several conversations are happening at once. It's worth using this instead of quoting text manually &mdash; it's faster and keeps context intact for other readers.</p><h2 class="text-white font-bold text-lg mt-8 mb-3 tracking-tight first:mt-0">If you see something that breaks the rules</h2><p class="text-neutral-300 text-sm leading-relaxed mb-4">Use the Report link on the specific post. That routes it to review faster than a general email, and including the post ID if you do email us helps us find it quickly. See our <a href="../guidelines.html" class="inline-link">Community Guidelines</a> for what qualifies.</p><h2 class="text-white font-bold text-lg mt-8 mb-3 tracking-tight first:mt-0">What not to expect</h2><p class="text-neutral-300 text-sm leading-relaxed mb-4">InteractInk removes the profile layer, not all traceability &mdash; see <a href="../blog/how-anonymous-posting-works.html" class="inline-link">How Anonymous Posting Actually Works</a> for the honest version of what anonymity here does and doesn't cover. Don't post anything where the consequences of it being traced back to you would be serious.</p><h2 class="text-white font-bold text-lg mt-8 mb-3 tracking-tight first:mt-0">A few habits that make the board better for everyone</h2><ul class="list-disc list-outside pl-5 text-neutral-300 text-sm leading-relaxed mb-4 space-y-1"><li class="mb-1.5">Stay on topic within a thread rather than derailing it</li><li class="mb-1.5">Assume good faith before assuming a post is bait or spam</li><li class="mb-1.5">Report rather than engage when a post is clearly breaking the rules</li></ul>
+<div class="mt-8 pt-4 border-t border-neutral-900">
+    <a href="../blog/index.html" class="inline-link">&larr; Back to Blog</a>
+</div>
 
         </main>
     </div>
+
     <footer style="width: 100%; text-align: center; padding: 40px 20px; margin-top: 24px; border-top: 1px solid #262626; color: #71767b;">
         <a href="../about.html" class="footer-link">About</a>
         <a href="../faq.html" class="footer-link">FAQ</a>
-        <a href="index.html" class="footer-link">Blog</a>
+        <a href="../blog/index.html" class="footer-link">Blog</a>
         <a href="../contact.html" class="footer-link">Contact</a>
         <a href="../terms.html" class="footer-link">Terms</a>
         <a href="../guidelines.html" class="footer-link">Guidelines</a>
         <a href="../privacy.html" class="footer-link">Privacy Policy</a>
         <p style="margin-top: 20px; font-size: 0.85rem;">&copy; 2026 InteractInk. All rights reserved.</p>
     </footer>
+
+    <script>
+        if (window.lucide) lucide.createIcons();
+    </script>
 </body>
 </html>
