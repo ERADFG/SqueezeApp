@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://squeezes.vercel.app/sitemap.xml
+Sitemap: https://interactink.vercel.app/sitemap.xml
