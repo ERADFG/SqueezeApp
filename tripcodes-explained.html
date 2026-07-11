@@ -3,72 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tripcodes Explained - InteractInk</title>
-    <meta name="description" content="How InteractInk's tripcode system works, and what it doesn't do.">
+    <title>Online Privacy Basics for Anonymous Posting | InteractInk Blog</title>
+    <meta name="description" content="Practical habits that protect your privacy beyond just using an anonymous platform, from browser settings to what you type.">
+    <link rel="canonical" href="https://interactink.vercel.app/blog/online-privacy-basics.html" />
+    <meta name="robots" content="index, follow">
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="InteractInk">
+    <meta property="og:title" content="Online Privacy Basics for Anonymous Posting">
+    <meta property="og:description" content="Practical habits that protect your privacy beyond just using an anonymous platform.">
+    <meta property="og:url" content="https://interactink.vercel.app/blog/online-privacy-basics.html">
+    <meta property="og:image" content="https://interactink.vercel.app/logo.png">
     <meta name="google-adsense-account" content="ca-pub-9357677827244243">
     <meta name="google-site-verification" content="DOvTKyh77YUQreg4Dg6SaL1wEM33Da783l6lqsLek7Q" />
 
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9357677827244243" crossorigin="anonymous"></script>
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-527BWKF63G"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-527BWKF63G');
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": "Online Privacy Basics for Anonymous Posting",
+      "description": "Practical habits that protect your privacy beyond just using an anonymous platform.",
+      "author": { "@type": "Organization", "name": "InteractInk" },
+      "publisher": { "@type": "Organization", "name": "InteractInk", "logo": { "@type": "ImageObject", "url": "https://interactink.vercel.app/logo.png" } },
+      "datePublished": "2026-07-11",
+      "dateModified": "2026-07-11",
+      "mainEntityOfPage": "https://interactink.vercel.app/blog/online-privacy-basics.html"
+    }
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-
     <style>
         body { background-color: #000000; color: #e7e9ea; }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #000000; }
-        ::-webkit-scrollbar-thumb { background: #202327; border-radius: 9999px; }
-        .inline-link { color: #3b82f6; text-decoration: underline; font-weight: 500; transition: color 0.1s ease; }
-        .inline-link:hover { color: #60a5fa; }
-        .footer-link { color: #e7e9ea; text-decoration: none; margin: 0 14px; font-weight: 500; font-size: 0.85rem; transition: opacity 0.2s; display: inline-block; margin-bottom: 8px; }
+        .inline-link { color: #3b82f6; text-decoration: underline; font-weight: 500; }
+        .footer-link { color: #e7e9ea; text-decoration: none; margin: 0 14px; font-weight: 500; font-size: 0.85rem; display: inline-block; margin-bottom: 8px; }
         .footer-link:hover { opacity: 0.7; }
     </style>
 </head>
-<body class="min-h-screen font-sans antialiased selection:bg-neutral-800 selection:text-white">
+<body class="min-h-screen font-sans antialiased">
     <nav class="sticky top-0 z-50 w-full bg-black/95 backdrop-blur-md border-b border-neutral-800 flex justify-center flex-wrap gap-6 px-4 py-3.5">
         <a href="../index.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Home</a>
         <a href="../about.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">About</a>
         <a href="../faq.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">FAQ</a>
-        <a href="../blog.html" class="text-white text-sm font-medium transition tracking-wide">Blog</a>
+        <a href="index.html" class="text-white text-sm font-medium transition tracking-wide">Blog</a>
         <a href="../contact.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Contact</a>
     </nav>
     <div class="max-w-2xl mx-auto min-h-screen flex flex-col border-x border-neutral-800">
-        <header class="sticky top-[49px] bg-black/90 backdrop-blur-md border-b border-neutral-800 p-4 z-40 flex items-center gap-2">
-            <img src="../logo.png" alt="Logo" class="w-6 h-6">
-            <h1 class="text-lg font-bold tracking-tight text-white">Blog</h1>
+        <header class="p-4 border-b border-neutral-800">
+            <p class="text-xs text-neutral-500 mb-1"><a href="index.html" class="hover:text-white">Blog</a> / July 11, 2026</p>
+            <h1 class="text-xl font-bold tracking-tight text-white">Online Privacy Basics for Anonymous Posting</h1>
         </header>
-        <main class="px-5 py-6 flex-1">
+        <main class="px-5 py-6 flex-1 text-sm leading-relaxed text-neutral-300 space-y-4">
 
-<div class="inline-block px-3 py-1 text-[10px] font-mono font-semibold text-neutral-400 bg-neutral-900 border border-neutral-800 rounded-full uppercase tracking-wider mb-6">Published July 11, 2026</div>
-<h2 class="text-white font-bold text-2xl mb-5 tracking-tight leading-tight">Tripcodes Explained: A Practical Guide</h2>
-<p class="text-neutral-300 text-sm leading-relaxed mb-4">If you've replied to a thread on InteractInk, you've probably noticed a short tag like <code class="bg-neutral-900 border border-neutral-800 px-1.5 py-0.5 rounded text-[13px] font-mono text-neutral-300">Anon#a1b2</code> attached to your name. That's a tripcode, and it solves a specific problem: how do you follow a conversation between anonymous people without anyone having an account?</p><h2 class="text-white font-bold text-lg mt-8 mb-3 tracking-tight first:mt-0">The problem it solves</h2><p class="text-neutral-300 text-sm leading-relaxed mb-4">Picture a thread where five different people are all posting as &quot;Anonymous.&quot; Without any way to tell them apart, a reply like &quot;I disagree with you&quot; is ambiguous &mdash; disagree with whom? Tripcodes give each participant a short, consistent tag for that thread so readers can follow who's replying to whom, without anyone revealing a real identity.</p><h2 class="text-white font-bold text-lg mt-8 mb-3 tracking-tight first:mt-0">How it's generated</h2><p class="text-neutral-300 text-sm leading-relaxed mb-4">The tag is derived automatically from technical data tied to your session, run through a one-way transformation so the tag itself can't be reversed to reveal anything about you. Two people posting in the same thread will reliably get different tags, and the same person will keep the same tag for the duration of that thread &mdash; but the tag doesn't persist across different threads or across visits.</p><h2 class="text-white font-bold text-lg mt-8 mb-3 tracking-tight first:mt-0">What a tripcode is not</h2><p class="text-neutral-300 text-sm leading-relaxed mb-4">It's worth being clear about the limits here, since some boards market tripcodes as more than they are:</p><ul class="list-disc list-outside pl-5 text-neutral-300 text-sm leading-relaxed mb-4 space-y-1"><li class="mb-1.5">It's not an account &mdash; there's no password, no login, nothing to recover if you lose it</li><li class="mb-1.5">It's not permanent identity &mdash; it typically resets between sessions or threads</li><li class="mb-1.5">It's not proof of anything &mdash; anyone can end up with a similar-looking tag by coincidence, since the tag space is limited</li></ul><h2 class="text-white font-bold text-lg mt-8 mb-3 tracking-tight first:mt-0">Why some boards offer &quot;secure&quot; tripcodes</h2><p class="text-neutral-300 text-sm leading-relaxed mb-4">Some anonymous boards let users generate a tripcode from a private passphrase, so the same person can reuse a recognizable tag across multiple threads or sessions if they want continuity without a full account. This is optional by design &mdash; it exists for people who want a consistent identity within the anonymous system, not for everyone by default.</p><h2 class="text-white font-bold text-lg mt-8 mb-3 tracking-tight first:mt-0">The short version</h2><p class="text-neutral-300 text-sm leading-relaxed mb-4">A tripcode is a lightweight way to tell anonymous voices apart within a single conversation. It's a readability tool, not an identity system &mdash; and understanding that distinction helps set the right expectations for what anonymity on a board like this actually covers.</p>
-<div class="mt-8 pt-4 border-t border-neutral-900">
-    <a href="../blog.html" class="inline-link">&larr; Back to Blog</a>
-</div>
+<p>Using an anonymous platform is one layer of privacy. What you type, and how you browse, matters just as much. A few habits go a long way.</p>
+
+<h2 class="text-white font-bold text-lg mt-6 mb-2">Watch what you write, not just where you post it</h2>
+<p>The most common way anonymous posts get traced back to a real identity isn't a technical leak &mdash; it's the content itself. Specific dates, locations, job titles, or writing style can identify someone even without a name attached. Before posting something sensitive, reread it as a stranger would.</p>
+
+<h2 class="text-white font-bold text-lg mt-6 mb-2">Strip metadata from images</h2>
+<p>Photos can carry embedded metadata, including GPS coordinates and device information. If you're posting an image anywhere online, strip that metadata first using your OS's built-in tools or a dedicated app.</p>
+
+<h2 class="text-white font-bold text-lg mt-6 mb-2">Be mindful of cross-posting</h2>
+<p>Posting the same message, in the same wording, across an anonymous board and a platform tied to your real identity can link the two together. If anonymity matters to you, write fresh text for anonymous posts rather than copy-pasting.</p>
+
+<h2 class="text-white font-bold text-lg mt-6 mb-2">Consider your network-level privacy</h2>
+<p>An anonymous board doesn't hide your IP address from your internet provider or from the site's own abuse-prevention logs. If network-level privacy matters for your situation, a reputable VPN or Tor can add a layer the platform itself doesn't provide.</p>
+
+<h2 class="text-white font-bold text-lg mt-6 mb-2">Read the privacy policy</h2>
+<p>Every platform handles logs differently. Check InteractInk's own <a href="../privacy.html" class="inline-link">Privacy Policy</a> to see exactly what's collected and for how long.</p>
 
         </main>
     </div>
-
     <footer style="width: 100%; text-align: center; padding: 40px 20px; margin-top: 24px; border-top: 1px solid #262626; color: #71767b;">
         <a href="../about.html" class="footer-link">About</a>
         <a href="../faq.html" class="footer-link">FAQ</a>
-        <a href="../blog.html" class="footer-link">Blog</a>
+        <a href="index.html" class="footer-link">Blog</a>
         <a href="../contact.html" class="footer-link">Contact</a>
         <a href="../terms.html" class="footer-link">Terms</a>
         <a href="../guidelines.html" class="footer-link">Guidelines</a>
         <a href="../privacy.html" class="footer-link">Privacy Policy</a>
         <p style="margin-top: 20px; font-size: 0.85rem;">&copy; 2026 InteractInk. All rights reserved.</p>
     </footer>
-
-    <script>
-        if (window.lucide) lucide.createIcons();
-    </script>
 </body>
 </html>

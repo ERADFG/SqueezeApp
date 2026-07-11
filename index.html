@@ -3,11 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InteractInk - Anonymous Text Board & Social Workspace</title>
-    
-    <meta name="description" content="InteractInk Workspace - Connect securely and privately through the decentralized, anonymous network interface.">
+    <title>InteractInk - Post Anonymously, No Sign-Up Required | Anonymous Text Board</title>
+
+    <meta name="description" content="InteractInk is a free anonymous text board. Post and reply instantly with no account, no email, and no sign-up. Threaded discussions, tripcodes, and full privacy.">
+    <link rel="canonical" href="https://interactink.vercel.app/" />
+    <meta name="robots" content="index, follow">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="InteractInk">
+    <meta property="og:title" content="InteractInk - Post Anonymously, No Sign-Up Required">
+    <meta property="og:description" content="A free anonymous text board. No accounts, no profiles, no tracking - just post and reply.">
+    <meta property="og:url" content="https://interactink.vercel.app/">
+    <meta property="og:image" content="https://interactink.vercel.app/logo.png">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="InteractInk - Post Anonymously, No Sign-Up Required">
+    <meta name="twitter:description" content="A free anonymous text board. No accounts, no profiles, no tracking - just post and reply.">
+    <meta name="twitter:image" content="https://interactink.vercel.app/logo.png">
+
     <meta name="google-adsense-account" content="ca-pub-9357677827244243">
     <meta name="google-site-verification" content="DOvTKyh77YUQreg4Dg6SaL1wEM33Da783l6lqsLek7Q" />
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "InteractInk",
+      "url": "https://interactink.vercel.app/",
+      "description": "A free anonymous text board where anyone can post and reply without creating an account.",
+      "publisher": {
+        "@type": "Organization",
+        "name": "InteractInk",
+        "logo": "https://interactink.vercel.app/logo.png"
+      }
+    }
+    </script>
     
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9357677827244243" crossorigin="anonymous"></script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-527BWKF63G"></script>
@@ -38,15 +70,15 @@
         <a href="index.html" class="text-white text-sm font-medium transition tracking-wide">Home</a>
         <a href="about.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">About</a>
         <a href="faq.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">FAQ</a>
-        <a href="blog.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Blog</a>
+        <a href="blog/index.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Blog</a>
         <a href="contact.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Contact</a>
         
     </nav>
     <div class="max-w-2xl mx-auto min-h-screen flex flex-col border-x border-neutral-800">
         <header class="sticky top-[49px] bg-black/90 backdrop-blur-md border-b border-neutral-800 p-4 z-40 flex justify-between items-center">
-    <h2 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-        <img src="logo.png" alt="Logo" class="w-6 h-6"> InteractInk
-    </h2>
+    <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+        <img src="logo.png" alt="InteractInk logo" class="w-6 h-6"> InteractInk
+    </h1>
 
     <div class="flex items-center gap-2">
         <div class="px-3 py-1 text-[10px] font-mono font-semibold text-neutral-400 bg-neutral-900 border border-neutral-800 rounded-full uppercase tracking-wider">
@@ -62,6 +94,21 @@
         </div>
     </div>
 </header>
+
+        <section class="px-4 pt-4 pb-2 border-b border-neutral-800">
+            <p class="text-neutral-400 text-sm leading-relaxed">
+                Post and reply on InteractInk's anonymous text board &mdash; no account, no email, no sign-up. Every thread supports threaded replies and one-time tripcodes so conversations stay readable without anyone needing a username.
+            </p>
+        </section>
+
+        <noscript>
+            <section class="px-4 py-6 border-b border-neutral-800">
+                <p class="text-neutral-300 text-sm leading-relaxed">
+                    InteractInk is a free, anonymous text board. JavaScript is required to view and post live threads &mdash; please enable it in your browser. In the meantime, learn more on our
+                    <a href="about.html" class="user-link">About page</a> or read the <a href="faq.html" class="user-link">FAQ</a>.
+                </p>
+            </section>
+        </noscript>
 
         <section class="p-4 border-b border-neutral-800">
             <form id="threadForm" class="pt-1">
@@ -543,7 +590,7 @@
     <footer style="width: 100%; text-align: center; padding: 40px 0; margin-top: 40px; border-top: 1px solid var(--x-border); color: var(--x-text-muted);">
         <a href="about.html" style="color: var(--x-text-main); text-decoration: none; margin: 0 20px; font-weight: 500; font-size: 0.9rem; transition: opacity 0.2s;">About</a>
         <a href="faq.html" style="color: var(--x-text-main); text-decoration: none; margin: 0 20px; font-weight: 500; font-size: 0.9rem; transition: opacity 0.2s;">FAQ</a>
-        <a href="blog.html" style="color: var(--x-text-main); text-decoration: none; margin: 0 20px; font-weight: 500; font-size: 0.9rem; transition: opacity 0.2s;">Blog</a>
+        <a href="blog/index.html" style="color: var(--x-text-main); text-decoration: none; margin: 0 20px; font-weight: 500; font-size: 0.9rem; transition: opacity 0.2s;">Blog</a>
         <a href="contact.html" style="color: var(--x-text-main); text-decoration: none; margin: 0 20px; font-weight: 500; font-size: 0.9rem; transition: opacity 0.2s;">Contact</a>
         <a href="terms.html" style="color: var(--x-text-main); text-decoration: none; margin: 0 20px; font-weight: 500; font-size: 0.9rem; transition: opacity 0.2s;">Terms</a>
         <a href="guidelines.html" style="color: var(--x-text-main); text-decoration: none; margin: 0 20px; font-weight: 500; font-size: 0.9rem; transition: opacity 0.2s;">Guidelines</a>
