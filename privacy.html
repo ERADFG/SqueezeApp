@@ -116,37 +116,37 @@
         <h1>Privacy Policy</h1>
         <div class="effective-date">Last Updated: July 6, 2026</div>
         
-        <p>InteractInk ("we," "our," or the "Platform") is committed to protecting the privacy and structural anonymity of users who interact with our text board and communication workspace. This Privacy Policy outlines the explicit data boundaries, storage protocols, and third-party interactions governed by your use of the Service.</p>
+        <p>InteractInk ("we," "our," or the "Platform") is a free, anonymous text board. This policy explains what data we do and don't collect, how it's handled, and what happens when a third party is involved.</p>
         
-        <h2>1. Non-Collection of Personal Identifiable Information (PII)</h2>
-        <p>InteractInk does not demand, register, or archive traditional personal data. The Service operates without profile systems, meaning we do not collect or store your:</p>
+        <h2>1. We don't collect personal information</h2>
+        <p>There's no sign-up on InteractInk, so we never ask for or store your:</p>
         <ul>
-            <li>Legal names, physical addresses, or email credentials;</li>
-            <li>Telephone numbers or device-specific identity registries;</li>
-            <li>Social media profile metrics, avatars, or external identity keys.</li>
+            <li>Name, physical address, or email;</li>
+            <li>Phone number or device ID;</li>
+            <li>Social media profile, avatar, or any other identity linked to another platform.</li>
         </ul>
-        <p>Because there is no account framework, we maintain zero historical user logs capable of correlating your real-world identity with specific text transmissions on the public timeline.</p>
+        <p>Because there's no account system, we have no logs that connect a real-world identity to anything posted on the board.</p>
 
-        <h2>2. Technical Data Transmission and Ephemeral Logs</h2>
-        <p>To deliver real-time data sync across our database systems, your network client sends text packages and node reference markers. The architectural handling of this data is executed under strict privacy constraints:</p>
+        <h2>2. What gets sent and logged when you post</h2>
+        <p>Posting or replying sends your text to our database. Here's specifically what that involves:</p>
         <ul>
-            <li><strong>Text Configurations:</strong> Content published to a thread node is broadcast publicly. It is indexed via random 8-character matrix node strings rather than static accounts.</li>
-            <li><strong>Cryptographic Tripcodes:</strong> Author verification is managed using locally held private seeds. Your browser generates a hashed tripcode signature on the client side before submission. The underlying private seed is never transmitted across our network layer.</li>
-            <li><strong>Server Infrastructure:</strong> Network traffic logs containing transient internet protocol (IP) metrics are exclusively used for mitigating malicious distributed denial-of-service (DDoS) requests or automated script attacks, and are regularly purged.</li>
+            <li><strong>Posts and replies:</strong> published publicly and identified by a random 8-character ID, not by an account.</li>
+            <li><strong>Tripcodes:</strong> the short tag under your replies (like <code>Anon#a1b2</code>) is generated in your browser from a private key that never leaves your device. It's a one-way hash — it lets people tell posters apart within a thread, but it can't be reversed to identify you.</li>
+            <li><strong>Server logs:</strong> like almost every website, our servers briefly log IP addresses as part of normal traffic handling. We use these logs only to block spam and abusive traffic (denial-of-service attacks, bots, etc.), and they're deleted on a regular schedule.</li>
         </ul>
 
-        <h2>3. Local Device Storage and Cookies</h2>
-        <p>InteractInk utilizes browser-level storage technologies (such as <code>localStorage</code> or session state keys) to track your local network view preferences, thread tracking history, and localized cryptographic parameters. These arrays are kept completely isolated on your hardware device and are not harvested by our infrastructure endpoints.</p>
+        <h2>3. Local storage and cookies</h2>
+        <p>InteractInk stores a few small things directly in your browser — like your tripcode seed and which threads you've viewed — using <code>localStorage</code>. This data stays on your device; we don't have access to it and it's never sent to our servers.</p>
 
-        <h2>4. Third-Party Integrations and Data Disclosures</h2>
-        <p>We deploy privacy-conscious advertising networks and analytical telemetry arrays to maintain the economic sustainability of our hosting layers. These external providers may place cookies or employ trackers to aggregate broad, non-PII demographic traffic trends and serve contextual advertisements based on your generalized geographic region.</p>
-        <p>We do not sell, trade, or rent user communication trends to data brokers. We will only disclose server connection logs when explicitly compelled by a binding court order, subpoena, or definitive legal process under applicable governing laws.</p>
+        <h2>4. Advertising and analytics</h2>
+        <p>We run a small amount of advertising and basic analytics to cover hosting costs. These third-party providers may set their own cookies and collect general, non-identifying traffic data (like rough location or browser type) to serve ads and measure site usage.</p>
+        <p>We don't sell or share your activity with data brokers. We'll only hand over server logs if legally required to — for example, by a valid court order or subpoena.</p>
 
-        <h2>5. Data Rights and Regulatory Disclaimers</h2>
-        <p>Because the Service does not collect usernames, emails, or static identifier profiles, we possess no technical indexical framework to verify, locate, retrieve, or selectively expunge individual text fragments on behalf of a remote user requesting data deletion under GDPR, CCPA, or related frameworks. Users are advised that statements committed to the public text matrix are permanently decentralized and cannot be retroactively mapped to a personal request identity.</p>
+        <h2>5. Data deletion requests (GDPR, CCPA, etc.)</h2>
+        <p>Because we don't collect usernames, emails, or any other identifier tied to a person, we have no way to find or delete a specific individual's posts on request — we simply have nothing that links a post back to a requester's identity. Content posted publicly to the board is not something we can selectively erase after the fact based on a personal data request.</p>
 
-        <h2>6. Policy Framework Adjustments</h2>
-        <p>We reserve the authority to update this data governance architecture to adjust for infrastructure updates or shifts in legal requirements. Any modifications will instantly update this public policy script, with the revision index reflected in the timestamp above.</p>
+        <h2>6. Changes to this policy</h2>
+        <p>We may update this policy as the site changes or as laws require. Any changes will be posted here, with the "Last Updated" date at the top reflecting the most recent revision.</p>
 
         <a href="index.html" class="back-link">← Back to InteractInk</a>
     </div>
