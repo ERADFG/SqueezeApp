@@ -1,4 +1,8 @@
 {
+  "rewrites": [
+    { "source": "/thread/:id", "destination": "/api/thread/:id" },
+    { "source": "/sitemap-threads.xml", "destination": "/api/sitemap-threads" }
+  ],
   "headers": [
     {
       "source": "/styles.css",
