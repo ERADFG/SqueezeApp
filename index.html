@@ -50,7 +50,11 @@
       gtag('config', 'G-527BWKF63G');
     </script>
 
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="preconnect" href="https://xdshsodkuyawljzuirqt.supabase.co">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://unpkg.com" crossorigin>
+    <link rel="stylesheet" href="styles.css">
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 
@@ -221,6 +225,12 @@
             renderThreads();
             lucide.createIcons();
             setInterval(() => renderThreads(), 30000);
+
+            const params = new URLSearchParams(location.search);
+            const requestedThread = params.get('thread');
+            if (requestedThread && appState.threads[requestedThread]) {
+                openThreadModal(requestedThread);
+            }
         });
 
         function initSeedEngine() {
@@ -436,9 +446,14 @@
         function createThreadElementCard(thread) {
             const dateStr = new Date(thread.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const dynamicCommentCount = appState.commentCounts[thread.id] || 0;
-            const card = document.createElement('div');
-            card.className = "p-4 hover:bg-neutral-900/40 cursor-pointer transition duration-200 flex flex-col";
-            card.onclick = () => openThreadModal(thread.id);
+            const card = document.createElement('a');
+            card.href = `/thread/${thread.id}`;
+            card.className = "p-4 hover:bg-neutral-900/40 cursor-pointer transition duration-200 flex flex-col no-underline text-inherit";
+            card.addEventListener('click', (e) => {
+                e.preventDefault();
+                history.pushState({}, '', `/thread/${thread.id}`);
+                openThreadModal(thread.id);
+            });
             
             const processedContent = parseRichTextContent(escapeHTML(thread.content));
             
@@ -477,6 +492,9 @@
 
         function closeThreadModal() {
             document.getElementById('threadModal').classList.add('hidden');
+            if (location.pathname.startsWith('/thread/')) {
+                history.pushState({}, '', '/');
+            }
             appState.activeThreadId = null;
             document.getElementById('commentInput').value = '';
             document.getElementById('commentCharCounter').innerText = '0/300';
