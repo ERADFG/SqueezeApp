@@ -84,7 +84,7 @@
         <a href="contact.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Contact</a>
     </nav>
 
-    <!-- Mobile bottom tab bar (shown only on small screens, mirrors the desktop nav above) -->
+    <!-- Mobile bottom tab bar -->
     <nav class="bottom-tab-bar" aria-label="Mobile navigation">
         <a href="welcome.html" class="bottom-tab active"><i data-lucide="home"></i></a>
         <a href="index.html" class="bottom-tab"><i data-lucide="message-square"></i></a>
@@ -212,12 +212,17 @@
             if (!window.supabase) return;
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+            // Bug fix: Render static icons immediately before the DB promises load
+            lucide.createIcons();
+
             await Promise.all([
                 loadStats(),
                 loadPopularPosts(),
                 loadFreshPosts()
             ]);
             trackPresence();
+            
+            // Bug fix: Render newly injected dynamic icons
             lucide.createIcons();
         });
 
@@ -226,9 +231,11 @@
             return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' })[m]);
         }
 
-        function timeAgo(ts) {
+        function timeAgo(dateString) {
+            // Bug fix: convert Supabase ISO string to a usable integer timestamp
+            const ts = new Date(dateString).getTime();
             const seconds = Math.floor((Date.now() - ts) / 1000);
-            if (seconds < 60) return `${seconds}s ago`;
+            if (seconds < 60) return `${Math.max(0, seconds)}s ago`;
             const minutes = Math.floor(seconds / 60);
             if (minutes < 60) return `${minutes}m ago`;
             const hours = Math.floor(minutes / 60);
@@ -300,7 +307,12 @@
 
                 const ranked = (threads || [])
                     .map(t => ({ ...t, replies: commentCounts[t.id] || 0 }))
-                    .sort((a, b) => (b.replies - a.replies) || (b.timestamp - a.timestamp))
+                    // Bug fix: Parse strings to JS Dates so they sort properly mathematically
+                    .sort((a, b) => {
+                        const replyDiff = b.replies - a.replies;
+                        if (replyDiff !== 0) return replyDiff;
+                        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+                    })
                     .slice(0, 8);
 
                 if (ranked.length === 0) {
