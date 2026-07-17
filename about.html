@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - InteractInk</title>
+    <meta name="description" content="Learn how InteractInk's anonymous text board works and who runs it.">
+    <meta name="google-adsense-account" content="ca-pub-9357677827244243">
+    <meta name="google-site-verification" content="DOvTKyh77YUQreg4Dg6SaL1wEM33Da783l6lqsLek7Q" />
+
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9357677827244243" crossorigin="anonymous"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-527BWKF63G"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-527BWKF63G');
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        body { background-color: #000000; color: #e7e9ea; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #000000; }
+        ::-webkit-scrollbar-thumb { background: #202327; border-radius: 9999px; }
+        .inline-link { color: #3b82f6; text-decoration: underline; font-weight: 500; transition: color 0.1s ease; }
+        .inline-link:hover { color: #60a5fa; }
+        .footer-link { color: #e7e9ea; text-decoration: none; margin: 0 14px; font-weight: 500; font-size: 0.85rem; transition: opacity 0.2s; display: inline-block; margin-bottom: 8px; }
+        .footer-link:hover { opacity: 0.7; }
+        .widget-link { color: #71767b; text-decoration: none; margin: 0 8px; font-weight: 500; font-size: 0.8rem; transition: color 0.2s; display: inline-block; margin-bottom: 6px; }
+        .widget-link:hover { color: #e7e9ea; }
+        /* ---------- Unified sidebar navigation (matches welcome.html) ---------- */
+        .app-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            min-height: 100vh;
+            background-color: #000000;
+        }
+
+        @media (min-width: 1024px) {
+            .app-container {
+                grid-template-columns: 1fr 275px 700px 300px 1fr;
+            }
+        }
+
+        .x-sidebar { display: none; }
+
+        @media (min-width: 1024px) {
+            .x-sidebar {
+                display: flex;
+                flex-direction: column;
+                grid-column: 2;
+                position: sticky;
+                top: 0;
+                height: 100vh;
+                padding: 12px 12px 20px 12px;
+                border-right: 1px solid #2f3336;
+                overflow-y: auto;
+                align-items: flex-start;
+            }
+        }
+
+        .x-feed {
+            grid-column: 1;
+            min-height: 100vh;
+        }
+
+        @media (min-width: 1024px) {
+            .x-feed {
+                grid-column: 3;
+                border-right: 1px solid #2f3336;
+            }
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 12px 20px 12px 12px;
+            border-radius: 9999px;
+            font-size: 1.25rem;
+            font-weight: 500;
+            color: #e7e9ea;
+            text-decoration: none;
+            transition: background-color 0.2s ease;
+            width: fit-content;
+        }
+
+        .nav-item:hover {
+            background-color: #16181c;
+        }
+
+        .nav-item.active {
+            font-weight: 700;
+        }
+
+        .nav-item svg {
+            width: 26px;
+            height: 26px;
+            stroke-width: 2px;
+        }
+
+        .x-widgets { display: none; }
+
+        @media (min-width: 1024px) {
+            .x-widgets {
+                display: flex;
+                flex-direction: column;
+                grid-column: 4;
+                position: sticky;
+                top: 0;
+                height: 100vh;
+                padding: 20px 24px;
+                gap: 20px;
+                overflow-y: auto;
+            }
+        }
+
+        .bottom-tab-bar { display: none; }
+        .bottom-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #71767b; text-decoration: none; padding: 6px 10px; }
+        .bottom-tab.active { color: #ffffff; }
+        .bottom-tab svg { width: 20px; height: 20px; }
+
+        @media (max-width: 1023px) {
+            .bottom-tab-bar {
+                display: flex; justify-content: space-around; align-items: center;
+                position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+                background: rgba(0,0,0,0.97); backdrop-filter: blur(12px);
+                border-top: 1px solid #262626; padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+            }
+            body { padding-bottom: 60px; }
+        }
+            body { padding-bottom: 60px; }
+        }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased selection:bg-neutral-800 selection:text-white">
+    <div class="app-container">
+        <aside class="x-sidebar">
+            <div class="py-2 px-3 mb-4">
+                <a href="welcome.html">
+                    <img src="favicon2.png" alt="InteractInk Logo" class="w-10 h-10 object-contain hover:opacity-90 transition">
+                </a>
+            </div>
+            <nav class="flex flex-col gap-1 w-full mb-4">
+                <a href="welcome.html" class="nav-item">
+                    <i data-lucide="home"></i>
+                    <span>Home</span>
+                </a>
+                <a href="index.html" class="nav-item">
+                    <i data-lucide="message-square"></i>
+                    <span>Board</span>
+                </a>
+                <a href="ichat.html" class="nav-item">
+                    <i data-lucide="message-circle-code"></i>
+                    <span>iChat</span>
+                </a>
+                <a href="about.html" class="nav-item active">
+                    <i data-lucide="info"></i>
+                    <span>About</span>
+                </a>
+                <a href="faq.html" class="nav-item">
+                    <i data-lucide="help-circle"></i>
+                    <span>FAQ</span>
+                </a>
+                <a href="blog.html" class="nav-item">
+                    <i data-lucide="rss"></i>
+                    <span>Blog</span>
+                </a>
+                <a href="contact.html" class="nav-item">
+                    <i data-lucide="mail"></i>
+                    <span>Contact</span>
+                </a>
+            </nav>
+            <a href="index.html" class="mt-2 w-11/12 bg-white text-black hover:bg-neutral-200 font-bold py-3.5 rounded-full text-center transition duration-200 text-[15px] shadow-sm">
+                Post
+            </a>
+        </aside>
+        <div class="x-feed">
+<div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
+        <script type="text/javascript">
+          atOptions = {
+            'key' : 'c2beae2a3c4b115088146fa8ef56a186',
+            'format' : 'iframe',
+            'height' : 50,
+            'width' : 320,
+            'params' : {}
+          };
+        </script>
+        <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
+    </div>
+    <div class="max-w-2xl mx-auto min-h-screen flex flex-col border-x border-neutral-800">
+        <header class="sticky top-[49px] bg-black/90 backdrop-blur-md border-b border-neutral-800 p-4 z-40 flex items-center gap-2">
+            <img src="favicon2.png" alt="Logo" class="w-6 h-6">
+            <h1 class="text-lg font-bold tracking-tight text-white">About InteractInk</h1>
+        </header>
+        <main class="px-5 py-6 flex-1">
+
+<p class="text-neutral-300 text-sm leading-relaxed mb-4">InteractInk is a text board where you can post and reply without creating an account. There's no username, no profile, and no sign-up form. You write something, it goes up, and other people can reply to it.</p>
+
+<h2 class="text-white font-bold text-lg mt-8 mb-3 tracking-tight first:mt-0">Why anonymous?</h2>
+<p class="text-neutral-300 text-sm leading-relaxed mb-4">A lot of discussion boards ask you to build a profile before you can say anything. We skip that step. You don't need an email address, a password, or a history tied to your name. What you post is judged on its own, not on who posted it.</p>
+
+<h2 class="text-white font-bold text-lg mt-8 mb-3 tracking-tight first:mt-0">How replies work</h2>
+<p class="text-neutral-300 text-sm leading-relaxed mb-4">When you leave a reply, the site generates a short ID for you within that thread &mdash; something like <code class="bg-neutral-900 border border-neutral-800 px-1.5 py-0.5 rounded text-[13px] font-mono text-neutral-300">Anon#a1b2</code>. This lets people follow a back-and-forth conversation without needing your real identity. The ID only applies to that thread; it's not a persistent account.</p>
+
+<h2 class="text-white font-bold text-lg mt-8 mb-3 tracking-tight first:mt-0">Who runs this</h2>
+<p class="text-neutral-300 text-sm leading-relaxed mb-4">InteractInk is built and maintained by an independent developer based in Uzbekistan. It's a small, independently run project &mdash; not a company product. If you want to reach out, see the <a href="contact.html" class="inline-link">Contact page</a>.</p>
+
+<h2 class="text-white font-bold text-lg mt-8 mb-3 tracking-tight first:mt-0">Moderation</h2>
+<p class="text-neutral-300 text-sm leading-relaxed mb-4">Anonymous doesn't mean unmoderated. Posts that break our <a href="guidelines.html" class="inline-link">Community Guidelines</a> get removed, and repeat abuse gets blocked at the network level. See our <a href="guidelines.html" class="inline-link">Guidelines</a> and <a href="terms.html" class="inline-link">Terms of Service</a> for specifics, and use the Report link on any post to flag something.</p>
+
+<h2 class="text-white font-bold text-lg mt-8 mb-3 tracking-tight first:mt-0">What we're working on</h2>
+<p class="text-neutral-300 text-sm leading-relaxed mb-4">The board is actively maintained. If you run into a bug or have a feature request, the <a href="contact.html" class="inline-link">Contact page</a> has the fastest way to reach us.</p>
+
+        </main>
+    </div>
+    <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
+        <script type="text/javascript">
+          atOptions = {
+            'key' : 'c2beae2a3c4b115088146fa8ef56a186',
+            'format' : 'iframe',
+            'height' : 50,
+            'width' : 320,
+            'params' : {}
+          };
+        </script>
+        <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
+    </div>
+
+    <footer style="width: 100%; text-align: center; padding: 40px 20px; margin-top: 24px; border-top: 1px solid #262626; color: #71767b;">
+        <a href="about.html" class="footer-link">About</a>
+        <a href="faq.html" class="footer-link">FAQ</a>
+        <a href="blog.html" class="footer-link">Blog</a>
+        <a href="contact.html" class="footer-link">Contact</a>
+        <a href="terms.html" class="footer-link">Terms</a>
+        <a href="guidelines.html" class="footer-link">Guidelines</a>
+        <a href="privacy.html" class="footer-link">Privacy Policy</a>
+        <p style="margin-top: 20px; font-size: 0.85rem;">&copy; 2026 InteractInk. All rights reserved.</p>
+    </footer>
+        </div>
+    <aside class="x-widgets">
+        <div class="bg-[#16181c] rounded-2xl p-4 border border-neutral-900">
+            <h2 class="text-white font-bold text-base mb-3">About InteractInk</h2>
+            <p class="text-neutral-400 text-xs leading-normal mb-3">
+                A zero-friction, layout-focused environment to speak your mind freely.
+            </p>
+            <div class="flex flex-wrap pt-2">
+                <a href="about.html" class="widget-link">About</a>
+                <a href="faq.html" class="widget-link">FAQ</a>
+                <a href="blog.html" class="widget-link">Blog</a>
+                <a href="contact.html" class="widget-link">Contact</a>
+                <a href="terms.html" class="widget-link">Terms</a>
+                <a href="guidelines.html" class="widget-link">Rules</a>
+                <a href="privacy.html" class="widget-link">Privacy</a>
+            </div>
+            <p class="text-[11px] text-neutral-600 mt-3">&copy; 2026 InteractInk</p>
+        </div>
+    </aside>
+    <nav class="bottom-tab-bar" aria-label="Mobile navigation">
+        <a href="welcome.html" class="bottom-tab"><i data-lucide="home"></i></a>
+        <a href="index.html" class="bottom-tab"><i data-lucide="message-square"></i></a>
+        <a href="ichat.html" class="bottom-tab"><i data-lucide="message-circle-code"></i></a>
+        <a href="about.html" class="bottom-tab active"><i data-lucide="info"></i></a>
+        <a href="faq.html" class="bottom-tab"><i data-lucide="help-circle"></i></a>
+        <a href="blog.html" class="bottom-tab"><i data-lucide="rss"></i></a>
+        <a href="contact.html" class="bottom-tab"><i data-lucide="mail"></i></a>
+    </nav>
+    </div>
+
+
+    <script>
+        if (window.lucide) lucide.createIcons();
+    </script>
+</body>
+</html>
