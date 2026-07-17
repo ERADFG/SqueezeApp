@@ -140,28 +140,27 @@
         </script>
         <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
     </div>
+    
     <div class="max-w-2xl mx-auto min-h-screen flex flex-col border-x border-neutral-800">
         <header class="sticky top-[49px] bg-black/90 backdrop-blur-md border-b border-neutral-800 p-4 z-40 flex justify-between items-center">
             <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
                 <img src="logo.png" alt="InteractInk logo" class="w-6 h-6"> InteractInk
             </h1>
 
-    <div class="flex items-center gap-2">
-        <div class="px-3 py-1 text-[10px] font-mono font-semibold text-neutral-400 bg-neutral-900 border border-neutral-800 rounded-full uppercase tracking-wider">
-            Total Posts: <span id="globalPostCount" class="text-white">0</span>
-        </div>
-        
-        <div class="px-3 py-1 flex items-center gap-2 rounded-full bg-neutral-900 border border-neutral-800">
-            <span class="relative flex h-1.5 w-1.5 shrink-0">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-            </span>
-            <span class="text-[10px] text-neutral-400 uppercase tracking-wider font-semibold"><span id="onlineCount">1</span> Online</span>
-        </div>
-    </div>
-</header>
-
-        
+            <div class="flex items-center gap-2">
+                <div class="px-3 py-1 text-[10px] font-mono font-semibold text-neutral-400 bg-neutral-900 border border-neutral-800 rounded-full uppercase tracking-wider">
+                    Total Posts: <span id="globalPostCount" class="text-white">0</span>
+                </div>
+                
+                <div class="px-3 py-1 flex items-center gap-2 rounded-full bg-neutral-900 border border-neutral-800">
+                    <span class="relative flex h-1.5 w-1.5 shrink-0">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                    </span>
+                    <span class="text-[10px] text-neutral-400 uppercase tracking-wider font-semibold"><span id="onlineCount">1</span> Online</span>
+                </div>
+            </div>
+        </header>
 
         <noscript>
             <section class="px-4 py-6 border-b border-neutral-800">
@@ -204,6 +203,7 @@
         <div id="paginationControls" class="flex justify-center items-center gap-2 p-6 border-t border-neutral-800 mb-8"></div>
     </div>
 
+    <!-- Modal window for viewing threads and replying -->
     <div id="threadModal" class="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-black border border-neutral-800 w-full max-w-xl rounded-2xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
             <div class="p-4 border-b border-neutral-800 flex justify-between items-center bg-black">
@@ -245,6 +245,7 @@
         </div>
     </div>
 
+    <!-- Tooltip box for displaying referenced posts on hover -->
     <div id="hoverPreviewBox" class="absolute bg-neutral-900 border border-neutral-700 text-neutral-200 text-xs p-3 rounded-xl shadow-2xl hidden z-50 max-w-xs pointer-events-none font-sans"></div>
 
     <script>
@@ -303,7 +304,6 @@
 
         async function fetchInitialData() {
             try {
-                // Fetch more limit to allow pagination to work visually
                 const { data: threads } = await supabaseClient.from('threads').select('*').order('timestamp', { ascending: false }).limit(100);
                 if (threads) threads.forEach(t => appState.threads[t.id] = t);
 
@@ -382,7 +382,7 @@
 
         function switchFeedFilter(filter) {
             appState.feedFilter = filter;
-            appState.currentPage = 1; // Reset to page 1 on filter switch
+            appState.currentPage = 1; 
             
             document.getElementById('tabLatest').className = filter === 'latest' 
                 ? 'flex-1 text-center py-3.5 text-white border-b-2 border-emerald-500 transition' 
@@ -448,19 +448,17 @@
             const threadList = Object.values(appState.threads);
             let sorted = [];
             
-            // Sorting Logic (Latest vs Trending)
             if (appState.feedFilter === 'trending') {
                 sorted = [...threadList].sort((a, b) => {
                     const scoreA = appState.commentCounts[a.id] || 0;
                     const scoreB = appState.commentCounts[b.id] || 0;
-                    if (scoreA === scoreB) return b.timestamp - a.timestamp; // Tie breaker
+                    if (scoreA === scoreB) return b.timestamp - a.timestamp; 
                     return scoreB - scoreA;
                 });
             } else {
                 sorted = [...threadList].sort((a, b) => b.timestamp - a.timestamp);
             }
 
-            // Pagination Logic
             const startIndex = (appState.currentPage - 1) * appState.threadsPerPage;
             const paginatedList = sorted.slice(startIndex, startIndex + appState.threadsPerPage);
             
@@ -492,13 +490,12 @@
                             <i data-lucide="chevron-left" class="w-4 h-4"></i>
                         </button>`;
             
-            // Generate numbered slides
             for(let i = 1; i <= totalPages; i++) {
                 if (i === 1 || i === totalPages || (i >= appState.currentPage - 1 && i <= appState.currentPage + 1)) {
                     html += `<button onclick="changePage(${i})" 
                                      class="w-9 h-9 flex items-center justify-center border border-neutral-800 rounded text-sm transition cursor-pointer 
                                      ${i === appState.currentPage ? 'bg-white text-black font-bold' : 'hover:bg-neutral-900 text-neutral-400'}">
-                                ${i}
+                                 ${i}
                              </button>`;
                 } else if (i === appState.currentPage - 2 || i === appState.currentPage + 2) {
                     html += `<span class="text-neutral-600 px-1">...</span>`;
@@ -540,6 +537,32 @@
                 </div>
             `;
             return card;
+        }
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+
+        function parseRichTextContent(text) {
+            // Converts >>id references into interactive internal links
+            return text.replace(/&gt;&gt;([a-f0-9]{8})/g, '<span class="user-link cursor-pointer" data-ref="$1">&gt;&gt;$1</span>');
+        }
+
+        function focusComposer() {
+            const el = document.getElementById('threadContent');
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth' });
+                el.focus();
+            }
+        }
+
+        function closeThreadModal() {
+            document.getElementById('threadModal').classList.add('hidden');
+            appState.activeThreadId = null;
+            history.pushState({}, '', '/index.html');
         }
 
         async function openThreadModal(tId) {
