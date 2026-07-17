@@ -39,6 +39,7 @@
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="stylesheet" href="styles.css">
 
+    <!-- Tailwind CSS Framework -->
     <script src="https://cdn.tailwindcss.com"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -52,17 +53,7 @@
         .user-link { color: #3b82f6; text-decoration: underline; font-weight: 500; transition: color 0.1s ease; }
         .user-link:hover { color: #60a5fa; }
         
-        /* FIXED: Added inversion filter to turn dark/black watermark white, and bumped opacity to 0.12 */
-        .keyhole-watermark { 
-            background-image: url('logo.png'); 
-            background-repeat: no-repeat; 
-            background-position: center; 
-            background-size: 160px; 
-            filter: invert(1) brightness(0.8);
-            opacity: 0.12; 
-        }
-        
-        /* FIXED: Separate filter for main logo to make it brilliant white against the black background */
+        /* Forces the dark logo image to be white and readable against the black background */
         .bright-logo {
             filter: invert(1) brightness(1.5);
         }
@@ -120,12 +111,11 @@
     <div class="max-w-3xl mx-auto min-h-screen flex flex-col border-x border-neutral-800">
 
         <!-- Hero -->
-        <!-- FIXED: Added relative container positioning to make sure watermark stays layered correctly behind elements -->
-        <header class="relative overflow-hidden border-b border-neutral-800 px-6 py-12 text-center">
-            <div class="absolute inset-0 keyhole-watermark pointer-events-none"></div>
-            <div class="relative z-10">
-                <!-- FIXED: Added 'bright-logo' class to force the logo image to be white and readable -->
-                <img src="logo.png" alt="InteractInk logo" class="bright-logo w-16 h-16 mx-auto mb-4">
+        <header class="border-b border-neutral-800 px-6 py-12 text-center">
+            <div class="relative z-10 flex flex-col items-center">
+                <!-- Brand logo positioned on top of the text -->
+                <img src="logo.png" alt="InteractInk logo" class="bright-logo w-16 h-16 mb-4">
+                
                 <h1 class="text-3xl font-bold tracking-tight text-white mb-2">InteractInk</h1>
                 <p class="text-neutral-400 text-sm max-w-md mx-auto leading-relaxed">
                     A free anonymous text board. Post and reply instantly &mdash; no account, no email, no sign-up.
@@ -251,6 +241,7 @@
             return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' })[m]);
         }
 
+        // Calculates accurate time differences
         function timeAgo(dateString) {
             const ts = new Date(dateString).getTime();
             const seconds = Math.floor((Date.now() - ts) / 1000);
