@@ -57,6 +57,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
         body { background-color: #000000; color: #e7e9ea; }
@@ -102,21 +103,16 @@
 </head>
 <body class="min-h-screen font-sans antialiased selection:bg-neutral-800 selection:text-white">
 
-    <!-- EXACT NAVIGATION FROM WELCOME.HTML -->
-    <!-- Sidebar Navigation -->
-<nav class="fixed left-0 top-0 h-full w-64 border-r border-neutral-800 p-6 flex flex-col justify-between z-50">
     <div class="app-container">
 
         <!-- LEFT DESKTOP SIDEBAR -->
         <aside class="x-sidebar">
-            <!-- Brand Logo -->
             <div class="py-2 px-3 mb-4">
                 <a href="welcome.html">
                     <img src="favicon2.png" alt="InteractInk Logo" class="w-10 h-10 object-contain hover:opacity-90 transition">
                 </a>
             </div>
 
-            <!-- Vertical Navigation -->
             <nav class="flex flex-col gap-1 w-full mb-4">
                 <a href="welcome.html" class="nav-item">
                     <i data-lucide="home"></i>
@@ -148,15 +144,13 @@
                 </a>
             </nav>
 
-            <!-- Large Desktop Post Button -->
-            <a href="index.html" class="mt-2 w-11/12 bg-white text-black hover:bg-neutral-200 font-bold py-3.5 rounded-full text-center transition duration-200 text-[15px] shadow-sm">
+            <button onclick="focusComposer()" class="mt-2 w-11/12 bg-white text-black hover:bg-neutral-200 font-bold py-3.5 rounded-full text-center transition duration-200 text-[15px] shadow-sm cursor-pointer">
                 Post
-            </a>
+            </button>
         </aside>
 
         <!-- CENTER MAIN CONTENT FEED -->
-        <main class="x-feed">
-            <!-- Top Banner Ad space -->
+        <main class="x-feed border-r border-neutral-800">
             <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
                 <script type="text/javascript">
                   atOptions = { 'key' : 'c2beae2a3c4b115088146fa8ef56a186', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
@@ -164,62 +158,28 @@
                 <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
             </div>
 
-    <!-- MOBILE BOTTOM TAB BAR -->
-    <nav class="bottom-tab-bar" aria-label="Mobile navigation">
-        <a href="welcome.html" class="bottom-tab"><i data-lucide="home"></i></a>
-        <a href="index.html" class="bottom-tab active"><i data-lucide="message-square"></i></a>
-        <a href="ichat.html" class="bottom-tab"><i data-lucide="message-circle-code"></i></a>
-        <a href="about.html" class="bottom-tab"><i data-lucide="info"></i></a>
-        <a href="faq.html" class="bottom-tab"><i data-lucide="help-circle"></i></a>
-    </nav>
-
-    <!-- Floating compose button (mobile only) -->
-    <button type="button" class="compose-fab" onclick="focusComposer()" aria-label="New post">
-        <i data-lucide="plus" class="w-5 h-5"></i>
-    </button>
-
-    <!-- Fallback share menu -->
-    <div id="shareMenu" class="share-menu hidden"></div>
-
-    <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
-        <script type="text/javascript">
-          atOptions = {
-            'key' : 'c2beae2a3c4b115088146fa8ef56a186',
-            'format' : 'iframe',
-            'height' : 50,
-            'width' : 320,
-            'params' : {}
-          };
-        </script>
-        <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
-    </div>
-    
-    <div class="ml-64 max-w-2xl mx-auto min-h-screen flex flex-col border-x border-neutral-800">
-        <header class="sticky top-[49px] bg-black/90 backdrop-blur-md border-b border-neutral-800 p-4 z-40 flex justify-between items-center">
-            <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-                <img src="logo.png" alt="InteractInk logo" class="w-6 h-6"> InteractInk
-            </h1>
-
-            <div class="flex items-center gap-2">
-                <div class="px-3 py-1 text-[10px] font-mono font-semibold text-neutral-400 bg-neutral-900 border border-neutral-800 rounded-full uppercase tracking-wider">
-                    Total Posts: <span id="globalPostCount" class="text-white">0</span>
+            <header class="sticky top-0 bg-black/90 backdrop-blur-md border-b border-neutral-800 p-4 z-40 flex justify-between items-center">
+                <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                    <img src="logo.png" alt="InteractInk logo" class="w-6 h-6"> InteractInk
+                </h1>
+                <div class="flex items-center gap-2">
+                    <div class="px-3 py-1 text-[10px] font-mono font-semibold text-neutral-400 bg-neutral-900 border border-neutral-800 rounded-full uppercase tracking-wider">
+                        Total Posts: <span id="globalPostCount" class="text-white">0</span>
+                    </div>
+                    <div class="px-3 py-1 flex items-center gap-2 rounded-full bg-neutral-900 border border-neutral-800">
+                        <span class="relative flex h-1.5 w-1.5 shrink-0">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                        </span>
+                        <span class="text-[10px] text-neutral-400 uppercase tracking-wider font-semibold"><span id="onlineCount">1</span> Online</span>
+                    </div>
                 </div>
-                
-                <div class="px-3 py-1 flex items-center gap-2 rounded-full bg-neutral-900 border border-neutral-800">
-                    <span class="relative flex h-1.5 w-1.5 shrink-0">
-                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-                    </span>
-                    <span class="text-[10px] text-neutral-400 uppercase tracking-wider font-semibold"><span id="onlineCount">1</span> Online</span>
-                </div>
-            </div>
-        </header>
+            </header>
 
         <noscript>
             <section class="px-4 py-6 border-b border-neutral-800">
                 <p class="text-neutral-300 text-sm leading-relaxed">
-                    InteractInk is a free, anonymous text board. JavaScript is required to view and post live threads &mdash; please enable it in your browser. In the meantime, learn more on our
-                    <a href="about.html" class="user-link">About page</a> or read the <a href="faq.html" class="user-link">FAQ</a>.
+                    InteractInk is a free, anonymous text board. JavaScript is required to view and post live threads &mdash; please enable it in your browser.
                 </p>
             </section>
         </noscript>
