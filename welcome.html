@@ -68,16 +68,113 @@
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         .fade-in-up { animation: fadeInUp 0.4s ease forwards; }
         .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-        .footer-link { color: #e7e9ea; text-decoration: none; margin: 0 14px; font-weight: 500; font-size: 0.85rem; transition: opacity 0.2s; display: inline-block; margin-bottom: 8px; }
-        .footer-link:hover { opacity: 0.7; }
+        .footer-link { color: #71767b; text-decoration: none; margin: 0 8px; font-weight: 500; font-size: 0.8rem; transition: color 0.2s; display: inline-block; margin-bottom: 6px; }
+        .footer-link:hover { color: #e7e9ea; }
     
-        /* ---------- Responsive device-adaptive layout ---------- */
+        /* ---------- Responsive 3-Column Grid ---------- */
+        .app-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            min-height: 100vh;
+            background-color: #000000;
+        }
+
+        @media (min-width: 1024px) {
+            .app-container {
+                grid-template-columns: 1fr 275px 640px 350px 1fr;
+            }
+        }
+
+        /* Sidebar Column */
+        .x-sidebar {
+            display: none;
+        }
+
+        @media (min-width: 1024px) {
+            .x-sidebar {
+                display: flex;
+                flex-direction: column;
+                grid-column: 2;
+                position: sticky;
+                top: 0;
+                height: 100vh;
+                padding: 12px 12px 20px 12px;
+                border-right: 1px solid #2f3336;
+                overflow-y: auto;
+                align-items: flex-start;
+            }
+        }
+
+        /* Main Feed Column */
+        .x-feed {
+            grid-column: 1;
+            min-height: 100vh;
+            padding-bottom: 80px;
+        }
+
+        @media (min-width: 1024px) {
+            .x-feed {
+                grid-column: 3;
+                border-right: 1px solid #2f3336;
+                padding-bottom: 24px;
+            }
+        }
+
+        /* Widgets Column */
+        .x-widgets {
+            display: none;
+        }
+
+        @media (min-width: 1024px) {
+            .x-widgets {
+                display: flex;
+                flex-direction: column;
+                grid-column: 4;
+                position: sticky;
+                top: 0;
+                height: 100vh;
+                padding: 20px 24px;
+                gap: 20px;
+                overflow-y: auto;
+            }
+        }
+
+        /* Sidebar Navigation Item */
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 12px 20px 12px 12px;
+            border-radius: 9999px;
+            font-size: 1.25rem;
+            font-weight: 500;
+            color: #e7e9ea;
+            text-decoration: none;
+            transition: background-color 0.2s ease;
+            width: fit-content;
+        }
+
+        .nav-item:hover {
+            background-color: #16181c;
+        }
+
+        .nav-item.active {
+            font-weight: 700;
+        }
+
+        .nav-item svg {
+            width: 26px;
+            height: 26px;
+            stroke-width: 2px;
+        }
+
+        /* Mobile Adjustments */
         .bottom-tab-bar { display: none; }
         .bottom-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #71767b; text-decoration: none; padding: 6px 10px; }
         .bottom-tab.active { color: #ffffff; }
-        .bottom-tab i { width: 20px; height: 20px; }
-        @media (max-width: 768px) {
-            .desktop-nav { display: none !important; }
+        .bottom-tab svg { width: 20px; height: 20px; }
+
+        @media (max-width: 1023px) {
             .bottom-tab-bar {
                 display: flex; justify-content: space-around; align-items: center;
                 position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
@@ -90,137 +187,191 @@
 </head>
 <body class="min-h-screen font-sans antialiased selection:bg-neutral-800 selection:text-white">
 
-    <nav class="desktop-nav sticky top-0 z-50 w-full bg-black/95 backdrop-blur-md border-b border-neutral-800 flex justify-center flex-wrap gap-6 px-4 py-3.5">
-        <a href="welcome.html" class="text-white text-sm font-medium transition tracking-wide">Home</a>
-        <a href="index.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Board</a>
-        <a href="about.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">About</a>
-        <a href="faq.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">FAQ</a>
-        <a href="blog.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Blog</a>
-        <a href="contact.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Contact</a>
-    </nav>
+    <div class="app-container">
 
-    <!-- Mobile bottom tab bar -->
-    <nav class="bottom-tab-bar" aria-label="Mobile navigation">
-        <a href="welcome.html" class="bottom-tab active"><i data-lucide="home"></i></a>
-        <a href="index.html" class="bottom-tab"><i data-lucide="message-square"></i></a>
-        <a href="about.html" class="bottom-tab"><i data-lucide="info"></i></a>
-        <a href="faq.html" class="bottom-tab"><i data-lucide="help-circle"></i></a>
-        <a href="blog.html" class="bottom-tab"><i data-lucide="rss"></i></a>
-    </nav>
-
-    <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
-        <script type="text/javascript">
-          atOptions = { 'key' : 'c2beae2a3c4b115088146fa8ef56a186', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
-        </script>
-        <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
-    </div>
-
-    <div class="max-w-3xl mx-auto min-h-screen flex flex-col border-x border-neutral-800">
-
-        <!-- Hero Header -->
-        <header class="relative overflow-hidden border-b border-neutral-800 px-6 py-12 text-center">
-            <div class="absolute inset-0 keyhole-watermark pointer-events-none"></div>
-            <div class="relative z-10 flex flex-col items-center">
-                <!-- Main Logo: Using favicon2.png directly centered above the title text -->
-                <img src="favicon2.png" alt="InteractInk Logo" class="w-20 h-20 mb-4 object-contain">
-                <h1 class="text-3xl font-bold tracking-tight text-white mb-2">InteractInk</h1>
-                <p class="text-neutral-400 text-sm max-w-md mx-auto leading-relaxed">
-                    A free anonymous text board. Post and reply instantly &mdash; no account, no email, no sign-up.
-                </p>
-                <a href="index.html" class="inline-flex items-center gap-2 mt-6 bg-white text-black hover:bg-neutral-200 font-bold px-6 py-2.5 rounded-full transition duration-200 text-sm shadow-sm">
-                    <i data-lucide="log-in" class="w-4 h-4"></i> Enter the Board
+        <!-- LEFT DESKTOP SIDEBAR -->
+        <aside class="x-sidebar">
+            <!-- Brand Logo -->
+            <div class="py-2 px-3 mb-4">
+                <a href="welcome.html">
+                    <img src="favicon2.png" alt="InteractInk Logo" class="w-10 h-10 object-contain hover:opacity-90 transition">
                 </a>
             </div>
-        </header>
 
-        <!-- What is InteractInk -->
-        <section id="infoBox" class="mx-4 mt-6 border border-neutral-800 bg-neutral-950/40 rounded-xl relative">
-            <button onclick="document.getElementById('infoBox').style.display='none'" class="absolute top-3 right-3 text-neutral-500 hover:text-white transition cursor-pointer">
-                <i data-lucide="x" class="w-4 h-4"></i>
-            </button>
-            <div class="p-5">
-                <h2 class="text-white font-bold text-sm uppercase tracking-wide mb-2">What is InteractInk?</h2>
-                <p class="text-neutral-400 text-sm leading-relaxed">
-                    InteractInk is a simple anonymous text board where anyone can post and reply with zero setup. There's no
-                    profile, no follower count, no algorithm &mdash; just threads and replies, tied together with lightweight
-                    anonymous tripcodes so conversations stay readable without giving up anonymity.
-                </p>
-                <p class="text-neutral-500 text-xs mt-3">
-                    New here? Check the <a href="faq.html" class="user-link">FAQ</a> or read the
-                    <a href="guidelines.html" class="user-link">Guidelines</a> before you post.
-                </p>
+            <!-- Vertical Navigation -->
+            <nav class="flex flex-col gap-1 w-full mb-4">
+                <a href="welcome.html" class="nav-item active">
+                    <i data-lucide="home"></i>
+                    <span>Home</span>
+                </a>
+                <a href="index.html" class="nav-item">
+                    <i data-lucide="message-square"></i>
+                    <span>Board</span>
+                </a>
+                <a href="ichat.html" class="nav-item">
+                    <i data-lucide="message-circle-code"></i>
+                    <span>iChat</span>
+                </a>
+                <a href="about.html" class="nav-item">
+                    <i data-lucide="info"></i>
+                    <span>About</span>
+                </a>
+                <a href="faq.html" class="nav-item">
+                    <i data-lucide="help-circle"></i>
+                    <span>FAQ</span>
+                </a>
+                <a href="blog.html" class="nav-item">
+                    <i data-lucide="rss"></i>
+                    <span>Blog</span>
+                </a>
+                <a href="contact.html" class="nav-item">
+                    <i data-lucide="mail"></i>
+                    <span>Contact</span>
+                </a>
+            </nav>
+
+            <!-- Large Desktop Post Button -->
+            <a href="index.html" class="mt-2 w-11/12 bg-white text-black hover:bg-neutral-200 font-bold py-3.5 rounded-full text-center transition duration-200 text-[15px] shadow-sm">
+                Post
+            </a>
+        </aside>
+
+        <!-- CENTER MAIN CONTENT FEED -->
+        <main class="x-feed">
+            <!-- Top Banner Ad space -->
+            <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
+                <script type="text/javascript">
+                  atOptions = { 'key' : 'c2beae2a3c4b115088146fa8ef56a186', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+                </script>
+                <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
             </div>
-        </section>
 
-        <!-- Live Stats -->
-        <section class="mx-4 mt-6 border border-neutral-800 bg-neutral-950/40 rounded-xl p-4">
-            <div class="grid grid-cols-3 divide-x divide-neutral-800 text-center">
-                <div class="px-2">
-                    <div id="statTotalPosts" class="text-xl font-bold text-white font-mono">&mdash;</div>
-                    <div class="text-[10px] uppercase tracking-wider text-neutral-500 mt-1">Total Posts</div>
+            <!-- Welcome page header -->
+            <header class="relative overflow-hidden border-b border-neutral-800 px-6 py-12 text-center">
+                <div class="absolute inset-0 keyhole-watermark pointer-events-none"></div>
+                <div class="relative z-10 flex flex-col items-center">
+                    <img src="favicon2.png" alt="InteractInk Logo" class="w-20 h-20 mb-4 object-contain">
+                    <h1 class="text-3xl font-bold tracking-tight text-white mb-2">InteractInk</h1>
+                    <p class="text-neutral-400 text-sm max-w-md mx-auto leading-relaxed">
+                        A free anonymous text board. Post and reply instantly &mdash; no account, no email, no sign-up.
+                    </p>
+                    <a href="index.html" class="inline-flex items-center gap-2 mt-6 bg-white text-black hover:bg-neutral-200 font-bold px-6 py-2.5 rounded-full transition duration-200 text-sm shadow-sm">
+                        <i data-lucide="log-in" class="w-4 h-4"></i> Enter the Board
+                    </a>
                 </div>
-                <div class="px-2">
-                    <div class="flex items-center justify-center gap-1.5">
-                        <span class="relative flex h-1.5 w-1.5 shrink-0">
-                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-                        </span>
-                        <span id="statOnline" class="text-xl font-bold text-white font-mono">&mdash;</span>
+            </header>
+
+            <!-- What is InteractInk -->
+            <section id="infoBox" class="mx-4 mt-6 border border-neutral-800 bg-neutral-950/40 rounded-xl relative">
+                <button onclick="document.getElementById('infoBox').style.display='none'" class="absolute top-3 right-3 text-neutral-500 hover:text-white transition cursor-pointer">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+                <div class="p-5">
+                    <h2 class="text-white font-bold text-sm uppercase tracking-wide mb-2">What is InteractInk?</h2>
+                    <p class="text-neutral-400 text-sm leading-relaxed">
+                        InteractInk is a simple anonymous text board where anyone can post and reply with zero setup. There's no
+                        profile, no follower count, no algorithm &mdash; just threads and replies, tied together with lightweight
+                        anonymous tripcodes so conversations stay readable without giving up anonymity.
+                    </p>
+                    <p class="text-neutral-500 text-xs mt-3">
+                        New here? Check the <a href="faq.html" class="user-link">FAQ</a> or read the
+                        <a href="guidelines.html" class="user-link">Guidelines</a> before you post.
+                    </p>
+                </div>
+            </section>
+
+            <!-- Live Stats Row -->
+            <section class="mx-4 mt-6 border border-neutral-800 bg-neutral-950/40 rounded-xl p-4">
+                <div class="grid grid-cols-3 divide-x divide-neutral-800 text-center">
+                    <div class="px-2">
+                        <div id="statTotalPosts" class="text-xl font-bold text-white font-mono">&mdash;</div>
+                        <div class="text-[10px] uppercase tracking-wider text-neutral-500 mt-1">Total Posts</div>
                     </div>
-                    <div class="text-[10px] uppercase tracking-wider text-neutral-500 mt-1">Current Users</div>
+                    <div class="px-2">
+                        <div class="flex items-center justify-center gap-1.5">
+                            <span class="relative flex h-1.5 w-1.5 shrink-0">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                            </span>
+                            <span id="statOnline" class="text-xl font-bold text-white font-mono">&mdash;</span>
+                        </div>
+                        <div class="text-[10px] uppercase tracking-wider text-neutral-500 mt-1">Current Users</div>
+                    </div>
+                    <div class="px-2">
+                        <div id="statActiveContent" class="text-xl font-bold text-white font-mono">&mdash;</div>
+                        <div class="text-[10px] uppercase tracking-wider text-neutral-500 mt-1">Active Content</div>
+                    </div>
                 </div>
-                <div class="px-2">
-                    <div id="statActiveContent" class="text-xl font-bold text-white font-mono">&mdash;</div>
-                    <div class="text-[10px] uppercase tracking-wider text-neutral-500 mt-1">Active Content</div>
+            </section>
+
+            <!-- Popular Posts -->
+            <section class="mt-8 px-4">
+                <div class="flex items-center justify-between mb-3 border-b border-neutral-800 pb-2">
+                    <h2 class="text-white font-bold text-sm uppercase tracking-wide flex items-center gap-2">
+                        <i data-lucide="flame" class="w-4 h-4 text-orange-500"></i> Popular Posts
+                    </h2>
+                    <a href="index.html" class="text-xs text-neutral-500 hover:text-white transition">View all &rarr;</a>
                 </div>
-            </div>
-        </section>
+                <div id="popularPostsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="col-span-full text-center text-neutral-600 text-xs font-mono py-10 animate-pulse">Loading popular posts...</div>
+                </div>
+            </section>
 
-        <!-- Popular Posts -->
-        <section class="mt-8 px-4">
-            <div class="flex items-center justify-between mb-3 border-b border-neutral-800 pb-2">
-                <h2 class="text-white font-bold text-sm uppercase tracking-wide flex items-center gap-2">
-                    <i data-lucide="flame" class="w-4 h-4 text-orange-500"></i> Popular Posts
-                </h2>
-                <a href="index.html" class="text-xs text-neutral-500 hover:text-white transition">View all &rarr;</a>
-            </div>
-            <div id="popularPostsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div class="col-span-full text-center text-neutral-600 text-xs font-mono py-10 animate-pulse">Loading popular posts...</div>
-            </div>
-        </section>
+            <!-- Recent Activity -->
+            <section class="mt-8 px-4 pb-8">
+                <div class="flex items-center justify-between mb-3 border-b border-neutral-800 pb-2">
+                    <h2 class="text-white font-bold text-sm uppercase tracking-wide flex items-center gap-2">
+                        <i data-lucide="clock" class="w-4 h-4 text-neutral-400"></i> Fresh Posts
+                    </h2>
+                    <a href="index.html" class="text-xs text-neutral-500 hover:text-white transition">View all &rarr;</a>
+                </div>
+                <div id="freshPostsList" class="divide-y divide-neutral-900 border border-neutral-900 rounded-xl overflow-hidden">
+                    <div class="text-center text-neutral-600 text-xs font-mono py-10 animate-pulse">Loading recent posts...</div>
+                </div>
+            </section>
 
-        <!-- Recent Activity -->
-        <section class="mt-8 px-4 pb-8">
-            <div class="flex items-center justify-between mb-3 border-b border-neutral-800 pb-2">
-                <h2 class="text-white font-bold text-sm uppercase tracking-wide flex items-center gap-2">
-                    <i data-lucide="clock" class="w-4 h-4 text-neutral-400"></i> Fresh Posts
-                </h2>
-                <a href="index.html" class="text-xs text-neutral-500 hover:text-white transition">View all &rarr;</a>
+            <!-- Bottom Ad Space inside Main Column -->
+            <div class="w-full flex justify-center py-3 bg-black border-t border-b border-neutral-800 my-4">
+                <script type="text/javascript">
+                  atOptions = { 'key' : 'c2beae2a3c4b115088146fa8ef56a186', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+                </script>
+                <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
             </div>
-            <div id="freshPostsList" class="divide-y divide-neutral-900 border border-neutral-900 rounded-xl overflow-hidden">
-                <div class="text-center text-neutral-600 text-xs font-mono py-10 animate-pulse">Loading recent posts...</div>
+        </main>
+
+        <!-- RIGHT DESKTOP SIDEBAR -->
+        <aside class="x-widgets">
+            <!-- Sidebar Info / Footer Card -->
+            <div class="bg-[#16181c] rounded-2xl p-4 border border-neutral-900">
+                <h2 class="text-white font-bold text-base mb-3">About InteractInk</h2>
+                <p class="text-neutral-400 text-xs leading-normal mb-3">
+                    A zero-friction, layout-focused environment to speak your mind freely.
+                </p>
+                <div class="flex flex-wrap pt-2">
+                    <a href="about.html" class="footer-link">About</a>
+                    <a href="faq.html" class="footer-link">FAQ</a>
+                    <a href="blog.html" class="footer-link">Blog</a>
+                    <a href="contact.html" class="footer-link">Contact</a>
+                    <a href="terms.html" class="footer-link">Terms</a>
+                    <a href="guidelines.html" class="footer-link">Rules</a>
+                    <a href="privacy.html" class="footer-link">Privacy</a>
+                </div>
+                <p class="text-[11px] text-neutral-600 mt-3">&copy; 2026 InteractInk</p>
             </div>
-        </section>
+        </aside>
+
+        <!-- MOBILE BOTTOM TAB BAR -->
+        <nav class="bottom-tab-bar" aria-label="Mobile navigation">
+            <a href="welcome.html" class="bottom-tab active"><i data-lucide="home"></i></a>
+            <a href="index.html" class="bottom-tab"><i data-lucide="message-square"></i></a>
+            <a href="ichat.html" class="bottom-tab"><i data-lucide="message-circle-code"></i></a>
+            <a href="about.html" class="bottom-tab"><i data-lucide="info"></i></a>
+            <a href="faq.html" class="bottom-tab"><i data-lucide="help-circle"></i></a>
+        </nav>
+
     </div>
 
-    <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
-        <script type="text/javascript">
-          atOptions = { 'key' : 'c2beae2a3c4b115088146fa8ef56a186', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
-        </script>
-        <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
-    </div>
-
-    <footer style="width: 100%; text-align: center; padding: 40px 20px; margin-top: 24px; border-top: 1px solid #262626; color: #71767b;">
-        <a href="about.html" class="footer-link">About</a>
-        <a href="faq.html" class="footer-link">FAQ</a>
-        <a href="blog.html" class="footer-link">Blog</a>
-        <a href="contact.html" class="footer-link">Contact</a>
-        <a href="terms.html" class="footer-link">Terms</a>
-        <a href="guidelines.html" class="footer-link">Guidelines</a>
-        <a href="privacy.html" class="footer-link">Privacy Policy</a>
-        <p style="margin-top: 20px; font-size: 0.85rem;">&copy; 2026 InteractInk. All rights reserved.</p>
-    </footer>
-
+    <!-- Script integrations remain identical and fully active -->
     <script>
         const SUPABASE_URL = "https://xdshsodkuyawljzuirqt.supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
@@ -266,7 +417,6 @@
             return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
         }
 
-        // ---------- Live Stats ----------
         async function loadStats() {
             try {
                 const [threadCountRes, commentCountRes, threadContentRes, commentTextRes] = await Promise.all([
@@ -291,7 +441,6 @@
             }
         }
 
-        // ---------- Presence (Current Users) ----------
         function trackPresence() {
             const clientId = Math.random().toString(16).substring(2, 10);
             const presenceChannel = supabaseClient.channel('interactink-online', {
@@ -311,7 +460,6 @@
                 });
         }
 
-        // ---------- Popular Posts ----------
         async function loadPopularPosts() {
             const grid = document.getElementById('popularPostsGrid');
             try {
@@ -364,7 +512,6 @@
             return card;
         }
 
-        // ---------- Fresh Posts ----------
         async function loadFreshPosts() {
             const list = document.getElementById('freshPostsList');
             try {
