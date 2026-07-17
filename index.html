@@ -102,6 +102,7 @@
 </head>
 <body class="min-h-screen font-sans antialiased selection:bg-neutral-800 selection:text-white">
 
+    <!-- Desktop Nav matched to welcome.html styling -->
     <nav class="desktop-nav sticky top-0 z-50 w-full bg-black/95 backdrop-blur-md border-b border-neutral-800 flex justify-center flex-wrap gap-6 px-4 py-3.5">
         <a href="welcome.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Home</a>
         <a href="index.html" class="text-white text-sm font-medium transition tracking-wide">Board</a>
@@ -111,7 +112,7 @@
         <a href="contact.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Contact</a>
     </nav>
 
-    <!-- Mobile bottom tab bar (shown only on small screens, mirrors the desktop nav above) -->
+    <!-- Mobile bottom tab bar -->
     <nav class="bottom-tab-bar" aria-label="Mobile navigation">
         <a href="welcome.html" class="bottom-tab"><i data-lucide="home"></i></a>
         <a href="index.html" class="bottom-tab active"><i data-lucide="message-square"></i></a>
@@ -120,12 +121,12 @@
         <a href="blog.html" class="bottom-tab"><i data-lucide="rss"></i></a>
     </nav>
 
-    <!-- Floating compose button (mobile only) - jumps to the composer at the top of the board -->
+    <!-- Floating compose button (mobile only) -->
     <button type="button" class="compose-fab" onclick="focusComposer()" aria-label="New post">
         <i data-lucide="plus" class="w-5 h-5"></i>
     </button>
 
-    <!-- Fallback share menu (populated dynamically, positioned near whichever share button was clicked) -->
+    <!-- Fallback share menu -->
     <div id="shareMenu" class="share-menu hidden"></div>
 
     <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
@@ -546,11 +547,6 @@
             );
         }
 
-        function parseRichTextContent(text) {
-            // Converts >>id references into interactive internal links
-            return text.replace(/&gt;&gt;([a-f0-9]{8})/g, '<span class="user-link cursor-pointer" data-ref="$1">&gt;&gt;$1</span>');
-        }
-
         function focusComposer() {
             const el = document.getElementById('threadContent');
             if (el) {
@@ -578,223 +574,218 @@
             document.getElementById('commentTreeContainer').innerHTML = `<div class="text-xs text-neutral-600 text-center py-6 font-mono animate-pulse">Loading comments...</div>`;
             
             try {
-               const { data: comments } = await supabaseClient.from('comments').select('*').eq('thread_id', tId);
-            appState.comments[tId] = {};
-            if (comments) comments.forEach(c => appState.comments[tId][c.id] = c);
-            renderCommentTree();
-        } catch (err) { console.error(err); }
-    }
-
-    function renderCommentTree() {
-        const container = document.getElementById('commentTreeContainer');
-        container.innerHTML = '';
-        const commentsMap = appState.comments[appState.activeThreadId] || {};
-        const rawCommentsList = Object.values(commentsMap).sort((a, b) => a.timestamp - b.timestamp);
-
-        if (rawCommentsList.length === 0) {
-            container.innerHTML = `<div class="text-xs text-neutral-600 text-center py-6 font-mono">No comments yet.</div>`;
-            return;
+                const { data: comments } = await supabaseClient.from('comments').select('*').eq('thread_id', tId);
+                appState.comments[tId] = {};
+                if (comments) comments.forEach(c => appState.comments[tId][c.id] = c);
+                renderCommentTree();
+            } catch (err) { console.error(err); }
         }
 
-        const commentMapRef = {};
-        const treeRootNodes = [];
+        function renderCommentTree() {
+            const container = document.getElementById('commentTreeContainer');
+            container.innerHTML = '';
+            const commentsMap = appState.comments[appState.activeThreadId] || {};
+            const rawCommentsList = Object.values(commentsMap).sort((a, b) => a.timestamp - b.timestamp);
 
-        rawCommentsList.forEach(c => commentMapRef[c.id] = { ...c, children: [] });
-        rawCommentsList.forEach(c => {
-            const node = commentMapRef[c.id];
-            const match = c.text.match(/^&gt;&gt;([A-Fa-f0-9]{8})/); 
-            const rawMatch = c.text.match(/^>>([A-Fa-f0-9]{8})/);
-            const targetedParentId = (rawMatch ? rawMatch[1] : null) || (match ? match[1] : null);
-
-            if (targetedParentId && commentMapRef[targetedParentId]) {
-                commentMapRef[targetedParentId].children.push(node);
-            } else {
-                treeRootNodes.push(node);
+            if (rawCommentsList.length === 0) {
+                container.innerHTML = `<div class="text-xs text-neutral-600 text-center py-6 font-mono">No comments yet.</div>`;
+                return;
             }
-        });
 
-        treeRootNodes.forEach(rootNode => container.appendChild(buildCommentTreeUI(rootNode, 0)));
-        setupCrossLinkHoverPreviews();
-        lucide.createIcons();
-    }
+            const commentMapRef = {};
+            const treeRootNodes = [];
 
-    function buildCommentTreeUI(node, depth) {
-        const wrap = document.createElement('div');
-        wrap.className = `flex flex-col ${depth > 0 ? 'ml-4 border-l border-neutral-800 pl-4 mt-3' : 'border-b border-neutral-900 pb-3'}`;
-        
-        const item = document.createElement('div');
-        item.className = "p-3 bg-neutral-950/40 rounded-xl border border-neutral-900 text-sm";
-        item.id = `comment-${node.id}`;
+            rawCommentsList.forEach(c => commentMapRef[c.id] = { ...c, children: [] });
+            rawCommentsList.forEach(c => {
+                const node = commentMapRef[c.id];
+                const match = c.text.match(/^&gt;&gt;([A-Fa-f0-9]{8})/); 
+                const rawMatch = c.text.match(/^>>([A-Fa-f0-9]{8})/);
+                const targetedParentId = (rawMatch ? rawMatch[1] : null) || (match ? match[1] : null);
 
-        const dateStr = new Date(node.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const structuralLinkedProcessedText = parseRichTextContent(escapeHTML(node.text));
-
-        item.innerHTML = `
-            <div class="flex justify-between items-center text-xs text-neutral-500 mb-2 border-b border-neutral-900 pb-1">
-                <span class="font-bold text-neutral-300 font-mono bg-neutral-900 px-1.5 py-0.5 rounded">${node.tripcode}</span>
-                <span class="font-mono text-[11px]">${dateStr} [>>${node.id}]</span>
-            </div>
-            <div class="text-neutral-300 leading-relaxed break-words whitespace-pre-wrap">${structuralLinkedProcessedText}</div>
-            <div class="flex justify-end items-center gap-4 mt-2">
-                <button onclick="shareComment('${appState.activeThreadId}', '${node.id}', event.currentTarget)" class="text-xs text-neutral-500 hover:text-white flex items-center gap-1 font-medium cursor-pointer"><i data-lucide="share" class="w-3.5 h-3.5"></i> Share</button>
-                <button onclick="appendReplyPointer('${node.id}')" class="text-xs text-neutral-500 hover:text-white flex items-center gap-1 font-medium cursor-pointer"><i data-lucide="reply" class="w-3.5 h-3.5"></i> Reply</button>
-            </div>
-        `;
-        wrap.appendChild(item);
-
-        if (node.children && node.children.length > 0) {
-            node.children.forEach(child => wrap.appendChild(buildCommentTreeUI(child, depth + 1)));
-        }
-        return wrap;
-    }
-
-    function appendReplyPointer(cId) {
-        const input = document.getElementById('commentInput');
-        input.value = `>>${cId} ` + input.value;
-        document.getElementById('commentCharCounter').innerText = `${input.value.length}/300`;
-        input.focus();
-    }
-
-    function parseRichTextContent(text) {
-        if (!text) return '';
-        const nodeCrossRegex = /&gt;&gt;([A-Fa-f0-9]{8})/g;
-        text = text.replace(nodeCrossRegex, (match, id) => {
-            return `<a href="#comment-${id}" data-preview-id="${id}" class="text-white underline font-bold cross-link-node" onclick="event.stopPropagation();">${match}</a>`;
-        });
-        const rawUrlRegex = /(https?:\/\/[^\s]+)/g;
-        text = text.replace(rawUrlRegex, (url) => {
-            return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="user-link" onclick="event.stopPropagation();">${url}</a>`;
-        });
-        return text;
-    }
-
-    function setupCrossLinkHoverPreviews() {
-        const links = document.querySelectorAll('.cross-link-node');
-        const previewBox = document.getElementById('hoverPreviewBox');
-
-        links.forEach(link => {
-            link.addEventListener('mouseenter', (e) => {
-                const targetId = link.getAttribute('data-preview-id');
-                const commentsMap = appState.comments[appState.activeThreadId] || {};
-                const targetComment = commentsMap[targetId];
-
-                if (targetComment) {
-                    previewBox.innerHTML = `
-                        <div class="text-[10px] text-white font-bold mb-1 border-b border-neutral-800 pb-0.5 uppercase font-mono">${targetComment.tripcode} [>>${targetComment.id}]</div>
-                        <p class="text-neutral-400 leading-snug">${escapeHTML(targetComment.text)}</p>
-                    `;
-                    previewBox.classList.remove('hidden');
-                    const rect = link.getBoundingClientRect();
-                    previewBox.style.left = `${rect.left + window.scrollX}px`;
-                    previewBox.style.top = `${rect.top + window.scrollY - previewBox.offsetHeight - 10}px`;
+                if (targetedParentId && commentMapRef[targetedParentId]) {
+                    commentMapRef[targetedParentId].children.push(node);
+                } else {
+                    treeRootNodes.push(node);
                 }
             });
-            link.addEventListener('mouseleave', () => previewBox.classList.add('hidden'));
-        });
-    }
 
-    function escapeHTML(str) {
-        if (!str) return '';
-        return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' })[m]);
-    }
+            treeRootNodes.forEach(rootNode => container.appendChild(buildCommentTreeUI(rootNode, 0)));
+            setupCrossLinkHoverPreviews();
+            lucide.createIcons();
+        }
 
-    // ---------- Device / screen-size detection ----------
-    function isMobileViewport() {
-        return window.matchMedia('(max-width: 768px)').matches;
-    }
+        function buildCommentTreeUI(node, depth) {
+            const wrap = document.createElement('div');
+            wrap.className = `flex flex-col ${depth > 0 ? 'ml-4 border-l border-neutral-800 pl-4 mt-3' : 'border-b border-neutral-900 pb-3'}`;
+            
+            const item = document.createElement('div');
+            item.className = "p-3 bg-neutral-950/40 rounded-xl border border-neutral-900 text-sm";
+            item.id = `comment-${node.id}`;
 
-    // ---------- Sharing (thread / comment) to any social platform ----------
-    function buildShareUrl(threadId) {
-        return `${location.origin}${location.pathname}?thread=${threadId}`;
-    }
+            const dateStr = new Date(node.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const structuralLinkedProcessedText = parseRichTextContent(escapeHTML(node.text));
 
-    async function shareThread(threadId, anchorEl) {
-        const thread = appState.threads[threadId];
-        if (!thread) return;
-        const shareText = (thread.content || '').slice(0, 200);
-        await performShare({
-            url: buildShareUrl(threadId),
-            title: thread.title || 'Anonymous post on InteractInk',
-            text: shareText
-        }, anchorEl);
-    }
+            item.innerHTML = `
+                <div class="flex justify-between items-center text-xs text-neutral-500 mb-2 border-b border-neutral-900 pb-1">
+                    <span class="font-bold text-neutral-300 font-mono bg-neutral-900 px-1.5 py-0.5 rounded">${node.tripcode}</span>
+                    <span class="font-mono text-[11px]">${dateStr} [>>${node.id}]</span>
+                </div>
+                <div class="text-neutral-300 leading-relaxed break-words whitespace-pre-wrap">${structuralLinkedProcessedText}</div>
+                <div class="flex justify-end items-center gap-4 mt-2">
+                    <button onclick="shareComment('${appState.activeThreadId}', '${node.id}', event.currentTarget)" class="text-xs text-neutral-500 hover:text-white flex items-center gap-1 font-medium cursor-pointer"><i data-lucide="share" class="w-3.5 h-3.5"></i> Share</button>
+                    <button onclick="appendReplyPointer('${node.id}')" class="text-xs text-neutral-500 hover:text-white flex items-center gap-1 font-medium cursor-pointer"><i data-lucide="reply" class="w-3.5 h-3.5"></i> Reply</button>
+                </div>
+            `;
+            wrap.appendChild(item);
 
-    async function shareComment(threadId, commentId, anchorEl) {
-        const comment = (appState.comments[threadId] || {})[commentId];
-        if (!comment) return;
-        const shareText = (comment.text || '').slice(0, 200);
-        await performShare({
-            url: `${buildShareUrl(threadId)}#comment-${commentId}`,
-            title: 'Anonymous reply on InteractInk',
-            text: shareText
-        }, anchorEl);
-    }
-
-    async function performShare(payload, anchorEl) {
-        if (navigator.share && isMobileViewport()) {
-            try {
-                await navigator.share(payload);
-                return;
-            } catch (err) {
-                if (err && err.name === 'AbortError') return;
+            if (node.children && node.children.length > 0) {
+                node.children.forEach(child => wrap.appendChild(buildCommentTreeUI(child, depth + 1)));
             }
+            return wrap;
         }
-        openShareMenu(payload, anchorEl);
-    }
 
-    function openShareMenu(payload, anchorEl) {
-        const menu = document.getElementById('shareMenu');
-        const encodedUrl = encodeURIComponent(payload.url);
-        const encodedText = encodeURIComponent(payload.text || payload.title || '');
-
-        const platforms = [
-            { name: 'X / Twitter', icon: 'twitter', href: `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}` },
-            { name: 'Facebook', icon: 'facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}` },
-            { name: 'Reddit', icon: 'message-circle', href: `https://www.reddit.com/submit?url=${encodedUrl}&title=${encodedText}` },
-            { name: 'WhatsApp', icon: 'phone', href: `https://api.whatsapp.com/send?text=${encodedText}%20${encodedUrl}` },
-            { name: 'Telegram', icon: 'send', href: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}` },
-            { name: 'Email', icon: 'mail', href: `mailto:?subject=${encodeURIComponent(payload.title || 'InteractInk post')}&body=${encodedText}%20${encodedUrl}` }
-        ];
-
-        menu.innerHTML = platforms.map(p =>
-            `<a href="${p.href}" target="_blank" rel="noopener noreferrer"><i data-lucide="${p.icon}"></i> ${p.name}</a>`
-        ).join('') + `<button onclick="copyShareLink('${payload.url.replace(/'/g, "\\'")}')"><i data-lucide="link"></i> Copy link</button>`;
-
-        const rect = anchorEl.getBoundingClientRect();
-        menu.style.top = `${rect.bottom + window.scrollY + 6}px`;
-        let left = rect.left + window.scrollX;
-        if (left + 200 > window.innerWidth) left = window.innerWidth - 210;
-        menu.style.left = `${Math.max(8, left)}px`;
-        menu.classList.remove('hidden');
-        lucide.createIcons();
-    }
-
-    function copyShareLink(url) {
-        navigator.clipboard.writeText(url).catch(() => {});
-        document.getElementById('shareMenu').classList.add('hidden');
-    }
-
-    document.addEventListener('click', (e) => {
-        const menu = document.getElementById('shareMenu');
-        if (!menu.classList.contains('hidden') && !menu.contains(e.target) && !e.target.closest('[onclick*="shareThread"], [onclick*="shareComment"]')) {
-            menu.classList.add('hidden');
+        function appendReplyPointer(cId) {
+            const input = document.getElementById('commentInput');
+            input.value = `>>${cId} ` + input.value;
+            document.getElementById('commentCharCounter').innerText = `${input.value.length}/300`;
+            input.focus();
         }
-    });
 
-    window.matchMedia('(max-width: 768px)').addEventListener('change', () => {
-        document.getElementById('shareMenu').classList.add('hidden');
-    });
-</script>
+        function parseRichTextContent(text) {
+            if (!text) return '';
+            const nodeCrossRegex = /&gt;&gt;([A-Fa-f0-9]{8})/g;
+            text = text.replace(nodeCrossRegex, (match, id) => {
+                return `<a href="#comment-${id}" data-preview-id="${id}" class="text-white underline font-bold cross-link-node" onclick="event.stopPropagation();">${match}</a>`;
+            });
+            const rawUrlRegex = /(https?:\/\/[^\s]+)/g;
+            text = text.replace(rawUrlRegex, (url) => {
+                return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="user-link" onclick="event.stopPropagation();">${url}</a>`;
+            });
+            return text;
+        }
 
-<footer style="width: 100%; text-align: center; padding: 40px 20px; margin-top: 24px; border-top: 1px solid #262626; color: #71767b;">
-    <a href="about.html" class="footer-link">About</a>
-    <a href="faq.html" class="footer-link">FAQ</a>
-    <a href="blog.html" class="footer-link">Blog</a>
-    <a href="contact.html" class="footer-link">Contact</a>
-    <a href="terms.html" class="footer-link">Terms</a>
-    <a href="guidelines.html" class="footer-link">Guidelines</a>
-    <a href="privacy.html" class="footer-link">Privacy Policy</a>
-    <p style="margin-top: 20px; font-size: 0.85rem;">&copy; 2026 InteractInk. All rights reserved.</p>
-</footer>
+        function setupCrossLinkHoverPreviews() {
+            const links = document.querySelectorAll('.cross-link-node');
+            const previewBox = document.getElementById('hoverPreviewBox');
+
+            links.forEach(link => {
+                link.addEventListener('mouseenter', (e) => {
+                    const targetId = link.getAttribute('data-preview-id');
+                    const commentsMap = appState.comments[appState.activeThreadId] || {};
+                    const targetComment = commentsMap[targetId];
+
+                    if (targetComment) {
+                        previewBox.innerHTML = `
+                            <div class="text-[10px] text-white font-bold mb-1 border-b border-neutral-800 pb-0.5 uppercase font-mono">${targetComment.tripcode} [>>${targetComment.id}]</div>
+                            <p class="text-neutral-400 leading-snug">${escapeHTML(targetComment.text)}</p>
+                        `;
+                        previewBox.classList.remove('hidden');
+                        const rect = link.getBoundingClientRect();
+                        previewBox.style.left = `${rect.left + window.scrollX}px`;
+                        previewBox.style.top = `${rect.top + window.scrollY - previewBox.offsetHeight - 10}px`;
+                    }
+                });
+                link.addEventListener('mouseleave', () => previewBox.classList.add('hidden'));
+            });
+        }
+
+        // ---------- Device / screen-size detection ----------
+        function isMobileViewport() {
+            return window.matchMedia('(max-width: 768px)').matches;
+        }
+
+        // ---------- Sharing (thread / comment) to any social platform ----------
+        function buildShareUrl(threadId) {
+            return `${location.origin}${location.pathname}?thread=${threadId}`;
+        }
+
+        async function shareThread(threadId, anchorEl) {
+            const thread = appState.threads[threadId];
+            if (!thread) return;
+            const shareText = (thread.content || '').slice(0, 200);
+            await performShare({
+                url: buildShareUrl(threadId),
+                title: thread.title || 'Anonymous post on InteractInk',
+                text: shareText
+            }, anchorEl);
+        }
+
+        async function shareComment(threadId, commentId, anchorEl) {
+            const comment = (appState.comments[threadId] || {})[commentId];
+            if (!comment) return;
+            const shareText = (comment.text || '').slice(0, 200);
+            await performShare({
+                url: `${buildShareUrl(threadId)}#comment-${commentId}`,
+                title: 'Anonymous reply on InteractInk',
+                text: shareText
+            }, anchorEl);
+        }
+
+        async function performShare(payload, anchorEl) {
+            if (navigator.share && isMobileViewport()) {
+                try {
+                    await navigator.share(payload);
+                    return;
+                } catch (err) {
+                    if (err && err.name === 'AbortError') return;
+                }
+            }
+            openShareMenu(payload, anchorEl);
+        }
+
+        function openShareMenu(payload, anchorEl) {
+            const menu = document.getElementById('shareMenu');
+            const encodedUrl = encodeURIComponent(payload.url);
+            const encodedText = encodeURIComponent(payload.text || payload.title || '');
+
+            const platforms = [
+                { name: 'X / Twitter', icon: 'twitter', href: `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}` },
+                { name: 'Facebook', icon: 'facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}` },
+                { name: 'Reddit', icon: 'message-circle', href: `https://www.reddit.com/submit?url=${encodedUrl}&title=${encodedText}` },
+                { name: 'WhatsApp', icon: 'phone', href: `https://api.whatsapp.com/send?text=${encodedText}%20${encodedUrl}` },
+                { name: 'Telegram', icon: 'send', href: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}` },
+                { name: 'Email', icon: 'mail', href: `mailto:?subject=${encodeURIComponent(payload.title || 'InteractInk post')}&body=${encodedText}%20${encodedUrl}` }
+            ];
+
+            menu.innerHTML = platforms.map(p =>
+                `<a href="${p.href}" target="_blank" rel="noopener noreferrer"><i data-lucide="${p.icon}"></i> ${p.name}</a>`
+            ).join('') + `<button onclick="copyShareLink('${payload.url.replace(/'/g, "\\'")}')"><i data-lucide="link"></i> Copy link</button>`;
+
+            const rect = anchorEl.getBoundingClientRect();
+            menu.style.top = `${rect.bottom + window.scrollY + 6}px`;
+            let left = rect.left + window.scrollX;
+            if (left + 200 > window.innerWidth) left = window.innerWidth - 210;
+            menu.style.left = `${Math.max(8, left)}px`;
+            menu.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function copyShareLink(url) {
+            navigator.clipboard.writeText(url).catch(() => {});
+            document.getElementById('shareMenu').classList.add('hidden');
+        }
+
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('shareMenu');
+            if (!menu.classList.contains('hidden') && !menu.contains(e.target) && !e.target.closest('[onclick*="shareThread"], [onclick*="shareComment"]')) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        window.matchMedia('(max-width: 768px)').addEventListener('change', () => {
+            document.getElementById('shareMenu').classList.add('hidden');
+        });
+    </script>
+
+    <footer style="width: 100%; text-align: center; padding: 40px 20px; margin-top: 24px; border-top: 1px solid #262626; color: #71767b;">
+        <a href="about.html" class="footer-link">About</a>
+        <a href="faq.html" class="footer-link">FAQ</a>
+        <a href="blog.html" class="footer-link">Blog</a>
+        <a href="contact.html" class="footer-link">Contact</a>
+        <a href="terms.html" class="footer-link">Terms</a>
+        <a href="guidelines.html" class="footer-link">Guidelines</a>
+        <a href="privacy.html" class="footer-link">Privacy Policy</a>
+        <p style="margin-top: 20px; font-size: 0.85rem;">&copy; 2026 InteractInk. All rights reserved.</p>
+    </footer>
 </body>
 </html>
