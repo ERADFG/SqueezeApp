@@ -39,7 +39,6 @@
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="stylesheet" href="styles.css">
 
-    <!-- FIXED: Added Tailwind CSS so styling actually applies -->
     <script src="https://cdn.tailwindcss.com"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -53,13 +52,19 @@
         .user-link { color: #3b82f6; text-decoration: underline; font-weight: 500; transition: color 0.1s ease; }
         .user-link:hover { color: #60a5fa; }
         
-        /* FIXED: Changed to a fixed pixel size to prevent massive mobile scaling */
+        /* FIXED: Added inversion filter to turn dark/black watermark white, and bumped opacity to 0.12 */
         .keyhole-watermark { 
             background-image: url('logo.png'); 
             background-repeat: no-repeat; 
             background-position: center; 
             background-size: 160px; 
-            opacity: 0.05; 
+            filter: invert(1) brightness(0.8);
+            opacity: 0.12; 
+        }
+        
+        /* FIXED: Separate filter for main logo to make it brilliant white against the black background */
+        .bright-logo {
+            filter: invert(1) brightness(1.5);
         }
         
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
@@ -115,15 +120,20 @@
     <div class="max-w-3xl mx-auto min-h-screen flex flex-col border-x border-neutral-800">
 
         <!-- Hero -->
-        <header class="relative overflow-hidden border-b border-neutral-800 px-6 py-12 text-center keyhole-watermark">
-            <img src="logo.png" alt="InteractInk logo" class="w-16 h-16 mx-auto mb-4">
-            <h1 class="text-3xl font-bold tracking-tight text-white mb-2">InteractInk</h1>
-            <p class="text-neutral-400 text-sm max-w-md mx-auto leading-relaxed">
-                A free anonymous text board. Post and reply instantly &mdash; no account, no email, no sign-up.
-            </p>
-            <a href="index.html" class="inline-flex items-center gap-2 mt-6 bg-white text-black hover:bg-neutral-200 font-bold px-6 py-2.5 rounded-full transition duration-200 text-sm shadow-sm">
-                <i data-lucide="log-in" class="w-4 h-4"></i> Enter the Board
-            </a>
+        <!-- FIXED: Added relative container positioning to make sure watermark stays layered correctly behind elements -->
+        <header class="relative overflow-hidden border-b border-neutral-800 px-6 py-12 text-center">
+            <div class="absolute inset-0 keyhole-watermark pointer-events-none"></div>
+            <div class="relative z-10">
+                <!-- FIXED: Added 'bright-logo' class to force the logo image to be white and readable -->
+                <img src="logo.png" alt="InteractInk logo" class="bright-logo w-16 h-16 mx-auto mb-4">
+                <h1 class="text-3xl font-bold tracking-tight text-white mb-2">InteractInk</h1>
+                <p class="text-neutral-400 text-sm max-w-md mx-auto leading-relaxed">
+                    A free anonymous text board. Post and reply instantly &mdash; no account, no email, no sign-up.
+                </p>
+                <a href="index.html" class="inline-flex items-center gap-2 mt-6 bg-white text-black hover:bg-neutral-200 font-bold px-6 py-2.5 rounded-full transition duration-200 text-sm shadow-sm">
+                    <i data-lucide="log-in" class="w-4 h-4"></i> Enter the Board
+                </a>
+            </div>
         </header>
 
         <!-- What is InteractInk -->
