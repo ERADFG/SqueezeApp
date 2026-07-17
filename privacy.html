@@ -100,6 +100,25 @@
         .back-link:hover { 
             text-decoration: underline; 
         }
+
+        /* ---------- Responsive device-adaptive layout ---------- */
+        .bottom-tab-bar { display: none; }
+        .bottom-tab {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: var(--text-secondary); text-decoration: none; font-size: 0.7rem; font-weight: 500;
+            padding: 6px 10px;
+        }
+        .bottom-tab.active { color: var(--text-primary); }
+        @media (max-width: 768px) {
+            .nav-bar { display: none; }
+            .bottom-tab-bar {
+                display: flex; justify-content: space-around; align-items: center;
+                position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+                background: rgba(0,0,0,0.97); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+                border-top: 1px solid var(--glass-border); padding: 8px 4px calc(8px + env(safe-area-inset-bottom));
+            }
+            body { padding-bottom: 60px; }
+        }
     </style>
 </head>
 <body>
@@ -110,6 +129,14 @@
         <a href="faq.html">FAQ</a>
         <a href="blog.html">Blog</a>
         <a href="contact.html">Contact</a>
+    </nav>
+
+    <!-- Mobile bottom tab bar (shown only on small screens, mirrors the nav above) -->
+    <nav class="bottom-tab-bar" aria-label="Mobile navigation">
+        <a href="index.html" class="bottom-tab">Home</a>
+        <a href="about.html" class="bottom-tab">About</a>
+        <a href="faq.html" class="bottom-tab">FAQ</a>
+        <a href="blog.html" class="bottom-tab">Blog</a>
     </nav>
 
     <div class="container">
