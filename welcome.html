@@ -15,13 +15,16 @@
     <meta property="og:title" content="InteractInk - Welcome">
     <meta property="og:description" content="A free anonymous text board. No accounts, no profiles, no tracking - just post and reply.">
     <meta property="og:url" content="https://interactink.vercel.app/welcome.html">
-    <meta property="og:image" content="https://interactink.vercel.app/logo.png">
+    <meta property="og:image" content="https://interactink.vercel.app/favicon2.png">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="InteractInk - Welcome">
     <meta name="twitter:description" content="A free anonymous text board. No accounts, no profiles, no tracking - just post and reply.">
-    <meta name="twitter:image" content="https://interactink.vercel.app/logo.png">
+    <meta name="twitter:image" content="https://interactink.vercel.app/favicon2.png">
+
+    <!-- Favicon Links -->
+    <link rel="icon" type="image/png" href="favicon2.png">
 
     <meta name="google-adsense-account" content="ca-pub-9357677827244243">
 
@@ -39,7 +42,7 @@
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="stylesheet" href="styles.css">
 
-    <!-- Tailwind CSS Framework -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -53,9 +56,13 @@
         .user-link { color: #3b82f6; text-decoration: underline; font-weight: 500; transition: color 0.1s ease; }
         .user-link:hover { color: #60a5fa; }
         
-        /* Forces the dark logo image to be white and readable against the black background */
-        .bright-logo {
-            filter: invert(1) brightness(1.5);
+        /* Watermark updated to use favicon2.png */
+        .keyhole-watermark { 
+            background-image: url('favicon2.png'); 
+            background-repeat: no-repeat; 
+            background-position: center; 
+            background-size: 160px; 
+            opacity: 0.08; 
         }
         
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
@@ -110,12 +117,12 @@
 
     <div class="max-w-3xl mx-auto min-h-screen flex flex-col border-x border-neutral-800">
 
-        <!-- Hero -->
-        <header class="border-b border-neutral-800 px-6 py-12 text-center">
+        <!-- Hero Header -->
+        <header class="relative overflow-hidden border-b border-neutral-800 px-6 py-12 text-center">
+            <div class="absolute inset-0 keyhole-watermark pointer-events-none"></div>
             <div class="relative z-10 flex flex-col items-center">
-                <!-- Brand logo positioned on top of the text -->
-                <img src="logo.png" alt="InteractInk logo" class="bright-logo w-16 h-16 mb-4">
-                
+                <!-- Main Logo: Using favicon2.png directly centered above the title text -->
+                <img src="favicon2.png" alt="InteractInk Logo" class="w-20 h-20 mb-4 object-contain">
                 <h1 class="text-3xl font-bold tracking-tight text-white mb-2">InteractInk</h1>
                 <p class="text-neutral-400 text-sm max-w-md mx-auto leading-relaxed">
                     A free anonymous text board. Post and reply instantly &mdash; no account, no email, no sign-up.
@@ -241,7 +248,6 @@
             return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' })[m]);
         }
 
-        // Calculates accurate time differences
         function timeAgo(dateString) {
             const ts = new Date(dateString).getTime();
             const seconds = Math.floor((Date.now() - ts) / 1000);
