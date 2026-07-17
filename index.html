@@ -6,7 +6,7 @@
     <title>InteractInk - Welcome | Anonymous Text Board</title>
 
     <meta name="description" content="Welcome to InteractInk, a free anonymous text board. No accounts, no sign-up. See what's trending right now and jump into the board.">
-    <link rel="canonical" href="https://interactink.vercel.app/index.html" />
+    <link rel="canonical" href="https://interactink.vercel.app/interactink.html" />
     <meta name="robots" content="index, follow">
 
     <!-- Open Graph -->
@@ -14,7 +14,7 @@
     <meta property="og:site_name" content="InteractInk">
     <meta property="og:title" content="InteractInk - Welcome">
     <meta property="og:description" content="A free anonymous text board. No accounts, no profiles, no tracking - just post and reply.">
-    <meta property="og:url" content="https://interactink.vercel.app/index.html">
+    <meta property="og:url" content="https://interactink.vercel.app/interactink.html">
     <meta property="og:image" content="https://interactink.vercel.app/favicon2.png">
 
     <!-- Twitter Card -->
@@ -231,7 +231,7 @@
             </nav>
 
             <!-- Large Desktop Post Button -->
-            <a href="index.html" class="mt-2 w-11/12 bg-white text-black hover:bg-neutral-200 font-bold py-3.5 rounded-full text-center transition duration-200 text-[15px] shadow-sm">
+            <a href="interactink.html" class="mt-2 w-11/12 bg-white text-black hover:bg-neutral-200 font-bold py-3.5 rounded-full text-center transition duration-200 text-[15px] shadow-sm">
                 Post
             </a>
         </aside>
@@ -255,7 +255,7 @@
                     <p class="text-neutral-400 text-sm max-w-md mx-auto leading-relaxed">
                         A free anonymous text board. Post and reply instantly &mdash; no account, no email, no sign-up.
                     </p>
-                    <a href="index.html" class="inline-flex items-center gap-2 mt-6 bg-white text-black hover:bg-neutral-200 font-bold px-6 py-2.5 rounded-full transition duration-200 text-sm shadow-sm">
+                    <a href="interactink.html" class="inline-flex items-center gap-2 mt-6 bg-white text-black hover:bg-neutral-200 font-bold px-6 py-2.5 rounded-full transition duration-200 text-sm shadow-sm">
                         <i data-lucide="log-in" class="w-4 h-4"></i> Enter the Board
                     </a>
                 </div>
@@ -312,7 +312,7 @@
                     <h2 class="text-white font-bold text-sm uppercase tracking-wide flex items-center gap-2">
                         <i data-lucide="flame" class="w-4 h-4 text-orange-500"></i> Popular Posts
                     </h2>
-                    <a href="index.html" class="text-xs text-neutral-500 hover:text-white transition">View all &rarr;</a>
+                    <a href="interactink.html" class="text-xs text-neutral-500 hover:text-white transition">View all &rarr;</a>
                 </div>
                 <div id="popularPostsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div class="col-span-full text-center text-neutral-600 text-xs font-mono py-10 animate-pulse">Loading popular posts...</div>
@@ -325,7 +325,7 @@
                     <h2 class="text-white font-bold text-sm uppercase tracking-wide flex items-center gap-2">
                         <i data-lucide="clock" class="w-4 h-4 text-neutral-400"></i> Fresh Posts
                     </h2>
-                    <a href="index.html" class="text-xs text-neutral-500 hover:text-white transition">View all &rarr;</a>
+                    <a href="interactink.html" class="text-xs text-neutral-500 hover:text-white transition">View all &rarr;</a>
                 </div>
                 <div id="freshPostsList" class="divide-y divide-neutral-900 border border-neutral-900 rounded-xl overflow-hidden">
                     <div class="text-center text-neutral-600 text-xs font-mono py-10 animate-pulse">Loading recent posts...</div>
@@ -495,7 +495,7 @@
 
         function buildPopularCard(thread, index) {
             const card = document.createElement('a');
-            card.href = `index.html?thread=${thread.id}`;
+            card.href = `interactink.html?thread=${thread.id}`;
             card.className = "fade-in-up p-4 bg-neutral-950/40 border border-neutral-900 rounded-xl hover:bg-neutral-900/40 hover:border-neutral-700 transition duration-200 flex flex-col no-underline text-inherit";
             card.style.animationDelay = `${index * 40}ms`;
 
@@ -527,7 +527,7 @@
                 list.innerHTML = '';
                 threads.forEach(t => {
                     const row = document.createElement('a');
-                    row.href = `index.html?thread=${t.id}`;
+                    row.href = `interactink.html?thread=${t.id}`;
                     row.className = "flex items-center justify-between gap-4 p-3 hover:bg-neutral-900/40 transition duration-150 no-underline text-inherit";
                     row.innerHTML = `
                         <div class="min-w-0">
