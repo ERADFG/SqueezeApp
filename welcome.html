@@ -39,6 +39,9 @@
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="stylesheet" href="styles.css">
 
+    <!-- FIXED: Added Tailwind CSS so styling actually applies -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 
@@ -49,7 +52,16 @@
         ::-webkit-scrollbar-thumb { background: #202327; border-radius: 9999px; }
         .user-link { color: #3b82f6; text-decoration: underline; font-weight: 500; transition: color 0.1s ease; }
         .user-link:hover { color: #60a5fa; }
-        .keyhole-watermark { background-image: url('logo.png'); background-repeat: no-repeat; background-position: center; background-size: 60%; opacity: 0.06; }
+        
+        /* FIXED: Changed to a fixed pixel size to prevent massive mobile scaling */
+        .keyhole-watermark { 
+            background-image: url('logo.png'); 
+            background-repeat: no-repeat; 
+            background-position: center; 
+            background-size: 160px; 
+            opacity: 0.05; 
+        }
+        
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         .fade-in-up { animation: fadeInUp 0.4s ease forwards; }
         .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
@@ -212,7 +224,6 @@
             if (!window.supabase) return;
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-            // Bug fix: Render static icons immediately before the DB promises load
             lucide.createIcons();
 
             await Promise.all([
@@ -222,7 +233,6 @@
             ]);
             trackPresence();
             
-            // Bug fix: Render newly injected dynamic icons
             lucide.createIcons();
         });
 
@@ -232,7 +242,6 @@
         }
 
         function timeAgo(dateString) {
-            // Bug fix: convert Supabase ISO string to a usable integer timestamp
             const ts = new Date(dateString).getTime();
             const seconds = Math.floor((Date.now() - ts) / 1000);
             if (seconds < 60) return `${Math.max(0, seconds)}s ago`;
@@ -307,7 +316,6 @@
 
                 const ranked = (threads || [])
                     .map(t => ({ ...t, replies: commentCounts[t.id] || 0 }))
-                    // Bug fix: Parse strings to JS Dates so they sort properly mathematically
                     .sort((a, b) => {
                         const replyDiff = b.replies - a.replies;
                         if (replyDiff !== 0) return replyDiff;
