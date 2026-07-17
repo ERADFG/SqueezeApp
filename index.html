@@ -258,45 +258,49 @@
         </div>
     </div>
 
-    <!-- Tooltip box for displaying referenced posts on hover -->
-    <div id="hoverPreviewBox" class="absolute bg-neutral-900 border border-neutral-700 text-neutral-200 text-xs p-3 rounded-xl shadow-2xl hidden z-50 max-w-xs pointer-events-none font-sans"></div>
+    <!-- Add this where your share menu placeholder is located -->
+<div id="shareMenu" class="share-menu hidden"></div>
 
-    <script>
-        const SUPABASE_URL = "https://xdshsodkuyawljzuirqt.supabase.co";
-        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
+<script>
+    const SUPABASE_URL = "https://xdshsodkuyawljzuirqt.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
+    
+    let supabaseClient;
+    const appState = { 
+        threads: {}, 
+        comments: {}, 
+        commentCounts: {}, 
+        activeThreadId: null, 
+        userSeed: null, 
+        cachedCounts: { threads: 0, comments: 0 },
+        feedFilter: 'latest', 
+        currentPage: 1, 
+        threadsPerPage: 10 
+    };
+
+       // Initialize core engine
+    window.addEventListener('load', async () => {
+        if (!window.supabase) return;
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
-        let supabaseClient;
-        const appState = { 
-            threads: {}, 
-            comments: {}, 
-            commentCounts: {}, 
-            activeThreadId: null, 
-            userSeed: null, 
-            cachedCounts: { threads: 0, comments: 0 },
-            feedFilter: 'latest', 
-            currentPage: 1, 
-            threadsPerPage: 10 
-        };
-
-        window.addEventListener('load', async () => {
-            if (!window.supabase) return;
-            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            
-            initSeedEngine();
-            bindEventListeners();
-            await fetchInitialData();
-            initRealtimeSync();
-            initPresenceTracking();
-            renderThreads();
-            lucide.createIcons();
-            setInterval(() => renderThreads(), 30000);
-
-            const params = new URLSearchParams(location.search);
-            const requestedThread = params.get('thread');
-            if (requestedThread && appState.threads[requestedThread]) {
-                openThreadModal(requestedThread);
-            }
-        });
+        initSeedEngine();
+        bindEventListeners();
+        await fetchInitialData();
+        initRealtimeSync();
+        initPresenceTracking();
+        renderThreads();
+        lucide.createIcons();
+        
+        // Handle deep linking
+        const params = new URLSearchParams(location.search);
+        const requestedThread = params.get('thread');
+        if (requestedThread) {
+            // Wait briefly for data to populate
+            setTimeout(() => {
+                if (appState.threads[requestedThread]) openThreadModal(requestedThread);
+            }, 500);
+        }
+    });
 
         function initSeedEngine() {
             let seed = localStorage.getItem('ink_private_seed_key');
@@ -308,12 +312,11 @@
         }
 
         async function generateTripcode(threadId, seedString) {
-            const encoder = new TextEncoder();
-            const rawBuffer = encoder.encode(threadId + seedString);
-            const digestBuffer = await crypto.subtle.digest('SHA-256', rawBuffer);
-            const hashArray = Array.from(new Uint8Array(digestBuffer));
-            return 'Anon#' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 4);
-        }
+        const encoder = new TextEncoder();
+        const data = encoder.encode(threadId + seedString);
+        const hash = await crypto.subtle.digest('SHA-256', data);
+        return 'Anon#' + Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 4);
+    }
 
         async function fetchInitialData() {
             try {
@@ -574,24 +577,23 @@
         }
 
         async function openThreadModal(tId) {
-            appState.activeThreadId = tId;
-            const thread = appState.threads[tId];
-            if (!thread) return;
+        appState.activeThreadId = tId;
+        const thread = appState.threads[tId];
+        if (!thread) return;
 
-            document.getElementById('modalMeta').innerText = `Thread >>${thread.id}`;
-            document.getElementById('modalTitle').innerText = thread.title;
-            document.getElementById('modalOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content));
-            document.getElementById('threadModal').classList.remove('hidden');
-            
-            document.getElementById('commentTreeContainer').innerHTML = `<div class="text-xs text-neutral-600 text-center py-6 font-mono animate-pulse">Loading comments...</div>`;
-            
-            try {
-                const { data: comments } = await supabaseClient.from('comments').select('*').eq('thread_id', tId);
-                appState.comments[tId] = {};
-                if (comments) comments.forEach(c => appState.comments[tId][c.id] = c);
-                renderCommentTree();
-            } catch (err) { console.error(err); }
-        }
+        document.getElementById('modalMeta').innerText = `Thread >>${thread.id}`;
+        document.getElementById('modalTitle').innerText = thread.title;
+        document.getElementById('modalOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content));
+        document.getElementById('threadModal').classList.remove('hidden');
+        
+        const container = document.getElementById('commentTreeContainer');
+        container.innerHTML = `<div class="text-xs text-neutral-600 text-center py-6 font-mono">Loading...</div>`;
+        
+        const { data: comments } = await supabaseClient.from('comments').select('*').eq('thread_id', tId).order('timestamp', { ascending: true });
+        appState.comments[tId] = {};
+        if (comments) comments.forEach(c => appState.comments[tId][c.id] = c);
+        renderCommentTree();
+     }
 
         function renderCommentTree() {
             const container = document.getElementById('commentTreeContainer');
@@ -677,29 +679,21 @@
         }
 
         function setupCrossLinkHoverPreviews() {
-            const links = document.querySelectorAll('.cross-link-node');
-            const previewBox = document.getElementById('hoverPreviewBox');
-
-            links.forEach(link => {
-                link.addEventListener('mouseenter', (e) => {
-                    const targetId = link.getAttribute('data-preview-id');
-                    const commentsMap = appState.comments[appState.activeThreadId] || {};
-                    const targetComment = commentsMap[targetId];
-
-                    if (targetComment) {
-                        previewBox.innerHTML = `
-                            <div class="text-[10px] text-white font-bold mb-1 border-b border-neutral-800 pb-0.5 uppercase font-mono">${targetComment.tripcode} [>>${targetComment.id}]</div>
-                            <p class="text-neutral-400 leading-snug">${escapeHTML(targetComment.text)}</p>
-                        `;
-                        previewBox.classList.remove('hidden');
-                        const rect = link.getBoundingClientRect();
-                        previewBox.style.left = `${rect.left + window.scrollX}px`;
-                        previewBox.style.top = `${rect.top + window.scrollY - previewBox.offsetHeight - 10}px`;
-                    }
-                });
-                link.addEventListener('mouseleave', () => previewBox.classList.add('hidden'));
-            });
-        }
+        const previewBox = document.getElementById('hoverPreviewBox');
+        document.querySelectorAll('.cross-link-node').forEach(link => {
+            link.onmouseenter = (e) => {
+                const targetId = link.getAttribute('data-preview-id');
+                const comment = (appState.comments[appState.activeThreadId] || {})[targetId];
+                if (comment) {
+                    previewBox.innerHTML = `<div class="font-bold border-b border-neutral-700 pb-1 mb-1">${comment.tripcode}</div><p>${escapeHTML(comment.text)}</p>`;
+                    previewBox.classList.remove('hidden');
+                    previewBox.style.left = `${e.pageX + 10}px`;
+                    previewBox.style.top = `${e.pageY + 10}px`;
+                }
+            };
+            link.onmouseleave = () => previewBox.classList.add('hidden');
+        });
+    }
 
         // ---------- Device / screen-size detection ----------
         function isMobileViewport() {
@@ -746,9 +740,9 @@
         }
 
         function openShareMenu(payload, anchorEl) {
-            const menu = document.getElementById('shareMenu');
-            const encodedUrl = encodeURIComponent(payload.url);
-            const encodedText = encodeURIComponent(payload.text || payload.title || '');
+    const menu = document.getElementById('shareMenu');
+    const encodedUrl = encodeURIComponent(payload.url);
+    const encodedText = encodeURIComponent(payload.text || '');
 
             const platforms = [
                 { name: 'X / Twitter', icon: 'twitter', href: `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}` },
@@ -759,18 +753,22 @@
                 { name: 'Email', icon: 'mail', href: `mailto:?subject=${encodeURIComponent(payload.title || 'InteractInk post')}&body=${encodedText}%20${encodedUrl}` }
             ];
 
-            menu.innerHTML = platforms.map(p =>
-                `<a href="${p.href}" target="_blank" rel="noopener noreferrer"><i data-lucide="${p.icon}"></i> ${p.name}</a>`
-            ).join('') + `<button onclick="copyShareLink('${payload.url.replace(/'/g, "\\'")}')"><i data-lucide="link"></i> Copy link</button>`;
+            menu.innerHTML = platforms.map(p => 
+            p.href ? `<a href="${p.href}" target="_blank" class="flex gap-2 p-2 hover:bg-neutral-800"><i data-lucide="${p.icon}"></i> ${p.name}</a>` 
+            : `<button onclick="(${p.action.toString()})()" class="flex gap-2 p-2 w-full hover:bg-neutral-800"><i data-lucide="${p.icon}"></i> ${p.name}</button>`
+        ).join('');
 
-            const rect = anchorEl.getBoundingClientRect();
-            menu.style.top = `${rect.bottom + window.scrollY + 6}px`;
-            let left = rect.left + window.scrollX;
-            if (left + 200 > window.innerWidth) left = window.innerWidth - 210;
-            menu.style.left = `${Math.max(8, left)}px`;
-            menu.classList.remove('hidden');
-            lucide.createIcons();
-        }
+        const rect = anchorEl.getBoundingClientRect();
+        menu.style.top = `${rect.bottom + window.scrollY}px`;
+        menu.style.left = `${rect.left + window.scrollX}px`;
+        menu.classList.remove('hidden');
+        lucide.createIcons();
+    }
+
+    function copyShareLink(url) {
+        navigator.clipboard.writeText(url);
+        document.getElementById('shareMenu').classList.add('hidden');
+    }
 
         function copyShareLink(url) {
             navigator.clipboard.writeText(url).catch(() => {});
