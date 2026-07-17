@@ -3,44 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InteractInk - Post Anonymously, No Sign-Up Required | Anonymous Text Board</title>
+    <title>InteractInk - Welcome | Anonymous Text Board</title>
 
-    <meta name="description" content="InteractInk is a free anonymous text board. Post and reply instantly with no account, no email, and no sign-up. Threaded discussions, tripcodes, and full privacy.">
-    <link rel="canonical" href="https://interactink.vercel.app/" />
+    <meta name="description" content="Welcome to InteractInk, a free anonymous text board. No accounts, no sign-up. See what's trending right now and jump into the board.">
+    <link rel="canonical" href="https://interactink.vercel.app/index.html" />
     <meta name="robots" content="index, follow">
 
     <!-- Open Graph -->
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="InteractInk">
-    <meta property="og:title" content="InteractInk - Post Anonymously, No Sign-Up Required">
+    <meta property="og:title" content="InteractInk - Welcome">
     <meta property="og:description" content="A free anonymous text board. No accounts, no profiles, no tracking - just post and reply.">
-    <meta property="og:url" content="https://interactink.vercel.app/">
+    <meta property="og:url" content="https://interactink.vercel.app/index.html">
     <meta property="og:image" content="https://interactink.vercel.app/favicon2.png">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="InteractInk - Post Anonymously, No Sign-Up Required">
+    <meta name="twitter:title" content="InteractInk - Welcome">
     <meta name="twitter:description" content="A free anonymous text board. No accounts, no profiles, no tracking - just post and reply.">
     <meta name="twitter:image" content="https://interactink.vercel.app/favicon2.png">
 
-    <meta name="google-adsense-account" content="ca-pub-9357677827244243">
-    <meta name="google-site-verification" content="DOvTKyh77YUQreg4Dg6SaL1wEM33Da783l6lqsLek7Q" />
+    <!-- Favicon Links -->
+    <link rel="icon" type="image/png" href="favicon2.png">
 
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "InteractInk",
-      "url": "https://interactink.vercel.app/",
-      "description": "A free anonymous text board where anyone can post and reply without creating an account.",
-      "publisher": {
-        "@type": "Organization",
-        "name": "InteractInk",
-        "logo": "https://interactink.vercel.app/favicon2.png"
-      }
-    }
-    </script>
-    
+    <meta name="google-adsense-account" content="ca-pub-9357677827244243">
+
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9357677827244243" crossorigin="anonymous"></script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-527BWKF63G"></script>
     <script>
@@ -55,24 +42,36 @@
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="stylesheet" href="styles.css">
 
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
         body { background-color: #000000; color: #e7e9ea; }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #000000; }
         ::-webkit-scrollbar-thumb { background: #202327; border-radius: 9999px; }
-        input, textarea { background-color: #000000 !important; }
         .user-link { color: #3b82f6; text-decoration: underline; font-weight: 500; transition: color 0.1s ease; }
         .user-link:hover { color: #60a5fa; }
-        .footer-link { color: #e7e9ea; text-decoration: none; margin: 0 14px; font-weight: 500; font-size: 0.85rem; transition: opacity 0.2s; display: inline-block; margin-bottom: 8px; }
-        .footer-link:hover { opacity: 0.7; }
-        .widget-link { color: #71767b; text-decoration: none; margin: 0 8px; font-weight: 500; font-size: 0.8rem; transition: color 0.2s; display: inline-block; margin-bottom: 6px; }
-        .widget-link:hover { color: #e7e9ea; }
-
-        /* ---------- Responsive 3-Column Grid (matches welcome.html) ---------- */
+        
+        /* Watermark updated to use favicon2.png */
+        .keyhole-watermark { 
+            background-image: url('favicon2.png'); 
+            background-repeat: no-repeat; 
+            background-position: center; 
+            background-size: 160px; 
+            opacity: 0.08; 
+        }
+        
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in-up { animation: fadeInUp 0.4s ease forwards; }
+        .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        .footer-link { color: #71767b; text-decoration: none; margin: 0 8px; font-weight: 500; font-size: 0.8rem; transition: color 0.2s; display: inline-block; margin-bottom: 6px; }
+        .footer-link:hover { color: #e7e9ea; }
+    
+        /* ---------- Responsive 3-Column Grid ---------- */
         .app-container {
             display: grid;
             grid-template-columns: 1fr;
@@ -86,7 +85,10 @@
             }
         }
 
-        .x-sidebar { display: none; }
+        /* Sidebar Column */
+        .x-sidebar {
+            display: none;
+        }
 
         @media (min-width: 1024px) {
             .x-sidebar {
@@ -103,19 +105,25 @@
             }
         }
 
+        /* Main Feed Column */
         .x-feed {
             grid-column: 1;
             min-height: 100vh;
+            padding-bottom: 80px;
         }
 
         @media (min-width: 1024px) {
             .x-feed {
                 grid-column: 3;
                 border-right: 1px solid #2f3336;
+                padding-bottom: 24px;
             }
         }
 
-        .x-widgets { display: none; }
+        /* Widgets Column */
+        .x-widgets {
+            display: none;
+        }
 
         @media (min-width: 1024px) {
             .x-widgets {
@@ -131,6 +139,7 @@
             }
         }
 
+        /* Sidebar Navigation Item */
         .nav-item {
             display: flex;
             align-items: center;
@@ -159,35 +168,21 @@
             stroke-width: 2px;
         }
 
-        /* ---------- Responsive device-adaptive layout ---------- */
+        /* Mobile Adjustments */
         .bottom-tab-bar { display: none; }
-        .compose-fab { display: none; }
-        .bottom-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #71767b; text-decoration: none; padding: 6px 10px; cursor: pointer; background: none; border: none; }
+        .bottom-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #71767b; text-decoration: none; padding: 6px 10px; }
         .bottom-tab.active { color: #ffffff; }
-        .bottom-tab i { width: 20px; height: 20px; }
-        @media (max-width: 768px) {
-            .desktop-nav { display: none !important; }
+        .bottom-tab svg { width: 20px; height: 20px; }
+
+        @media (max-width: 1023px) {
             .bottom-tab-bar {
                 display: flex; justify-content: space-around; align-items: center;
                 position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
                 background: rgba(0,0,0,0.97); backdrop-filter: blur(12px);
                 border-top: 1px solid #262626; padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
             }
-            .compose-fab {
-                display: flex; align-items: center; justify-content: center;
-                position: fixed; right: 16px; bottom: calc(64px + env(safe-area-inset-bottom));
-                width: 48px; height: 48px; border-radius: 9999px; background: #1d9bf0; color: #fff;
-                z-index: 50; border: none; box-shadow: 0 2px 10px rgba(0,0,0,0.5); cursor: pointer;
-            }
             body { padding-bottom: 60px; }
-            .post-card-body { font-size: 13px !important; }
         }
-
-        /* ---------- Share menu ---------- */
-        .share-menu { position: absolute; z-index: 60; background: #16181c; border: 1px solid #2f3336; border-radius: 12px; padding: 6px; min-width: 190px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
-        .share-menu a, .share-menu button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: none; border: none; color: #e7e9ea; font-size: 13px; padding: 8px 10px; border-radius: 8px; cursor: pointer; text-decoration: none; }
-        .share-menu a:hover, .share-menu button:hover { background: #1d1f23; }
-        .share-menu i { width: 16px; height: 16px; flex-shrink: 0; }
     </style>
 </head>
 <body class="min-h-screen font-sans antialiased selection:bg-neutral-800 selection:text-white">
@@ -196,18 +191,20 @@
 
         <!-- LEFT DESKTOP SIDEBAR -->
         <aside class="x-sidebar">
+            <!-- Brand Logo -->
             <div class="py-2 px-3 mb-4">
-                <a href="welcome.html">
+                <a href="index.html">
                     <img src="favicon2.png" alt="InteractInk Logo" class="w-10 h-10 object-contain hover:opacity-90 transition">
                 </a>
             </div>
 
+            <!-- Vertical Navigation -->
             <nav class="flex flex-col gap-1 w-full mb-4">
-                <a href="welcome.html" class="nav-item">
+                <a href="index.html" class="nav-item active">
                     <i data-lucide="home"></i>
                     <span>Home</span>
                 </a>
-                <a href="index.html" class="nav-item active">
+                <a href="interactink.html" class="nav-item">
                     <i data-lucide="message-square"></i>
                     <span>Board</span>
                 </a>
@@ -233,13 +230,15 @@
                 </a>
             </nav>
 
-            <button onclick="focusComposer()" class="mt-2 w-11/12 bg-white text-black hover:bg-neutral-200 font-bold py-3.5 rounded-full text-center transition duration-200 text-[15px] shadow-sm cursor-pointer">
+            <!-- Large Desktop Post Button -->
+            <a href="index.html" class="mt-2 w-11/12 bg-white text-black hover:bg-neutral-200 font-bold py-3.5 rounded-full text-center transition duration-200 text-[15px] shadow-sm">
                 Post
-            </button>
+            </a>
         </aside>
 
         <!-- CENTER MAIN CONTENT FEED -->
-        <div class="x-feed border-r border-neutral-800">
+        <main class="x-feed">
+            <!-- Top Banner Ad space -->
             <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
                 <script type="text/javascript">
                   atOptions = { 'key' : 'c2beae2a3c4b115088146fa8ef56a186', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
@@ -247,79 +246,117 @@
                 <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
             </div>
 
-            <header class="sticky top-0 bg-black/90 backdrop-blur-md border-b border-neutral-800 p-4 z-40 flex justify-between items-center">
-                <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-                    <img src="favicon2.png" alt="InteractInk logo" class="w-6 h-6"> InteractInk
-                </h1>
-                <div class="flex items-center gap-2">
-                    <div class="px-3 py-1 text-[10px] font-mono font-semibold text-neutral-400 bg-neutral-900 border border-neutral-800 rounded-full uppercase tracking-wider">
-                        Total Posts: <span id="globalPostCount" class="text-white">0</span>
-                    </div>
-                    <div class="px-3 py-1 flex items-center gap-2 rounded-full bg-neutral-900 border border-neutral-800">
-                        <span class="relative flex h-1.5 w-1.5 shrink-0">
-                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-                        </span>
-                        <span class="text-[10px] text-neutral-400 uppercase tracking-wider font-semibold"><span id="onlineCount">1</span> Online</span>
-                    </div>
+            <!-- Welcome page header -->
+            <header class="relative overflow-hidden border-b border-neutral-800 px-6 py-12 text-center">
+                <div class="absolute inset-0 keyhole-watermark pointer-events-none"></div>
+                <div class="relative z-10 flex flex-col items-center">
+                    <img src="favicon2.png" alt="InteractInk Logo" class="w-20 h-20 mb-4 object-contain">
+                    <h1 class="text-3xl font-bold tracking-tight text-white mb-2">InteractInk</h1>
+                    <p class="text-neutral-400 text-sm max-w-md mx-auto leading-relaxed">
+                        A free anonymous text board. Post and reply instantly &mdash; no account, no email, no sign-up.
+                    </p>
+                    <a href="index.html" class="inline-flex items-center gap-2 mt-6 bg-white text-black hover:bg-neutral-200 font-bold px-6 py-2.5 rounded-full transition duration-200 text-sm shadow-sm">
+                        <i data-lucide="log-in" class="w-4 h-4"></i> Enter the Board
+                    </a>
                 </div>
             </header>
+            
 
-        <noscript>
-            <section class="px-4 py-6 border-b border-neutral-800">
-                <p class="text-neutral-300 text-sm leading-relaxed">
-                    InteractInk is a free, anonymous text board. JavaScript is required to view and post live threads &mdash; please enable it in your browser.
-                </p>
-            </section>
-        </noscript>
-
-        <section class="p-4 border-b border-neutral-800">
-            <form id="threadForm" class="pt-1">
-                <input type="text" id="threadTitle" placeholder="Your Name (Optional)..." maxlength="50" autocomplete="off"
-                       class="w-full bg-transparent text-white text-base font-bold pb-2 focus:outline-none placeholder:text-neutral-600 border-b border-neutral-900 mb-3">
-                <textarea id="threadContent" placeholder="What is happening?" required rows="3" maxlength="1000"
-                          class="w-full bg-transparent text-white text-sm focus:outline-none placeholder:text-neutral-500 resize-none leading-relaxed"></textarea>
+            <!-- What is InteractInk -->
+            <section id="infoBox" class="mx-4 mt-6 border border-neutral-800 bg-neutral-950/40 rounded-xl relative">
+                <button onclick="document.getElementById('infoBox').style.display='none'" class="absolute top-3 right-3 text-neutral-500 hover:text-white transition cursor-pointer">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+                <div class="p-5">
+                    <h2 class="text-white font-bold text-sm uppercase tracking-wide mb-2">What is InteractInk?</h2>
+                    <p class="text-neutral-400 text-sm leading-relaxed">
+                        InteractInk is a simple anonymous text board where anyone can post and reply with zero setup. There's no
+                        profile, no follower count, no algorithm &mdash; just threads and replies, tied together with lightweight
+                        anonymous tripcodes so conversations stay readable without giving up anonymity.
+                    </p>
+                    <p class="text-neutral-500 text-xs mt-3">
+                        New here? Check the <a href="faq.html" class="user-link">FAQ</a> or read the
+                        <a href="guidelines.html" class="user-link">Guidelines</a> before you post.
+                    </p>
+                </div>
                 
-                <div class="flex justify-between items-center border-t border-neutral-950 pt-3 mt-2">
-                    <div class="text-neutral-600 flex gap-4 items-center text-sm">
-                        <i data-lucide="shield-check" class="w-4 h-4 text-neutral-500" title="You'll get an automatic anonymous ID for this thread"></i>
-                        <span class="text-xs text-neutral-500 hidden sm:inline">Anonymous Posting</span>
+            </section>
+
+            <!-- Live Stats Row -->
+            <section class="mx-4 mt-6 border border-neutral-800 bg-neutral-950/40 rounded-xl p-4">
+                <div class="grid grid-cols-3 divide-x divide-neutral-800 text-center">
+                    <div class="px-2">
+                        <div id="statTotalPosts" class="text-xl font-bold text-white font-mono">&mdash;</div>
+                        <div class="text-[10px] uppercase tracking-wider text-neutral-500 mt-1">Total Posts</div>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <span id="threadCharCounter" class="text-[11px] font-mono text-neutral-600">0/1000</span>
-                        <button type="submit" class="bg-white text-black hover:bg-neutral-200 font-bold px-5 py-2 rounded-full transition duration-200 text-sm cursor-pointer shadow-sm">
-                            Post
-                        </button>
+                    <div class="px-2">
+                        <div class="flex items-center justify-center gap-1.5">
+                            <span class="relative flex h-1.5 w-1.5 shrink-0">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                            </span>
+                            <span id="statOnline" class="text-xl font-bold text-white font-mono">&mdash;</span>
+                        </div>
+                        <div class="text-[10px] uppercase tracking-wider text-neutral-500 mt-1">Current Users</div>
+                    </div>
+                    <div class="px-2">
+                        <div id="statActiveContent" class="text-xl font-bold text-white font-mono">&mdash;</div>
+                        <div class="text-[10px] uppercase tracking-wider text-neutral-500 mt-1">Active Content</div>
                     </div>
                 </div>
-            </form>
-        </section>
+            </section>
 
-        <div class="flex border-b border-neutral-800 text-sm font-bold bg-neutral-950/30">
-            <button id="tabLatest" onclick="switchFeedFilter('latest')" class="flex-1 text-center py-3.5 text-white border-b-2 border-emerald-500 transition">Latest</button>
-            <button id="tabTrending" onclick="switchFeedFilter('trending')" class="flex-1 text-center py-3.5 text-neutral-500 border-b-2 border-transparent hover:bg-neutral-900 hover:text-white transition">Trending</button>
-        </div>
+            <!-- Popular Posts -->
+            <section class="mt-8 px-4">
+                <div class="flex items-center justify-between mb-3 border-b border-neutral-800 pb-2">
+                    <h2 class="text-white font-bold text-sm uppercase tracking-wide flex items-center gap-2">
+                        <i data-lucide="flame" class="w-4 h-4 text-orange-500"></i> Popular Posts
+                    </h2>
+                    <a href="index.html" class="text-xs text-neutral-500 hover:text-white transition">View all &rarr;</a>
+                </div>
+                <div id="popularPostsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="col-span-full text-center text-neutral-600 text-xs font-mono py-10 animate-pulse">Loading popular posts...</div>
+                </div>
+            </section>
 
-        <main id="latestStream" class="divide-y divide-neutral-800 flex-1"></main>
-        
-        <div id="paginationControls" class="flex justify-center items-center gap-2 p-6 border-t border-neutral-800 mb-8"></div>
-        </div>
+            <!-- Recent Activity -->
+            <section class="mt-8 px-4 pb-8">
+                <div class="flex items-center justify-between mb-3 border-b border-neutral-800 pb-2">
+                    <h2 class="text-white font-bold text-sm uppercase tracking-wide flex items-center gap-2">
+                        <i data-lucide="clock" class="w-4 h-4 text-neutral-400"></i> Fresh Posts
+                    </h2>
+                    <a href="index.html" class="text-xs text-neutral-500 hover:text-white transition">View all &rarr;</a>
+                </div>
+                <div id="freshPostsList" class="divide-y divide-neutral-900 border border-neutral-900 rounded-xl overflow-hidden">
+                    <div class="text-center text-neutral-600 text-xs font-mono py-10 animate-pulse">Loading recent posts...</div>
+                </div>
+            </section>
+
+            <!-- Bottom Ad Space inside Main Column -->
+            <div class="w-full flex justify-center py-3 bg-black border-t border-b border-neutral-800 my-4">
+                <script type="text/javascript">
+                  atOptions = { 'key' : 'c2beae2a3c4b115088146fa8ef56a186', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+                </script>
+                <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
+            </div>
+        </main>
 
         <!-- RIGHT DESKTOP SIDEBAR -->
         <aside class="x-widgets">
+            <!-- Sidebar Info / Footer Card -->
             <div class="bg-[#16181c] rounded-2xl p-4 border border-neutral-900">
                 <h2 class="text-white font-bold text-base mb-3">About InteractInk</h2>
                 <p class="text-neutral-400 text-xs leading-normal mb-3">
                     A zero-friction, layout-focused environment to speak your mind freely.
                 </p>
                 <div class="flex flex-wrap pt-2">
-                    <a href="about.html" class="widget-link">About</a>
-                    <a href="faq.html" class="widget-link">FAQ</a>
-                    <a href="blog.html" class="widget-link">Blog</a>
-                    <a href="contact.html" class="widget-link">Contact</a>
-                    <a href="terms.html" class="widget-link">Terms</a>
-                    <a href="guidelines.html" class="widget-link">Rules</a>
-                    <a href="privacy.html" class="widget-link">Privacy</a>
+                    <a href="about.html" class="footer-link">About</a>
+                    <a href="faq.html" class="footer-link">FAQ</a>
+                    <a href="blog.html" class="footer-link">Blog</a>
+                    <a href="contact.html" class="footer-link">Contact</a>
+                    <a href="terms.html" class="footer-link">Terms</a>
+                    <a href="guidelines.html" class="footer-link">Rules</a>
+                    <a href="privacy.html" class="footer-link">Privacy</a>
                 </div>
                 <p class="text-[11px] text-neutral-600 mt-3">&copy; 2026 InteractInk</p>
             </div>
@@ -327,177 +364,86 @@
 
         <!-- MOBILE BOTTOM TAB BAR -->
         <nav class="bottom-tab-bar" aria-label="Mobile navigation">
-            <a href="welcome.html" class="bottom-tab"><i data-lucide="home"></i></a>
-            <a href="index.html" class="bottom-tab active"><i data-lucide="message-square"></i></a>
+            <a href="index.html" class="bottom-tab active"><i data-lucide="home"></i></a>
+            <a href="interactink.html" class="bottom-tab"><i data-lucide="message-square"></i></a>
             <a href="ichat.html" class="bottom-tab"><i data-lucide="message-circle-code"></i></a>
             <a href="about.html" class="bottom-tab"><i data-lucide="info"></i></a>
             <a href="faq.html" class="bottom-tab"><i data-lucide="help-circle"></i></a>
-            <a href="blog.html" class="bottom-tab"><i data-lucide="rss"></i></a>
-            <a href="contact.html" class="bottom-tab"><i data-lucide="mail"></i></a>
         </nav>
+
     </div>
 
-    <!-- Modal window for viewing threads and replying -->
-    <div id="threadModal" class="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-black border border-neutral-800 w-full max-w-xl rounded-2xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
-            <div class="p-4 border-b border-neutral-800 flex justify-between items-center bg-black">
-                <div class="flex items-center gap-2 text-xs text-neutral-500 font-medium">
-                    <i data-lucide="message-square" class="w-3.5 h-3.5 text-neutral-500"></i>
-                    <span id="modalMeta" class="uppercase tracking-wider">Thread</span>
-                </div>
-                <button onclick="closeThreadModal()" class="text-neutral-400 hover:text-white p-1 hover:bg-neutral-900 rounded-full transition cursor-pointer">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
-            </div>
+    <!-- Script integrations remain identical and fully active -->
+    <script>
+        const SUPABASE_URL = "https://xdshsodkuyawljzuirqt.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
+
+        let supabaseClient;
+
+        window.addEventListener('load', async () => {
+            if (!window.supabase) return;
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+            lucide.createIcons();
+
+            await Promise.all([
+                loadStats(),
+                loadPopularPosts(),
+                loadFreshPosts()
+            ]);
+            trackPresence();
             
-            <div class="flex-1 overflow-y-auto p-4 space-y-6" id="modalScrollBody">
-                <div class="min-w-0">
-                    <div class="flex items-baseline gap-2 mb-2">
-                        <span id="modalTitle" class="font-bold text-white text-base truncate uppercase tracking-wide border-b border-neutral-900 pb-1 w-full">Subject Target</span>
-                    </div>
-                    <p id="modalOpBody" class="text-neutral-200 text-sm leading-relaxed break-words whitespace-pre-wrap pt-1"></p>
-                </div>
+            lucide.createIcons();
+        });
 
-                <div class="border-b border-neutral-800"></div>
-
-                <div id="commentTreeContainer" class="space-y-4"></div>
-            </div>
-
-            <div class="p-4 border-t border-neutral-800 bg-black">
-                <form id="commentForm" class="flex gap-3 items-center">
-                    <div class="text-neutral-500 shrink-0">
-                        <i data-lucide="corner-down-right" class="w-4 h-4"></i>
-                    </div>
-                    <input type="text" id="commentInput" placeholder="Post your reply... (use >>ID to link to a specific post)" autocomplete="off" required maxlength="300"
-                           class="flex-1 bg-transparent text-sm text-white focus:outline-none placeholder:text-neutral-600">
-                    <span id="commentCharCounter" class="text-[11px] font-mono text-neutral-600 shrink-0 select-none">0/300</span>
-                    <button type="submit" class="bg-white text-black hover:bg-neutral-200 font-bold px-4 py-1.5 rounded-full text-xs transition duration-200 cursor-pointer shrink-0">
-                        Reply
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Add this where your share menu placeholder is located -->
-<div id="shareMenu" class="share-menu hidden"></div>
-
-<script>
-    const SUPABASE_URL = "https://xdshsodkuyawljzuirqt.supabase.co";
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
-    
-    let supabaseClient;
-    const appState = { 
-        threads: {}, 
-        comments: {}, 
-        commentCounts: {}, 
-        activeThreadId: null, 
-        userSeed: null, 
-        cachedCounts: { threads: 0, comments: 0 },
-        feedFilter: 'latest', 
-        currentPage: 1, 
-        threadsPerPage: 10 
-    };
-
-       // Initialize core engine
-    window.addEventListener('load', async () => {
-        if (!window.supabase) return;
-        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        
-        initSeedEngine();
-        bindEventListeners();
-        await fetchInitialData();
-        initRealtimeSync();
-        initPresenceTracking();
-        renderThreads();
-        lucide.createIcons();
-        
-        // Handle deep linking
-        const params = new URLSearchParams(location.search);
-        const requestedThread = params.get('thread');
-        if (requestedThread) {
-            // Wait briefly for data to populate
-            setTimeout(() => {
-                if (appState.threads[requestedThread]) openThreadModal(requestedThread);
-            }, 500);
-        }
-    });
-
-        function initSeedEngine() {
-            let seed = localStorage.getItem('ink_private_seed_key');
-            if (!seed) {
-                seed = [...Array(32)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
-                localStorage.setItem('ink_private_seed_key', seed);
-            }
-            appState.userSeed = seed;
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' })[m]);
         }
 
-        async function generateTripcode(threadId, seedString) {
-        const encoder = new TextEncoder();
-        const data = encoder.encode(threadId + seedString);
-        const hash = await crypto.subtle.digest('SHA-256', data);
-        return 'Anon#' + Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 4);
-    }
+        function timeAgo(dateString) {
+            const ts = new Date(dateString).getTime();
+            const seconds = Math.floor((Date.now() - ts) / 1000);
+            if (seconds < 60) return `${Math.max(0, seconds)}s ago`;
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes}m ago`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours}h ago`;
+            const days = Math.floor(hours / 24);
+            return `${days}d ago`;
+        }
 
-        async function fetchInitialData() {
+        function formatBytes(bytes) {
+            if (bytes < 1024) return `${bytes} B`;
+            if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+            return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+        }
+
+        async function loadStats() {
             try {
-                const { data: threads } = await supabaseClient.from('threads').select('*').order('timestamp', { ascending: false }).limit(100);
-                if (threads) threads.forEach(t => appState.threads[t.id] = t);
-
-                const { data: commentIds } = await supabaseClient.from('comments').select('thread_id');
-                if (commentIds) {
-                    commentIds.forEach(c => {
-                        appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
-                    });
-                }
-
-                const [threadCountRes, commentCountRes] = await Promise.all([
+                const [threadCountRes, commentCountRes, threadContentRes, commentTextRes] = await Promise.all([
                     supabaseClient.from('threads').select('*', { count: 'exact', head: true }),
-                    supabaseClient.from('comments').select('*', { count: 'exact', head: true })
+                    supabaseClient.from('comments').select('*', { count: 'exact', head: true }),
+                    supabaseClient.from('threads').select('content'),
+                    supabaseClient.from('comments').select('text')
                 ]);
 
-                appState.cachedCounts.threads = threadCountRes.count || 0;
-                appState.cachedCounts.comments = commentCountRes.count || 0;
-                
-                updateGlobalCounterUI();
-            } catch (err) { console.error(err); }
+                const threadCount = threadCountRes.count || 0;
+                const commentCount = commentCountRes.count || 0;
+                document.getElementById('statTotalPosts').innerText = (threadCount + commentCount).toLocaleString();
+
+                let totalBytes = 0;
+                (threadContentRes.data || []).forEach(t => totalBytes += new Blob([t.content || '']).size);
+                (commentTextRes.data || []).forEach(c => totalBytes += new Blob([c.text || '']).size);
+                document.getElementById('statActiveContent').innerText = formatBytes(totalBytes);
+            } catch (err) {
+                console.error('stats error', err);
+                document.getElementById('statTotalPosts').innerText = '0';
+                document.getElementById('statActiveContent').innerText = '0 B';
+            }
         }
 
-        function initRealtimeSync() {
-            supabaseClient.channel('global-changes')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'threads' }, payload => {
-                    if (payload.eventType === 'INSERT') {
-                        appState.threads[payload.new.id] = payload.new;
-                        appState.cachedCounts.threads++;
-                    } else if (payload.eventType === 'UPDATE') {
-                        appState.threads[payload.new.id] = payload.new;
-                    }
-                    updateGlobalCounterUI();
-                    renderThreads();
-                })
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, payload => {
-                    if (payload.eventType === 'INSERT') {
-                        const c = payload.new;
-                        appState.cachedCounts.comments++;
-                        appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
-                        
-                        if (appState.activeThreadId === c.thread_id) {
-                            if (!appState.comments[c.thread_id]) appState.comments[c.thread_id] = {};
-                            appState.comments[c.thread_id][c.id] = c;
-                            renderCommentTree();
-                        }
-                    }
-                    updateGlobalCounterUI();
-                    renderThreads();
-                })
-                .subscribe();
-        }
-
-        function updateGlobalCounterUI() {
-            document.getElementById('globalPostCount').innerText = appState.cachedCounts.threads + appState.cachedCounts.comments;
-        }
-
-        function initPresenceTracking() {
+        function trackPresence() {
             const clientId = Math.random().toString(16).substring(2, 10);
             const presenceChannel = supabaseClient.channel('interactink-online', {
                 config: { presence: { key: clientId } }
@@ -507,8 +453,7 @@
                 .on('presence', { event: 'sync' }, () => {
                     const state = presenceChannel.presenceState();
                     const count = Object.keys(state).length;
-                    const el = document.getElementById('onlineCount');
-                    if (el) el.innerText = Math.max(count, 1).toLocaleString();
+                    document.getElementById('statOnline').innerText = Math.max(count, 1).toLocaleString();
                 })
                 .subscribe(async (status) => {
                     if (status === 'SUBSCRIBED') {
@@ -517,406 +462,87 @@
                 });
         }
 
-        function switchFeedFilter(filter) {
-            appState.feedFilter = filter;
-            appState.currentPage = 1; 
-            
-            document.getElementById('tabLatest').className = filter === 'latest' 
-                ? 'flex-1 text-center py-3.5 text-white border-b-2 border-emerald-500 transition' 
-                : 'flex-1 text-center py-3.5 text-neutral-500 border-b-2 border-transparent hover:bg-neutral-900 hover:text-white transition';
-                
-            document.getElementById('tabTrending').className = filter === 'trending' 
-                ? 'flex-1 text-center py-3.5 text-white border-b-2 border-emerald-500 transition' 
-                : 'flex-1 text-center py-3.5 text-neutral-500 border-b-2 border-transparent hover:bg-neutral-900 hover:text-white transition';
-                
-            renderThreads();
-        }
+        async function loadPopularPosts() {
+            const grid = document.getElementById('popularPostsGrid');
+            try {
+                const { data: threads } = await supabaseClient.from('threads').select('*').order('timestamp', { ascending: false }).limit(100);
+                const { data: comments } = await supabaseClient.from('comments').select('thread_id');
 
-        function changePage(page) {
-            appState.currentPage = page;
-            renderThreads();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
+                const commentCounts = {};
+                (comments || []).forEach(c => { commentCounts[c.thread_id] = (commentCounts[c.thread_id] || 0) + 1; });
 
-        function bindEventListeners() {
-            const threadContent = document.getElementById('threadContent');
-            const threadCharCounter = document.getElementById('threadCharCounter');
-            threadContent.addEventListener('input', () => {
-                threadCharCounter.innerText = `${threadContent.value.length}/1000`;
-            });
+                const ranked = (threads || [])
+                    .map(t => ({ ...t, replies: commentCounts[t.id] || 0 }))
+                    .sort((a, b) => {
+                        const replyDiff = b.replies - a.replies;
+                        if (replyDiff !== 0) return replyDiff;
+                        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+                    })
+                    .slice(0, 8);
 
-            const commentInput = document.getElementById('commentInput');
-            const commentCharCounter = document.getElementById('commentCharCounter');
-            commentInput.addEventListener('input', () => {
-                commentCharCounter.innerText = `${commentInput.value.length}/300`;
-            });
-
-            document.getElementById('threadForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const title = document.getElementById('threadTitle');
-                const id = Math.random().toString(16).substring(2, 10);
-                const parsedTitle = title.value.trim() || 'Anonymous';
-
-                await supabaseClient.from('threads').insert([{ id, title: parsedTitle, content: threadContent.value.trim(), timestamp: Date.now(), upvotes: 1 }]);
-                title.value = ''; threadContent.value = '';
-                threadCharCounter.innerText = '0/1000';
-            });
-
-            document.getElementById('commentForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                if (!appState.activeThreadId) return;
-
-                const id = Math.random().toString(16).substring(2, 10);
-                const tripcode = await generateTripcode(appState.activeThreadId, appState.userSeed);
-                const textVal = commentInput.value.trim();
-
-                await supabaseClient.from('comments').insert([{ id, thread_id: appState.activeThreadId, tripcode, text: textVal, timestamp: Date.now() }]);
-                
-                if (!appState.comments[appState.activeThreadId]) appState.comments[appState.activeThreadId] = {};
-                appState.comments[appState.activeThreadId][id] = { id, thread_id: appState.activeThreadId, tripcode, text: textVal, timestamp: Date.now() };
-                
-                renderCommentTree();
-                commentInput.value = '';
-                commentCharCounter.innerText = '0/300';
-            });
-        }
-
-        function renderThreads() {
-            const threadList = Object.values(appState.threads);
-            let sorted = [];
-            
-            if (appState.feedFilter === 'trending') {
-                sorted = [...threadList].sort((a, b) => {
-                    const scoreA = appState.commentCounts[a.id] || 0;
-                    const scoreB = appState.commentCounts[b.id] || 0;
-                    if (scoreA === scoreB) return b.timestamp - a.timestamp; 
-                    return scoreB - scoreA;
-                });
-            } else {
-                sorted = [...threadList].sort((a, b) => b.timestamp - a.timestamp);
-            }
-
-            const startIndex = (appState.currentPage - 1) * appState.threadsPerPage;
-            const paginatedList = sorted.slice(startIndex, startIndex + appState.threadsPerPage);
-            
-            const latestContainer = document.getElementById('latestStream');
-            latestContainer.innerHTML = '';
-            
-            if (paginatedList.length === 0) {
-                latestContainer.innerHTML = '<div class="text-neutral-500 text-center py-10 text-sm">No threads found.</div>';
-            } else {
-                paginatedList.forEach(t => latestContainer.appendChild(createThreadElementCard(t)));
-            }
-
-            renderPaginationControls(sorted.length);
-            lucide.createIcons();
-        }
-
-        function renderPaginationControls(totalItems) {
-            const container = document.getElementById('paginationControls');
-            const totalPages = Math.ceil(totalItems / appState.threadsPerPage) || 1;
-            
-            if (totalPages <= 1) {
-                container.innerHTML = '';
-                return;
-            }
-
-            let html = `<button onclick="changePage(${Math.max(1, appState.currentPage - 1)})" 
-                                class="p-2 border border-neutral-800 rounded hover:bg-neutral-900 text-white transition ${appState.currentPage === 1 ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}" 
-                                ${appState.currentPage === 1 ? 'disabled' : ''}>
-                            <i data-lucide="chevron-left" class="w-4 h-4"></i>
-                        </button>`;
-            
-            for(let i = 1; i <= totalPages; i++) {
-                if (i === 1 || i === totalPages || (i >= appState.currentPage - 1 && i <= appState.currentPage + 1)) {
-                    html += `<button onclick="changePage(${i})" 
-                                     class="w-9 h-9 flex items-center justify-center border border-neutral-800 rounded text-sm transition cursor-pointer 
-                                     ${i === appState.currentPage ? 'bg-white text-black font-bold' : 'hover:bg-neutral-900 text-neutral-400'}">
-                                 ${i}
-                             </button>`;
-                } else if (i === appState.currentPage - 2 || i === appState.currentPage + 2) {
-                    html += `<span class="text-neutral-600 px-1">...</span>`;
+                if (ranked.length === 0) {
+                    grid.innerHTML = `<div class="col-span-full text-center text-neutral-600 text-xs font-mono py-10">No posts yet. Be the first to post on the board.</div>`;
+                    return;
                 }
-            }
 
-            html += `<button onclick="changePage(${Math.min(totalPages, appState.currentPage + 1)})" 
-                                class="p-2 border border-neutral-800 rounded hover:bg-neutral-900 text-white transition ${appState.currentPage === totalPages ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}" 
-                                ${appState.currentPage === totalPages ? 'disabled' : ''}>
-                            <i data-lucide="chevron-right" class="w-4 h-4"></i>
-                        </button>`;
-            
-            container.innerHTML = html;
+                grid.innerHTML = '';
+                ranked.forEach((t, i) => grid.appendChild(buildPopularCard(t, i)));
+            } catch (err) {
+                console.error('popular posts error', err);
+                grid.innerHTML = `<div class="col-span-full text-center text-neutral-600 text-xs font-mono py-10">Couldn't load popular posts.</div>`;
+            }
         }
 
-        function createThreadElementCard(thread) {
-            const dateStr = new Date(thread.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const dynamicCommentCount = appState.commentCounts[thread.id] || 0;
+        function buildPopularCard(thread, index) {
             const card = document.createElement('a');
-            card.href = `/thread/${thread.id}`;
-            card.className = "p-4 hover:bg-neutral-900/40 cursor-pointer transition duration-200 flex flex-col no-underline text-inherit";
-            card.addEventListener('click', (e) => {
-                e.preventDefault();
-                history.pushState({}, '', `/thread/${thread.id}`);
-                openThreadModal(thread.id);
-            });
-            
-            const processedContent = parseRichTextContent(escapeHTML(thread.content));
-            
+            card.href = `index.html?thread=${thread.id}`;
+            card.className = "fade-in-up p-4 bg-neutral-950/40 border border-neutral-900 rounded-xl hover:bg-neutral-900/40 hover:border-neutral-700 transition duration-200 flex flex-col no-underline text-inherit";
+            card.style.animationDelay = `${index * 40}ms`;
+
+            const excerpt = escapeHTML(thread.content || '').slice(0, 140);
             card.innerHTML = `
-                <div class="flex items-center justify-between text-xs text-neutral-500 mb-1">
-                    <span class="font-bold text-neutral-300 uppercase tracking-wide truncate max-w-[70%]">${escapeHTML(thread.title)}</span>
-                    <span class="font-mono text-[11px]">>>${thread.id} · ${dateStr}</span>
+                <div class="flex items-center justify-between text-xs text-neutral-500 mb-2">
+                    <span class="font-bold text-neutral-300 uppercase tracking-wide truncate max-w-[65%]">${escapeHTML(thread.title || 'Anonymous')}</span>
+                    <span class="font-mono text-[10px]">&gt;&gt;${thread.id}</span>
                 </div>
-                <div class="post-card-body text-neutral-300 text-sm leading-relaxed mb-3 break-words whitespace-pre-wrap">${processedContent}</div>
-                <div class="flex items-center gap-6 text-xs text-neutral-500">
-                    <span class="flex items-center gap-1.5 hover:text-neutral-300 transition"><i data-lucide="message-square" class="w-4 h-4"></i> ${dynamicCommentCount} Replies</span>
-                    <button type="button" class="flex items-center gap-1.5 hover:text-neutral-300 transition cursor-pointer" onclick="event.preventDefault(); event.stopPropagation(); shareThread('${thread.id}', event.currentTarget);"><i data-lucide="share" class="w-4 h-4"></i> Share</button>
+                <p class="text-neutral-300 text-sm leading-relaxed line-clamp-3 mb-3">${excerpt}${(thread.content || '').length > 140 ? '&hellip;' : ''}</p>
+                <div class="flex items-center gap-4 text-[11px] text-neutral-500 mt-auto pt-2 border-t border-neutral-900">
+                    <span class="flex items-center gap-1"><i data-lucide="message-square" class="w-3.5 h-3.5"></i> ${thread.replies} ${thread.replies === 1 ? 'Reply' : 'Replies'}</span>
+                    <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5"></i> ${timeAgo(thread.timestamp)}</span>
                 </div>
             `;
             return card;
         }
 
-        function escapeHTML(str) {
-            if (!str) return '';
-            return str.replace(/[&<>'"]/g, 
-                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-            );
-        }
+        async function loadFreshPosts() {
+            const list = document.getElementById('freshPostsList');
+            try {
+                const { data: threads } = await supabaseClient.from('threads').select('*').order('timestamp', { ascending: false }).limit(6);
 
-        function focusComposer() {
-            const el = document.getElementById('threadContent');
-            if (el) {
-                el.scrollIntoView({ behavior: 'smooth' });
-                el.focus();
-            }
-        }
-
-        function closeThreadModal() {
-            document.getElementById('threadModal').classList.add('hidden');
-            appState.activeThreadId = null;
-            history.pushState({}, '', '/index.html');
-        }
-
-        async function openThreadModal(tId) {
-        appState.activeThreadId = tId;
-        const thread = appState.threads[tId];
-        if (!thread) return;
-
-        document.getElementById('modalMeta').innerText = `Thread >>${thread.id}`;
-        document.getElementById('modalTitle').innerText = thread.title;
-        document.getElementById('modalOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content));
-        document.getElementById('threadModal').classList.remove('hidden');
-        
-        const container = document.getElementById('commentTreeContainer');
-        container.innerHTML = `<div class="text-xs text-neutral-600 text-center py-6 font-mono">Loading...</div>`;
-        
-        const { data: comments } = await supabaseClient.from('comments').select('*').eq('thread_id', tId).order('timestamp', { ascending: true });
-        appState.comments[tId] = {};
-        if (comments) comments.forEach(c => appState.comments[tId][c.id] = c);
-        renderCommentTree();
-     }
-
-        function renderCommentTree() {
-            const container = document.getElementById('commentTreeContainer');
-            container.innerHTML = '';
-            const commentsMap = appState.comments[appState.activeThreadId] || {};
-            const rawCommentsList = Object.values(commentsMap).sort((a, b) => a.timestamp - b.timestamp);
-
-            if (rawCommentsList.length === 0) {
-                container.innerHTML = `<div class="text-xs text-neutral-600 text-center py-6 font-mono">No comments yet.</div>`;
-                return;
-            }
-
-            const commentMapRef = {};
-            const treeRootNodes = [];
-
-            rawCommentsList.forEach(c => commentMapRef[c.id] = { ...c, children: [] });
-            rawCommentsList.forEach(c => {
-                const node = commentMapRef[c.id];
-                const match = c.text.match(/^&gt;&gt;([A-Fa-f0-9]{8})/); 
-                const rawMatch = c.text.match(/^>>([A-Fa-f0-9]{8})/);
-                const targetedParentId = (rawMatch ? rawMatch[1] : null) || (match ? match[1] : null);
-
-                if (targetedParentId && commentMapRef[targetedParentId]) {
-                    commentMapRef[targetedParentId].children.push(node);
-                } else {
-                    treeRootNodes.push(node);
-                }
-            });
-
-            treeRootNodes.forEach(rootNode => container.appendChild(buildCommentTreeUI(rootNode, 0)));
-            setupCrossLinkHoverPreviews();
-            lucide.createIcons();
-        }
-
-        function buildCommentTreeUI(node, depth) {
-            const wrap = document.createElement('div');
-            wrap.className = `flex flex-col ${depth > 0 ? 'ml-4 border-l border-neutral-800 pl-4 mt-3' : 'border-b border-neutral-900 pb-3'}`;
-            
-            const item = document.createElement('div');
-            item.className = "p-3 bg-neutral-950/40 rounded-xl border border-neutral-900 text-sm";
-            item.id = `comment-${node.id}`;
-
-            const dateStr = new Date(node.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            const structuralLinkedProcessedText = parseRichTextContent(escapeHTML(node.text));
-
-            item.innerHTML = `
-                <div class="flex justify-between items-center text-xs text-neutral-500 mb-2 border-b border-neutral-900 pb-1">
-                    <span class="font-bold text-neutral-300 font-mono bg-neutral-900 px-1.5 py-0.5 rounded">${node.tripcode}</span>
-                    <span class="font-mono text-[11px]">${dateStr} [>>${node.id}]</span>
-                </div>
-                <div class="text-neutral-300 leading-relaxed break-words whitespace-pre-wrap">${structuralLinkedProcessedText}</div>
-                <div class="flex justify-end items-center gap-4 mt-2">
-                    <button onclick="shareComment('${appState.activeThreadId}', '${node.id}', event.currentTarget)" class="text-xs text-neutral-500 hover:text-white flex items-center gap-1 font-medium cursor-pointer"><i data-lucide="share" class="w-3.5 h-3.5"></i> Share</button>
-                    <button onclick="appendReplyPointer('${node.id}')" class="text-xs text-neutral-500 hover:text-white flex items-center gap-1 font-medium cursor-pointer"><i data-lucide="reply" class="w-3.5 h-3.5"></i> Reply</button>
-                </div>
-            `;
-            wrap.appendChild(item);
-
-            if (node.children && node.children.length > 0) {
-                node.children.forEach(child => wrap.appendChild(buildCommentTreeUI(child, depth + 1)));
-            }
-            return wrap;
-        }
-
-        function appendReplyPointer(cId) {
-            const input = document.getElementById('commentInput');
-            input.value = `>>${cId} ` + input.value;
-            document.getElementById('commentCharCounter').innerText = `${input.value.length}/300`;
-            input.focus();
-        }
-
-        function parseRichTextContent(text) {
-            if (!text) return '';
-            const nodeCrossRegex = /&gt;&gt;([A-Fa-f0-9]{8})/g;
-            text = text.replace(nodeCrossRegex, (match, id) => {
-                return `<a href="#comment-${id}" data-preview-id="${id}" class="text-white underline font-bold cross-link-node" onclick="event.stopPropagation();">${match}</a>`;
-            });
-            const rawUrlRegex = /(https?:\/\/[^\s]+)/g;
-            text = text.replace(rawUrlRegex, (url) => {
-                return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="user-link" onclick="event.stopPropagation();">${url}</a>`;
-            });
-            return text;
-        }
-
-        function setupCrossLinkHoverPreviews() {
-        const previewBox = document.getElementById('hoverPreviewBox');
-        document.querySelectorAll('.cross-link-node').forEach(link => {
-            link.onmouseenter = (e) => {
-                const targetId = link.getAttribute('data-preview-id');
-                const comment = (appState.comments[appState.activeThreadId] || {})[targetId];
-                if (comment) {
-                    previewBox.innerHTML = `<div class="font-bold border-b border-neutral-700 pb-1 mb-1">${comment.tripcode}</div><p>${escapeHTML(comment.text)}</p>`;
-                    previewBox.classList.remove('hidden');
-                    previewBox.style.left = `${e.pageX + 10}px`;
-                    previewBox.style.top = `${e.pageY + 10}px`;
-                }
-            };
-            link.onmouseleave = () => previewBox.classList.add('hidden');
-        });
-    }
-
-        // ---------- Device / screen-size detection ----------
-        function isMobileViewport() {
-            return window.matchMedia('(max-width: 768px)').matches;
-        }
-
-        // ---------- Sharing (thread / comment) to any social platform ----------
-        function buildShareUrl(threadId) {
-            return `${location.origin}${location.pathname}?thread=${threadId}`;
-        }
-
-        async function shareThread(threadId, anchorEl) {
-            const thread = appState.threads[threadId];
-            if (!thread) return;
-            const shareText = (thread.content || '').slice(0, 200);
-            await performShare({
-                url: buildShareUrl(threadId),
-                title: thread.title || 'Anonymous post on InteractInk',
-                text: shareText
-            }, anchorEl);
-        }
-
-        async function shareComment(threadId, commentId, anchorEl) {
-            const comment = (appState.comments[threadId] || {})[commentId];
-            if (!comment) return;
-            const shareText = (comment.text || '').slice(0, 200);
-            await performShare({
-                url: `${buildShareUrl(threadId)}#comment-${commentId}`,
-                title: 'Anonymous reply on InteractInk',
-                text: shareText
-            }, anchorEl);
-        }
-
-        async function performShare(payload, anchorEl) {
-            if (navigator.share && isMobileViewport()) {
-                try {
-                    await navigator.share(payload);
+                if (!threads || threads.length === 0) {
+                    list.innerHTML = `<div class="text-center text-neutral-600 text-xs font-mono py-10">No posts yet.</div>`;
                     return;
-                } catch (err) {
-                    if (err && err.name === 'AbortError') return;
                 }
+
+                list.innerHTML = '';
+                threads.forEach(t => {
+                    const row = document.createElement('a');
+                    row.href = `index.html?thread=${t.id}`;
+                    row.className = "flex items-center justify-between gap-4 p-3 hover:bg-neutral-900/40 transition duration-150 no-underline text-inherit";
+                    row.innerHTML = `
+                        <div class="min-w-0">
+                            <span class="font-bold text-neutral-300 text-xs uppercase tracking-wide">${escapeHTML(t.title || 'Anonymous')}</span>
+                            <p class="text-neutral-500 text-xs truncate">${escapeHTML((t.content || '').slice(0, 80))}</p>
+                        </div>
+                        <span class="font-mono text-[10px] text-neutral-600 shrink-0">${timeAgo(t.timestamp)}</span>
+                    `;
+                    list.appendChild(row);
+                });
+            } catch (err) {
+                console.error('fresh posts error', err);
+                list.innerHTML = `<div class="text-center text-neutral-600 text-xs font-mono py-10">Couldn't load recent posts.</div>`;
             }
-            openShareMenu(payload, anchorEl);
         }
-
-        function openShareMenu(payload, anchorEl) {
-    const menu = document.getElementById('shareMenu');
-    const encodedUrl = encodeURIComponent(payload.url);
-    const encodedText = encodeURIComponent(payload.text || '');
-
-            const platforms = [
-                { name: 'X / Twitter', icon: 'twitter', href: `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}` },
-                { name: 'Facebook', icon: 'facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}` },
-                { name: 'Reddit', icon: 'message-circle', href: `https://www.reddit.com/submit?url=${encodedUrl}&title=${encodedText}` },
-                { name: 'WhatsApp', icon: 'phone', href: `https://api.whatsapp.com/send?text=${encodedText}%20${encodedUrl}` },
-                { name: 'Telegram', icon: 'send', href: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}` },
-                { name: 'Email', icon: 'mail', href: `mailto:?subject=${encodeURIComponent(payload.title || 'InteractInk post')}&body=${encodedText}%20${encodedUrl}` }
-            ];
-
-            menu.innerHTML = platforms.map(p => 
-            p.href ? `<a href="${p.href}" target="_blank" class="flex gap-2 p-2 hover:bg-neutral-800"><i data-lucide="${p.icon}"></i> ${p.name}</a>` 
-            : `<button onclick="(${p.action.toString()})()" class="flex gap-2 p-2 w-full hover:bg-neutral-800"><i data-lucide="${p.icon}"></i> ${p.name}</button>`
-        ).join('');
-
-        const rect = anchorEl.getBoundingClientRect();
-        menu.style.top = `${rect.bottom + window.scrollY}px`;
-        menu.style.left = `${rect.left + window.scrollX}px`;
-        menu.classList.remove('hidden');
-        lucide.createIcons();
-    }
-
-    function copyShareLink(url) {
-        navigator.clipboard.writeText(url);
-        document.getElementById('shareMenu').classList.add('hidden');
-    }
-
-        function copyShareLink(url) {
-            navigator.clipboard.writeText(url).catch(() => {});
-            document.getElementById('shareMenu').classList.add('hidden');
-        }
-
-        document.addEventListener('click', (e) => {
-            const menu = document.getElementById('shareMenu');
-            if (!menu.classList.contains('hidden') && !menu.contains(e.target) && !e.target.closest('[onclick*="shareThread"], [onclick*="shareComment"]')) {
-                menu.classList.add('hidden');
-            }
-        });
-
-        window.matchMedia('(max-width: 768px)').addEventListener('change', () => {
-            document.getElementById('shareMenu').classList.add('hidden');
-        });
     </script>
-
-    <footer style="width: 100%; text-align: center; padding: 40px 20px; margin-top: 24px; border-top: 1px solid #262626; color: #71767b;">
-        <a href="about.html" class="footer-link">About</a>
-        <a href="faq.html" class="footer-link">FAQ</a>
-        <a href="blog.html" class="footer-link">Blog</a>
-        <a href="contact.html" class="footer-link">Contact</a>
-        <a href="terms.html" class="footer-link">Terms</a>
-        <a href="guidelines.html" class="footer-link">Guidelines</a>
-        <a href="privacy.html" class="footer-link">Privacy Policy</a>
-        <p style="margin-top: 20px; font-size: 0.85rem;">&copy; 2026 InteractInk. All rights reserved.</p>
-    </footer>
 </body>
 </html>

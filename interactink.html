@@ -15,13 +15,13 @@
     <meta property="og:title" content="InteractInk - Post Anonymously, No Sign-Up Required">
     <meta property="og:description" content="A free anonymous text board. No accounts, no profiles, no tracking - just post and reply.">
     <meta property="og:url" content="https://interactink.vercel.app/">
-    <meta property="og:image" content="https://interactink.vercel.app/logo.png">
+    <meta property="og:image" content="https://interactink.vercel.app/favicon2.png">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="InteractInk - Post Anonymously, No Sign-Up Required">
     <meta name="twitter:description" content="A free anonymous text board. No accounts, no profiles, no tracking - just post and reply.">
-    <meta name="twitter:image" content="https://interactink.vercel.app/logo.png">
+    <meta name="twitter:image" content="https://interactink.vercel.app/favicon2.png">
 
     <meta name="google-adsense-account" content="ca-pub-9357677827244243">
     <meta name="google-site-verification" content="DOvTKyh77YUQreg4Dg6SaL1wEM33Da783l6lqsLek7Q" />
@@ -36,7 +36,7 @@
       "publisher": {
         "@type": "Organization",
         "name": "InteractInk",
-        "logo": "https://interactink.vercel.app/logo.png"
+        "logo": "https://interactink.vercel.app/favicon2.png"
       }
     }
     </script>
@@ -57,6 +57,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
         body { background-color: #000000; color: #e7e9ea; }
@@ -66,58 +67,208 @@
         input, textarea { background-color: #000000 !important; }
         .user-link { color: #3b82f6; text-decoration: underline; font-weight: 500; transition: color 0.1s ease; }
         .user-link:hover { color: #60a5fa; }
+        .footer-link { color: #e7e9ea; text-decoration: none; margin: 0 14px; font-weight: 500; font-size: 0.85rem; transition: opacity 0.2s; display: inline-block; margin-bottom: 8px; }
+        .footer-link:hover { opacity: 0.7; }
+        .widget-link { color: #71767b; text-decoration: none; margin: 0 8px; font-weight: 500; font-size: 0.8rem; transition: color 0.2s; display: inline-block; margin-bottom: 6px; }
+        .widget-link:hover { color: #e7e9ea; }
+
+        /* ---------- Responsive 3-Column Grid (matches index.html) ---------- */
+        .app-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            min-height: 100vh;
+            background-color: #000000;
+        }
+
+        @media (min-width: 1024px) {
+            .app-container {
+                grid-template-columns: 1fr 275px 640px 350px 1fr;
+            }
+        }
+
+        .x-sidebar { display: none; }
+
+        @media (min-width: 1024px) {
+            .x-sidebar {
+                display: flex;
+                flex-direction: column;
+                grid-column: 2;
+                position: sticky;
+                top: 0;
+                height: 100vh;
+                padding: 12px 12px 20px 12px;
+                border-right: 1px solid #2f3336;
+                overflow-y: auto;
+                align-items: flex-start;
+            }
+        }
+
+        .x-feed {
+            grid-column: 1;
+            min-height: 100vh;
+        }
+
+        @media (min-width: 1024px) {
+            .x-feed {
+                grid-column: 3;
+                border-right: 1px solid #2f3336;
+            }
+        }
+
+        .x-widgets { display: none; }
+
+        @media (min-width: 1024px) {
+            .x-widgets {
+                display: flex;
+                flex-direction: column;
+                grid-column: 4;
+                position: sticky;
+                top: 0;
+                height: 100vh;
+                padding: 20px 24px;
+                gap: 20px;
+                overflow-y: auto;
+            }
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 12px 20px 12px 12px;
+            border-radius: 9999px;
+            font-size: 1.25rem;
+            font-weight: 500;
+            color: #e7e9ea;
+            text-decoration: none;
+            transition: background-color 0.2s ease;
+            width: fit-content;
+        }
+
+        .nav-item:hover {
+            background-color: #16181c;
+        }
+
+        .nav-item.active {
+            font-weight: 700;
+        }
+
+        .nav-item svg {
+            width: 26px;
+            height: 26px;
+            stroke-width: 2px;
+        }
+
+        /* ---------- Responsive device-adaptive layout ---------- */
+        .bottom-tab-bar { display: none; }
+        .compose-fab { display: none; }
+        .bottom-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #71767b; text-decoration: none; padding: 6px 10px; cursor: pointer; background: none; border: none; }
+        .bottom-tab.active { color: #ffffff; }
+        .bottom-tab i { width: 20px; height: 20px; }
+        @media (max-width: 768px) {
+            .desktop-nav { display: none !important; }
+            .bottom-tab-bar {
+                display: flex; justify-content: space-around; align-items: center;
+                position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+                background: rgba(0,0,0,0.97); backdrop-filter: blur(12px);
+                border-top: 1px solid #262626; padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+            }
+            .compose-fab {
+                display: flex; align-items: center; justify-content: center;
+                position: fixed; right: 16px; bottom: calc(64px + env(safe-area-inset-bottom));
+                width: 48px; height: 48px; border-radius: 9999px; background: #1d9bf0; color: #fff;
+                z-index: 50; border: none; box-shadow: 0 2px 10px rgba(0,0,0,0.5); cursor: pointer;
+            }
+            body { padding-bottom: 60px; }
+            .post-card-body { font-size: 13px !important; }
+        }
+
+        /* ---------- Share menu ---------- */
+        .share-menu { position: absolute; z-index: 60; background: #16181c; border: 1px solid #2f3336; border-radius: 12px; padding: 6px; min-width: 190px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+        .share-menu a, .share-menu button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: none; border: none; color: #e7e9ea; font-size: 13px; padding: 8px 10px; border-radius: 8px; cursor: pointer; text-decoration: none; }
+        .share-menu a:hover, .share-menu button:hover { background: #1d1f23; }
+        .share-menu i { width: 16px; height: 16px; flex-shrink: 0; }
     </style>
 </head>
 <body class="min-h-screen font-sans antialiased selection:bg-neutral-800 selection:text-white">
 
-    <nav class="sticky top-0 z-50 w-full bg-black/95 backdrop-blur-md border-b border-neutral-800 flex justify-center flex-wrap gap-6 px-4 py-3.5">
-        <a href="index.html" class="text-white text-sm font-medium transition tracking-wide">Home</a>
-        <a href="about.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">About</a>
-        <a href="faq.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">FAQ</a>
-        <a href="blog.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Blog</a>
-        <a href="contact.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Contact</a>
-    </nav>
+    <div class="app-container">
 
-    <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
-        <script type="text/javascript">
-          atOptions = {
-            'key' : 'c2beae2a3c4b115088146fa8ef56a186',
-            'format' : 'iframe',
-            'height' : 50,
-            'width' : 320,
-            'params' : {}
-          };
-        </script>
-        <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
-    </div>
-    <div class="max-w-2xl mx-auto min-h-screen flex flex-col border-x border-neutral-800">
-        <header class="sticky top-[49px] bg-black/90 backdrop-blur-md border-b border-neutral-800 p-4 z-40 flex justify-between items-center">
-            <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-                <img src="logo.png" alt="InteractInk logo" class="w-6 h-6"> InteractInk
-            </h1>
+        <!-- LEFT DESKTOP SIDEBAR -->
+        <aside class="x-sidebar">
+            <div class="py-2 px-3 mb-4">
+                <a href="index.html">
+                    <img src="favicon2.png" alt="InteractInk Logo" class="w-10 h-10 object-contain hover:opacity-90 transition">
+                </a>
+            </div>
 
-    <div class="flex items-center gap-2">
-        <div class="px-3 py-1 text-[10px] font-mono font-semibold text-neutral-400 bg-neutral-900 border border-neutral-800 rounded-full uppercase tracking-wider">
-            Total Posts: <span id="globalPostCount" class="text-white">0</span>
-        </div>
-        
-        <div class="px-3 py-1 flex items-center gap-2 rounded-full bg-neutral-900 border border-neutral-800">
-            <span class="relative flex h-1.5 w-1.5 shrink-0">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-            </span>
-            <span class="text-[10px] text-neutral-400 uppercase tracking-wider font-semibold">Online</span>
-        </div>
-    </div>
-</header>
+            <nav class="flex flex-col gap-1 w-full mb-4">
+                <a href="index.html" class="nav-item">
+                    <i data-lucide="home"></i>
+                    <span>Home</span>
+                </a>
+                <a href="interactink.html" class="nav-item active">
+                    <i data-lucide="message-square"></i>
+                    <span>Board</span>
+                </a>
+                <a href="ichat.html" class="nav-item">
+                    <i data-lucide="message-circle-code"></i>
+                    <span>iChat</span>
+                </a>
+                <a href="about.html" class="nav-item">
+                    <i data-lucide="info"></i>
+                    <span>About</span>
+                </a>
+                <a href="faq.html" class="nav-item">
+                    <i data-lucide="help-circle"></i>
+                    <span>FAQ</span>
+                </a>
+                <a href="blog.html" class="nav-item">
+                    <i data-lucide="rss"></i>
+                    <span>Blog</span>
+                </a>
+                <a href="contact.html" class="nav-item">
+                    <i data-lucide="mail"></i>
+                    <span>Contact</span>
+                </a>
+            </nav>
 
-        
+            <button onclick="focusComposer()" class="mt-2 w-11/12 bg-white text-black hover:bg-neutral-200 font-bold py-3.5 rounded-full text-center transition duration-200 text-[15px] shadow-sm cursor-pointer">
+                Post
+            </button>
+        </aside>
+
+        <!-- CENTER MAIN CONTENT FEED -->
+        <div class="x-feed border-r border-neutral-800">
+            <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
+                <script type="text/javascript">
+                  atOptions = { 'key' : 'c2beae2a3c4b115088146fa8ef56a186', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+                </script>
+                <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
+            </div>
+
+            <header class="sticky top-0 bg-black/90 backdrop-blur-md border-b border-neutral-800 p-4 z-40 flex justify-between items-center">
+                <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                    <img src="favicon2.png" alt="InteractInk logo" class="w-6 h-6"> InteractInk
+                </h1>
+                <div class="flex items-center gap-2">
+                    <div class="px-3 py-1 text-[10px] font-mono font-semibold text-neutral-400 bg-neutral-900 border border-neutral-800 rounded-full uppercase tracking-wider">
+                        Total Posts: <span id="globalPostCount" class="text-white">0</span>
+                    </div>
+                    <div class="px-3 py-1 flex items-center gap-2 rounded-full bg-neutral-900 border border-neutral-800">
+                        <span class="relative flex h-1.5 w-1.5 shrink-0">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                        </span>
+                        <span class="text-[10px] text-neutral-400 uppercase tracking-wider font-semibold"><span id="onlineCount">1</span> Online</span>
+                    </div>
+                </div>
+            </header>
 
         <noscript>
             <section class="px-4 py-6 border-b border-neutral-800">
                 <p class="text-neutral-300 text-sm leading-relaxed">
-                    InteractInk is a free, anonymous text board. JavaScript is required to view and post live threads &mdash; please enable it in your browser. In the meantime, learn more on our
-                    <a href="about.html" class="user-link">About page</a> or read the <a href="faq.html" class="user-link">FAQ</a>.
+                    InteractInk is a free, anonymous text board. JavaScript is required to view and post live threads &mdash; please enable it in your browser.
                 </p>
             </section>
         </noscript>
@@ -152,8 +303,41 @@
         <main id="latestStream" class="divide-y divide-neutral-800 flex-1"></main>
         
         <div id="paginationControls" class="flex justify-center items-center gap-2 p-6 border-t border-neutral-800 mb-8"></div>
+        </div>
+
+        <!-- RIGHT DESKTOP SIDEBAR -->
+        <aside class="x-widgets">
+            <div class="bg-[#16181c] rounded-2xl p-4 border border-neutral-900">
+                <h2 class="text-white font-bold text-base mb-3">About InteractInk</h2>
+                <p class="text-neutral-400 text-xs leading-normal mb-3">
+                    A zero-friction, layout-focused environment to speak your mind freely.
+                </p>
+                <div class="flex flex-wrap pt-2">
+                    <a href="about.html" class="widget-link">About</a>
+                    <a href="faq.html" class="widget-link">FAQ</a>
+                    <a href="blog.html" class="widget-link">Blog</a>
+                    <a href="contact.html" class="widget-link">Contact</a>
+                    <a href="terms.html" class="widget-link">Terms</a>
+                    <a href="guidelines.html" class="widget-link">Rules</a>
+                    <a href="privacy.html" class="widget-link">Privacy</a>
+                </div>
+                <p class="text-[11px] text-neutral-600 mt-3">&copy; 2026 InteractInk</p>
+            </div>
+        </aside>
+
+        <!-- MOBILE BOTTOM TAB BAR -->
+        <nav class="bottom-tab-bar" aria-label="Mobile navigation">
+            <a href="index.html" class="bottom-tab"><i data-lucide="home"></i></a>
+            <a href="interactink.html" class="bottom-tab active"><i data-lucide="message-square"></i></a>
+            <a href="ichat.html" class="bottom-tab"><i data-lucide="message-circle-code"></i></a>
+            <a href="about.html" class="bottom-tab"><i data-lucide="info"></i></a>
+            <a href="faq.html" class="bottom-tab"><i data-lucide="help-circle"></i></a>
+            <a href="blog.html" class="bottom-tab"><i data-lucide="rss"></i></a>
+            <a href="contact.html" class="bottom-tab"><i data-lucide="mail"></i></a>
+        </nav>
     </div>
 
+    <!-- Modal window for viewing threads and replying -->
     <div id="threadModal" class="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-black border border-neutral-800 w-full max-w-xl rounded-2xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
             <div class="p-4 border-b border-neutral-800 flex justify-between items-center bg-black">
@@ -195,43 +379,49 @@
         </div>
     </div>
 
-    <div id="hoverPreviewBox" class="absolute bg-neutral-900 border border-neutral-700 text-neutral-200 text-xs p-3 rounded-xl shadow-2xl hidden z-50 max-w-xs pointer-events-none font-sans"></div>
+    <!-- Add this where your share menu placeholder is located -->
+<div id="shareMenu" class="share-menu hidden"></div>
 
-    <script>
-        const SUPABASE_URL = "https://xdshsodkuyawljzuirqt.supabase.co";
-        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
+<script>
+    const SUPABASE_URL = "https://xdshsodkuyawljzuirqt.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
+    
+    let supabaseClient;
+    const appState = { 
+        threads: {}, 
+        comments: {}, 
+        commentCounts: {}, 
+        activeThreadId: null, 
+        userSeed: null, 
+        cachedCounts: { threads: 0, comments: 0 },
+        feedFilter: 'latest', 
+        currentPage: 1, 
+        threadsPerPage: 10 
+    };
+
+       // Initialize core engine
+    window.addEventListener('load', async () => {
+        if (!window.supabase) return;
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
-        let supabaseClient;
-        const appState = { 
-            threads: {}, 
-            comments: {}, 
-            commentCounts: {}, 
-            activeThreadId: null, 
-            userSeed: null, 
-            cachedCounts: { threads: 0, comments: 0 },
-            feedFilter: 'latest', 
-            currentPage: 1, 
-            threadsPerPage: 10 
-        };
-
-        window.addEventListener('load', async () => {
-            if (!window.supabase) return;
-            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            
-            initSeedEngine();
-            bindEventListeners();
-            await fetchInitialData();
-            initRealtimeSync();
-            renderThreads();
-            lucide.createIcons();
-            setInterval(() => renderThreads(), 30000);
-
-            const params = new URLSearchParams(location.search);
-            const requestedThread = params.get('thread');
-            if (requestedThread && appState.threads[requestedThread]) {
-                openThreadModal(requestedThread);
-            }
-        });
+        initSeedEngine();
+        bindEventListeners();
+        await fetchInitialData();
+        initRealtimeSync();
+        initPresenceTracking();
+        renderThreads();
+        lucide.createIcons();
+        
+        // Handle deep linking
+        const params = new URLSearchParams(location.search);
+        const requestedThread = params.get('thread');
+        if (requestedThread) {
+            // Wait briefly for data to populate
+            setTimeout(() => {
+                if (appState.threads[requestedThread]) openThreadModal(requestedThread);
+            }, 500);
+        }
+    });
 
         function initSeedEngine() {
             let seed = localStorage.getItem('ink_private_seed_key');
@@ -243,16 +433,14 @@
         }
 
         async function generateTripcode(threadId, seedString) {
-            const encoder = new TextEncoder();
-            const rawBuffer = encoder.encode(threadId + seedString);
-            const digestBuffer = await crypto.subtle.digest('SHA-256', rawBuffer);
-            const hashArray = Array.from(new Uint8Array(digestBuffer));
-            return 'Anon#' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 4);
-        }
+        const encoder = new TextEncoder();
+        const data = encoder.encode(threadId + seedString);
+        const hash = await crypto.subtle.digest('SHA-256', data);
+        return 'Anon#' + Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 4);
+    }
 
         async function fetchInitialData() {
             try {
-                // Fetch more limit to allow pagination to work visually
                 const { data: threads } = await supabaseClient.from('threads').select('*').order('timestamp', { ascending: false }).limit(100);
                 if (threads) threads.forEach(t => appState.threads[t.id] = t);
 
@@ -309,9 +497,29 @@
             document.getElementById('globalPostCount').innerText = appState.cachedCounts.threads + appState.cachedCounts.comments;
         }
 
+        function initPresenceTracking() {
+            const clientId = Math.random().toString(16).substring(2, 10);
+            const presenceChannel = supabaseClient.channel('interactink-online', {
+                config: { presence: { key: clientId } }
+            });
+
+            presenceChannel
+                .on('presence', { event: 'sync' }, () => {
+                    const state = presenceChannel.presenceState();
+                    const count = Object.keys(state).length;
+                    const el = document.getElementById('onlineCount');
+                    if (el) el.innerText = Math.max(count, 1).toLocaleString();
+                })
+                .subscribe(async (status) => {
+                    if (status === 'SUBSCRIBED') {
+                        await presenceChannel.track({ online_at: Date.now() });
+                    }
+                });
+        }
+
         function switchFeedFilter(filter) {
             appState.feedFilter = filter;
-            appState.currentPage = 1; // Reset to page 1 on filter switch
+            appState.currentPage = 1; 
             
             document.getElementById('tabLatest').className = filter === 'latest' 
                 ? 'flex-1 text-center py-3.5 text-white border-b-2 border-emerald-500 transition' 
@@ -377,19 +585,17 @@
             const threadList = Object.values(appState.threads);
             let sorted = [];
             
-            // Sorting Logic (Latest vs Trending)
             if (appState.feedFilter === 'trending') {
                 sorted = [...threadList].sort((a, b) => {
                     const scoreA = appState.commentCounts[a.id] || 0;
                     const scoreB = appState.commentCounts[b.id] || 0;
-                    if (scoreA === scoreB) return b.timestamp - a.timestamp; // Tie breaker
+                    if (scoreA === scoreB) return b.timestamp - a.timestamp; 
                     return scoreB - scoreA;
                 });
             } else {
                 sorted = [...threadList].sort((a, b) => b.timestamp - a.timestamp);
             }
 
-            // Pagination Logic
             const startIndex = (appState.currentPage - 1) * appState.threadsPerPage;
             const paginatedList = sorted.slice(startIndex, startIndex + appState.threadsPerPage);
             
@@ -421,13 +627,12 @@
                             <i data-lucide="chevron-left" class="w-4 h-4"></i>
                         </button>`;
             
-            // Generate numbered slides
             for(let i = 1; i <= totalPages; i++) {
                 if (i === 1 || i === totalPages || (i >= appState.currentPage - 1 && i <= appState.currentPage + 1)) {
                     html += `<button onclick="changePage(${i})" 
                                      class="w-9 h-9 flex items-center justify-center border border-neutral-800 rounded text-sm transition cursor-pointer 
                                      ${i === appState.currentPage ? 'bg-white text-black font-bold' : 'hover:bg-neutral-900 text-neutral-400'}">
-                                ${i}
+                                 ${i}
                              </button>`;
                 } else if (i === appState.currentPage - 2 || i === appState.currentPage + 2) {
                     html += `<span class="text-neutral-600 px-1">...</span>`;
@@ -462,43 +667,54 @@
                     <span class="font-bold text-neutral-300 uppercase tracking-wide truncate max-w-[70%]">${escapeHTML(thread.title)}</span>
                     <span class="font-mono text-[11px]">>>${thread.id} · ${dateStr}</span>
                 </div>
-                <div class="text-neutral-300 text-sm leading-relaxed mb-3 break-words whitespace-pre-wrap">${processedContent}</div>
+                <div class="post-card-body text-neutral-300 text-sm leading-relaxed mb-3 break-words whitespace-pre-wrap">${processedContent}</div>
                 <div class="flex items-center gap-6 text-xs text-neutral-500">
                     <span class="flex items-center gap-1.5 hover:text-neutral-300 transition"><i data-lucide="message-square" class="w-4 h-4"></i> ${dynamicCommentCount} Replies</span>
+                    <button type="button" class="flex items-center gap-1.5 hover:text-neutral-300 transition cursor-pointer" onclick="event.preventDefault(); event.stopPropagation(); shareThread('${thread.id}', event.currentTarget);"><i data-lucide="share" class="w-4 h-4"></i> Share</button>
                 </div>
             `;
             return card;
         }
 
-        async function openThreadModal(tId) {
-            appState.activeThreadId = tId;
-            const thread = appState.threads[tId];
-            if (!thread) return;
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
 
-            document.getElementById('modalMeta').innerText = `Thread >>${thread.id}`;
-            document.getElementById('modalTitle').innerText = thread.title;
-            document.getElementById('modalOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content));
-            document.getElementById('threadModal').classList.remove('hidden');
-            
-            document.getElementById('commentTreeContainer').innerHTML = `<div class="text-xs text-neutral-600 text-center py-6 font-mono animate-pulse">Loading comments...</div>`;
-            
-            try {
-                const { data: comments } = await supabaseClient.from('comments').select('*').eq('thread_id', tId);
-                appState.comments[tId] = {};
-                if (comments) comments.forEach(c => appState.comments[tId][c.id] = c);
-                renderCommentTree();
-            } catch (err) { console.error(err); }
+        function focusComposer() {
+            const el = document.getElementById('threadContent');
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth' });
+                el.focus();
+            }
         }
 
         function closeThreadModal() {
             document.getElementById('threadModal').classList.add('hidden');
-            if (location.pathname.startsWith('/thread/')) {
-                history.pushState({}, '', '/');
-            }
             appState.activeThreadId = null;
-            document.getElementById('commentInput').value = '';
-            document.getElementById('commentCharCounter').innerText = '0/300';
+            history.pushState({}, '', '/index.html');
         }
+
+        async function openThreadModal(tId) {
+        appState.activeThreadId = tId;
+        const thread = appState.threads[tId];
+        if (!thread) return;
+
+        document.getElementById('modalMeta').innerText = `Thread >>${thread.id}`;
+        document.getElementById('modalTitle').innerText = thread.title;
+        document.getElementById('modalOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content));
+        document.getElementById('threadModal').classList.remove('hidden');
+        
+        const container = document.getElementById('commentTreeContainer');
+        container.innerHTML = `<div class="text-xs text-neutral-600 text-center py-6 font-mono">Loading...</div>`;
+        
+        const { data: comments } = await supabaseClient.from('comments').select('*').eq('thread_id', tId).order('timestamp', { ascending: true });
+        appState.comments[tId] = {};
+        if (comments) comments.forEach(c => appState.comments[tId][c.id] = c);
+        renderCommentTree();
+     }
 
         function renderCommentTree() {
             const container = document.getElementById('commentTreeContainer');
@@ -550,7 +766,8 @@
                     <span class="font-mono text-[11px]">${dateStr} [>>${node.id}]</span>
                 </div>
                 <div class="text-neutral-300 leading-relaxed break-words whitespace-pre-wrap">${structuralLinkedProcessedText}</div>
-                <div class="flex justify-end mt-2">
+                <div class="flex justify-end items-center gap-4 mt-2">
+                    <button onclick="shareComment('${appState.activeThreadId}', '${node.id}', event.currentTarget)" class="text-xs text-neutral-500 hover:text-white flex items-center gap-1 font-medium cursor-pointer"><i data-lucide="share" class="w-3.5 h-3.5"></i> Share</button>
                     <button onclick="appendReplyPointer('${node.id}')" class="text-xs text-neutral-500 hover:text-white flex items-center gap-1 font-medium cursor-pointer"><i data-lucide="reply" class="w-3.5 h-3.5"></i> Reply</button>
                 </div>
             `;
@@ -583,58 +800,123 @@
         }
 
         function setupCrossLinkHoverPreviews() {
-            const links = document.querySelectorAll('.cross-link-node');
-            const previewBox = document.getElementById('hoverPreviewBox');
+        const previewBox = document.getElementById('hoverPreviewBox');
+        document.querySelectorAll('.cross-link-node').forEach(link => {
+            link.onmouseenter = (e) => {
+                const targetId = link.getAttribute('data-preview-id');
+                const comment = (appState.comments[appState.activeThreadId] || {})[targetId];
+                if (comment) {
+                    previewBox.innerHTML = `<div class="font-bold border-b border-neutral-700 pb-1 mb-1">${comment.tripcode}</div><p>${escapeHTML(comment.text)}</p>`;
+                    previewBox.classList.remove('hidden');
+                    previewBox.style.left = `${e.pageX + 10}px`;
+                    previewBox.style.top = `${e.pageY + 10}px`;
+                }
+            };
+            link.onmouseleave = () => previewBox.classList.add('hidden');
+        });
+    }
 
-            links.forEach(link => {
-                link.addEventListener('mouseenter', (e) => {
-                    const targetId = link.getAttribute('data-preview-id');
-                    const commentsMap = appState.comments[appState.activeThreadId] || {};
-                    const targetComment = commentsMap[targetId];
-
-                    if (targetComment) {
-                        previewBox.innerHTML = `
-                            <div class="text-[10px] text-white font-bold mb-1 border-b border-neutral-800 pb-0.5 uppercase font-mono">${targetComment.tripcode} [>>${targetComment.id}]</div>
-                            <p class="text-neutral-400 leading-snug">${escapeHTML(targetComment.text)}</p>
-                        `;
-                        previewBox.classList.remove('hidden');
-                        const rect = link.getBoundingClientRect();
-                        previewBox.style.left = `${rect.left + window.scrollX}px`;
-                        previewBox.style.top = `${rect.top + window.scrollY - previewBox.offsetHeight - 10}px`;
-                    }
-                });
-                link.addEventListener('mouseleave', () => previewBox.classList.add('hidden'));
-            });
+        // ---------- Device / screen-size detection ----------
+        function isMobileViewport() {
+            return window.matchMedia('(max-width: 768px)').matches;
         }
 
-        function escapeHTML(str) {
-            if (!str) return '';
-            return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' })[m]);
+        // ---------- Sharing (thread / comment) to any social platform ----------
+        function buildShareUrl(threadId) {
+            return `${location.origin}${location.pathname}?thread=${threadId}`;
         }
+
+        async function shareThread(threadId, anchorEl) {
+            const thread = appState.threads[threadId];
+            if (!thread) return;
+            const shareText = (thread.content || '').slice(0, 200);
+            await performShare({
+                url: buildShareUrl(threadId),
+                title: thread.title || 'Anonymous post on InteractInk',
+                text: shareText
+            }, anchorEl);
+        }
+
+        async function shareComment(threadId, commentId, anchorEl) {
+            const comment = (appState.comments[threadId] || {})[commentId];
+            if (!comment) return;
+            const shareText = (comment.text || '').slice(0, 200);
+            await performShare({
+                url: `${buildShareUrl(threadId)}#comment-${commentId}`,
+                title: 'Anonymous reply on InteractInk',
+                text: shareText
+            }, anchorEl);
+        }
+
+        async function performShare(payload, anchorEl) {
+            if (navigator.share && isMobileViewport()) {
+                try {
+                    await navigator.share(payload);
+                    return;
+                } catch (err) {
+                    if (err && err.name === 'AbortError') return;
+                }
+            }
+            openShareMenu(payload, anchorEl);
+        }
+
+        function openShareMenu(payload, anchorEl) {
+    const menu = document.getElementById('shareMenu');
+    const encodedUrl = encodeURIComponent(payload.url);
+    const encodedText = encodeURIComponent(payload.text || '');
+
+            const platforms = [
+                { name: 'X / Twitter', icon: 'twitter', href: `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}` },
+                { name: 'Facebook', icon: 'facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}` },
+                { name: 'Reddit', icon: 'message-circle', href: `https://www.reddit.com/submit?url=${encodedUrl}&title=${encodedText}` },
+                { name: 'WhatsApp', icon: 'phone', href: `https://api.whatsapp.com/send?text=${encodedText}%20${encodedUrl}` },
+                { name: 'Telegram', icon: 'send', href: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}` },
+                { name: 'Email', icon: 'mail', href: `mailto:?subject=${encodeURIComponent(payload.title || 'InteractInk post')}&body=${encodedText}%20${encodedUrl}` }
+            ];
+
+            menu.innerHTML = platforms.map(p => 
+            p.href ? `<a href="${p.href}" target="_blank" class="flex gap-2 p-2 hover:bg-neutral-800"><i data-lucide="${p.icon}"></i> ${p.name}</a>` 
+            : `<button onclick="(${p.action.toString()})()" class="flex gap-2 p-2 w-full hover:bg-neutral-800"><i data-lucide="${p.icon}"></i> ${p.name}</button>`
+        ).join('');
+
+        const rect = anchorEl.getBoundingClientRect();
+        menu.style.top = `${rect.bottom + window.scrollY}px`;
+        menu.style.left = `${rect.left + window.scrollX}px`;
+        menu.classList.remove('hidden');
+        lucide.createIcons();
+    }
+
+    function copyShareLink(url) {
+        navigator.clipboard.writeText(url);
+        document.getElementById('shareMenu').classList.add('hidden');
+    }
+
+        function copyShareLink(url) {
+            navigator.clipboard.writeText(url).catch(() => {});
+            document.getElementById('shareMenu').classList.add('hidden');
+        }
+
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('shareMenu');
+            if (!menu.classList.contains('hidden') && !menu.contains(e.target) && !e.target.closest('[onclick*="shareThread"], [onclick*="shareComment"]')) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        window.matchMedia('(max-width: 768px)').addEventListener('change', () => {
+            document.getElementById('shareMenu').classList.add('hidden');
+        });
     </script>
-    <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
-        <script type="text/javascript">
-          atOptions = {
-            'key' : 'c2beae2a3c4b115088146fa8ef56a186',
-            'format' : 'iframe',
-            'height' : 50,
-            'width' : 320,
-            'params' : {}
-          };
-        </script>
-        <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
-    </div>
 
-    <footer style="width: 100%; text-align: center; padding: 40px 0; margin-top: 40px; border-top: 1px solid var(--x-border); color: var(--x-text-muted);">
-        <a href="about.html" style="color: var(--x-text-main); text-decoration: none; margin: 0 20px; font-weight: 500; font-size: 0.9rem; transition: opacity 0.2s;">About</a>
-        <a href="faq.html" style="color: var(--x-text-main); text-decoration: none; margin: 0 20px; font-weight: 500; font-size: 0.9rem; transition: opacity 0.2s;">FAQ</a>
-        <a href="blog.html" style="color: var(--x-text-main); text-decoration: none; margin: 0 20px; font-weight: 500; font-size: 0.9rem; transition: opacity 0.2s;">Blog</a>
-        <a href="contact.html" style="color: var(--x-text-main); text-decoration: none; margin: 0 20px; font-weight: 500; font-size: 0.9rem; transition: opacity 0.2s;">Contact</a>
-        <a href="terms.html" style="color: var(--x-text-main); text-decoration: none; margin: 0 20px; font-weight: 500; font-size: 0.9rem; transition: opacity 0.2s;">Terms</a>
-        <a href="guidelines.html" style="color: var(--x-text-main); text-decoration: none; margin: 0 20px; font-weight: 500; font-size: 0.9rem; transition: opacity 0.2s;">Guidelines</a>
-        <a href="privacy.html" style="color: var(--x-text-main); text-decoration: none; margin: 0 20px; font-weight: 500; font-size: 0.9rem; transition: opacity 0.2s;">Privacy Policy</a>
-
-        <p style="margin-top: 24px; font-size: 0.85rem;">&copy; 2026 InteractInk. All rights reserved.</p>
+    <footer style="width: 100%; text-align: center; padding: 40px 20px; margin-top: 24px; border-top: 1px solid #262626; color: #71767b;">
+        <a href="about.html" class="footer-link">About</a>
+        <a href="faq.html" class="footer-link">FAQ</a>
+        <a href="blog.html" class="footer-link">Blog</a>
+        <a href="contact.html" class="footer-link">Contact</a>
+        <a href="terms.html" class="footer-link">Terms</a>
+        <a href="guidelines.html" class="footer-link">Guidelines</a>
+        <a href="privacy.html" class="footer-link">Privacy Policy</a>
+        <p style="margin-top: 20px; font-size: 0.85rem;">&copy; 2026 InteractInk. All rights reserved.</p>
     </footer>
 </body>
-</html> 
+</html>
