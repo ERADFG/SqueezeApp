@@ -3,11 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InteractInk - Anonymous Text Board & Social Workspace</title>
-    
-    <meta name="description" content="Squeezes Workspace - Connect securely and privately through the decentralized, anonymous network interface.">
+    <title>InteractInk - Post Anonymously, No Sign-Up Required | Anonymous Text Board</title>
+
+    <meta name="description" content="InteractInk is a free anonymous text board. Post and reply instantly with no account, no email, and no sign-up. Threaded discussions, tripcodes, and full privacy.">
+    <link rel="canonical" href="https://interactink.vercel.app/" />
+    <meta name="robots" content="index, follow">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="InteractInk">
+    <meta property="og:title" content="InteractInk - Post Anonymously, No Sign-Up Required">
+    <meta property="og:description" content="A free anonymous text board. No accounts, no profiles, no tracking - just post and reply.">
+    <meta property="og:url" content="https://interactink.vercel.app/">
+    <meta property="og:image" content="https://interactink.vercel.app/logo.png">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="InteractInk - Post Anonymously, No Sign-Up Required">
+    <meta name="twitter:description" content="A free anonymous text board. No accounts, no profiles, no tracking - just post and reply.">
+    <meta name="twitter:image" content="https://interactink.vercel.app/logo.png">
+
     <meta name="google-adsense-account" content="ca-pub-9357677827244243">
     <meta name="google-site-verification" content="DOvTKyh77YUQreg4Dg6SaL1wEM33Da783l6lqsLek7Q" />
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "InteractInk",
+      "url": "https://interactink.vercel.app/",
+      "description": "A free anonymous text board where anyone can post and reply without creating an account.",
+      "publisher": {
+        "@type": "Organization",
+        "name": "InteractInk",
+        "logo": "https://interactink.vercel.app/logo.png"
+      }
+    }
+    </script>
     
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9357677827244243" crossorigin="anonymous"></script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-527BWKF63G"></script>
@@ -18,7 +50,11 @@
       gtag('config', 'G-527BWKF63G');
     </script>
 
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="preconnect" href="https://xdshsodkuyawljzuirqt.supabase.co">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://unpkg.com" crossorigin>
+    <link rel="stylesheet" href="styles.css">
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 
@@ -34,18 +70,31 @@
 </head>
 <body class="min-h-screen font-sans antialiased selection:bg-neutral-800 selection:text-white">
 
-    <nav class="sticky top-0 z-50 w-full bg-black/95 backdrop-blur-md border-b border-neutral-800 flex justify-center gap-8 py-3.5">
-        <a href="index.html" class="text-white text-sm font-bold tracking-wide">Home</a>
+    <nav class="sticky top-0 z-50 w-full bg-black/95 backdrop-blur-md border-b border-neutral-800 flex justify-center flex-wrap gap-6 px-4 py-3.5">
+        <a href="index.html" class="text-white text-sm font-medium transition tracking-wide">Home</a>
         <a href="about.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">About</a>
         <a href="faq.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">FAQ</a>
-        <a href="privacy.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Privacy</a>
+        <a href="blog.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Blog</a>
+        <a href="contact.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Contact</a>
     </nav>
 
+    <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
+        <script type="text/javascript">
+          atOptions = {
+            'key' : 'c2beae2a3c4b115088146fa8ef56a186',
+            'format' : 'iframe',
+            'height' : 50,
+            'width' : 320,
+            'params' : {}
+          };
+        </script>
+        <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
+    </div>
     <div class="max-w-2xl mx-auto min-h-screen flex flex-col border-x border-neutral-800">
         <header class="sticky top-[49px] bg-black/90 backdrop-blur-md border-b border-neutral-800 p-4 z-40 flex justify-between items-center">
-    <h2 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-        <img src="logo.png" alt="Logo" class="w-6 h-6"> InteractInk
-    </h2>
+            <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                <img src="logo.png" alt="InteractInk logo" class="w-6 h-6"> InteractInk
+            </h1>
 
     <div class="flex items-center gap-2">
         <div class="px-3 py-1 text-[10px] font-mono font-semibold text-neutral-400 bg-neutral-900 border border-neutral-800 rounded-full uppercase tracking-wider">
@@ -62,17 +111,28 @@
     </div>
 </header>
 
+        
+
+        <noscript>
+            <section class="px-4 py-6 border-b border-neutral-800">
+                <p class="text-neutral-300 text-sm leading-relaxed">
+                    InteractInk is a free, anonymous text board. JavaScript is required to view and post live threads &mdash; please enable it in your browser. In the meantime, learn more on our
+                    <a href="about.html" class="user-link">About page</a> or read the <a href="faq.html" class="user-link">FAQ</a>.
+                </p>
+            </section>
+        </noscript>
+
         <section class="p-4 border-b border-neutral-800">
             <form id="threadForm" class="pt-1">
                 <input type="text" id="threadTitle" placeholder="Your Name (Optional)..." maxlength="50" autocomplete="off"
                        class="w-full bg-transparent text-white text-base font-bold pb-2 focus:outline-none placeholder:text-neutral-600 border-b border-neutral-900 mb-3">
-                <textarea id="threadContent" placeholder="What is happening? Links are automatically hyperlinked..." required rows="3" maxlength="1000"
+                <textarea id="threadContent" placeholder="What is happening?" required rows="3" maxlength="1000"
                           class="w-full bg-transparent text-white text-sm focus:outline-none placeholder:text-neutral-500 resize-none leading-relaxed"></textarea>
                 
                 <div class="flex justify-between items-center border-t border-neutral-950 pt-3 mt-2">
                     <div class="text-neutral-600 flex gap-4 items-center text-sm">
-                        <i data-lucide="shield-check" class="w-4 h-4 text-neutral-500" title="Auto-Tripcode compilation layer active"></i>
-                        <span class="text-xs text-neutral-500 hidden sm:inline">Secure Broadcast</span>
+                        <i data-lucide="shield-check" class="w-4 h-4 text-neutral-500" title="You'll get an automatic anonymous ID for this thread"></i>
+                        <span class="text-xs text-neutral-500 hidden sm:inline">Anonymous Posting</span>
                     </div>
                     <div class="flex items-center gap-3">
                         <span id="threadCharCounter" class="text-[11px] font-mono text-neutral-600">0/1000</span>
@@ -98,8 +158,8 @@
         <div class="bg-black border border-neutral-800 w-full max-w-xl rounded-2xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
             <div class="p-4 border-b border-neutral-800 flex justify-between items-center bg-black">
                 <div class="flex items-center gap-2 text-xs text-neutral-500 font-medium">
-                    <i data-lucide="cpu" class="w-3.5 h-3.5 text-neutral-500"></i>
-                    <span id="modalMeta" class="uppercase tracking-wider">Node Directory Reference</span>
+                    <i data-lucide="message-square" class="w-3.5 h-3.5 text-neutral-500"></i>
+                    <span id="modalMeta" class="uppercase tracking-wider">Thread</span>
                 </div>
                 <button onclick="closeThreadModal()" class="text-neutral-400 hover:text-white p-1 hover:bg-neutral-900 rounded-full transition cursor-pointer">
                     <i data-lucide="x" class="w-5 h-5"></i>
@@ -124,7 +184,7 @@
                     <div class="text-neutral-500 shrink-0">
                         <i data-lucide="corner-down-right" class="w-4 h-4"></i>
                     </div>
-                    <input type="text" id="commentInput" placeholder="Post your reply... (Use >>ID to interlink)" autocomplete="off" required maxlength="300"
+                    <input type="text" id="commentInput" placeholder="Post your reply... (use >>ID to link to a specific post)" autocomplete="off" required maxlength="300"
                            class="flex-1 bg-transparent text-sm text-white focus:outline-none placeholder:text-neutral-600">
                     <span id="commentCharCounter" class="text-[11px] font-mono text-neutral-600 shrink-0 select-none">0/300</span>
                     <button type="submit" class="bg-white text-black hover:bg-neutral-200 font-bold px-4 py-1.5 rounded-full text-xs transition duration-200 cursor-pointer shrink-0">
@@ -165,6 +225,12 @@
             renderThreads();
             lucide.createIcons();
             setInterval(() => renderThreads(), 30000);
+
+            const params = new URLSearchParams(location.search);
+            const requestedThread = params.get('thread');
+            if (requestedThread && appState.threads[requestedThread]) {
+                openThreadModal(requestedThread);
+            }
         });
 
         function initSeedEngine() {
@@ -380,9 +446,14 @@
         function createThreadElementCard(thread) {
             const dateStr = new Date(thread.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const dynamicCommentCount = appState.commentCounts[thread.id] || 0;
-            const card = document.createElement('div');
-            card.className = "p-4 hover:bg-neutral-900/40 cursor-pointer transition duration-200 flex flex-col";
-            card.onclick = () => openThreadModal(thread.id);
+            const card = document.createElement('a');
+            card.href = `/thread/${thread.id}`;
+            card.className = "p-4 hover:bg-neutral-900/40 cursor-pointer transition duration-200 flex flex-col no-underline text-inherit";
+            card.addEventListener('click', (e) => {
+                e.preventDefault();
+                history.pushState({}, '', `/thread/${thread.id}`);
+                openThreadModal(thread.id);
+            });
             
             const processedContent = parseRichTextContent(escapeHTML(thread.content));
             
@@ -404,12 +475,12 @@
             const thread = appState.threads[tId];
             if (!thread) return;
 
-            document.getElementById('modalMeta').innerText = `NODE SYSTEM: >>${thread.id} // VERIFIED PIPELINE`;
+            document.getElementById('modalMeta').innerText = `Thread >>${thread.id}`;
             document.getElementById('modalTitle').innerText = thread.title;
             document.getElementById('modalOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content));
             document.getElementById('threadModal').classList.remove('hidden');
             
-            document.getElementById('commentTreeContainer').innerHTML = `<div class="text-xs text-neutral-600 text-center py-6 font-mono animate-pulse">Syncing linked node packets...</div>`;
+            document.getElementById('commentTreeContainer').innerHTML = `<div class="text-xs text-neutral-600 text-center py-6 font-mono animate-pulse">Loading comments...</div>`;
             
             try {
                 const { data: comments } = await supabaseClient.from('comments').select('*').eq('thread_id', tId);
@@ -421,6 +492,9 @@
 
         function closeThreadModal() {
             document.getElementById('threadModal').classList.add('hidden');
+            if (location.pathname.startsWith('/thread/')) {
+                history.pushState({}, '', '/');
+            }
             appState.activeThreadId = null;
             document.getElementById('commentInput').value = '';
             document.getElementById('commentCharCounter').innerText = '0/300';
@@ -433,7 +507,7 @@
             const rawCommentsList = Object.values(commentsMap).sort((a, b) => a.timestamp - b.timestamp);
 
             if (rawCommentsList.length === 0) {
-                container.innerHTML = `<div class="text-xs text-neutral-600 text-center py-6 font-mono">No communication packets linked to this cluster root.</div>`;
+                container.innerHTML = `<div class="text-xs text-neutral-600 text-center py-6 font-mono">No comments yet.</div>`;
                 return;
             }
 
@@ -538,11 +612,29 @@
             return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' })[m]);
         }
     </script>
+    <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
+        <script type="text/javascript">
+          atOptions = {
+            'key' : 'c2beae2a3c4b115088146fa8ef56a186',
+            'format' : 'iframe',
+            'height' : 50,
+            'width' : 320,
+            'params' : {}
+          };
+        </script>
+        <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
+    </div>
 
     <footer style="width: 100%; text-align: center; padding: 40px 0; margin-top: 40px; border-top: 1px solid var(--x-border); color: var(--x-text-muted);">
-        <a href="privacy.html" style="color: var(--x-text-main); text-decoration: none; margin: 0 20px; font-weight: 500; font-size: 0.9rem; transition: opacity 0.2s;">Privacy Policy</a>
+        <a href="about.html" style="color: var(--x-text-main); text-decoration: none; margin: 0 20px; font-weight: 500; font-size: 0.9rem; transition: opacity 0.2s;">About</a>
         <a href="faq.html" style="color: var(--x-text-main); text-decoration: none; margin: 0 20px; font-weight: 500; font-size: 0.9rem; transition: opacity 0.2s;">FAQ</a>
+        <a href="blog.html" style="color: var(--x-text-main); text-decoration: none; margin: 0 20px; font-weight: 500; font-size: 0.9rem; transition: opacity 0.2s;">Blog</a>
+        <a href="contact.html" style="color: var(--x-text-main); text-decoration: none; margin: 0 20px; font-weight: 500; font-size: 0.9rem; transition: opacity 0.2s;">Contact</a>
+        <a href="terms.html" style="color: var(--x-text-main); text-decoration: none; margin: 0 20px; font-weight: 500; font-size: 0.9rem; transition: opacity 0.2s;">Terms</a>
+        <a href="guidelines.html" style="color: var(--x-text-main); text-decoration: none; margin: 0 20px; font-weight: 500; font-size: 0.9rem; transition: opacity 0.2s;">Guidelines</a>
+        <a href="privacy.html" style="color: var(--x-text-main); text-decoration: none; margin: 0 20px; font-weight: 500; font-size: 0.9rem; transition: opacity 0.2s;">Privacy Policy</a>
+
         <p style="margin-top: 24px; font-size: 0.85rem;">&copy; 2026 InteractInk. All rights reserved.</p>
     </footer>
 </body>
-</html>
+</html> 

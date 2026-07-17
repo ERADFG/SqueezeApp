@@ -71,7 +71,8 @@
 <body class="min-h-screen font-sans antialiased selection:bg-neutral-800 selection:text-white">
 
     <nav class="sticky top-0 z-50 w-full bg-black/95 backdrop-blur-md border-b border-neutral-800 flex justify-center flex-wrap gap-6 px-4 py-3.5">
-        <a href="index.html" class="text-white text-sm font-medium transition tracking-wide">Home</a>
+        <a href="welcome.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Home</a>
+        <a href="index.html" class="text-white text-sm font-medium transition tracking-wide">Board</a>
         <a href="about.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">About</a>
         <a href="faq.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">FAQ</a>
         <a href="blog.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Blog</a>
@@ -106,7 +107,7 @@
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
             </span>
-            <span class="text-[10px] text-neutral-400 uppercase tracking-wider font-semibold">Online</span>
+            <span class="text-[10px] text-neutral-400 uppercase tracking-wider font-semibold"><span id="onlineCount">1</span> Online</span>
         </div>
     </div>
 </header>
@@ -222,6 +223,7 @@
             bindEventListeners();
             await fetchInitialData();
             initRealtimeSync();
+            initPresenceTracking();
             renderThreads();
             lucide.createIcons();
             setInterval(() => renderThreads(), 30000);
@@ -307,6 +309,26 @@
 
         function updateGlobalCounterUI() {
             document.getElementById('globalPostCount').innerText = appState.cachedCounts.threads + appState.cachedCounts.comments;
+        }
+
+        function initPresenceTracking() {
+            const clientId = Math.random().toString(16).substring(2, 10);
+            const presenceChannel = supabaseClient.channel('interactink-online', {
+                config: { presence: { key: clientId } }
+            });
+
+            presenceChannel
+                .on('presence', { event: 'sync' }, () => {
+                    const state = presenceChannel.presenceState();
+                    const count = Object.keys(state).length;
+                    const el = document.getElementById('onlineCount');
+                    if (el) el.innerText = Math.max(count, 1).toLocaleString();
+                })
+                .subscribe(async (status) => {
+                    if (status === 'SUBSCRIBED') {
+                        await presenceChannel.track({ online_at: Date.now() });
+                    }
+                });
         }
 
         function switchFeedFilter(filter) {
