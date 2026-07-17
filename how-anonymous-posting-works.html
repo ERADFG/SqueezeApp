@@ -29,14 +29,101 @@
         .inline-link:hover { color: #60a5fa; }
         .footer-link { color: #e7e9ea; text-decoration: none; margin: 0 14px; font-weight: 500; font-size: 0.85rem; transition: opacity 0.2s; display: inline-block; margin-bottom: 8px; }
         .footer-link:hover { opacity: 0.7; }
-    
-        /* ---------- Responsive device-adaptive layout ---------- */
+        .widget-link { color: #71767b; text-decoration: none; margin: 0 8px; font-weight: 500; font-size: 0.8rem; transition: color 0.2s; display: inline-block; margin-bottom: 6px; }
+        .widget-link:hover { color: #e7e9ea; }
+        /* ---------- Unified sidebar navigation (matches welcome.html) ---------- */
+        .app-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            min-height: 100vh;
+            background-color: #000000;
+        }
+
+        @media (min-width: 1024px) {
+            .app-container {
+                grid-template-columns: 1fr 275px 700px 300px 1fr;
+            }
+        }
+
+        .x-sidebar { display: none; }
+
+        @media (min-width: 1024px) {
+            .x-sidebar {
+                display: flex;
+                flex-direction: column;
+                grid-column: 2;
+                position: sticky;
+                top: 0;
+                height: 100vh;
+                padding: 12px 12px 20px 12px;
+                border-right: 1px solid #2f3336;
+                overflow-y: auto;
+                align-items: flex-start;
+            }
+        }
+
+        .x-feed {
+            grid-column: 1;
+            min-height: 100vh;
+        }
+
+        @media (min-width: 1024px) {
+            .x-feed {
+                grid-column: 3;
+                border-right: 1px solid #2f3336;
+            }
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 12px 20px 12px 12px;
+            border-radius: 9999px;
+            font-size: 1.25rem;
+            font-weight: 500;
+            color: #e7e9ea;
+            text-decoration: none;
+            transition: background-color 0.2s ease;
+            width: fit-content;
+        }
+
+        .nav-item:hover {
+            background-color: #16181c;
+        }
+
+        .nav-item.active {
+            font-weight: 700;
+        }
+
+        .nav-item svg {
+            width: 26px;
+            height: 26px;
+            stroke-width: 2px;
+        }
+
+        .x-widgets { display: none; }
+
+        @media (min-width: 1024px) {
+            .x-widgets {
+                display: flex;
+                flex-direction: column;
+                grid-column: 4;
+                position: sticky;
+                top: 0;
+                height: 100vh;
+                padding: 20px 24px;
+                gap: 20px;
+                overflow-y: auto;
+            }
+        }
+
         .bottom-tab-bar { display: none; }
         .bottom-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #71767b; text-decoration: none; padding: 6px 10px; }
         .bottom-tab.active { color: #ffffff; }
-        .bottom-tab i { width: 20px; height: 20px; }
-        @media (max-width: 768px) {
-            .desktop-nav { display: none !important; }
+        .bottom-tab svg { width: 20px; height: 20px; }
+
+        @media (max-width: 1023px) {
             .bottom-tab-bar {
                 display: flex; justify-content: space-around; align-items: center;
                 position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
@@ -45,25 +132,54 @@
             }
             body { padding-bottom: 60px; }
         }
+            body { padding-bottom: 60px; }
+        }
     </style>
 </head>
 <body class="min-h-screen font-sans antialiased selection:bg-neutral-800 selection:text-white">
-    <nav class="desktop-nav sticky top-0 z-50 w-full bg-black/95 backdrop-blur-md border-b border-neutral-800 flex justify-center flex-wrap gap-6 px-4 py-3.5">
-        <a href="../index.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Home</a>
-        <a href="../about.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">About</a>
-        <a href="../faq.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">FAQ</a>
-        <a href="../blog.html" class="text-white text-sm font-medium transition tracking-wide">Blog</a>
-        <a href="../contact.html" class="text-neutral-500 hover:text-white text-sm font-medium transition tracking-wide">Contact</a>
-    </nav>
-
-    <!-- Mobile bottom tab bar (shown only on small screens, mirrors the desktop nav above) -->
-    <nav class="bottom-tab-bar" aria-label="Mobile navigation">
-        <a href="../index.html" class="bottom-tab"><i data-lucide="home"></i></a>
-        <a href="../about.html" class="bottom-tab"><i data-lucide="info"></i></a>
-        <a href="../faq.html" class="bottom-tab"><i data-lucide="help-circle"></i></a>
-        <a href="../blog.html" class="bottom-tab active"><i data-lucide="rss"></i></a>
-    </nav>
-    <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
+    <div class="app-container">
+        <aside class="x-sidebar">
+            <div class="py-2 px-3 mb-4">
+                <a href="../welcome.html">
+                    <img src="../logo.png" alt="InteractInk Logo" class="w-10 h-10 object-contain hover:opacity-90 transition">
+                </a>
+            </div>
+            <nav class="flex flex-col gap-1 w-full mb-4">
+                <a href="../welcome.html" class="nav-item">
+                    <i data-lucide="home"></i>
+                    <span>Home</span>
+                </a>
+                <a href="../index.html" class="nav-item">
+                    <i data-lucide="message-square"></i>
+                    <span>Board</span>
+                </a>
+                <a href="../ichat.html" class="nav-item">
+                    <i data-lucide="message-circle-code"></i>
+                    <span>iChat</span>
+                </a>
+                <a href="../about.html" class="nav-item">
+                    <i data-lucide="info"></i>
+                    <span>About</span>
+                </a>
+                <a href="../faq.html" class="nav-item">
+                    <i data-lucide="help-circle"></i>
+                    <span>FAQ</span>
+                </a>
+                <a href="../blog.html" class="nav-item active">
+                    <i data-lucide="rss"></i>
+                    <span>Blog</span>
+                </a>
+                <a href="../contact.html" class="nav-item">
+                    <i data-lucide="mail"></i>
+                    <span>Contact</span>
+                </a>
+            </nav>
+            <a href="../index.html" class="mt-2 w-11/12 bg-white text-black hover:bg-neutral-200 font-bold py-3.5 rounded-full text-center transition duration-200 text-[15px] shadow-sm">
+                Post
+            </a>
+        </aside>
+        <div class="x-feed">
+<div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
         <script type="text/javascript">
           atOptions = {
             'key' : 'c2beae2a3c4b115088146fa8ef56a186',
@@ -114,6 +230,36 @@
         <a href="../privacy.html" class="footer-link">Privacy Policy</a>
         <p style="margin-top: 20px; font-size: 0.85rem;">&copy; 2026 InteractInk. All rights reserved.</p>
     </footer>
+        </div>
+    <aside class="x-widgets">
+        <div class="bg-[#16181c] rounded-2xl p-4 border border-neutral-900">
+            <h2 class="text-white font-bold text-base mb-3">About InteractInk</h2>
+            <p class="text-neutral-400 text-xs leading-normal mb-3">
+                A zero-friction, layout-focused environment to speak your mind freely.
+            </p>
+            <div class="flex flex-wrap pt-2">
+                <a href="../about.html" class="widget-link">About</a>
+                <a href="../faq.html" class="widget-link">FAQ</a>
+                <a href="../blog.html" class="widget-link">Blog</a>
+                <a href="../contact.html" class="widget-link">Contact</a>
+                <a href="../terms.html" class="widget-link">Terms</a>
+                <a href="../guidelines.html" class="widget-link">Rules</a>
+                <a href="../privacy.html" class="widget-link">Privacy</a>
+            </div>
+            <p class="text-[11px] text-neutral-600 mt-3">&copy; 2026 InteractInk</p>
+        </div>
+    </aside>
+    <nav class="bottom-tab-bar" aria-label="Mobile navigation">
+        <a href="../welcome.html" class="bottom-tab"><i data-lucide="home"></i></a>
+        <a href="../index.html" class="bottom-tab"><i data-lucide="message-square"></i></a>
+        <a href="../ichat.html" class="bottom-tab"><i data-lucide="message-circle-code"></i></a>
+        <a href="../about.html" class="bottom-tab"><i data-lucide="info"></i></a>
+        <a href="../faq.html" class="bottom-tab"><i data-lucide="help-circle"></i></a>
+        <a href="../blog.html" class="bottom-tab active"><i data-lucide="rss"></i></a>
+        <a href="../contact.html" class="bottom-tab"><i data-lucide="mail"></i></a>
+    </nav>
+    </div>
+
 
     <script>
         if (window.lucide) lucide.createIcons();

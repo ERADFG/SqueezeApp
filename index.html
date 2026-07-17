@@ -69,6 +69,95 @@
         .user-link:hover { color: #60a5fa; }
         .footer-link { color: #e7e9ea; text-decoration: none; margin: 0 14px; font-weight: 500; font-size: 0.85rem; transition: opacity 0.2s; display: inline-block; margin-bottom: 8px; }
         .footer-link:hover { opacity: 0.7; }
+        .widget-link { color: #71767b; text-decoration: none; margin: 0 8px; font-weight: 500; font-size: 0.8rem; transition: color 0.2s; display: inline-block; margin-bottom: 6px; }
+        .widget-link:hover { color: #e7e9ea; }
+
+        /* ---------- Responsive 3-Column Grid (matches welcome.html) ---------- */
+        .app-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            min-height: 100vh;
+            background-color: #000000;
+        }
+
+        @media (min-width: 1024px) {
+            .app-container {
+                grid-template-columns: 1fr 275px 640px 350px 1fr;
+            }
+        }
+
+        .x-sidebar { display: none; }
+
+        @media (min-width: 1024px) {
+            .x-sidebar {
+                display: flex;
+                flex-direction: column;
+                grid-column: 2;
+                position: sticky;
+                top: 0;
+                height: 100vh;
+                padding: 12px 12px 20px 12px;
+                border-right: 1px solid #2f3336;
+                overflow-y: auto;
+                align-items: flex-start;
+            }
+        }
+
+        .x-feed {
+            grid-column: 1;
+            min-height: 100vh;
+        }
+
+        @media (min-width: 1024px) {
+            .x-feed {
+                grid-column: 3;
+                border-right: 1px solid #2f3336;
+            }
+        }
+
+        .x-widgets { display: none; }
+
+        @media (min-width: 1024px) {
+            .x-widgets {
+                display: flex;
+                flex-direction: column;
+                grid-column: 4;
+                position: sticky;
+                top: 0;
+                height: 100vh;
+                padding: 20px 24px;
+                gap: 20px;
+                overflow-y: auto;
+            }
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 12px 20px 12px 12px;
+            border-radius: 9999px;
+            font-size: 1.25rem;
+            font-weight: 500;
+            color: #e7e9ea;
+            text-decoration: none;
+            transition: background-color 0.2s ease;
+            width: fit-content;
+        }
+
+        .nav-item:hover {
+            background-color: #16181c;
+        }
+
+        .nav-item.active {
+            font-weight: 700;
+        }
+
+        .nav-item svg {
+            width: 26px;
+            height: 26px;
+            stroke-width: 2px;
+        }
 
         /* ---------- Responsive device-adaptive layout ---------- */
         .bottom-tab-bar { display: none; }
@@ -150,7 +239,7 @@
         </aside>
 
         <!-- CENTER MAIN CONTENT FEED -->
-        <main class="x-feed border-r border-neutral-800">
+        <div class="x-feed border-r border-neutral-800">
             <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
                 <script type="text/javascript">
                   atOptions = { 'key' : 'c2beae2a3c4b115088146fa8ef56a186', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
@@ -214,6 +303,38 @@
         <main id="latestStream" class="divide-y divide-neutral-800 flex-1"></main>
         
         <div id="paginationControls" class="flex justify-center items-center gap-2 p-6 border-t border-neutral-800 mb-8"></div>
+        </div>
+
+        <!-- RIGHT DESKTOP SIDEBAR -->
+        <aside class="x-widgets">
+            <div class="bg-[#16181c] rounded-2xl p-4 border border-neutral-900">
+                <h2 class="text-white font-bold text-base mb-3">About InteractInk</h2>
+                <p class="text-neutral-400 text-xs leading-normal mb-3">
+                    A zero-friction, layout-focused environment to speak your mind freely.
+                </p>
+                <div class="flex flex-wrap pt-2">
+                    <a href="about.html" class="widget-link">About</a>
+                    <a href="faq.html" class="widget-link">FAQ</a>
+                    <a href="blog.html" class="widget-link">Blog</a>
+                    <a href="contact.html" class="widget-link">Contact</a>
+                    <a href="terms.html" class="widget-link">Terms</a>
+                    <a href="guidelines.html" class="widget-link">Rules</a>
+                    <a href="privacy.html" class="widget-link">Privacy</a>
+                </div>
+                <p class="text-[11px] text-neutral-600 mt-3">&copy; 2026 InteractInk</p>
+            </div>
+        </aside>
+
+        <!-- MOBILE BOTTOM TAB BAR -->
+        <nav class="bottom-tab-bar" aria-label="Mobile navigation">
+            <a href="welcome.html" class="bottom-tab"><i data-lucide="home"></i></a>
+            <a href="index.html" class="bottom-tab active"><i data-lucide="message-square"></i></a>
+            <a href="ichat.html" class="bottom-tab"><i data-lucide="message-circle-code"></i></a>
+            <a href="about.html" class="bottom-tab"><i data-lucide="info"></i></a>
+            <a href="faq.html" class="bottom-tab"><i data-lucide="help-circle"></i></a>
+            <a href="blog.html" class="bottom-tab"><i data-lucide="rss"></i></a>
+            <a href="contact.html" class="bottom-tab"><i data-lucide="mail"></i></a>
+        </nav>
     </div>
 
     <!-- Modal window for viewing threads and replying -->
