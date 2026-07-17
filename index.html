@@ -105,54 +105,73 @@
     <!-- EXACT NAVIGATION FROM WELCOME.HTML -->
     <!-- Sidebar Navigation -->
 <nav class="fixed left-0 top-0 h-full w-64 border-r border-neutral-800 p-6 flex flex-col justify-between z-50">
-    <div class="flex flex-col gap-8">
-        <!-- Logo -->
-        <a href="welcome.html" class="pl-2">
-            <img src="logo.png" alt="InteractInk" class="w-8 h-8">
-        </a>
-        
-        <!-- Menu Links -->
-        <div class="flex flex-col gap-6">
-            <a href="welcome.html" class="flex items-center gap-4 text-xl font-bold text-neutral-400 hover:text-white transition">
-                <i data-lucide="home"></i> Home
-            </a>
-            <a href="index.html" class="flex items-center gap-4 text-xl font-bold text-white transition">
-                <i data-lucide="message-square"></i> Board
-                <!-- Inside your sidebar <div class="flex flex-col gap-6"> -->
-            <a href="ichat.html" class="flex items-center gap-4 text-xl font-bold text-neutral-400 hover:text-white transition">
-                <i data-lucide="message-circle"></i> iChat
-            </a>
-            </a>
-            <a href="about.html" class="flex items-center gap-4 text-xl font-bold text-neutral-400 hover:text-white transition">
-                <i data-lucide="info"></i> About
-            </a>
-            <a href="faq.html" class="flex items-center gap-4 text-xl font-bold text-neutral-400 hover:text-white transition">
-                <i data-lucide="help-circle"></i> FAQ
-            </a>
-            <a href="blog.html" class="flex items-center gap-4 text-xl font-bold text-neutral-400 hover:text-white transition">
-                <i data-lucide="rss"></i> Blog
-            </a>
-            <a href="contact.html" class="flex items-center gap-4 text-xl font-bold text-neutral-400 hover:text-white transition">
-                <i data-lucide="mail"></i> Contact
-            </a>
-        </div>
-    </div>
+    <div class="app-container">
 
-    <!-- Post Button -->
-    <button onclick="focusComposer()" class="w-full bg-white text-black font-bold py-3 rounded-full hover:bg-neutral-200 transition">
-        Post
-    </button>
-</nav>
+        <!-- LEFT DESKTOP SIDEBAR -->
+        <aside class="x-sidebar">
+            <!-- Brand Logo -->
+            <div class="py-2 px-3 mb-4">
+                <a href="welcome.html">
+                    <img src="favicon2.png" alt="InteractInk Logo" class="w-10 h-10 object-contain hover:opacity-90 transition">
+                </a>
+            </div>
+
+            <!-- Vertical Navigation -->
+            <nav class="flex flex-col gap-1 w-full mb-4">
+                <a href="welcome.html" class="nav-item active">
+                    <i data-lucide="home"></i>
+                    <span>Home</span>
+                </a>
+                <a href="index.html" class="nav-item">
+                    <i data-lucide="message-square"></i>
+                    <span>Board</span>
+                </a>
+                <a href="ichat.html" class="nav-item">
+                    <i data-lucide="message-circle-code"></i>
+                    <span>iChat</span>
+                </a>
+                <a href="about.html" class="nav-item">
+                    <i data-lucide="info"></i>
+                    <span>About</span>
+                </a>
+                <a href="faq.html" class="nav-item">
+                    <i data-lucide="help-circle"></i>
+                    <span>FAQ</span>
+                </a>
+                <a href="blog.html" class="nav-item">
+                    <i data-lucide="rss"></i>
+                    <span>Blog</span>
+                </a>
+                <a href="contact.html" class="nav-item">
+                    <i data-lucide="mail"></i>
+                    <span>Contact</span>
+                </a>
+            </nav>
+
+            <!-- Large Desktop Post Button -->
+            <a href="index.html" class="mt-2 w-11/12 bg-white text-black hover:bg-neutral-200 font-bold py-3.5 rounded-full text-center transition duration-200 text-[15px] shadow-sm">
+                Post
+            </a>
+        </aside>
+
+        <!-- CENTER MAIN CONTENT FEED -->
+        <main class="x-feed">
+            <!-- Top Banner Ad space -->
+            <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
+                <script type="text/javascript">
+                  atOptions = { 'key' : 'c2beae2a3c4b115088146fa8ef56a186', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+                </script>
+                <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
+            </div>
 
     <!-- Mobile bottom tab bar -->
     <nav class="bottom-tab-bar" aria-label="Mobile navigation">
-        <a href="welcome.html" class="bottom-tab"><i data-lucide="home"></i></a>
-        <a href="index.html" class="bottom-tab active"><i data-lucide="message-square"></i></a>
-        <a href="ichat.html" class="bottom-tab"><i data-lucide="message-circle"></i></a>
-        <a href="about.html" class="bottom-tab"><i data-lucide="info"></i></a>
-        <a href="faq.html" class="bottom-tab"><i data-lucide="help-circle"></i></a>
-        <a href="blog.html" class="bottom-tab"><i data-lucide="rss"></i></a>
-    </nav>
+            <a href="welcome.html" class="bottom-tab active"><i data-lucide="home"></i></a>
+            <a href="index.html" class="bottom-tab"><i data-lucide="message-square"></i></a>
+            <a href="ichat.html" class="bottom-tab"><i data-lucide="message-circle-code"></i></a>
+            <a href="about.html" class="bottom-tab"><i data-lucide="info"></i></a>
+            <a href="faq.html" class="bottom-tab"><i data-lucide="help-circle"></i></a>
+        </nav>
 
     <!-- Floating compose button (mobile only) -->
     <button type="button" class="compose-fab" onclick="focusComposer()" aria-label="New post">
