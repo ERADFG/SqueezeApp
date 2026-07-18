@@ -47,6 +47,8 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Unified routing & board registry (shared with interactink.html) -->
+    <script src="js/routing.js"></script>
 
     <style>
         body { background-color: #000000; color: #e7e9ea; }
@@ -70,6 +72,57 @@
         .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
         .footer-link { color: #71767b; text-decoration: none; margin: 0 8px; font-weight: 500; font-size: 0.8rem; transition: color 0.2s; display: inline-block; margin-bottom: 6px; }
         .footer-link:hover { color: #e7e9ea; }
+
+        /* ---------- 20-Board Grid (landing hub) ---------- */
+        .boards-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        @media (min-width: 480px) {
+            .boards-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (min-width: 1024px) {
+            .boards-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        .board-grid-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            border: 1px solid #262626;
+            border-radius: 12px;
+            background: rgba(10, 10, 10, 0.4);
+            text-decoration: none;
+            color: inherit;
+            transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+            min-width: 0;
+        }
+        .board-grid-card:hover {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.07);
+            transform: translateY(-1px);
+        }
+        .board-grid-card.active {
+            border-color: #10b981;
+            box-shadow: 0 0 0 1px #10b981, 0 0 16px rgba(16, 185, 129, 0.25);
+        }
+        .board-grid-icon {
+            flex-shrink: 0;
+            width: 34px;
+            height: 34px;
+            border-radius: 9999px;
+            background: #16181c;
+            border: 1px solid #262626;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #10b981;
+        }
+        .board-grid-icon svg { width: 16px; height: 16px; }
+        .board-grid-meta { min-width: 0; }
+        .board-grid-label { font-family: ui-monospace, "SF Mono", monospace; font-weight: 700; font-size: 13px; color: #ffffff; line-height: 1.2; }
+        .board-grid-name { font-size: 11px; color: #71767b; line-height: 1.25; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     
         /* ---------- Responsive 3-Column Grid ---------- */
         .app-container {
@@ -262,6 +315,19 @@
             </header>
             
 
+            <!-- 20-Board Grid: the primary navigation hub for the site -->
+            <section class="mt-8 px-4">
+                <div class="flex items-center justify-between mb-3 border-b border-neutral-800 pb-2">
+                    <h2 class="text-white font-bold text-sm uppercase tracking-wide flex items-center gap-2">
+                        <i data-lucide="layout-grid" class="w-4 h-4 text-emerald-500"></i> Boards
+                    </h2>
+                    <span class="text-xs text-neutral-500">20 boards &middot; pick one</span>
+                </div>
+                <div id="boardsGrid" class="boards-grid">
+                    <!-- Populated by InkRouting.renderBoardGrid() -->
+                </div>
+            </section>
+
             <!-- What is InteractInk -->
             <section id="infoBox" class="mx-4 mt-6 border border-neutral-800 bg-neutral-950/40 rounded-xl relative">
                 <button onclick="document.getElementById('infoBox').style.display='none'" class="absolute top-3 right-3 text-neutral-500 hover:text-white transition cursor-pointer">
@@ -381,6 +447,10 @@
         let supabaseClient;
 
         window.addEventListener('load', async () => {
+            if (window.InkRouting) {
+                InkRouting.renderBoardGrid(document.getElementById('boardsGrid'));
+            }
+
             if (!window.supabase) return;
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -494,16 +564,23 @@
         }
 
         function buildPopularCard(thread, index) {
+            const board = window.InkRouting ? InkRouting.getBoardMeta(thread.board_id) : null;
+            const boardLabel = board ? board.label : '/b/';
             const card = document.createElement('a');
-            card.href = `interactink.html?thread=${thread.id}`;
+            card.href = window.InkRouting
+                ? InkRouting.buildThreadUrl(thread.board_id || InkRouting.DEFAULT_BOARD, thread.id, 'interactink.html')
+                : `interactink.html?thread=${thread.id}`;
             card.className = "fade-in-up p-4 bg-neutral-950/40 border border-neutral-900 rounded-xl hover:bg-neutral-900/40 hover:border-neutral-700 transition duration-200 flex flex-col no-underline text-inherit";
             card.style.animationDelay = `${index * 40}ms`;
 
             const excerpt = escapeHTML(thread.content || '').slice(0, 140);
             card.innerHTML = `
-                <div class="flex items-center justify-between text-xs text-neutral-500 mb-2">
-                    <span class="font-bold text-neutral-300 uppercase tracking-wide truncate max-w-[65%]">${escapeHTML(thread.title || 'Anonymous')}</span>
-                    <span class="font-mono text-[10px]">&gt;&gt;${thread.id}</span>
+                <div class="flex items-center justify-between text-xs text-neutral-500 mb-2 gap-2">
+                    <span class="font-bold text-neutral-300 uppercase tracking-wide truncate max-w-[55%]">${escapeHTML(thread.title || 'Anonymous')}</span>
+                    <span class="flex items-center gap-2 shrink-0">
+                        <span class="font-mono text-[10px] text-emerald-500">${boardLabel}</span>
+                        <span class="font-mono text-[10px]">&gt;&gt;${thread.id}</span>
+                    </span>
                 </div>
                 <p class="text-neutral-300 text-sm leading-relaxed line-clamp-3 mb-3">${excerpt}${(thread.content || '').length > 140 ? '&hellip;' : ''}</p>
                 <div class="flex items-center gap-4 text-[11px] text-neutral-500 mt-auto pt-2 border-t border-neutral-900">
@@ -526,11 +603,16 @@
 
                 list.innerHTML = '';
                 threads.forEach(t => {
+                    const board = window.InkRouting ? InkRouting.getBoardMeta(t.board_id) : null;
+                    const boardLabel = board ? board.label : '/b/';
                     const row = document.createElement('a');
-                    row.href = `interactink.html?thread=${t.id}`;
+                    row.href = window.InkRouting
+                        ? InkRouting.buildThreadUrl(t.board_id || InkRouting.DEFAULT_BOARD, t.id, 'interactink.html')
+                        : `interactink.html?thread=${t.id}`;
                     row.className = "flex items-center justify-between gap-4 p-3 hover:bg-neutral-900/40 transition duration-150 no-underline text-inherit";
                     row.innerHTML = `
                         <div class="min-w-0">
+                            <span class="font-mono text-[10px] text-emerald-500 mr-1.5">${boardLabel}</span>
                             <span class="font-bold text-neutral-300 text-xs uppercase tracking-wide">${escapeHTML(t.title || 'Anonymous')}</span>
                             <p class="text-neutral-500 text-xs truncate">${escapeHTML((t.content || '').slice(0, 80))}</p>
                         </div>

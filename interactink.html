@@ -58,6 +58,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Unified routing & state management (board resolution, sessionStorage persistence) -->
+    <script src="js/routing.js"></script>
 
     <style>
         body { background-color: #000000; color: #e7e9ea; }
@@ -248,8 +250,10 @@
             </div>
 
             <header class="sticky top-0 bg-black/90 backdrop-blur-md border-b border-neutral-800 p-4 z-40 flex justify-between items-center">
-                <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-                    <img src="favicon2.png" alt="InteractInk logo" class="w-6 h-6"> InteractInk
+                <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2 min-w-0">
+                    <img src="favicon2.png" alt="InteractInk logo" class="w-6 h-6 shrink-0">
+                    <span class="truncate">InteractInk</span>
+                    <span id="activeBoardBadge" class="shrink-0 px-2 py-0.5 text-[11px] font-mono font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 rounded-full uppercase tracking-wider">/b/</span>
                 </h1>
                 <div class="flex items-center gap-2">
                     <div class="px-3 py-1 text-[10px] font-mono font-semibold text-neutral-400 bg-neutral-900 border border-neutral-800 rounded-full uppercase tracking-wider">
@@ -274,10 +278,15 @@
         </noscript>
 
         <section class="p-4 border-b border-neutral-800">
+            <div id="composerBoardLine" class="text-xs text-neutral-500 mb-2 flex items-center gap-1.5">
+                <i data-lucide="corner-down-right" class="w-3.5 h-3.5"></i>
+                Posting to <span id="composerBoardLabel" class="text-emerald-500 font-mono font-bold">/b/</span>
+                <span id="composerBoardName" class="text-neutral-600">&mdash; Random</span>
+            </div>
             <form id="threadForm" class="pt-1">
                 <input type="text" id="threadTitle" placeholder="Your Name (Optional)..." maxlength="50" autocomplete="off"
                        class="w-full bg-transparent text-white text-base font-bold pb-2 focus:outline-none placeholder:text-neutral-600 border-b border-neutral-900 mb-3">
-                <textarea id="threadContent" placeholder="What is happening?" required rows="3" maxlength="1000"
+                <textarea id="threadContent" placeholder="What is happening?" data-default-placeholder="What is happening?" required rows="3" maxlength="1000"
                           class="w-full bg-transparent text-white text-sm focus:outline-none placeholder:text-neutral-500 resize-none leading-relaxed"></textarea>
                 
                 <div class="flex justify-between items-center border-t border-neutral-950 pt-3 mt-2">
@@ -396,14 +405,25 @@
         cachedCounts: { threads: 0, comments: 0 },
         feedFilter: 'latest', 
         currentPage: 1, 
-        threadsPerPage: 10 
+        threadsPerPage: 10,
+        currentBoard: 'b'
     };
 
        // Initialize core engine
     window.addEventListener('load', async () => {
         if (!window.supabase) return;
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        
+
+        // ---- Task 1: resolve active board from URL (?board=), with a
+        // sessionStorage-backed fallback when no param is present at all,
+        // then make sure the URL always reflects the resolved board so the
+        // address bar / share links / back-button history stay accurate. ----
+        const resolvedBoard = InkRouting.resolveInitialBoard();
+        appState.currentBoard = resolvedBoard;
+        InkRouting.saveCurrentBoard(resolvedBoard);
+        syncBoardInURL(resolvedBoard);
+        updateBoardBadgeUI(resolvedBoard);
+
         initSeedEngine();
         bindEventListeners();
         await fetchInitialData();
@@ -411,7 +431,12 @@
         initPresenceTracking();
         renderThreads();
         lucide.createIcons();
-        
+
+        // Restore scroll position from a previous visit to this same board
+        // (e.g. the user hit Back after reading a thread).
+        InkRouting.restoreScrollPosition(appState.currentBoard);
+        InkRouting.trackScrollPosition(appState.currentBoard);
+
         // Handle deep linking
         const params = new URLSearchParams(location.search);
         const requestedThread = params.get('thread');
@@ -420,6 +445,71 @@
             setTimeout(() => {
                 if (appState.threads[requestedThread]) openThreadModal(requestedThread);
             }, 500);
+        }
+    });
+
+    /** Keeps the visible URL's ?board= param in sync with appState.currentBoard
+     *  without triggering a page reload. */
+    function syncBoardInURL(boardId) {
+        const url = new URL(location.href);
+        if (url.searchParams.get('board') !== boardId) {
+            url.searchParams.set('board', boardId);
+            history.replaceState(history.state, '', url.toString());
+        }
+    }
+
+    function updateBoardBadgeUI(boardId) {
+        const meta = InkRouting.getBoardMeta(boardId);
+        const badge = document.getElementById('activeBoardBadge');
+        if (badge && meta) badge.textContent = meta.label;
+        if (meta) document.title = `${meta.label} — ${meta.name} | InteractInk`;
+
+        const composer = document.getElementById('threadContent');
+        if (composer && meta) {
+            composer.placeholder = `What is happening in ${meta.label} — ${meta.name}?`;
+        }
+
+        const boardLabelEl = document.getElementById('composerBoardLabel');
+        const boardNameEl = document.getElementById('composerBoardName');
+        if (meta && boardLabelEl && boardNameEl) {
+            boardLabelEl.textContent = meta.label;
+            boardNameEl.textContent = `— ${meta.name}`;
+        }
+    }
+
+    /**
+     * Switches the active board in-place: updates state, URL, sessionStorage,
+     * resets pagination, clears the previously-loaded board's threads out of
+     * memory, and re-fetches. Used by the board switcher (Task 3) and by
+     * popstate handling below.
+     */
+    async function switchToBoard(boardId) {
+        if (!InkRouting.isValidBoard(boardId) || boardId === appState.currentBoard) return;
+
+        appState.currentBoard = boardId;
+        appState.currentPage = 1;
+        appState.threads = {};
+        appState.comments = {};
+        appState.commentCounts = {};
+
+        InkRouting.saveCurrentBoard(boardId);
+        syncBoardInURL(boardId);
+        updateBoardBadgeUI(boardId);
+
+        await fetchInitialData();
+        initRealtimeSync(); // re-subscribe with the new board filter
+        renderThreads();
+        window.scrollTo({ top: 0, behavior: 'auto' });
+        InkRouting.restoreScrollPosition(boardId);
+        lucide.createIcons();
+    }
+
+    // Keep in sync with browser Back/Forward when the ?board= param changes
+    // (e.g. user navigated via the board switcher, then pressed Back).
+    window.addEventListener('popstate', () => {
+        const urlBoard = InkRouting.getBoardFromURL();
+        if (urlBoard !== appState.currentBoard) {
+            switchToBoard(urlBoard);
         }
     });
 
@@ -441,10 +531,19 @@
 
         async function fetchInitialData() {
             try {
-                const { data: threads } = await supabaseClient.from('threads').select('*').order('timestamp', { ascending: false }).limit(100);
+                // Strict segregation: every query is scoped to appState.currentBoard.
+                const board = appState.currentBoard;
+
+                const { data: threads } = await supabaseClient.from('threads')
+                    .select('*')
+                    .eq('board_id', board)
+                    .order('timestamp', { ascending: false })
+                    .limit(100);
                 if (threads) threads.forEach(t => appState.threads[t.id] = t);
 
-                const { data: commentIds } = await supabaseClient.from('comments').select('thread_id');
+                const { data: commentIds } = await supabaseClient.from('comments')
+                    .select('thread_id')
+                    .eq('board_id', board);
                 if (commentIds) {
                     commentIds.forEach(c => {
                         appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
@@ -452,8 +551,8 @@
                 }
 
                 const [threadCountRes, commentCountRes] = await Promise.all([
-                    supabaseClient.from('threads').select('*', { count: 'exact', head: true }),
-                    supabaseClient.from('comments').select('*', { count: 'exact', head: true })
+                    supabaseClient.from('threads').select('*', { count: 'exact', head: true }).eq('board_id', board),
+                    supabaseClient.from('comments').select('*', { count: 'exact', head: true }).eq('board_id', board)
                 ]);
 
                 appState.cachedCounts.threads = threadCountRes.count || 0;
@@ -463,9 +562,20 @@
             } catch (err) { console.error(err); }
         }
 
+        let realtimeChannel = null;
+
         function initRealtimeSync() {
-            supabaseClient.channel('global-changes')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'threads' }, payload => {
+            // Tear down any previous board's subscription first so switching
+            // boards never leaves a stale channel leaking updates in.
+            if (realtimeChannel) {
+                supabaseClient.removeChannel(realtimeChannel);
+                realtimeChannel = null;
+            }
+
+            const board = appState.currentBoard;
+
+            realtimeChannel = supabaseClient.channel(`board-changes-${board}`)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'threads', filter: `board_id=eq.${board}` }, payload => {
                     if (payload.eventType === 'INSERT') {
                         appState.threads[payload.new.id] = payload.new;
                         appState.cachedCounts.threads++;
@@ -475,7 +585,7 @@
                     updateGlobalCounterUI();
                     renderThreads();
                 })
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, payload => {
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'comments', filter: `board_id=eq.${board}` }, payload => {
                     if (payload.eventType === 'INSERT') {
                         const c = payload.new;
                         appState.cachedCounts.comments++;
@@ -557,7 +667,7 @@
                 const id = Math.random().toString(16).substring(2, 10);
                 const parsedTitle = title.value.trim() || 'Anonymous';
 
-                await supabaseClient.from('threads').insert([{ id, title: parsedTitle, content: threadContent.value.trim(), timestamp: Date.now(), upvotes: 1 }]);
+                await supabaseClient.from('threads').insert([{ id, board_id: appState.currentBoard, title: parsedTitle, content: threadContent.value.trim(), timestamp: Date.now(), upvotes: 1 }]);
                 title.value = ''; threadContent.value = '';
                 threadCharCounter.innerText = '0/1000';
             });
@@ -570,10 +680,10 @@
                 const tripcode = await generateTripcode(appState.activeThreadId, appState.userSeed);
                 const textVal = commentInput.value.trim();
 
-                await supabaseClient.from('comments').insert([{ id, thread_id: appState.activeThreadId, tripcode, text: textVal, timestamp: Date.now() }]);
+                await supabaseClient.from('comments').insert([{ id, thread_id: appState.activeThreadId, board_id: appState.currentBoard, tripcode, text: textVal, timestamp: Date.now() }]);
                 
                 if (!appState.comments[appState.activeThreadId]) appState.comments[appState.activeThreadId] = {};
-                appState.comments[appState.activeThreadId][id] = { id, thread_id: appState.activeThreadId, tripcode, text: textVal, timestamp: Date.now() };
+                appState.comments[appState.activeThreadId][id] = { id, thread_id: appState.activeThreadId, board_id: appState.currentBoard, tripcode, text: textVal, timestamp: Date.now() };
                 
                 renderCommentTree();
                 commentInput.value = '';
@@ -603,7 +713,9 @@
             latestContainer.innerHTML = '';
             
             if (paginatedList.length === 0) {
-                latestContainer.innerHTML = '<div class="text-neutral-500 text-center py-10 text-sm">No threads found.</div>';
+                const meta = InkRouting.getBoardMeta(appState.currentBoard);
+                const boardLabel = meta ? meta.label : '';
+                latestContainer.innerHTML = `<div class="text-neutral-500 text-center py-10 text-sm">No threads in <span class="text-emerald-500 font-mono">${boardLabel}</span> yet &mdash; be the first to post.</div>`;
             } else {
                 paginatedList.forEach(t => latestContainer.appendChild(createThreadElementCard(t)));
             }
@@ -652,11 +764,11 @@
             const dateStr = new Date(thread.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const dynamicCommentCount = appState.commentCounts[thread.id] || 0;
             const card = document.createElement('a');
-            card.href = `/thread/${thread.id}`;
+            card.href = InkRouting.buildThreadUrl(appState.currentBoard, thread.id, 'interactink.html');
             card.className = "p-4 hover:bg-neutral-900/40 cursor-pointer transition duration-200 flex flex-col no-underline text-inherit";
             card.addEventListener('click', (e) => {
                 e.preventDefault();
-                history.pushState({}, '', `/thread/${thread.id}`);
+                history.pushState({}, '', card.href);
                 openThreadModal(thread.id);
             });
             
@@ -694,10 +806,16 @@
         function closeThreadModal() {
             document.getElementById('threadModal').classList.add('hidden');
             appState.activeThreadId = null;
-            history.pushState({}, '', '/index.html');
+            history.pushState({}, '', InkRouting.buildBoardUrl(appState.currentBoard, 'interactink.html'));
+            // Return the feed to exactly where the user left it.
+            InkRouting.restoreScrollPosition(appState.currentBoard);
         }
 
         async function openThreadModal(tId) {
+        // Preserve exactly where the user was on this board's feed so that
+        // closing the thread (or hitting Back) restores that scroll offset.
+        InkRouting.captureStateBeforeNavigation(appState.currentBoard);
+
         appState.activeThreadId = tId;
         const thread = appState.threads[tId];
         if (!thread) return;
@@ -710,7 +828,13 @@
         const container = document.getElementById('commentTreeContainer');
         container.innerHTML = `<div class="text-xs text-neutral-600 text-center py-6 font-mono">Loading...</div>`;
         
-        const { data: comments } = await supabaseClient.from('comments').select('*').eq('thread_id', tId).order('timestamp', { ascending: true });
+        // Scoped by both thread_id and board_id — belt-and-suspenders against
+        // any cross-board data leakage even if an id were ever to collide.
+        const { data: comments } = await supabaseClient.from('comments')
+            .select('*')
+            .eq('thread_id', tId)
+            .eq('board_id', appState.currentBoard)
+            .order('timestamp', { ascending: true });
         appState.comments[tId] = {};
         if (comments) comments.forEach(c => appState.comments[tId][c.id] = c);
         renderCommentTree();
@@ -823,7 +947,7 @@
 
         // ---------- Sharing (thread / comment) to any social platform ----------
         function buildShareUrl(threadId) {
-            return `${location.origin}${location.pathname}?thread=${threadId}`;
+            return `${location.origin}${location.pathname}?board=${appState.currentBoard}&thread=${threadId}`;
         }
 
         async function shareThread(threadId, anchorEl) {
