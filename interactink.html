@@ -637,24 +637,22 @@
  
         async function fetchInitialData() {
             try {
-                // /b/ (Random) is the firehose: it shows every post ever made,
-                // across every board, with no board_id filter at all. Every
-                // other board stays strictly scoped to its own board_id so a
-                // post made in one board never leaks into another.
+                // Strict segregation: every board, including /b/ (Random),
+                // is scoped to its own board_id. A post made in one board
+                // never shows up in another.
                 const board = appState.currentBoard;
-                const isFirehose = board === InkRouting.DEFAULT_BOARD;
 
-                let threadsQuery = supabaseClient.from('threads').select('*');
-                if (!isFirehose) threadsQuery = threadsQuery.eq('board_id', board);
-                const { data: threads, error: threadsError } = await threadsQuery
+                const { data: threads, error: threadsError } = await supabaseClient.from('threads')
+                    .select('*')
+                    .eq('board_id', board)
                     .order('timestamp', { ascending: false })
                     .limit(100);
                 if (threadsError) throw threadsError;
                 if (threads) threads.forEach(t => appState.threads[t.id] = t);
 
-                let commentsQuery = supabaseClient.from('comments').select('thread_id');
-                if (!isFirehose) commentsQuery = commentsQuery.eq('board_id', board);
-                const { data: commentIds, error: commentsError } = await commentsQuery;
+                const { data: commentIds, error: commentsError } = await supabaseClient.from('comments')
+                    .select('thread_id')
+                    .eq('board_id', board);
                 if (commentsError) throw commentsError;
                 if (commentIds) {
                     commentIds.forEach(c => {
@@ -704,21 +702,15 @@ function initRealtimeSync() {
             }
 
             const board = appState.currentBoard;
-            // /b/ (Random) is the firehose: subscribe to inserts/updates from
-            // every board. Every other board keeps a strict board_id filter
-            // so posts made elsewhere never leak in live.
-            const isFirehose = board === InkRouting.DEFAULT_BOARD;
-            const threadFilter = isFirehose ? undefined : `board_id=eq.${board}`;
-            const commentFilter = isFirehose ? undefined : `board_id=eq.${board}`;
 
             realtimeChannel = supabaseClient.channel(`board-changes-${board}`)
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'threads', filter: threadFilter }, payload => {
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'threads', filter: `board_id=eq.${board}` }, payload => {
                     if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
                         appState.threads[payload.new.id] = payload.new;
                     }
                     renderThreads();
                 })
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'comments', filter: commentFilter }, payload => {
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'comments', filter: `board_id=eq.${board}` }, payload => {
                     if (payload.eventType === 'INSERT') {
                         const c = payload.new;
                         const alreadyHave = !!(appState.comments[c.thread_id] && appState.comments[c.thread_id][c.id]);
