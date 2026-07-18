@@ -259,13 +259,6 @@
                     <div class="px-3 py-1 text-[10px] font-mono font-semibold text-neutral-400 bg-neutral-900 border border-neutral-800 rounded-full uppercase tracking-wider">
                         Total Posts: <span id="globalPostCount" class="text-white">0</span>
                     </div>
-                    <div class="px-3 py-1 flex items-center gap-2 rounded-full bg-neutral-900 border border-neutral-800">
-                        <span class="relative flex h-1.5 w-1.5 shrink-0">
-                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-                        </span>
-                        <span class="text-[10px] text-neutral-400 uppercase tracking-wider font-semibold"><span id="onlineCount">1</span> Online</span>
-                    </div>
                 </div>
             </header>
 
@@ -411,7 +404,20 @@
 
        // Initialize core engine
     window.addEventListener('load', async () => {
-        if (!window.supabase) return;
+        // The Supabase CDN script can occasionally still be attaching itself
+        // to `window` right as the 'load' event fires (slow network, ad
+        // blocker, etc). Instead of silently giving up, wait briefly for it.
+        if (!window.supabase) {
+            let attempts = 0;
+            while (!window.supabase && attempts < 20) {
+                await new Promise(r => setTimeout(r, 150));
+                attempts++;
+            }
+        }
+        if (!window.supabase) {
+            showFeedError('Could not load the database library. Please check your connection and refresh the page.');
+            return;
+        }
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         // ---- Task 1: resolve active board from URL (?board=), with a
@@ -428,7 +434,6 @@
         bindEventListeners();
         await fetchInitialData();
         initRealtimeSync();
-        initPresenceTracking();
         renderThreads();
         lucide.createIcons();
 
@@ -534,16 +539,18 @@
                 // Strict segregation: every query is scoped to appState.currentBoard.
                 const board = appState.currentBoard;
 
-                const { data: threads } = await supabaseClient.from('threads')
+                const { data: threads, error: threadsError } = await supabaseClient.from('threads')
                     .select('*')
                     .eq('board_id', board)
                     .order('timestamp', { ascending: false })
                     .limit(100);
+                if (threadsError) throw threadsError;
                 if (threads) threads.forEach(t => appState.threads[t.id] = t);
 
-                const { data: commentIds } = await supabaseClient.from('comments')
+                const { data: commentIds, error: commentsError } = await supabaseClient.from('comments')
                     .select('thread_id')
                     .eq('board_id', board);
+                if (commentsError) throw commentsError;
                 if (commentIds) {
                     commentIds.forEach(c => {
                         appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
@@ -554,12 +561,26 @@
                     supabaseClient.from('threads').select('*', { count: 'exact', head: true }).eq('board_id', board),
                     supabaseClient.from('comments').select('*', { count: 'exact', head: true }).eq('board_id', board)
                 ]);
+                if (threadCountRes.error) throw threadCountRes.error;
+                if (commentCountRes.error) throw commentCountRes.error;
 
                 appState.cachedCounts.threads = threadCountRes.count || 0;
                 appState.cachedCounts.comments = commentCountRes.count || 0;
                 
                 updateGlobalCounterUI();
-            } catch (err) { console.error(err); }
+            } catch (err) {
+                console.error(err);
+                // Most common real-world cause: Supabase Row Level Security
+                // is blocking anonymous SELECTs on 'threads'/'comments'.
+                showFeedError(`Couldn't load posts: ${err.message || 'unknown error'}. If this persists, check that your Supabase tables allow public SELECT access (Row Level Security policies).`);
+            }
+        }
+
+        function showFeedError(message) {
+            const latestContainer = document.getElementById('latestStream');
+            if (latestContainer) {
+                latestContainer.innerHTML = `<div class="text-red-400 text-center py-10 text-sm px-6">${escapeHTML(message)}</div>`;
+            }
         }
 
         let realtimeChannel = null;
@@ -605,26 +626,6 @@
 
         function updateGlobalCounterUI() {
             document.getElementById('globalPostCount').innerText = appState.cachedCounts.threads + appState.cachedCounts.comments;
-        }
-
-        function initPresenceTracking() {
-            const clientId = Math.random().toString(16).substring(2, 10);
-            const presenceChannel = supabaseClient.channel('interactink-online', {
-                config: { presence: { key: clientId } }
-            });
-
-            presenceChannel
-                .on('presence', { event: 'sync' }, () => {
-                    const state = presenceChannel.presenceState();
-                    const count = Object.keys(state).length;
-                    const el = document.getElementById('onlineCount');
-                    if (el) el.innerText = Math.max(count, 1).toLocaleString();
-                })
-                .subscribe(async (status) => {
-                    if (status === 'SUBSCRIBED') {
-                        await presenceChannel.track({ online_at: Date.now() });
-                    }
-                });
         }
 
         function switchFeedFilter(filter) {
