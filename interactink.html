@@ -682,6 +682,23 @@
             }
         }
  
+        function showToast(message, isError) {
+            let toast = document.getElementById('inkToast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'inkToast';
+                toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:100;max-width:90vw;padding:10px 16px;border-radius:9999px;font-size:13px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,0.5);transition:opacity .2s;';
+                document.body.appendChild(toast);
+            }
+            toast.style.background = isError ? '#7f1d1d' : '#16181c';
+            toast.style.color = '#fff';
+            toast.style.border = isError ? '1px solid #ef4444' : '1px solid #2f3336';
+            toast.textContent = message;
+            toast.style.opacity = '1';
+            clearTimeout(toast._timer);
+            toast._timer = setTimeout(() => { toast.style.opacity = '0'; }, isError ? 6000 : 2500);
+        }
+
         function showFeedError(message) {
             const latestContainer = document.getElementById('latestStream');
             if (latestContainer) {
@@ -704,8 +721,12 @@
             realtimeChannel = supabaseClient.channel(`board-changes-${board}`)
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'threads', filter: `board_id=eq.${board}` }, payload => {
                     if (payload.eventType === 'INSERT') {
+                        // Skip the counter bump if we already added this post ourselves
+                        // (optimistic local insert on submit) - otherwise our own posts
+                        // get double-counted when the realtime echo arrives.
+                        const alreadyHave = !!appState.threads[payload.new.id];
                         appState.threads[payload.new.id] = payload.new;
-                        appState.cachedCounts.threads++;
+                        if (!alreadyHave) appState.cachedCounts.threads++;
                     } else if (payload.eventType === 'UPDATE') {
                         appState.threads[payload.new.id] = payload.new;
                     }
@@ -715,9 +736,12 @@
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'comments', filter: `board_id=eq.${board}` }, payload => {
                     if (payload.eventType === 'INSERT') {
                         const c = payload.new;
-                        appState.cachedCounts.comments++;
-                        appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
-                        
+                        const alreadyHave = !!(appState.comments[c.thread_id] && appState.comments[c.thread_id][c.id]);
+                        if (!alreadyHave) {
+                            appState.cachedCounts.comments++;
+                            appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
+                        }
+
                         if (appState.activeThreadId === c.thread_id) {
                             if (!appState.comments[c.thread_id]) appState.comments[c.thread_id] = {};
                             appState.comments[c.thread_id][c.id] = c;
@@ -771,10 +795,33 @@
             document.getElementById('threadForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const title = document.getElementById('threadTitle');
+                const contentVal = threadContent.value.trim();
+                if (!contentVal) return;
+
                 const id = Math.random().toString(16).substring(2, 10);
                 const parsedTitle = title.value.trim() || 'Anonymous';
- 
-                await supabaseClient.from('threads').insert([{ id, board_id: appState.currentBoard, title: parsedTitle, content: threadContent.value.trim(), timestamp: Date.now(), upvotes: 1 }]);
+                const newThread = { id, board_id: appState.currentBoard, title: parsedTitle, content: contentVal, timestamp: Date.now(), upvotes: 1 };
+
+                const submitBtn = e.target.querySelector('button[type="submit"]');
+                if (submitBtn) submitBtn.disabled = true;
+
+                const { error } = await supabaseClient.from('threads').insert([newThread]);
+
+                if (submitBtn) submitBtn.disabled = false;
+
+                if (error) {
+                    console.error('Thread insert failed:', error);
+                    showToast(`Post failed: ${error.message || 'unknown error'}`, true);
+                    return;
+                }
+
+                // Don't wait on the realtime channel to reflect our own post back to us -
+                // add it locally right away so it always appears instantly.
+                appState.threads[id] = newThread;
+                appState.cachedCounts.threads++;
+                updateGlobalCounterUI();
+                renderThreads();
+
                 title.value = ''; threadContent.value = '';
                 threadCharCounter.innerText = '0/1000';
             });
@@ -782,16 +829,33 @@
             document.getElementById('commentForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 if (!appState.activeThreadId) return;
- 
+
+                const textVal = commentInput.value.trim();
+                if (!textVal) return;
+
                 const id = Math.random().toString(16).substring(2, 10);
                 const tripcode = await generateTripcode(appState.activeThreadId, appState.userSeed);
-                const textVal = commentInput.value.trim();
- 
-                await supabaseClient.from('comments').insert([{ id, thread_id: appState.activeThreadId, board_id: appState.currentBoard, tripcode, text: textVal, timestamp: Date.now() }]);
-                
+                const newComment = { id, thread_id: appState.activeThreadId, board_id: appState.currentBoard, tripcode, text: textVal, timestamp: Date.now() };
+
+                const submitBtn = e.target.querySelector('button[type="submit"]');
+                if (submitBtn) submitBtn.disabled = true;
+
+                const { error } = await supabaseClient.from('comments').insert([newComment]);
+
+                if (submitBtn) submitBtn.disabled = false;
+
+                if (error) {
+                    console.error('Comment insert failed:', error);
+                    showToast(`Reply failed: ${error.message || 'unknown error'}`, true);
+                    return;
+                }
+
                 if (!appState.comments[appState.activeThreadId]) appState.comments[appState.activeThreadId] = {};
-                appState.comments[appState.activeThreadId][id] = { id, thread_id: appState.activeThreadId, board_id: appState.currentBoard, tripcode, text: textVal, timestamp: Date.now() };
-                
+                appState.comments[appState.activeThreadId][id] = newComment;
+                appState.commentCounts[appState.activeThreadId] = (appState.commentCounts[appState.activeThreadId] || 0) + 1;
+                appState.cachedCounts.comments++;
+                updateGlobalCounterUI();
+
                 renderCommentTree();
                 commentInput.value = '';
                 commentCharCounter.innerText = '0/300';
