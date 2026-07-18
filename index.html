@@ -95,17 +95,16 @@
             background: rgba(10, 10, 10, 0.4);
             text-decoration: none;
             color: inherit;
-            transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+            transition: border-color 0.15s ease, background-color 0.15s ease;
             min-width: 0;
         }
         .board-grid-card:hover {
             border-color: #10b981;
             background: rgba(16, 185, 129, 0.07);
-            transform: translateY(-1px);
         }
         .board-grid-card.active {
             border-color: #10b981;
-            box-shadow: 0 0 0 1px #10b981, 0 0 16px rgba(16, 185, 129, 0.25);
+            background: rgba(16, 185, 129, 0.15);
         }
         .board-grid-icon {
             flex-shrink: 0;
@@ -284,7 +283,7 @@
             </nav>
 
             <!-- Large Desktop Post Button -->
-            <a href="interactink.html" class="mt-2 w-11/12 bg-white text-black hover:bg-neutral-200 font-bold py-3.5 rounded-full text-center transition duration-200 text-[15px] shadow-sm">
+            <a href="interactink.html" class="mt-2 w-11/12 bg-white text-black hover:bg-neutral-200 font-bold py-3.5 rounded-full text-center transition duration-200 text-[15px]">
                 Post
             </a>
         </aside>
@@ -308,13 +307,12 @@
                     <p class="text-neutral-400 text-sm max-w-md mx-auto leading-relaxed">
                         A free anonymous text board. Post and reply instantly &mdash; no account, no email, no sign-up.
                     </p>
-                    <a href="interactink.html" class="inline-flex items-center gap-2 mt-6 bg-white text-black hover:bg-neutral-200 font-bold px-6 py-2.5 rounded-full transition duration-200 text-sm shadow-sm">
+                    <a href="interactink.html" class="inline-flex items-center gap-2 mt-6 bg-white text-black hover:bg-neutral-200 font-bold px-6 py-2.5 rounded-full transition duration-200 text-sm">
                         <i data-lucide="log-in" class="w-4 h-4"></i> Enter the Board
                     </a>
                 </div>
             </header>
             
-
             <!-- 20-Board Grid: the primary navigation hub for the site -->
             <section class="mt-8 px-4">
                 <div class="flex items-center justify-between mb-3 border-b border-neutral-800 pb-2">
