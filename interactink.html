@@ -83,7 +83,7 @@
             { id: 'rel',  label: '/rel/',  name: 'Relationships',  icon: 'heart' },
             { id: 'news', label: '/news/', name: 'News',           icon: 'newspaper' },
             { id: 'conf', label: '/conf/', name: 'Confessions',    icon: 'lock' },
-            { id: 'diy',  label: '/diy/',  name: 'DIY & Crafts',   icon: 'hammer' },
+            { id: 'diy',  label: '/diy/',  name: 'Lookism',        icon: 'smile' },
             { id: 'pets', label: '/pets/', name: 'Pets & Animals', icon: 'paw-print' }
         ];
         const DEFAULT_BOARD = 'b';
@@ -643,19 +643,25 @@
         async function fetchInitialData() {
             try {
                 // Strict segregation: every query is scoped to appState.currentBoard.
+                // Exception: the default /b/ (Random) board also picks up any
+                // legacy rows saved before per-board segregation existed
+                // (board_id left NULL), so they don't silently vanish from the feed.
                 const board = appState.currentBoard;
- 
-                const { data: threads, error: threadsError } = await supabaseClient.from('threads')
-                    .select('*')
-                    .eq('board_id', board)
+                const boardFilter = board === InkRouting.DEFAULT_BOARD
+                    ? `board_id.eq.${board},board_id.is.null`
+                    : null;
+
+                let threadsQuery = supabaseClient.from('threads').select('*');
+                threadsQuery = boardFilter ? threadsQuery.or(boardFilter) : threadsQuery.eq('board_id', board);
+                const { data: threads, error: threadsError } = await threadsQuery
                     .order('timestamp', { ascending: false })
                     .limit(100);
                 if (threadsError) throw threadsError;
                 if (threads) threads.forEach(t => appState.threads[t.id] = t);
  
-                const { data: commentIds, error: commentsError } = await supabaseClient.from('comments')
-                    .select('thread_id')
-                    .eq('board_id', board);
+                let commentsQuery = supabaseClient.from('comments').select('thread_id');
+                commentsQuery = boardFilter ? commentsQuery.or(boardFilter) : commentsQuery.eq('board_id', board);
+                const { data: commentIds, error: commentsError } = await commentsQuery;
                 if (commentsError) throw commentsError;
                 if (commentIds) {
                     commentIds.forEach(c => {
@@ -664,8 +670,12 @@
                 }
  
                 const [threadCountRes, commentCountRes] = await Promise.all([
-                    supabaseClient.from('threads').select('*', { count: 'exact', head: true }).eq('board_id', board),
-                    supabaseClient.from('comments').select('*', { count: 'exact', head: true }).eq('board_id', board)
+                    boardFilter
+                        ? supabaseClient.from('threads').select('*', { count: 'exact', head: true }).or(boardFilter)
+                        : supabaseClient.from('threads').select('*', { count: 'exact', head: true }).eq('board_id', board),
+                    boardFilter
+                        ? supabaseClient.from('comments').select('*', { count: 'exact', head: true }).or(boardFilter)
+                        : supabaseClient.from('comments').select('*', { count: 'exact', head: true }).eq('board_id', board)
                 ]);
                 if (threadCountRes.error) throw threadCountRes.error;
                 if (commentCountRes.error) throw commentCountRes.error;
@@ -999,12 +1009,11 @@
         const container = document.getElementById('commentTreeContainer');
         container.innerHTML = `<div class="text-xs text-neutral-600 text-center py-6 font-mono">Loading...</div>`;
         
-        // Scoped by both thread_id and board_id — belt-and-suspenders against
-        // any cross-board data leakage even if an id were ever to collide.
+        // Scoped by thread_id, which already uniquely identifies the thread —
+        // no extra board_id filter, so comments on legacy threads still show up.
         const { data: comments } = await supabaseClient.from('comments')
             .select('*')
             .eq('thread_id', tId)
-            .eq('board_id', appState.currentBoard)
             .order('timestamp', { ascending: true });
         appState.comments[tId] = {};
         if (comments) comments.forEach(c => appState.comments[tId][c.id] = c);
