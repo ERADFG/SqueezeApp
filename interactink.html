@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>InteractInk - Post Anonymously, No Sign-Up Required | Anonymous Text Board</title>
-
+ 
     <meta name="description" content="InteractInk is a free anonymous text board. Post and reply instantly with no account, no email, and no sign-up. Threaded discussions, tripcodes, and full privacy.">
     <link rel="canonical" href="https://interactink.vercel.app/" />
     <meta name="robots" content="index, follow">
-
+ 
     <!-- Open Graph -->
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="InteractInk">
@@ -16,16 +16,19 @@
     <meta property="og:description" content="A free anonymous text board. No accounts, no profiles, no tracking - just post and reply.">
     <meta property="og:url" content="https://interactink.vercel.app/">
     <meta property="og:image" content="https://interactink.vercel.app/favicon2.png">
-
+ 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="InteractInk - Post Anonymously, No Sign-Up Required">
     <meta name="twitter:description" content="A free anonymous text board. No accounts, no profiles, no tracking - just post and reply.">
     <meta name="twitter:image" content="https://interactink.vercel.app/favicon2.png">
-
+ 
+    <!-- Favicon Links -->
+    <link rel="icon" type="image/png" href="favicon2.png">
+ 
     <meta name="google-adsense-account" content="ca-pub-9357677827244243">
     <meta name="google-site-verification" content="DOvTKyh77YUQreg4Dg6SaL1wEM33Da783l6lqsLek7Q" />
-
+ 
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -49,18 +52,106 @@
       gtag('js', new Date());
       gtag('config', 'G-527BWKF63G');
     </script>
-
+ 
     <link rel="preconnect" href="https://xdshsodkuyawljzuirqt.supabase.co">
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="stylesheet" href="styles.css">
-
+ 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Unified routing & state management (board resolution, sessionStorage persistence) -->
-    <script src="js/routing.js"></script>
-
+    <script>
+    (function () {
+        const BOARDS = [
+            { id: 'b',    label: '/b/',    name: 'Random',         icon: 'shuffle' },
+            { id: 'q',    label: '/q/',    name: 'Questions',      icon: 'help-circle' },
+            { id: 'g',    label: '/g/',    name: 'Technology',     icon: 'cpu' },
+            { id: 'v',    label: '/v/',    name: 'Gaming',         icon: 'gamepad-2' },
+            { id: 'mu',   label: '/mu/',   name: 'Music',          icon: 'music' },
+            { id: 'mo',   label: '/mo/',   name: 'Movies & TV',    icon: 'clapperboard' },
+            { id: 'sp',   label: '/sp/',   name: 'Sports',         icon: 'trophy' },
+            { id: 'fit',  label: '/fit/',  name: 'Fitness',        icon: 'dumbbell' },
+            { id: 'biz',  label: '/biz/',  name: 'Business',       icon: 'briefcase' },
+            { id: 'sci',  label: '/sci/',  name: 'Science',        icon: 'flask-conical' },
+            { id: 'his',  label: '/his/',  name: 'History',        icon: 'landmark' },
+            { id: 'art',  label: '/art/',  name: 'Art & Design',   icon: 'palette' },
+            { id: 'lit',  label: '/lit/',  name: 'Books',          icon: 'book-open' },
+            { id: 'trv',  label: '/trv/',  name: 'Travel',         icon: 'plane' },
+            { id: 'adv',  label: '/adv/',  name: 'Advice',         icon: 'life-buoy' },
+            { id: 'rel',  label: '/rel/',  name: 'Relationships',  icon: 'heart' },
+            { id: 'news', label: '/news/', name: 'News',           icon: 'newspaper' },
+            { id: 'conf', label: '/conf/', name: 'Confessions',    icon: 'lock' },
+            { id: 'diy',  label: '/diy/',  name: 'DIY & Crafts',   icon: 'hammer' },
+            { id: 'pets', label: '/pets/', name: 'Pets & Animals', icon: 'paw-print' }
+        ];
+        const DEFAULT_BOARD = 'b';
+        const BOARD_STORAGE_KEY = 'ink_current_board';
+        const SCROLL_KEY_PREFIX = 'ink_scroll_';
+ 
+        function isValidBoard(id) { return BOARDS.some(b => b.id === id); }
+        function getBoardMeta(id) { return BOARDS.find(b => b.id === id) || BOARDS[0]; }
+        function getBoardFromURL() { return new URLSearchParams(location.search).get('board'); }
+        function resolveInitialBoard() {
+            const fromUrl = getBoardFromURL();
+            if (fromUrl && isValidBoard(fromUrl)) return fromUrl;
+            try {
+                const saved = sessionStorage.getItem(BOARD_STORAGE_KEY);
+                if (saved && isValidBoard(saved)) return saved;
+            } catch (e) {}
+            return DEFAULT_BOARD;
+        }
+        function saveCurrentBoard(id) { try { sessionStorage.setItem(BOARD_STORAGE_KEY, id); } catch (e) {} }
+        function buildBoardUrl(boardId, page) {
+            page = page || 'interactink.html';
+            return `${page}?board=${encodeURIComponent(boardId)}`;
+        }
+        function buildThreadUrl(boardId, threadId, page) {
+            page = page || 'interactink.html';
+            return `${page}?board=${encodeURIComponent(boardId)}&thread=${encodeURIComponent(threadId)}`;
+        }
+        function renderBoardGrid(container, activeBoardId) {
+            if (!container) return;
+            container.innerHTML = BOARDS.map(b => `
+                <a href="${buildBoardUrl(b.id)}" class="board-grid-card${b.id === activeBoardId ? ' active' : ''}" data-board-id="${b.id}">
+                    <span class="board-grid-icon"><i data-lucide="${b.icon}"></i></span>
+                    <span class="board-grid-meta">
+                        <span class="board-grid-label">${b.label}</span>
+                        <span class="board-grid-name">${b.name}</span>
+                    </span>
+                </a>
+            `).join('');
+            if (window.lucide) lucide.createIcons();
+        }
+        function captureStateBeforeNavigation(boardId) { try { sessionStorage.setItem(SCROLL_KEY_PREFIX + boardId, String(window.scrollY)); } catch (e) {} }
+        function restoreScrollPosition(boardId) {
+            try {
+                const y = sessionStorage.getItem(SCROLL_KEY_PREFIX + boardId);
+                if (y !== null) window.scrollTo({ top: parseInt(y, 10) || 0, behavior: 'auto' });
+            } catch (e) {}
+        }
+        let trackedBoard = null;
+        let scrollTimer = null;
+        function onTrackedScroll() {
+            if (!trackedBoard) return;
+            clearTimeout(scrollTimer);
+            scrollTimer = setTimeout(() => captureStateBeforeNavigation(trackedBoard), 150);
+        }
+        function trackScrollPosition(boardId) {
+            trackedBoard = boardId;
+            window.removeEventListener('scroll', onTrackedScroll);
+            window.addEventListener('scroll', onTrackedScroll, { passive: true });
+        }
+ 
+        window.InkRouting = {
+            BOARDS, DEFAULT_BOARD, isValidBoard, getBoardMeta, getBoardFromURL, resolveInitialBoard,
+            saveCurrentBoard, buildBoardUrl, buildThreadUrl, renderBoardGrid,
+            captureStateBeforeNavigation, restoreScrollPosition, trackScrollPosition
+        };
+    })();
+    </script>
+ 
     <style>
         body { background-color: #000000; color: #e7e9ea; }
         ::-webkit-scrollbar { width: 6px; }
@@ -73,7 +164,7 @@
         .footer-link:hover { opacity: 0.7; }
         .widget-link { color: #71767b; text-decoration: none; margin: 0 8px; font-weight: 500; font-size: 0.8rem; transition: color 0.2s; display: inline-block; margin-bottom: 6px; }
         .widget-link:hover { color: #e7e9ea; }
-
+ 
         /* ---------- Responsive 3-Column Grid (matches index.html) ---------- */
         .app-container {
             display: grid;
@@ -81,15 +172,15 @@
             min-height: 100vh;
             background-color: #000000;
         }
-
+ 
         @media (min-width: 1024px) {
             .app-container {
                 grid-template-columns: 1fr 275px 640px 350px 1fr;
             }
         }
-
+ 
         .x-sidebar { display: none; }
-
+ 
         @media (min-width: 1024px) {
             .x-sidebar {
                 display: flex;
@@ -104,21 +195,21 @@
                 align-items: flex-start;
             }
         }
-
+ 
         .x-feed {
             grid-column: 1;
             min-height: 100vh;
         }
-
+ 
         @media (min-width: 1024px) {
             .x-feed {
                 grid-column: 3;
                 border-right: 1px solid #2f3336;
             }
         }
-
+ 
         .x-widgets { display: none; }
-
+ 
         @media (min-width: 1024px) {
             .x-widgets {
                 display: flex;
@@ -132,7 +223,7 @@
                 overflow-y: auto;
             }
         }
-
+ 
         .nav-item {
             display: flex;
             align-items: center;
@@ -146,21 +237,21 @@
             transition: background-color 0.2s ease;
             width: fit-content;
         }
-
+ 
         .nav-item:hover {
             background-color: #16181c;
         }
-
+ 
         .nav-item.active {
             font-weight: 700;
         }
-
+ 
         .nav-item svg {
             width: 26px;
             height: 26px;
             stroke-width: 2px;
         }
-
+ 
         /* ---------- Responsive device-adaptive layout ---------- */
         .bottom-tab-bar { display: none; }
         .compose-fab { display: none; }
@@ -184,7 +275,7 @@
             body { padding-bottom: 60px; }
             .post-card-body { font-size: 13px !important; }
         }
-
+ 
         /* ---------- Share menu ---------- */
         .share-menu { position: absolute; z-index: 60; background: #16181c; border: 1px solid #2f3336; border-radius: 12px; padding: 6px; min-width: 190px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
         .share-menu a, .share-menu button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: none; border: none; color: #e7e9ea; font-size: 13px; padding: 8px 10px; border-radius: 8px; cursor: pointer; text-decoration: none; }
@@ -193,9 +284,9 @@
     </style>
 </head>
 <body class="min-h-screen font-sans antialiased selection:bg-neutral-800 selection:text-white">
-
+ 
     <div class="app-container">
-
+ 
         <!-- LEFT DESKTOP SIDEBAR -->
         <aside class="x-sidebar">
             <div class="py-2 px-3 mb-4">
@@ -203,7 +294,7 @@
                     <img src="favicon2.png" alt="InteractInk Logo" class="w-10 h-10 object-contain hover:opacity-90 transition">
                 </a>
             </div>
-
+ 
             <nav class="flex flex-col gap-1 w-full mb-4">
                 <a href="index.html" class="nav-item">
                     <i data-lucide="home"></i>
@@ -234,12 +325,12 @@
                     <span>Contact</span>
                 </a>
             </nav>
-
+ 
             <button onclick="focusComposer()" class="mt-2 w-11/12 bg-white text-black hover:bg-neutral-200 font-bold py-3.5 rounded-full text-center transition duration-200 text-[15px] shadow-sm cursor-pointer">
                 Post
             </button>
         </aside>
-
+ 
         <!-- CENTER MAIN CONTENT FEED -->
         <div class="x-feed border-r border-neutral-800">
             <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
@@ -248,12 +339,12 @@
                 </script>
                 <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
             </div>
-
+ 
             <header class="sticky top-0 bg-black/90 backdrop-blur-md border-b border-neutral-800 p-4 z-40 flex justify-between items-center">
                 <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2 min-w-0">
                     <img src="favicon2.png" alt="InteractInk logo" class="w-6 h-6 shrink-0">
                     <span class="truncate">InteractInk</span>
-                    <span id="activeBoardBadge" class="shrink-0 px-2 py-0.5 text-[11px] font-mono font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 rounded-full uppercase tracking-wider">/b/</span>
+                    <select id="boardSwitcher" aria-label="Switch board" class="shrink-0 px-2 py-0.5 text-[11px] font-mono font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 rounded-full uppercase tracking-wider cursor-pointer focus:outline-none appearance-none pr-5"></select>
                 </h1>
                 <div class="flex items-center gap-2">
                     <div class="px-3 py-1 text-[10px] font-mono font-semibold text-neutral-400 bg-neutral-900 border border-neutral-800 rounded-full uppercase tracking-wider">
@@ -261,7 +352,7 @@
                     </div>
                 </div>
             </header>
-
+ 
         <noscript>
             <section class="px-4 py-6 border-b border-neutral-800">
                 <p class="text-neutral-300 text-sm leading-relaxed">
@@ -269,7 +360,7 @@
                 </p>
             </section>
         </noscript>
-
+ 
         <section class="p-4 border-b border-neutral-800">
             <div id="composerBoardLine" class="text-xs text-neutral-500 mb-2 flex items-center gap-1.5">
                 <i data-lucide="corner-down-right" class="w-3.5 h-3.5"></i>
@@ -296,17 +387,17 @@
                 </div>
             </form>
         </section>
-
+ 
         <div class="flex border-b border-neutral-800 text-sm font-bold bg-neutral-950/30">
             <button id="tabLatest" onclick="switchFeedFilter('latest')" class="flex-1 text-center py-3.5 text-white border-b-2 border-emerald-500 transition">Latest</button>
             <button id="tabTrending" onclick="switchFeedFilter('trending')" class="flex-1 text-center py-3.5 text-neutral-500 border-b-2 border-transparent hover:bg-neutral-900 hover:text-white transition">Trending</button>
         </div>
-
+ 
         <main id="latestStream" class="divide-y divide-neutral-800 flex-1"></main>
         
         <div id="paginationControls" class="flex justify-center items-center gap-2 p-6 border-t border-neutral-800 mb-8"></div>
         </div>
-
+ 
         <!-- RIGHT DESKTOP SIDEBAR -->
         <aside class="x-widgets">
             <div class="bg-[#16181c] rounded-2xl p-4 border border-neutral-900">
@@ -326,7 +417,7 @@
                 <p class="text-[11px] text-neutral-600 mt-3">&copy; 2026 InteractInk</p>
             </div>
         </aside>
-
+ 
         <!-- MOBILE BOTTOM TAB BAR -->
         <nav class="bottom-tab-bar" aria-label="Mobile navigation">
             <a href="index.html" class="bottom-tab"><i data-lucide="home"></i></a>
@@ -338,7 +429,7 @@
             <a href="contact.html" class="bottom-tab"><i data-lucide="mail"></i></a>
         </nav>
     </div>
-
+ 
     <!-- Modal window for viewing threads and replying -->
     <div id="threadModal" class="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-black border border-neutral-800 w-full max-w-xl rounded-2xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
@@ -359,12 +450,12 @@
                     </div>
                     <p id="modalOpBody" class="text-neutral-200 text-sm leading-relaxed break-words whitespace-pre-wrap pt-1"></p>
                 </div>
-
+ 
                 <div class="border-b border-neutral-800"></div>
-
+ 
                 <div id="commentTreeContainer" class="space-y-4"></div>
             </div>
-
+ 
             <div class="p-4 border-t border-neutral-800 bg-black">
                 <form id="commentForm" class="flex gap-3 items-center">
                     <div class="text-neutral-500 shrink-0">
@@ -380,10 +471,13 @@
             </div>
         </div>
     </div>
-
+ 
     <!-- Add this where your share menu placeholder is located -->
 <div id="shareMenu" class="share-menu hidden"></div>
-
+ 
+<!-- Hover preview tooltip for >>ID cross-links inside comments -->
+<div id="hoverPreviewBox" class="hidden fixed z-[70] max-w-xs bg-neutral-950 border border-neutral-800 rounded-lg p-3 text-xs text-neutral-300 shadow-2xl pointer-events-none"></div>
+ 
 <script>
     const SUPABASE_URL = "https://xdshsodkuyawljzuirqt.supabase.co";
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
@@ -401,7 +495,7 @@
         threadsPerPage: 10,
         currentBoard: 'b'
     };
-
+ 
        // Initialize core engine
     window.addEventListener('load', async () => {
         // The Supabase CDN script can occasionally still be attaching itself
@@ -419,7 +513,7 @@
             return;
         }
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
+ 
         // ---- Task 1: resolve active board from URL (?board=), with a
         // sessionStorage-backed fallback when no param is present at all,
         // then make sure the URL always reflects the resolved board so the
@@ -429,19 +523,19 @@
         InkRouting.saveCurrentBoard(resolvedBoard);
         syncBoardInURL(resolvedBoard);
         updateBoardBadgeUI(resolvedBoard);
-
+ 
         initSeedEngine();
         bindEventListeners();
         await fetchInitialData();
         initRealtimeSync();
         renderThreads();
         lucide.createIcons();
-
+ 
         // Restore scroll position from a previous visit to this same board
         // (e.g. the user hit Back after reading a thread).
         InkRouting.restoreScrollPosition(appState.currentBoard);
         InkRouting.trackScrollPosition(appState.currentBoard);
-
+ 
         // Handle deep linking
         const params = new URLSearchParams(location.search);
         const requestedThread = params.get('thread');
@@ -452,7 +546,7 @@
             }, 500);
         }
     });
-
+ 
     /** Keeps the visible URL's ?board= param in sync with appState.currentBoard
      *  without triggering a page reload. */
     function syncBoardInURL(boardId) {
@@ -462,18 +556,30 @@
             history.replaceState(history.state, '', url.toString());
         }
     }
-
+ 
     function updateBoardBadgeUI(boardId) {
         const meta = InkRouting.getBoardMeta(boardId);
-        const badge = document.getElementById('activeBoardBadge');
-        if (badge && meta) badge.textContent = meta.label;
+        const switcher = document.getElementById('boardSwitcher');
+        if (switcher && meta) {
+            // Populate the option list once, then keep it in sync on every switch.
+            if (switcher.options.length === 0) {
+                InkRouting.BOARDS.forEach(b => {
+                    const opt = document.createElement('option');
+                    opt.value = b.id;
+                    opt.textContent = `${b.label} — ${b.name}`;
+                    switcher.appendChild(opt);
+                });
+                switcher.addEventListener('change', () => switchToBoard(switcher.value));
+            }
+            switcher.value = meta.id;
+        }
         if (meta) document.title = `${meta.label} — ${meta.name} | InteractInk`;
-
+ 
         const composer = document.getElementById('threadContent');
         if (composer && meta) {
             composer.placeholder = `What is happening in ${meta.label} — ${meta.name}?`;
         }
-
+ 
         const boardLabelEl = document.getElementById('composerBoardLabel');
         const boardNameEl = document.getElementById('composerBoardName');
         if (meta && boardLabelEl && boardNameEl) {
@@ -481,7 +587,7 @@
             boardNameEl.textContent = `— ${meta.name}`;
         }
     }
-
+ 
     /**
      * Switches the active board in-place: updates state, URL, sessionStorage,
      * resets pagination, clears the previously-loaded board's threads out of
@@ -490,17 +596,17 @@
      */
     async function switchToBoard(boardId) {
         if (!InkRouting.isValidBoard(boardId) || boardId === appState.currentBoard) return;
-
+ 
         appState.currentBoard = boardId;
         appState.currentPage = 1;
         appState.threads = {};
         appState.comments = {};
         appState.commentCounts = {};
-
+ 
         InkRouting.saveCurrentBoard(boardId);
         syncBoardInURL(boardId);
         updateBoardBadgeUI(boardId);
-
+ 
         await fetchInitialData();
         initRealtimeSync(); // re-subscribe with the new board filter
         renderThreads();
@@ -508,7 +614,7 @@
         InkRouting.restoreScrollPosition(boardId);
         lucide.createIcons();
     }
-
+ 
     // Keep in sync with browser Back/Forward when the ?board= param changes
     // (e.g. user navigated via the board switcher, then pressed Back).
     window.addEventListener('popstate', () => {
@@ -517,7 +623,7 @@
             switchToBoard(urlBoard);
         }
     });
-
+ 
         function initSeedEngine() {
             let seed = localStorage.getItem('ink_private_seed_key');
             if (!seed) {
@@ -526,19 +632,19 @@
             }
             appState.userSeed = seed;
         }
-
+ 
         async function generateTripcode(threadId, seedString) {
         const encoder = new TextEncoder();
         const data = encoder.encode(threadId + seedString);
         const hash = await crypto.subtle.digest('SHA-256', data);
         return 'Anon#' + Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 4);
     }
-
+ 
         async function fetchInitialData() {
             try {
                 // Strict segregation: every query is scoped to appState.currentBoard.
                 const board = appState.currentBoard;
-
+ 
                 const { data: threads, error: threadsError } = await supabaseClient.from('threads')
                     .select('*')
                     .eq('board_id', board)
@@ -546,7 +652,7 @@
                     .limit(100);
                 if (threadsError) throw threadsError;
                 if (threads) threads.forEach(t => appState.threads[t.id] = t);
-
+ 
                 const { data: commentIds, error: commentsError } = await supabaseClient.from('comments')
                     .select('thread_id')
                     .eq('board_id', board);
@@ -556,14 +662,14 @@
                         appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
                     });
                 }
-
+ 
                 const [threadCountRes, commentCountRes] = await Promise.all([
                     supabaseClient.from('threads').select('*', { count: 'exact', head: true }).eq('board_id', board),
                     supabaseClient.from('comments').select('*', { count: 'exact', head: true }).eq('board_id', board)
                 ]);
                 if (threadCountRes.error) throw threadCountRes.error;
                 if (commentCountRes.error) throw commentCountRes.error;
-
+ 
                 appState.cachedCounts.threads = threadCountRes.count || 0;
                 appState.cachedCounts.comments = commentCountRes.count || 0;
                 
@@ -575,16 +681,16 @@
                 showFeedError(`Couldn't load posts: ${err.message || 'unknown error'}. If this persists, check that your Supabase tables allow public SELECT access (Row Level Security policies).`);
             }
         }
-
+ 
         function showFeedError(message) {
             const latestContainer = document.getElementById('latestStream');
             if (latestContainer) {
                 latestContainer.innerHTML = `<div class="text-red-400 text-center py-10 text-sm px-6">${escapeHTML(message)}</div>`;
             }
         }
-
+ 
         let realtimeChannel = null;
-
+ 
         function initRealtimeSync() {
             // Tear down any previous board's subscription first so switching
             // boards never leaves a stale channel leaking updates in.
@@ -592,9 +698,9 @@
                 supabaseClient.removeChannel(realtimeChannel);
                 realtimeChannel = null;
             }
-
+ 
             const board = appState.currentBoard;
-
+ 
             realtimeChannel = supabaseClient.channel(`board-changes-${board}`)
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'threads', filter: `board_id=eq.${board}` }, payload => {
                     if (payload.eventType === 'INSERT') {
@@ -623,11 +729,11 @@
                 })
                 .subscribe();
         }
-
+ 
         function updateGlobalCounterUI() {
             document.getElementById('globalPostCount').innerText = appState.cachedCounts.threads + appState.cachedCounts.comments;
         }
-
+ 
         function switchFeedFilter(filter) {
             appState.feedFilter = filter;
             appState.currentPage = 1; 
@@ -642,45 +748,45 @@
                 
             renderThreads();
         }
-
+ 
         function changePage(page) {
             appState.currentPage = page;
             renderThreads();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-
+ 
         function bindEventListeners() {
             const threadContent = document.getElementById('threadContent');
             const threadCharCounter = document.getElementById('threadCharCounter');
             threadContent.addEventListener('input', () => {
                 threadCharCounter.innerText = `${threadContent.value.length}/1000`;
             });
-
+ 
             const commentInput = document.getElementById('commentInput');
             const commentCharCounter = document.getElementById('commentCharCounter');
             commentInput.addEventListener('input', () => {
                 commentCharCounter.innerText = `${commentInput.value.length}/300`;
             });
-
+ 
             document.getElementById('threadForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const title = document.getElementById('threadTitle');
                 const id = Math.random().toString(16).substring(2, 10);
                 const parsedTitle = title.value.trim() || 'Anonymous';
-
+ 
                 await supabaseClient.from('threads').insert([{ id, board_id: appState.currentBoard, title: parsedTitle, content: threadContent.value.trim(), timestamp: Date.now(), upvotes: 1 }]);
                 title.value = ''; threadContent.value = '';
                 threadCharCounter.innerText = '0/1000';
             });
-
+ 
             document.getElementById('commentForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 if (!appState.activeThreadId) return;
-
+ 
                 const id = Math.random().toString(16).substring(2, 10);
                 const tripcode = await generateTripcode(appState.activeThreadId, appState.userSeed);
                 const textVal = commentInput.value.trim();
-
+ 
                 await supabaseClient.from('comments').insert([{ id, thread_id: appState.activeThreadId, board_id: appState.currentBoard, tripcode, text: textVal, timestamp: Date.now() }]);
                 
                 if (!appState.comments[appState.activeThreadId]) appState.comments[appState.activeThreadId] = {};
@@ -691,7 +797,7 @@
                 commentCharCounter.innerText = '0/300';
             });
         }
-
+ 
         function renderThreads() {
             const threadList = Object.values(appState.threads);
             let sorted = [];
@@ -706,7 +812,7 @@
             } else {
                 sorted = [...threadList].sort((a, b) => b.timestamp - a.timestamp);
             }
-
+ 
             const startIndex = (appState.currentPage - 1) * appState.threadsPerPage;
             const paginatedList = sorted.slice(startIndex, startIndex + appState.threadsPerPage);
             
@@ -720,11 +826,11 @@
             } else {
                 paginatedList.forEach(t => latestContainer.appendChild(createThreadElementCard(t)));
             }
-
+ 
             renderPaginationControls(sorted.length);
             lucide.createIcons();
         }
-
+ 
         function renderPaginationControls(totalItems) {
             const container = document.getElementById('paginationControls');
             const totalPages = Math.ceil(totalItems / appState.threadsPerPage) || 1;
@@ -733,7 +839,7 @@
                 container.innerHTML = '';
                 return;
             }
-
+ 
             let html = `<button onclick="changePage(${Math.max(1, appState.currentPage - 1)})" 
                                 class="p-2 border border-neutral-800 rounded hover:bg-neutral-900 text-white transition ${appState.currentPage === 1 ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}" 
                                 ${appState.currentPage === 1 ? 'disabled' : ''}>
@@ -751,7 +857,7 @@
                     html += `<span class="text-neutral-600 px-1">...</span>`;
                 }
             }
-
+ 
             html += `<button onclick="changePage(${Math.min(totalPages, appState.currentPage + 1)})" 
                                 class="p-2 border border-neutral-800 rounded hover:bg-neutral-900 text-white transition ${appState.currentPage === totalPages ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}" 
                                 ${appState.currentPage === totalPages ? 'disabled' : ''}>
@@ -760,7 +866,7 @@
             
             container.innerHTML = html;
         }
-
+ 
         function createThreadElementCard(thread) {
             const dateStr = new Date(thread.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const dynamicCommentCount = appState.commentCounts[thread.id] || 0;
@@ -788,14 +894,14 @@
             `;
             return card;
         }
-
+ 
         function escapeHTML(str) {
             if (!str) return '';
             return str.replace(/[&<>'"]/g, 
                 tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
             );
         }
-
+ 
         function focusComposer() {
             const el = document.getElementById('threadContent');
             if (el) {
@@ -803,7 +909,7 @@
                 el.focus();
             }
         }
-
+ 
         function closeThreadModal() {
             document.getElementById('threadModal').classList.add('hidden');
             appState.activeThreadId = null;
@@ -811,16 +917,16 @@
             // Return the feed to exactly where the user left it.
             InkRouting.restoreScrollPosition(appState.currentBoard);
         }
-
+ 
         async function openThreadModal(tId) {
         // Preserve exactly where the user was on this board's feed so that
         // closing the thread (or hitting Back) restores that scroll offset.
         InkRouting.captureStateBeforeNavigation(appState.currentBoard);
-
+ 
         appState.activeThreadId = tId;
         const thread = appState.threads[tId];
         if (!thread) return;
-
+ 
         document.getElementById('modalMeta').innerText = `Thread >>${thread.id}`;
         document.getElementById('modalTitle').innerText = thread.title;
         document.getElementById('modalOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content));
@@ -840,40 +946,40 @@
         if (comments) comments.forEach(c => appState.comments[tId][c.id] = c);
         renderCommentTree();
      }
-
+ 
         function renderCommentTree() {
             const container = document.getElementById('commentTreeContainer');
             container.innerHTML = '';
             const commentsMap = appState.comments[appState.activeThreadId] || {};
             const rawCommentsList = Object.values(commentsMap).sort((a, b) => a.timestamp - b.timestamp);
-
+ 
             if (rawCommentsList.length === 0) {
                 container.innerHTML = `<div class="text-xs text-neutral-600 text-center py-6 font-mono">No comments yet.</div>`;
                 return;
             }
-
+ 
             const commentMapRef = {};
             const treeRootNodes = [];
-
+ 
             rawCommentsList.forEach(c => commentMapRef[c.id] = { ...c, children: [] });
             rawCommentsList.forEach(c => {
                 const node = commentMapRef[c.id];
                 const match = c.text.match(/^&gt;&gt;([A-Fa-f0-9]{8})/); 
                 const rawMatch = c.text.match(/^>>([A-Fa-f0-9]{8})/);
                 const targetedParentId = (rawMatch ? rawMatch[1] : null) || (match ? match[1] : null);
-
+ 
                 if (targetedParentId && commentMapRef[targetedParentId]) {
                     commentMapRef[targetedParentId].children.push(node);
                 } else {
                     treeRootNodes.push(node);
                 }
             });
-
+ 
             treeRootNodes.forEach(rootNode => container.appendChild(buildCommentTreeUI(rootNode, 0)));
             setupCrossLinkHoverPreviews();
             lucide.createIcons();
         }
-
+ 
         function buildCommentTreeUI(node, depth) {
             const wrap = document.createElement('div');
             wrap.className = `flex flex-col ${depth > 0 ? 'ml-4 border-l border-neutral-800 pl-4 mt-3' : 'border-b border-neutral-900 pb-3'}`;
@@ -881,10 +987,10 @@
             const item = document.createElement('div');
             item.className = "p-3 bg-neutral-950/40 rounded-xl border border-neutral-900 text-sm";
             item.id = `comment-${node.id}`;
-
+ 
             const dateStr = new Date(node.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             const structuralLinkedProcessedText = parseRichTextContent(escapeHTML(node.text));
-
+ 
             item.innerHTML = `
                 <div class="flex justify-between items-center text-xs text-neutral-500 mb-2 border-b border-neutral-900 pb-1">
                     <span class="font-bold text-neutral-300 font-mono bg-neutral-900 px-1.5 py-0.5 rounded">${node.tripcode}</span>
@@ -897,20 +1003,20 @@
                 </div>
             `;
             wrap.appendChild(item);
-
+ 
             if (node.children && node.children.length > 0) {
                 node.children.forEach(child => wrap.appendChild(buildCommentTreeUI(child, depth + 1)));
             }
             return wrap;
         }
-
+ 
         function appendReplyPointer(cId) {
             const input = document.getElementById('commentInput');
             input.value = `>>${cId} ` + input.value;
             document.getElementById('commentCharCounter').innerText = `${input.value.length}/300`;
             input.focus();
         }
-
+ 
         function parseRichTextContent(text) {
             if (!text) return '';
             const nodeCrossRegex = /&gt;&gt;([A-Fa-f0-9]{8})/g;
@@ -923,7 +1029,7 @@
             });
             return text;
         }
-
+ 
         function setupCrossLinkHoverPreviews() {
         const previewBox = document.getElementById('hoverPreviewBox');
         document.querySelectorAll('.cross-link-node').forEach(link => {
@@ -940,17 +1046,17 @@
             link.onmouseleave = () => previewBox.classList.add('hidden');
         });
     }
-
+ 
         // ---------- Device / screen-size detection ----------
         function isMobileViewport() {
             return window.matchMedia('(max-width: 768px)').matches;
         }
-
+ 
         // ---------- Sharing (thread / comment) to any social platform ----------
         function buildShareUrl(threadId) {
             return `${location.origin}${location.pathname}?board=${appState.currentBoard}&thread=${threadId}`;
         }
-
+ 
         async function shareThread(threadId, anchorEl) {
             const thread = appState.threads[threadId];
             if (!thread) return;
@@ -961,7 +1067,7 @@
                 text: shareText
             }, anchorEl);
         }
-
+ 
         async function shareComment(threadId, commentId, anchorEl) {
             const comment = (appState.comments[threadId] || {})[commentId];
             if (!comment) return;
@@ -972,7 +1078,7 @@
                 text: shareText
             }, anchorEl);
         }
-
+ 
         async function performShare(payload, anchorEl) {
             if (navigator.share && isMobileViewport()) {
                 try {
@@ -984,12 +1090,12 @@
             }
             openShareMenu(payload, anchorEl);
         }
-
+ 
         function openShareMenu(payload, anchorEl) {
     const menu = document.getElementById('shareMenu');
     const encodedUrl = encodeURIComponent(payload.url);
     const encodedText = encodeURIComponent(payload.text || '');
-
+ 
             const platforms = [
                 { name: 'X / Twitter', icon: 'twitter', href: `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}` },
                 { name: 'Facebook', icon: 'facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}` },
@@ -998,41 +1104,36 @@
                 { name: 'Telegram', icon: 'send', href: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}` },
                 { name: 'Email', icon: 'mail', href: `mailto:?subject=${encodeURIComponent(payload.title || 'InteractInk post')}&body=${encodedText}%20${encodedUrl}` }
             ];
-
+ 
             menu.innerHTML = platforms.map(p => 
             p.href ? `<a href="${p.href}" target="_blank" class="flex gap-2 p-2 hover:bg-neutral-800"><i data-lucide="${p.icon}"></i> ${p.name}</a>` 
             : `<button onclick="(${p.action.toString()})()" class="flex gap-2 p-2 w-full hover:bg-neutral-800"><i data-lucide="${p.icon}"></i> ${p.name}</button>`
         ).join('');
-
+ 
         const rect = anchorEl.getBoundingClientRect();
         menu.style.top = `${rect.bottom + window.scrollY}px`;
         menu.style.left = `${rect.left + window.scrollX}px`;
         menu.classList.remove('hidden');
         lucide.createIcons();
     }
-
-    function copyShareLink(url) {
-        navigator.clipboard.writeText(url);
-        document.getElementById('shareMenu').classList.add('hidden');
-    }
-
+ 
         function copyShareLink(url) {
             navigator.clipboard.writeText(url).catch(() => {});
             document.getElementById('shareMenu').classList.add('hidden');
         }
-
+ 
         document.addEventListener('click', (e) => {
             const menu = document.getElementById('shareMenu');
             if (!menu.classList.contains('hidden') && !menu.contains(e.target) && !e.target.closest('[onclick*="shareThread"], [onclick*="shareComment"]')) {
                 menu.classList.add('hidden');
             }
         });
-
+ 
         window.matchMedia('(max-width: 768px)').addEventListener('change', () => {
             document.getElementById('shareMenu').classList.add('hidden');
         });
     </script>
-
+ 
     <footer style="width: 100%; text-align: center; padding: 40px 20px; margin-top: 24px; border-top: 1px solid #262626; color: #71767b;">
         <a href="about.html" class="footer-link">About</a>
         <a href="faq.html" class="footer-link">FAQ</a>
