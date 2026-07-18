@@ -346,12 +346,8 @@
                     <span class="truncate">InteractInk</span>
                     <select id="boardSwitcher" aria-label="Switch board" class="shrink-0 px-2 py-0.5 text-[11px] font-mono font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 rounded-full uppercase tracking-wider cursor-pointer focus:outline-none appearance-none pr-5"></select>
                 </h1>
-                <div class="flex items-center gap-2">
-                    <div class="px-3 py-1 text-[10px] font-mono font-semibold text-neutral-400 bg-neutral-900 border border-neutral-800 rounded-full uppercase tracking-wider">
-                        Total Posts: <span id="globalPostCount" class="text-white">0</span>
-                    </div>
-                </div>
             </header>
+
  
         <noscript>
             <section class="px-4 py-6 border-b border-neutral-800">
@@ -489,7 +485,6 @@
         commentCounts: {}, 
         activeThreadId: null, 
         userSeed: null, 
-        cachedCounts: { threads: 0, comments: 0 },
         feedFilter: 'latest', 
         currentPage: 1, 
         threadsPerPage: 10,
@@ -642,25 +637,23 @@
  
         async function fetchInitialData() {
             try {
-                // Strict segregation: every query is scoped to appState.currentBoard.
-                // Exception: the default /b/ (Random) board also picks up any
-                // legacy rows saved before per-board segregation existed
-                // (board_id left NULL), so they don't silently vanish from the feed.
+                // /b/ (Random) is the firehose: it shows every post ever made,
+                // across every board, with no board_id filter at all. Every
+                // other board stays strictly scoped to its own board_id so a
+                // post made in one board never leaks into another.
                 const board = appState.currentBoard;
-                const boardFilter = board === InkRouting.DEFAULT_BOARD
-                    ? `board_id.eq.${board},board_id.is.null`
-                    : null;
+                const isFirehose = board === InkRouting.DEFAULT_BOARD;
 
                 let threadsQuery = supabaseClient.from('threads').select('*');
-                threadsQuery = boardFilter ? threadsQuery.or(boardFilter) : threadsQuery.eq('board_id', board);
+                if (!isFirehose) threadsQuery = threadsQuery.eq('board_id', board);
                 const { data: threads, error: threadsError } = await threadsQuery
                     .order('timestamp', { ascending: false })
                     .limit(100);
                 if (threadsError) throw threadsError;
                 if (threads) threads.forEach(t => appState.threads[t.id] = t);
- 
+
                 let commentsQuery = supabaseClient.from('comments').select('thread_id');
-                commentsQuery = boardFilter ? commentsQuery.or(boardFilter) : commentsQuery.eq('board_id', board);
+                if (!isFirehose) commentsQuery = commentsQuery.eq('board_id', board);
                 const { data: commentIds, error: commentsError } = await commentsQuery;
                 if (commentsError) throw commentsError;
                 if (commentIds) {
@@ -668,22 +661,6 @@
                         appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
                     });
                 }
- 
-                const [threadCountRes, commentCountRes] = await Promise.all([
-                    boardFilter
-                        ? supabaseClient.from('threads').select('*', { count: 'exact', head: true }).or(boardFilter)
-                        : supabaseClient.from('threads').select('*', { count: 'exact', head: true }).eq('board_id', board),
-                    boardFilter
-                        ? supabaseClient.from('comments').select('*', { count: 'exact', head: true }).or(boardFilter)
-                        : supabaseClient.from('comments').select('*', { count: 'exact', head: true }).eq('board_id', board)
-                ]);
-                if (threadCountRes.error) throw threadCountRes.error;
-                if (commentCountRes.error) throw commentCountRes.error;
- 
-                appState.cachedCounts.threads = threadCountRes.count || 0;
-                appState.cachedCounts.comments = commentCountRes.count || 0;
-                
-                updateGlobalCounterUI();
             } catch (err) {
                 console.error(err);
                 // Most common real-world cause: Supabase Row Level Security
@@ -718,37 +695,34 @@
  
         let realtimeChannel = null;
  
-        function initRealtimeSync() {
+function initRealtimeSync() {
             // Tear down any previous board's subscription first so switching
             // boards never leaves a stale channel leaking updates in.
             if (realtimeChannel) {
                 supabaseClient.removeChannel(realtimeChannel);
                 realtimeChannel = null;
             }
- 
+
             const board = appState.currentBoard;
- 
+            // /b/ (Random) is the firehose: subscribe to inserts/updates from
+            // every board. Every other board keeps a strict board_id filter
+            // so posts made elsewhere never leak in live.
+            const isFirehose = board === InkRouting.DEFAULT_BOARD;
+            const threadFilter = isFirehose ? undefined : `board_id=eq.${board}`;
+            const commentFilter = isFirehose ? undefined : `board_id=eq.${board}`;
+
             realtimeChannel = supabaseClient.channel(`board-changes-${board}`)
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'threads', filter: `board_id=eq.${board}` }, payload => {
-                    if (payload.eventType === 'INSERT') {
-                        // Skip the counter bump if we already added this post ourselves
-                        // (optimistic local insert on submit) - otherwise our own posts
-                        // get double-counted when the realtime echo arrives.
-                        const alreadyHave = !!appState.threads[payload.new.id];
-                        appState.threads[payload.new.id] = payload.new;
-                        if (!alreadyHave) appState.cachedCounts.threads++;
-                    } else if (payload.eventType === 'UPDATE') {
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'threads', filter: threadFilter }, payload => {
+                    if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
                         appState.threads[payload.new.id] = payload.new;
                     }
-                    updateGlobalCounterUI();
                     renderThreads();
                 })
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'comments', filter: `board_id=eq.${board}` }, payload => {
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'comments', filter: commentFilter }, payload => {
                     if (payload.eventType === 'INSERT') {
                         const c = payload.new;
                         const alreadyHave = !!(appState.comments[c.thread_id] && appState.comments[c.thread_id][c.id]);
                         if (!alreadyHave) {
-                            appState.cachedCounts.comments++;
                             appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
                         }
 
@@ -758,14 +732,9 @@
                             renderCommentTree();
                         }
                     }
-                    updateGlobalCounterUI();
                     renderThreads();
                 })
                 .subscribe();
-        }
- 
-        function updateGlobalCounterUI() {
-            document.getElementById('globalPostCount').innerText = appState.cachedCounts.threads + appState.cachedCounts.comments;
         }
  
         function switchFeedFilter(filter) {
@@ -828,8 +797,6 @@
                 // Don't wait on the realtime channel to reflect our own post back to us -
                 // add it locally right away so it always appears instantly.
                 appState.threads[id] = newThread;
-                appState.cachedCounts.threads++;
-                updateGlobalCounterUI();
                 renderThreads();
 
                 title.value = ''; threadContent.value = '';
@@ -863,8 +830,6 @@
                 if (!appState.comments[appState.activeThreadId]) appState.comments[appState.activeThreadId] = {};
                 appState.comments[appState.activeThreadId][id] = newComment;
                 appState.commentCounts[appState.activeThreadId] = (appState.commentCounts[appState.activeThreadId] || 0) + 1;
-                appState.cachedCounts.comments++;
-                updateGlobalCounterUI();
 
                 renderCommentTree();
                 commentInput.value = '';
