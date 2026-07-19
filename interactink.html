@@ -429,6 +429,76 @@
         .board-picker-empty { text-align: center; padding: 20px 0; font-size: 13px; color: #71767b; }
 
         /* ==================================================================
+           BOARD SCROLLER
+           A horizontally-scrollable strip of every board sitting right under
+           the header. Works identically on mobile (finger/touch swipe) and
+           desktop (mouse-wheel / trackpad / drag), so it's always visible —
+           unlike the dropdown, no tap-to-reveal step is needed. Tapping any
+           chip jumps straight to that board.
+        ================================================================== */
+        .board-scroller-wrap {
+            position: relative;
+            border-bottom: 1px solid #2f3336;
+            background: rgba(0, 0, 0, 0.6);
+        }
+        .board-scroller {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            padding: 10px 14px;
+            cursor: grab;
+            touch-action: pan-x;
+        }
+        .board-scroller:active { cursor: grabbing; }
+        .board-scroller::-webkit-scrollbar { display: none; }
+        .board-scroller-chip {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+            scroll-snap-align: start;
+            padding: 7px 13px;
+            border-radius: 9999px;
+            font-size: 12.5px;
+            font-weight: 700;
+            color: #a1a1aa;
+            background: #16181c;
+            border: 1px solid #2f3336;
+            text-decoration: none;
+            white-space: nowrap;
+            user-select: none;
+            transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+        }
+        .board-scroller-chip:hover { border-color: #525252; color: #e7e9ea; }
+        .board-scroller-chip.active {
+            background: rgba(16, 185, 129, 0.14);
+            border-color: rgba(16, 185, 129, 0.55);
+            color: #10b981;
+        }
+        .board-scroller-chip i { width: 13px; height: 13px; flex-shrink: 0; }
+        .board-scroller-chip .board-scroller-chip-label { font-family: ui-monospace, Menlo, monospace; }
+        .board-scroller-chip .board-scroller-chip-name { color: #71767b; font-weight: 500; }
+        .board-scroller-chip.active .board-scroller-chip-name { color: #10b981; opacity: 0.8; }
+        .board-scroller-edge {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 28px;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .board-scroller-edge.left { left: 0; background: linear-gradient(to right, #000000, transparent); }
+        .board-scroller-edge.right { right: 0; background: linear-gradient(to left, #000000, transparent); }
+        @media (min-width: 640px) {
+            .board-scroller-chip .board-scroller-chip-name { display: inline; }
+        }
+
+        /* ==================================================================
            THREAD PAGE (full-page comment view, replaces the old modal)
         ================================================================== */
         #threadPage { display: none; flex-direction: column; min-height: 100%; }
@@ -558,6 +628,16 @@
             </header>
             <div id="boardPickerBackdrop" class="board-picker-backdrop hidden" onclick="closeBoardPicker()"></div>
 
+            <!-- Board scroller: every board, always visible, right under the
+                 header. Drag/swipe to scroll, tap a chip to jump there. This
+                 is the primary board-navigation UI on both mobile and
+                 desktop (the badge+dropdown above remains as a quick
+                 searchable alternative). -->
+            <div class="board-scroller-wrap">
+                <div id="boardScroller" class="board-scroller" role="tablist" aria-label="Boards"></div>
+                <div class="board-scroller-edge left" aria-hidden="true"></div>
+                <div class="board-scroller-edge right" aria-hidden="true"></div>
+            </div>
  
         <noscript>
             <section class="px-4 py-6 border-b border-neutral-800">
@@ -834,6 +914,8 @@
         if (!document.getElementById('boardPickerPanel').classList.contains('hidden')) {
             renderBoardPickerList(boardId);
         }
+
+        renderBoardScroller(boardId);
     }
 
     /**
@@ -929,6 +1011,88 @@
             if (panel && !panel.classList.contains('hidden')) closeBoardPicker();
         }
     });
+
+    /**
+     * Renders the always-visible horizontal board strip and wires up
+     * click-to-navigate on every chip (same instant-switch-with-fallback
+     * pattern as the dropdown picker). Called on initial load and every
+     * time the active board changes, so the highlighted chip stays correct.
+     */
+    function renderBoardScroller(activeBoardId) {
+        const scroller = document.getElementById('boardScroller');
+        if (!scroller) return;
+
+        scroller.innerHTML = InkRouting.BOARDS.map(b => `
+            <a href="${InkRouting.buildBoardUrl(b.id)}" class="board-scroller-chip${b.id === activeBoardId ? ' active' : ''}" data-board-id="${b.id}" role="tab" aria-selected="${b.id === activeBoardId}">
+                <i data-lucide="${b.icon}"></i>
+                <span class="board-scroller-chip-label">${b.label}</span>
+                <span class="board-scroller-chip-name">${b.name}</span>
+            </a>
+        `).join('');
+
+        scroller.querySelectorAll('.board-scroller-chip').forEach(chip => {
+            chip.addEventListener('click', (e) => {
+                // A drag gesture just finished on this chip — don't treat it
+                // as a click-to-navigate.
+                if (scroller.dataset.dragged === 'true') { e.preventDefault(); return; }
+                const id = chip.getAttribute('data-board-id');
+                if (id === appState.currentBoard) { e.preventDefault(); return; }
+                e.preventDefault();
+                Promise.resolve(switchToBoard(id)).catch(() => {
+                    window.location.href = chip.getAttribute('href');
+                });
+            });
+        });
+
+        if (window.lucide) lucide.createIcons();
+
+        // Keep the active chip in view as boards change (e.g. Back/Forward).
+        const activeChip = scroller.querySelector('.board-scroller-chip.active');
+        if (activeChip) activeChip.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+
+    /**
+     * Desktop mouse-drag-to-scroll + vertical-wheel-to-horizontal-scroll for
+     * the board strip. Touch devices already get native horizontal swipe
+     * for free via overflow-x:auto, this just covers mouse-only desktops.
+     */
+    (function setupBoardScrollerDrag() {
+        const scroller = document.getElementById('boardScroller');
+        if (!scroller) return;
+
+        let isDown = false, startX = 0, startScroll = 0, moved = false;
+
+        scroller.addEventListener('mousedown', (e) => {
+            isDown = true;
+            moved = false;
+            scroller.dataset.dragged = 'false';
+            startX = e.pageX;
+            startScroll = scroller.scrollLeft;
+        });
+        window.addEventListener('mouseup', () => {
+            isDown = false;
+            if (moved) {
+                // Swallow the upcoming click on whatever chip we released
+                // over, then clear the flag right after.
+                setTimeout(() => { scroller.dataset.dragged = 'false'; }, 0);
+            }
+        });
+        window.addEventListener('mousemove', (e) => {
+            if (!isDown) return;
+            const dx = e.pageX - startX;
+            if (Math.abs(dx) > 4) {
+                moved = true;
+                scroller.dataset.dragged = 'true';
+            }
+            scroller.scrollLeft = startScroll - dx;
+        });
+        scroller.addEventListener('wheel', (e) => {
+            if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+                scroller.scrollLeft += e.deltaY;
+                e.preventDefault();
+            }
+        }, { passive: false });
+    })();
  
     /**
      * Switches the active board in-place: updates state, URL, sessionStorage,
