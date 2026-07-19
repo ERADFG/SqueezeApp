@@ -252,6 +252,12 @@
             grid-column: 1;
             min-height: 100vh;
         }
+
+        /* Wraps the bottom-of-page ad + footer. Deliberately NOT using
+           .x-feed here — that class carries min-height:100vh, which on a
+           tiny ad+footer block was forcing a full viewport of empty space
+           below the footer. */
+        .site-footer-ad { width: 100%; }
  
         @media (min-width: 1024px) {
             .x-feed {
@@ -550,17 +556,37 @@
         .thread-page-headline .board-tag { font-size: 11px; font-weight: 700; color: #10b981; font-family: ui-monospace, Menlo, monospace; text-transform: uppercase; }
         .thread-page-headline .thread-tag { font-size: 12px; color: #71767b; font-family: ui-monospace, Menlo, monospace; }
         .thread-reply-bar {
-            position: sticky;
+            position: fixed;
+            left: 0;
+            right: 0;
             bottom: 0;
-            z-index: 20;
+            z-index: 45;
             background: rgba(0, 0, 0, 0.96);
             backdrop-filter: blur(10px);
             border-top: 1px solid #1c1f23;
             padding: 12px 14px;
+            box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.35);
         }
         @media (max-width: 768px) {
+            /* Clear the mobile bottom tab bar so the two don't overlap. */
             .thread-reply-bar { bottom: 60px; }
         }
+        @media (min-width: 1024px) {
+            /* Align with the center feed column instead of spanning the
+               full viewport (which would overlap the sidebars). The feed
+               column is a fixed 640px centered between two equal 1fr
+               edges, so centering a fixed-width bar the same way lines it
+               up exactly. */
+            .thread-reply-bar {
+                left: 50%;
+                right: auto;
+                width: 640px;
+                transform: translateX(-50%);
+            }
+        }
+        /* Reserve room at the bottom of the scrollable thread body so the
+           last comment never ends up hidden behind the floating reply bar. */
+        #threadPageScrollBody { padding-bottom: 180px; }
     </style>
 </head>
 <body class="min-h-screen font-sans antialiased selection:bg-neutral-800 selection:text-white">
@@ -1931,14 +1957,15 @@ function initRealtimeSync() {
             document.getElementById('shareMenu').classList.add('hidden');
         });
     </script>
-    <div class="x-feed border-r border-neutral-800">
-            <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
-                <script type="text/javascript">
-                  atOptions = { 'key' : 'c2beae2a3c4b115088146fa8ef56a186', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
-                </script>
-                <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
-            </div>
- 
+    <div class="site-footer-ad">
+        <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
+            <script type="text/javascript">
+              atOptions = { 'key' : 'c2beae2a3c4b115088146fa8ef56a186', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+            </script>
+            <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
+        </div>
+    </div>
+
     <footer style="width: 100%; text-align: center; padding: 40px 20px; margin-top: 24px; border-top: 1px solid #262626; color: #71767b;">
         <a href="about.html" class="footer-link">About</a>
         <a href="faq.html" class="footer-link">FAQ</a>

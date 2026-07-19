@@ -261,6 +261,11 @@
             padding-bottom: 80px;
         }
 
+        /* Wraps the in-feed ad banners. Deliberately NOT using .x-feed here
+           — that class carries min-height:100vh, which on a tiny ad block
+           was forcing a full viewport of empty space beneath it. */
+        .ad-slot { width: 100%; }
+
         @media (min-width: 1024px) {
             .x-feed {
                 grid-column: 3;
@@ -391,12 +396,13 @@
             <!-- Top Banner Ad space (sandboxed in its own iframe so the ad
                  network's document.write() can only affect its own tiny
                  document, never this page's layout/zoom) -->
-            <div class="x-feed border-r border-neutral-800">
-            <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
-                <script type="text/javascript">
-                  atOptions = { 'key' : 'c2beae2a3c4b115088146fa8ef56a186', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
-                </script>
-                <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
+            <div class="ad-slot">
+                <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
+                    <script type="text/javascript">
+                      atOptions = { 'key' : 'c2beae2a3c4b115088146fa8ef56a186', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+                    </script>
+                    <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
+                </div>
             </div>
 
             <!-- Welcome page header -->
@@ -488,12 +494,13 @@
             </section>
 
             <!-- Bottom Ad Space inside Main Column (sandboxed, see note above) -->
-            <div class="x-feed border-r border-neutral-800">
-            <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
-                <script type="text/javascript">
-                  atOptions = { 'key' : 'c2beae2a3c4b115088146fa8ef56a186', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
-                </script>
-                <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
+            <div class="ad-slot">
+                <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
+                    <script type="text/javascript">
+                      atOptions = { 'key' : 'c2beae2a3c4b115088146fa8ef56a186', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+                    </script>
+                    <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
+                </div>
             </div>
         </main>
 
