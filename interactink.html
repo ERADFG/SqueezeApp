@@ -882,10 +882,19 @@
         `).join('');
         list.querySelectorAll('.board-picker-item').forEach(item => {
             item.addEventListener('click', (e) => {
-                e.preventDefault();
                 const id = item.getAttribute('data-board-id');
                 closeBoardPicker();
-                if (id !== appState.currentBoard) switchToBoard(id);
+                // If the in-place AJAX switch works, use it for an instant,
+                // no-reload transition. If anything about it fails for any
+                // reason, don't swallow the click — let the anchor's real
+                // href (interactink.html?board=<id>) take over and do a
+                // normal navigation, which always lands on the right board.
+                if (id !== appState.currentBoard) {
+                    e.preventDefault();
+                    Promise.resolve(switchToBoard(id)).catch(() => {
+                        window.location.href = item.getAttribute('href');
+                    });
+                }
             });
         });
         if (window.lucide) lucide.createIcons();
