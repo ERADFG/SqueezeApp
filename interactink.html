@@ -320,6 +320,233 @@
         .share-menu a, .share-menu button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: none; border: none; color: #e7e9ea; font-size: 13px; padding: 8px 10px; border-radius: 8px; cursor: pointer; text-decoration: none; }
         .share-menu a:hover, .share-menu button:hover { background: #1d1f23; }
         .share-menu i { width: 16px; height: 16px; flex-shrink: 0; }
+
+        /* ==================================================================
+           BOARD NAVIGATION
+           - .board-select-wrap / .board-select : compact quick-switch dropdown in header
+           - .board-strip / .board-chip         : always-visible horizontal board rail
+           - .board-directory-*                 : full "browse all boards" modal grid
+        ================================================================== */
+        .board-select-wrap { position: relative; display: inline-flex; align-items: center; flex-shrink: 0; }
+        .board-select {
+            padding: 5px 24px 5px 12px;
+            font-size: 11px;
+            font-family: ui-monospace, Menlo, monospace;
+            font-weight: 700;
+            color: #10b981;
+            background-color: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 9999px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            outline: none;
+            max-width: 40vw;
+        }
+        .board-select:hover { border-color: rgba(16, 185, 129, 0.55); }
+        .board-select-chevron {
+            position: absolute;
+            right: 7px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 12px;
+            height: 12px;
+            color: #10b981;
+            pointer-events: none;
+        }
+        .board-directory-trigger {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            border-radius: 9999px;
+            border: 1px solid #262626;
+            background: #0a0a0a;
+            color: #a1a1aa;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.15s ease;
+        }
+        .board-directory-trigger:hover { color: #ffffff; border-color: #404040; background: #16181c; }
+        .board-directory-trigger i { width: 15px; height: 15px; }
+
+        .board-strip {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 10px 12px;
+            border-bottom: 1px solid #1c1f23;
+            background-color: #000000;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            scroll-behavior: smooth;
+        }
+        .board-strip::-webkit-scrollbar { display: none; }
+        .board-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 14px;
+            border-radius: 9999px;
+            background: #0a0a0a;
+            border: 1px solid #262626;
+            color: #a1a1aa;
+            font-size: 12.5px;
+            font-weight: 600;
+            font-family: ui-monospace, Menlo, monospace;
+            white-space: nowrap;
+            text-decoration: none;
+            flex-shrink: 0;
+            scroll-snap-align: start;
+            transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+            cursor: pointer;
+        }
+        .board-chip:hover { border-color: #404040; color: #e7e9ea; }
+        .board-chip.active {
+            background: rgba(16, 185, 129, 0.12);
+            border-color: rgba(16, 185, 129, 0.5);
+            color: #10b981;
+        }
+        .board-chip i { width: 13px; height: 13px; flex-shrink: 0; }
+
+        .board-directory-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(6px);
+            z-index: 65;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 8vh 16px 40px;
+            overflow-y: auto;
+        }
+        .board-directory-panel {
+            width: 100%;
+            max-width: 640px;
+            background: #000000;
+            border: 1px solid #262626;
+            border-radius: 20px;
+            padding: 18px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+        }
+        .board-directory-search-wrap {
+            position: relative;
+            margin-top: 14px;
+        }
+        .board-directory-search-wrap i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 15px;
+            height: 15px;
+            color: #71767b;
+        }
+        #boardDirectorySearch {
+            width: 100%;
+            background: #0a0a0a;
+            border: 1px solid #262626;
+            border-radius: 9999px;
+            padding: 9px 14px 9px 34px;
+            font-size: 13px;
+            color: #e7e9ea;
+        }
+        #boardDirectorySearch:focus { outline: none; border-color: #404040; }
+        .board-directory-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 14px;
+            max-height: 56vh;
+            overflow-y: auto;
+            padding-right: 2px;
+        }
+        @media (min-width: 480px) {
+            .board-directory-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        .board-grid-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            border-radius: 14px;
+            border: 1px solid #262626;
+            background: #0a0a0a;
+            text-decoration: none;
+            transition: border-color 0.15s ease, background-color 0.15s ease;
+        }
+        .board-grid-card:hover { border-color: #404040; background: #111214; }
+        .board-grid-card.active { border-color: rgba(16, 185, 129, 0.5); background: rgba(16, 185, 129, 0.08); }
+        .board-grid-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            background: #16181c;
+            color: #10b981;
+            flex-shrink: 0;
+        }
+        .board-grid-icon i { width: 17px; height: 17px; }
+        .board-grid-meta { display: flex; flex-direction: column; min-width: 0; }
+        .board-grid-label { font-family: ui-monospace, Menlo, monospace; font-size: 12px; font-weight: 700; color: #10b981; }
+        .board-grid-name { font-size: 12px; color: #a1a1aa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .board-directory-empty { grid-column: 1 / -1; text-align: center; padding: 24px 0; font-size: 13px; color: #71767b; }
+
+        /* ==================================================================
+           THREAD PAGE (full-page comment view, replaces the old modal)
+        ================================================================== */
+        #threadPage { display: none; flex-direction: column; min-height: 100%; }
+        #threadPage.active { display: flex; }
+        .thread-page-header {
+            position: sticky;
+            top: 0;
+            z-index: 30;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            background: rgba(0, 0, 0, 0.92);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #1c1f23;
+        }
+        .thread-back-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            border-radius: 9999px;
+            color: #e7e9ea;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+            flex-shrink: 0;
+            border: none;
+            background: none;
+            padding: 0;
+        }
+        .thread-back-btn:hover { background: #16181c; }
+        .thread-back-btn i { width: 19px; height: 19px; }
+        .thread-page-headline { display: flex; flex-direction: column; min-width: 0; }
+        .thread-page-headline .board-tag { font-size: 11px; font-weight: 700; color: #10b981; font-family: ui-monospace, Menlo, monospace; text-transform: uppercase; }
+        .thread-page-headline .thread-tag { font-size: 12px; color: #71767b; font-family: ui-monospace, Menlo, monospace; }
+        .thread-reply-bar {
+            position: sticky;
+            bottom: 0;
+            z-index: 20;
+            background: rgba(0, 0, 0, 0.96);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid #1c1f23;
+            padding: 12px 14px;
+        }
+        @media (max-width: 768px) {
+            .thread-reply-bar { bottom: 60px; }
+        }
     </style>
 </head>
 <body class="min-h-screen font-sans antialiased selection:bg-neutral-800 selection:text-white">
@@ -342,6 +569,10 @@
                 <a href="interactink.html" class="nav-item active">
                     <i data-lucide="message-square"></i>
                     <span>Board</span>
+                </a>
+                <a href="#" onclick="openBoardDirectory(); return false;" class="nav-item">
+                    <i data-lucide="layout-grid"></i>
+                    <span>Browse Boards</span>
                 </a>
                 <a href="ichat.html" class="nav-item">
                     <i data-lucide="message-circle-code"></i>
@@ -379,12 +610,24 @@
                 <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
             </div>
  
-            <header class="sticky top-0 bg-black/90 backdrop-blur-md border-b border-neutral-800 p-4 z-40 flex justify-between items-center">
-                <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2 min-w-0">
-                    <img src="favicon2.png" alt="InteractInk logo" class="w-6 h-6 shrink-0">
-                    <span class="truncate">InteractInk</span>
-                    <select id="boardSwitcher" aria-label="Switch board" class="shrink-0 px-2 py-0.5 text-[11px] font-mono font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 rounded-full uppercase tracking-wider cursor-pointer focus:outline-none appearance-none pr-5"></select>
-                </h1>
+            <header class="sticky top-0 bg-black/90 backdrop-blur-md border-b border-neutral-800 z-40">
+                <div class="p-4 flex justify-between items-center gap-2">
+                    <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2 min-w-0">
+                        <img src="favicon2.png" alt="InteractInk logo" class="w-6 h-6 shrink-0">
+                        <span class="truncate">InteractInk</span>
+                    </h1>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <div class="board-select-wrap">
+                            <select id="boardSwitcher" aria-label="Switch board" class="board-select"></select>
+                            <i data-lucide="chevron-down" class="board-select-chevron"></i>
+                        </div>
+                        <button type="button" onclick="openBoardDirectory()" class="board-directory-trigger" aria-label="Browse all boards" title="Browse all boards">
+                            <i data-lucide="layout-grid"></i>
+                        </button>
+                    </div>
+                </div>
+                <!-- Always-visible quick-switch board rail -->
+                <nav id="boardStrip" class="board-strip" aria-label="Boards"></nav>
             </header>
 
  
@@ -396,6 +639,7 @@
             </section>
         </noscript>
  
+        <div id="feedView">
         <section class="p-4 border-b border-neutral-800">
             <div id="composerBoardLine" class="text-xs text-neutral-500 mb-2 flex items-center gap-1.5">
                 <i data-lucide="corner-down-right" class="w-3.5 h-3.5"></i>
@@ -444,63 +688,35 @@
         
         <div id="paginationControls" class="flex justify-center items-center gap-2 p-6 border-t border-neutral-800 mb-8"></div>
         </div>
- 
-        <!-- RIGHT DESKTOP SIDEBAR -->
-        <aside class="x-widgets">
-            <div class="bg-[#16181c] rounded-2xl p-4 border border-neutral-900">
-                <h2 class="text-white font-bold text-base mb-3">About InteractInk</h2>
-                <p class="text-neutral-400 text-xs leading-normal mb-3">
-                    A zero-friction, layout-focused environment to speak your mind freely.
-                </p>
-                <div class="flex flex-wrap pt-2">
-                    <a href="about.html" class="widget-link">About</a>
-                    <a href="faq.html" class="widget-link">FAQ</a>
-                    <a href="blog.html" class="widget-link">Blog</a>
-                    <a href="contact.html" class="widget-link">Contact</a>
-                    <a href="terms.html" class="widget-link">Terms</a>
-                    <a href="guidelines.html" class="widget-link">Rules</a>
-                    <a href="privacy.html" class="widget-link">Privacy</a>
-                </div>
-                <p class="text-[11px] text-neutral-600 mt-3">&copy; 2026 InteractInk</p>
-            </div>
-        </aside>
- 
-        <!-- MOBILE BOTTOM TAB BAR -->
-        <nav class="bottom-tab-bar" aria-label="Mobile navigation">
-            <a href="index.html" class="bottom-tab"><i data-lucide="home"></i></a>
-            <a href="interactink.html" class="bottom-tab active"><i data-lucide="message-square"></i></a>
-            <a href="ichat.html" class="bottom-tab"><i data-lucide="message-circle-code"></i></a>
-            <a href="settings.html" class="bottom-tab"><i data-lucide="settings"></i></a>
-        </nav>
-    </div>
- 
-    <!-- Modal window for viewing threads and replying -->
-    <div id="threadModal" class="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-black border border-neutral-800 w-full max-w-xl rounded-2xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
-            <div class="p-4 border-b border-neutral-800 flex justify-between items-center bg-black">
-                <div class="flex items-center gap-2 text-xs text-neutral-500 font-medium">
-                    <i data-lucide="message-square" class="w-3.5 h-3.5 text-neutral-500"></i>
-                    <span id="modalMeta" class="uppercase tracking-wider">Thread</span>
-                </div>
-                <button onclick="closeThreadModal()" class="text-neutral-400 hover:text-white p-1 hover:bg-neutral-900 rounded-full transition cursor-pointer">
-                    <i data-lucide="x" class="w-5 h-5"></i>
+        <!-- /feedView -->
+
+        <!-- Full-page thread view: replaces feedView when a post is opened.
+             Tapping a post navigates here (URL + history updated) instead of
+             opening an overlay, and the Back arrow returns to the feed. -->
+        <div id="threadPage" class="hidden">
+            <div class="thread-page-header">
+                <button type="button" onclick="closeThreadPage()" class="thread-back-btn" aria-label="Back to board">
+                    <i data-lucide="arrow-left"></i>
                 </button>
+                <div class="thread-page-headline min-w-0">
+                    <span id="threadPageMeta" class="thread-tag truncate">Thread</span>
+                </div>
             </div>
-            
-            <div class="flex-1 overflow-y-auto p-4 space-y-6" id="modalScrollBody">
+
+            <div class="flex-1 p-4 space-y-6" id="threadPageScrollBody">
                 <div class="min-w-0">
                     <div class="flex items-baseline gap-2 mb-2">
-                        <span id="modalTitle" class="font-bold text-white text-base truncate uppercase tracking-wide border-b border-neutral-900 pb-1 w-full">Subject Target</span>
+                        <span id="threadPageTitle" class="font-bold text-white text-base truncate uppercase tracking-wide border-b border-neutral-900 pb-1 w-full">Subject Target</span>
                     </div>
-                    <p id="modalOpBody" class="text-neutral-200 text-sm leading-relaxed break-words whitespace-pre-wrap pt-1"></p>
+                    <p id="threadPageOpBody" class="text-neutral-200 text-sm leading-relaxed break-words whitespace-pre-wrap pt-1"></p>
                 </div>
- 
+
                 <div class="border-b border-neutral-800"></div>
- 
+
                 <div id="commentTreeContainer" class="space-y-4"></div>
             </div>
- 
-            <div class="p-4 border-t border-neutral-800 bg-black">
+
+            <div class="thread-reply-bar">
                 <form id="commentForm" class="flex flex-col gap-2">
                     <div class="flex gap-3 items-center">
                         <div class="text-neutral-500 shrink-0">
@@ -526,8 +742,61 @@
                 </form>
             </div>
         </div>
+        <!-- /threadPage -->
+        </div>
+        <!-- /x-feed -->
+ 
+        <!-- RIGHT DESKTOP SIDEBAR -->
+        <aside class="x-widgets">
+            <div class="bg-[#16181c] rounded-2xl p-4 border border-neutral-900">
+                <h2 class="text-white font-bold text-base mb-3">About InteractInk</h2>
+                <p class="text-neutral-400 text-xs leading-normal mb-3">
+                    A zero-friction, layout-focused environment to speak your mind freely.
+                </p>
+                <div class="flex flex-wrap pt-2">
+                    <a href="about.html" class="widget-link">About</a>
+                    <a href="faq.html" class="widget-link">FAQ</a>
+                    <a href="blog.html" class="widget-link">Blog</a>
+                    <a href="contact.html" class="widget-link">Contact</a>
+                    <a href="terms.html" class="widget-link">Terms</a>
+                    <a href="guidelines.html" class="widget-link">Rules</a>
+                    <a href="privacy.html" class="widget-link">Privacy</a>
+                </div>
+                <p class="text-[11px] text-neutral-600 mt-3">&copy; 2026 InteractInk</p>
+            </div>
+        </aside>
+ 
+        <!-- MOBILE BOTTOM TAB BAR -->
+        <nav class="bottom-tab-bar" aria-label="Mobile navigation">
+            <a href="index.html" class="bottom-tab"><i data-lucide="home"></i></a>
+            <a href="interactink.html" class="bottom-tab active"><i data-lucide="message-square"></i></a>
+            <button type="button" onclick="openBoardDirectory()" class="bottom-tab" aria-label="Browse boards"><i data-lucide="layout-grid"></i></button>
+            <a href="ichat.html" class="bottom-tab"><i data-lucide="message-circle-code"></i></a>
+            <a href="settings.html" class="bottom-tab"><i data-lucide="settings"></i></a>
+        </nav>
     </div>
  
+    <!-- Board Directory: full grid of every board, opened from the header
+         trigger, sidebar "Browse Boards" item, or mobile tab bar. -->
+    <div id="boardDirectoryModal" class="board-directory-overlay hidden" onclick="if(event.target===this) closeBoardDirectory();">
+        <div class="board-directory-panel">
+            <div class="flex justify-between items-center">
+                <h2 class="text-white font-bold text-base flex items-center gap-2">
+                    <i data-lucide="layout-grid" class="w-4 h-4 text-emerald-500"></i>
+                    All Boards
+                </h2>
+                <button type="button" onclick="closeBoardDirectory()" class="text-neutral-400 hover:text-white p-1 hover:bg-neutral-900 rounded-full transition cursor-pointer" aria-label="Close">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="board-directory-search-wrap">
+                <i data-lucide="search"></i>
+                <input type="text" id="boardDirectorySearch" placeholder="Find a board..." autocomplete="off" oninput="filterBoardDirectory(this.value)">
+            </div>
+            <div id="boardDirectoryGrid" class="board-directory-grid"></div>
+        </div>
+    </div>
+
     <!-- Add this where your share menu placeholder is located -->
 <div id="shareMenu" class="share-menu hidden"></div>
 
@@ -619,7 +888,7 @@
         if (requestedThread) {
             // Wait briefly for data to populate
             setTimeout(() => {
-                if (appState.threads[requestedThread]) openThreadModal(requestedThread);
+                if (appState.threads[requestedThread]) openThreadPage(requestedThread, { pushHistory: false });
             }, 500);
         }
     });
@@ -663,7 +932,92 @@
             boardLabelEl.textContent = meta.label;
             boardNameEl.textContent = `— ${meta.name}`;
         }
+
+        renderBoardStrip(boardId);
     }
+
+    /**
+     * Renders the always-visible horizontal board rail under the header.
+     * Every board is a real link (buildBoardUrl) so it degrades gracefully
+     * without JS, but clicks are intercepted below for instant SPA switching.
+     */
+    function renderBoardStrip(activeBoardId) {
+        const strip = document.getElementById('boardStrip');
+        if (!strip) return;
+        strip.innerHTML = InkRouting.BOARDS.map(b => `
+            <a href="${InkRouting.buildBoardUrl(b.id)}" class="board-chip${b.id === activeBoardId ? ' active' : ''}" data-board-id="${b.id}">
+                <i data-lucide="${b.icon}"></i>${b.label}
+            </a>
+        `).join('');
+        strip.querySelectorAll('.board-chip').forEach(chip => {
+            chip.addEventListener('click', (e) => {
+                e.preventDefault();
+                const id = chip.getAttribute('data-board-id');
+                if (id !== appState.currentBoard) switchToBoard(id);
+            });
+        });
+        // Keep the active chip in view when it's off-screen (e.g. after a
+        // board switch triggered from the directory or the select).
+        const activeChip = strip.querySelector('.board-chip.active');
+        if (activeChip) activeChip.scrollIntoView({ behavior: 'auto', inline: 'center', block: 'nearest' });
+        if (window.lucide) lucide.createIcons();
+    }
+
+    /**
+     * Full "browse all boards" directory. Reuses InkRouting.renderBoardGrid
+     * for the card markup, then intercepts clicks for SPA-style switching.
+     */
+    function openBoardDirectory() {
+        const modal = document.getElementById('boardDirectoryModal');
+        const grid = document.getElementById('boardDirectoryGrid');
+        InkRouting.renderBoardGrid(grid, appState.currentBoard);
+        grid.querySelectorAll('.board-grid-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                e.preventDefault();
+                const id = card.getAttribute('data-board-id');
+                closeBoardDirectory();
+                if (id !== appState.currentBoard) switchToBoard(id);
+            });
+        });
+        const search = document.getElementById('boardDirectorySearch');
+        if (search) search.value = '';
+        modal.classList.remove('hidden');
+        setTimeout(() => { if (search) search.focus(); }, 50);
+    }
+
+    function closeBoardDirectory() {
+        document.getElementById('boardDirectoryModal').classList.add('hidden');
+    }
+
+    function filterBoardDirectory(query) {
+        const q = query.trim().toLowerCase();
+        const grid = document.getElementById('boardDirectoryGrid');
+        const cards = grid.querySelectorAll('.board-grid-card');
+        let visibleCount = 0;
+        cards.forEach(card => {
+            const matches = card.textContent.toLowerCase().includes(q);
+            card.style.display = matches ? '' : 'none';
+            if (matches) visibleCount++;
+        });
+        let empty = grid.querySelector('.board-directory-empty');
+        if (visibleCount === 0) {
+            if (!empty) {
+                empty = document.createElement('div');
+                empty.className = 'board-directory-empty';
+                grid.appendChild(empty);
+            }
+            empty.textContent = `No boards match "${query}"`;
+        } else if (empty) {
+            empty.remove();
+        }
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('boardDirectoryModal');
+            if (modal && !modal.classList.contains('hidden')) closeBoardDirectory();
+        }
+    });
  
     /**
      * Switches the active board in-place: updates state, URL, sessionStorage,
@@ -673,6 +1027,11 @@
      */
     async function switchToBoard(boardId) {
         if (!InkRouting.isValidBoard(boardId) || boardId === appState.currentBoard) return;
+
+        // A board switch always means "back to that board's feed" — close
+        // any open thread page first so we don't leave a stale thread from
+        // the previous board on screen.
+        if (appState.activeThreadId) closeThreadPage({ pushHistory: false });
  
         appState.currentBoard = boardId;
         appState.currentPage = 1;
@@ -692,12 +1051,26 @@
         lucide.createIcons();
     }
  
-    // Keep in sync with browser Back/Forward when the ?board= param changes
-    // (e.g. user navigated via the board switcher, then pressed Back).
+    // Keep in sync with browser Back/Forward: this now covers both the
+    // ?board= param (board switcher) and the ?thread= param (opening or
+    // backing out of the full-page thread view), since both are pushed to
+    // history as real "pages" a user can navigate between.
     window.addEventListener('popstate', () => {
         const urlBoard = InkRouting.getBoardFromURL();
-        if (urlBoard !== appState.currentBoard) {
-            switchToBoard(urlBoard);
+        const urlThread = new URLSearchParams(location.search).get('thread');
+
+        const finishThreadSync = () => {
+            if (urlThread && appState.threads[urlThread]) {
+                openThreadPage(urlThread, { pushHistory: false });
+            } else if (!urlThread && appState.activeThreadId) {
+                closeThreadPage({ pushHistory: false });
+            }
+        };
+
+        if (urlBoard && urlBoard !== appState.currentBoard) {
+            switchToBoard(urlBoard).then(finishThreadSync);
+        } else {
+            finishThreadSync();
         }
     });
  
@@ -1165,8 +1538,7 @@ function initRealtimeSync() {
             card.className = "p-4 hover:bg-neutral-900/40 cursor-pointer transition duration-200 flex flex-col no-underline text-inherit";
             card.addEventListener('click', (e) => {
                 e.preventDefault();
-                history.pushState({}, '', card.href);
-                openThreadModal(thread.id);
+                openThreadPage(thread.id);
             });
             
             const processedContent = parseRichTextContent(escapeHTML(thread.content));
@@ -1200,15 +1572,40 @@ function initRealtimeSync() {
             }
         }
  
-        function closeThreadModal() {
-            document.getElementById('threadModal').classList.add('hidden');
+        /**
+         * Navigates BACK from the full-page thread view to the board feed.
+         * This is real navigation, not a modal dismiss: the URL loses its
+         * ?thread= param and (unless we're here because of a popstate/Back
+         * press, which already moved history for us) a new history entry is
+         * pushed so the browser Back button keeps working as expected.
+         */
+        function closeThreadPage(opts) {
+            opts = opts || {};
+            const pushHistory = opts.pushHistory !== false;
+
+            document.getElementById('threadPage').classList.add('hidden');
+            document.getElementById('threadPage').classList.remove('active');
+            document.getElementById('feedView').classList.remove('hidden');
             appState.activeThreadId = null;
-            history.pushState({}, '', InkRouting.buildBoardUrl(appState.currentBoard, 'interactink.html'));
+
+            if (pushHistory) {
+                history.pushState({}, '', InkRouting.buildBoardUrl(appState.currentBoard, 'interactink.html'));
+            }
             // Return the feed to exactly where the user left it.
             InkRouting.restoreScrollPosition(appState.currentBoard);
+            lucide.createIcons();
         }
- 
-        async function openThreadModal(tId) {
+
+        /**
+         * Navigates the user to the full-page thread view — a distinct
+         * "page" within the app (own URL via ?thread=, own history entry,
+         * own back arrow) rather than an overlay on top of the feed. The
+         * feed is hidden rather than destroyed so returning to it is instant.
+         */
+        async function openThreadPage(tId, opts) {
+        opts = opts || {};
+        const pushHistory = opts.pushHistory !== false;
+
         // Preserve exactly where the user was on this board's feed so that
         // closing the thread (or hitting Back) restores that scroll offset.
         InkRouting.captureStateBeforeNavigation(appState.currentBoard);
@@ -1216,11 +1613,21 @@ function initRealtimeSync() {
         appState.activeThreadId = tId;
         const thread = appState.threads[tId];
         if (!thread) return;
- 
-        document.getElementById('modalMeta').innerText = `Thread >>${thread.id}`;
-        document.getElementById('modalTitle').innerText = thread.title;
-        document.getElementById('modalOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content));
-        document.getElementById('threadModal').classList.remove('hidden');
+
+        if (pushHistory) {
+            history.pushState({}, '', InkRouting.buildThreadUrl(appState.currentBoard, tId, 'interactink.html'));
+        }
+
+        const meta = InkRouting.getBoardMeta(appState.currentBoard);
+        document.getElementById('threadPageMeta').innerText = `${meta.label} · Thread >>${thread.id}`;
+        document.getElementById('threadPageTitle').innerText = thread.title;
+        document.getElementById('threadPageOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content));
+
+        document.getElementById('feedView').classList.add('hidden');
+        const threadPageEl = document.getElementById('threadPage');
+        threadPageEl.classList.remove('hidden');
+        threadPageEl.classList.add('active');
+        window.scrollTo({ top: 0, behavior: 'auto' });
         
         const container = document.getElementById('commentTreeContainer');
         container.innerHTML = `<div class="text-xs text-neutral-600 text-center py-6 font-mono">Loading...</div>`;
