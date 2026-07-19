@@ -163,6 +163,44 @@
         .footer-link { color: #e7e9ea; text-decoration: none; margin: 0 14px; font-weight: 500; font-size: 0.85rem; transition: opacity 0.2s; display: inline-block; margin-bottom: 8px; }
         .footer-link:hover { opacity: 0.7; }
         .widget-link { color: #71767b; text-decoration: none; margin: 0 8px; font-weight: 500; font-size: 0.8rem; transition: color 0.2s; display: inline-block; margin-bottom: 6px; }
+
+        /* Honeypot field: kept in the tab/DOM flow but invisible to real users so
+           screen readers / autofill / bots that blindly fill every input get caught. */
+        .ink-honeypot {
+            position: absolute !important;
+            left: -9999px !important;
+            top: -9999px !important;
+            width: 1px !important;
+            height: 1px !important;
+            opacity: 0 !important;
+            pointer-events: none;
+        }
+
+        /* "I'm not a robot" checkbox row */
+        .ink-captcha-box {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #0a0a0a;
+            border: 1px solid #262626;
+            border-radius: 10px;
+            padding: 8px 12px;
+            cursor: pointer;
+            user-select: none;
+            transition: border-color 0.15s ease;
+        }
+        .ink-captcha-box:hover { border-color: #404040; }
+        .ink-captcha-box-sm { padding: 6px 10px; }
+        .ink-captcha-checkbox {
+            width: 16px;
+            height: 16px;
+            accent-color: #10b981;
+            cursor: pointer;
+        }
+        .ink-captcha-box.ink-captcha-verified {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.08);
+        }
         .widget-link:hover { color: #e7e9ea; }
  
         /* ---------- Responsive 3-Column Grid (matches index.html) ---------- */
@@ -369,7 +407,19 @@
                        class="w-full bg-transparent text-white text-base font-bold pb-2 focus:outline-none placeholder:text-neutral-600 border-b border-neutral-900 mb-3">
                 <textarea id="threadContent" placeholder="What is happening?" data-default-placeholder="What is happening?" required rows="3" maxlength="1000"
                           class="w-full bg-transparent text-white text-sm focus:outline-none placeholder:text-neutral-500 resize-none leading-relaxed"></textarea>
-                
+
+                <!-- Honeypot field: invisible to real users, bots often auto-fill it -->
+                <input type="text" id="threadHoneypot" name="website" tabindex="-1" autocomplete="off"
+                       class="ink-honeypot" aria-hidden="true">
+
+                <div class="flex items-center gap-2 mt-3 pt-3 border-t border-neutral-950">
+                    <label id="threadCaptchaBox" class="ink-captcha-box">
+                        <input type="checkbox" id="threadCaptchaCheckbox" class="ink-captcha-checkbox" onclick="return handleCaptchaClick(event, 'thread')">
+                        <span class="text-xs text-neutral-300">I'm not a robot</span>
+                        <i data-lucide="shield-check" class="w-3.5 h-3.5 text-neutral-600"></i>
+                    </label>
+                </div>
+
                 <div class="flex justify-between items-center border-t border-neutral-950 pt-3 mt-2">
                     <div class="text-neutral-600 flex gap-4 items-center text-sm">
                         <i data-lucide="shield-check" class="w-4 h-4 text-neutral-500" title="You'll get an automatic anonymous ID for this thread"></i>
@@ -377,7 +427,7 @@
                     </div>
                     <div class="flex items-center gap-3">
                         <span id="threadCharCounter" class="text-[11px] font-mono text-neutral-600">0/1000</span>
-                        <button type="submit" class="bg-white text-black hover:bg-neutral-200 font-bold px-5 py-2 rounded-full transition duration-200 text-sm cursor-pointer shadow-sm">
+                        <button type="submit" id="threadSubmitBtn" class="bg-white text-black hover:bg-neutral-200 font-bold px-5 py-2 rounded-full transition duration-200 text-sm cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
                             Post
                         </button>
                     </div>
@@ -454,16 +504,28 @@
             </div>
  
             <div class="p-4 border-t border-neutral-800 bg-black">
-                <form id="commentForm" class="flex gap-3 items-center">
-                    <div class="text-neutral-500 shrink-0">
-                        <i data-lucide="corner-down-right" class="w-4 h-4"></i>
+                <form id="commentForm" class="flex flex-col gap-2">
+                    <div class="flex gap-3 items-center">
+                        <div class="text-neutral-500 shrink-0">
+                            <i data-lucide="corner-down-right" class="w-4 h-4"></i>
+                        </div>
+                        <input type="text" id="commentInput" placeholder="Post your reply... (use >>ID to link to a specific post)" autocomplete="off" required maxlength="300"
+                               class="flex-1 bg-transparent text-sm text-white focus:outline-none placeholder:text-neutral-600">
+                        <span id="commentCharCounter" class="text-[11px] font-mono text-neutral-600 shrink-0 select-none">0/300</span>
+                        <button type="submit" id="commentSubmitBtn" class="bg-white text-black hover:bg-neutral-200 font-bold px-4 py-1.5 rounded-full text-xs transition duration-200 cursor-pointer shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
+                            Reply
+                        </button>
                     </div>
-                    <input type="text" id="commentInput" placeholder="Post your reply... (use >>ID to link to a specific post)" autocomplete="off" required maxlength="300"
-                           class="flex-1 bg-transparent text-sm text-white focus:outline-none placeholder:text-neutral-600">
-                    <span id="commentCharCounter" class="text-[11px] font-mono text-neutral-600 shrink-0 select-none">0/300</span>
-                    <button type="submit" class="bg-white text-black hover:bg-neutral-200 font-bold px-4 py-1.5 rounded-full text-xs transition duration-200 cursor-pointer shrink-0">
-                        Reply
-                    </button>
+                    <div class="flex items-center gap-2 pl-7">
+                        <label id="commentCaptchaBox" class="ink-captcha-box ink-captcha-box-sm">
+                            <input type="checkbox" id="commentCaptchaCheckbox" class="ink-captcha-checkbox" onclick="return handleCaptchaClick(event, 'comment')">
+                            <span class="text-[11px] text-neutral-300">I'm not a robot</span>
+                            <i data-lucide="shield-check" class="w-3 h-3 text-neutral-600"></i>
+                        </label>
+                    </div>
+                    <!-- Honeypot field: invisible to real users, bots often auto-fill it -->
+                    <input type="text" id="commentHoneypot" name="website" tabindex="-1" autocomplete="off"
+                           class="ink-honeypot" aria-hidden="true">
                 </form>
             </div>
         </div>
@@ -471,6 +533,26 @@
  
     <!-- Add this where your share menu placeholder is located -->
 <div id="shareMenu" class="share-menu hidden"></div>
+
+<!-- Shared "I'm not a robot" challenge modal, used by both the thread and comment composers -->
+<div id="captchaChallengeModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-[80] flex items-center justify-center p-4">
+    <div class="bg-neutral-950 border border-neutral-800 rounded-2xl w-full max-w-xs p-5 shadow-2xl">
+        <div class="flex items-center gap-2 mb-3 text-white font-bold text-sm">
+            <i data-lucide="shield-check" class="w-4 h-4 text-emerald-500"></i>
+            Quick human check
+        </div>
+        <p class="text-neutral-400 text-xs mb-3">Solve this to prove you're not a bot:</p>
+        <div id="captchaQuestion" class="text-white text-lg font-mono font-bold mb-3 text-center bg-neutral-900 border border-neutral-800 rounded-lg py-2">?</div>
+        <input type="number" inputmode="numeric" id="captchaAnswerInput" placeholder="Your answer"
+               class="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-white text-sm mb-1 focus:outline-none focus:border-emerald-600"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();submitCaptchaAnswer();}">
+        <p id="captchaError" class="hidden text-red-400 text-xs mb-2">Not quite — here's a new one.</p>
+        <div class="flex gap-2 mt-3">
+            <button type="button" onclick="closeCaptchaChallenge()" class="flex-1 bg-neutral-900 border border-neutral-800 text-neutral-300 rounded-full py-2 text-xs font-bold hover:bg-neutral-800 transition cursor-pointer">Cancel</button>
+            <button type="button" onclick="submitCaptchaAnswer()" class="flex-1 bg-white text-black rounded-full py-2 text-xs font-bold hover:bg-neutral-200 transition cursor-pointer">Verify</button>
+        </div>
+    </div>
+</div>
  
 <!-- Hover preview tooltip for >>ID cross-links inside comments -->
 <div id="hoverPreviewBox" class="hidden fixed z-[70] max-w-xs bg-neutral-950 border border-neutral-800 rounded-lg p-3 text-xs text-neutral-300 shadow-2xl pointer-events-none"></div>
@@ -522,6 +604,8 @@
  
         initSeedEngine();
         bindEventListeners();
+        updateCooldownUI('thread');
+        updateCooldownUI('comment');
         await fetchInitialData();
         initRealtimeSync();
         renderThreads();
@@ -751,6 +835,125 @@ function initRealtimeSync() {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
  
+        // ---------- Posting cooldown ----------
+        // Anonymous posters get one new thread every 100s and one new comment
+        // every 100s. The timestamp is written to localStorage (NOT
+        // sessionStorage), so it survives a page refresh, a closed tab, or
+        // navigating away and back — the whole point being that refreshing
+        // the page must not reset the timer. This is still a client-side
+        // guard (someone could clear their localStorage or use a private
+        // window to reset it), so for airtight abuse prevention it should be
+        // paired with a server-side check too — e.g. a Supabase Edge
+        // Function or RLS policy that rejects inserts from the same
+        // IP/fingerprint within the last 100s. Wiring that up requires
+        // access to the Supabase project's server-side config, which isn't
+        // available here.
+        const POST_COOLDOWN_MS = 100 * 1000;
+        const COOLDOWN_STORAGE_KEYS = { thread: 'ink_last_thread_post_ts', comment: 'ink_last_comment_post_ts' };
+        const cooldownTimers = { thread: null, comment: null };
+
+        function getRemainingCooldownMs(kind) {
+            try {
+                const last = parseInt(localStorage.getItem(COOLDOWN_STORAGE_KEYS[kind]) || '0', 10);
+                if (!last) return 0;
+                const remaining = POST_COOLDOWN_MS - (Date.now() - last);
+                return remaining > 0 ? remaining : 0;
+            } catch (e) { return 0; }
+        }
+
+        function markPosted(kind) {
+            try { localStorage.setItem(COOLDOWN_STORAGE_KEYS[kind], String(Date.now())); } catch (e) {}
+            updateCooldownUI(kind);
+        }
+
+        function updateCooldownUI(kind) {
+            const btn = document.getElementById(kind === 'thread' ? 'threadSubmitBtn' : 'commentSubmitBtn');
+            if (!btn) return;
+            const defaultLabel = kind === 'thread' ? 'Post' : 'Reply';
+            const remaining = getRemainingCooldownMs(kind);
+
+            if (remaining <= 0) {
+                if (cooldownTimers[kind]) { clearInterval(cooldownTimers[kind]); cooldownTimers[kind] = null; }
+                btn.disabled = false;
+                btn.textContent = defaultLabel;
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = `Wait ${Math.ceil(remaining / 1000)}s`;
+            if (!cooldownTimers[kind]) {
+                cooldownTimers[kind] = setInterval(() => updateCooldownUI(kind), 1000);
+            }
+        }
+
+        // ---------- "I'm not a robot" captcha (client-side bot deterrent) ----------
+        // Combined with the honeypot fields on each form. A real reCAPTCHA/hCaptcha
+        // integration would give stronger protection, but needs a site key +
+        // server-side verification call; this self-contained challenge needs no
+        // external service or backend and still stops the vast majority of
+        // simple/scripted spam bots that just POST directly to the API.
+        const captchaState = { thread: false, comment: false };
+        let captchaContext = null;
+        let captchaAnswer = null;
+
+        function handleCaptchaClick(event, context) {
+            event.preventDefault();
+            const checkbox = document.getElementById(context === 'thread' ? 'threadCaptchaCheckbox' : 'commentCaptchaCheckbox');
+            const box = document.getElementById(context === 'thread' ? 'threadCaptchaBox' : 'commentCaptchaBox');
+            if (captchaState[context]) {
+                // Already verified — let the user un-verify and redo it if they want.
+                captchaState[context] = false;
+                checkbox.checked = false;
+                if (box) box.classList.remove('ink-captcha-verified');
+                return false;
+            }
+            openCaptchaChallenge(context);
+            return false;
+        }
+
+        function openCaptchaChallenge(context) {
+            captchaContext = context;
+            const a = Math.floor(Math.random() * 8) + 1;
+            const b = Math.floor(Math.random() * 8) + 1;
+            captchaAnswer = a + b;
+            document.getElementById('captchaQuestion').textContent = `${a} + ${b} = ?`;
+            const input = document.getElementById('captchaAnswerInput');
+            input.value = '';
+            document.getElementById('captchaError').classList.add('hidden');
+            document.getElementById('captchaChallengeModal').classList.remove('hidden');
+            setTimeout(() => input.focus(), 50);
+        }
+
+        function closeCaptchaChallenge() {
+            document.getElementById('captchaChallengeModal').classList.add('hidden');
+            captchaContext = null;
+        }
+
+        function submitCaptchaAnswer() {
+            const val = parseInt(document.getElementById('captchaAnswerInput').value, 10);
+            const context = captchaContext;
+            if (!context) return;
+            if (val === captchaAnswer) {
+                captchaState[context] = true;
+                const checkbox = document.getElementById(context === 'thread' ? 'threadCaptchaCheckbox' : 'commentCaptchaCheckbox');
+                const box = document.getElementById(context === 'thread' ? 'threadCaptchaBox' : 'commentCaptchaBox');
+                checkbox.checked = true;
+                if (box) box.classList.add('ink-captcha-verified');
+                closeCaptchaChallenge();
+            } else {
+                document.getElementById('captchaError').classList.remove('hidden');
+                openCaptchaChallenge(context);
+            }
+        }
+
+        function resetCaptcha(context) {
+            captchaState[context] = false;
+            const checkbox = document.getElementById(context === 'thread' ? 'threadCaptchaCheckbox' : 'commentCaptchaCheckbox');
+            const box = document.getElementById(context === 'thread' ? 'threadCaptchaBox' : 'commentCaptchaBox');
+            if (checkbox) checkbox.checked = false;
+            if (box) box.classList.remove('ink-captcha-verified');
+        }
+
         function bindEventListeners() {
             const threadContent = document.getElementById('threadContent');
             const threadCharCounter = document.getElementById('threadCharCounter');
@@ -770,6 +973,32 @@ function initRealtimeSync() {
                 const contentVal = threadContent.value.trim();
                 if (!contentVal) return;
 
+                // Honeypot: a real visitor never sees/fills this field. If it has a
+                // value, a bot filled every input on the form — quietly bail out
+                // instead of hitting the database.
+                const honeypot = document.getElementById('threadHoneypot');
+                if (honeypot && honeypot.value.trim() !== '') {
+                    console.warn('Thread submission blocked: honeypot triggered.');
+                    return;
+                }
+
+                // 100s posting cooldown, backed by localStorage so a refresh can't
+                // reset it.
+                const remaining = getRemainingCooldownMs('thread');
+                if (remaining > 0) {
+                    showToast(`Please wait ${Math.ceil(remaining / 1000)}s before posting another thread.`, true);
+                    updateCooldownUI('thread');
+                    return;
+                }
+
+                // "I'm not a robot" check
+                if (!captchaState.thread) {
+                    showToast(`Please verify you're not a robot before posting.`, true);
+                    const box = document.getElementById('threadCaptchaBox');
+                    if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    return;
+                }
+
                 const id = Math.random().toString(16).substring(2, 10);
                 const parsedTitle = title.value.trim() || 'Anonymous';
                 const newThread = { id, board_id: appState.currentBoard, title: parsedTitle, content: contentVal, timestamp: Date.now(), upvotes: 1 };
@@ -779,13 +1008,17 @@ function initRealtimeSync() {
 
                 const { error } = await supabaseClient.from('threads').insert([newThread]);
 
-                if (submitBtn) submitBtn.disabled = false;
-
                 if (error) {
+                    if (submitBtn) submitBtn.disabled = false;
                     console.error('Thread insert failed:', error);
                     showToast(`Post failed: ${error.message || 'unknown error'}`, true);
                     return;
                 }
+
+                // Post succeeded: start the 100s cooldown and require a fresh
+                // captcha solve for the next post.
+                markPosted('thread');
+                resetCaptcha('thread');
 
                 // Don't wait on the realtime channel to reflect our own post back to us -
                 // add it locally right away so it always appears instantly.
@@ -803,6 +1036,30 @@ function initRealtimeSync() {
                 const textVal = commentInput.value.trim();
                 if (!textVal) return;
 
+                // Honeypot check (see thread form for the rationale)
+                const honeypot = document.getElementById('commentHoneypot');
+                if (honeypot && honeypot.value.trim() !== '') {
+                    console.warn('Comment submission blocked: honeypot triggered.');
+                    return;
+                }
+
+                // 100s posting cooldown, backed by localStorage so a refresh can't
+                // reset it.
+                const remaining = getRemainingCooldownMs('comment');
+                if (remaining > 0) {
+                    showToast(`Please wait ${Math.ceil(remaining / 1000)}s before posting another reply.`, true);
+                    updateCooldownUI('comment');
+                    return;
+                }
+
+                // "I'm not a robot" check
+                if (!captchaState.comment) {
+                    showToast(`Please verify you're not a robot before replying.`, true);
+                    const box = document.getElementById('commentCaptchaBox');
+                    if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    return;
+                }
+
                 const id = Math.random().toString(16).substring(2, 10);
                 const tripcode = await generateTripcode(appState.activeThreadId, appState.userSeed);
                 const newComment = { id, thread_id: appState.activeThreadId, board_id: appState.currentBoard, tripcode, text: textVal, timestamp: Date.now() };
@@ -812,13 +1069,17 @@ function initRealtimeSync() {
 
                 const { error } = await supabaseClient.from('comments').insert([newComment]);
 
-                if (submitBtn) submitBtn.disabled = false;
-
                 if (error) {
+                    if (submitBtn) submitBtn.disabled = false;
                     console.error('Comment insert failed:', error);
                     showToast(`Reply failed: ${error.message || 'unknown error'}`, true);
                     return;
                 }
+
+                // Reply succeeded: start the 100s cooldown and require a fresh
+                // captcha solve for the next reply.
+                markPosted('comment');
+                resetCaptcha('comment');
 
                 if (!appState.comments[appState.activeThreadId]) appState.comments[appState.activeThreadId] = {};
                 appState.comments[appState.activeThreadId][id] = newComment;
