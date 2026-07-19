@@ -2,58 +2,1109 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <link rel="preconnect" href="https://unpkg.com" crossorigin>
-  <title>iChat - InteractInk</title>
-  <meta name="description" content="iChat Secure Environment - InteractInk's encrypted chat runtime.">
-  <meta name="google-adsense-account" content="ca-pub-9357677827244243">
-  <meta name="google-site-verification" content="DOvTKyh77YUQreg4Dg6SaL1wEM33Da783l6lqsLek7Q" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ichat - Anonymous Cryptographic P2P Messenger</title>
+  
+  <!-- Favicon utilizing logo.png -->
+  <link rel="icon" type="image/png" href="logo.png">
+  
+  <!-- Lucide Icons for clean, scalable vector iconography -->
   <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Tailwind CSS (used by the shared site navigation / widgets, matching index.html) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
   <style>
-    /* Reset & Base Styles */
+    :root {
+      --bg-black: #080808;
+      --card-bg: #0f0f11;
+      --card-border: #1a1a1c;
+      --neon-green: #10b981; 
+      --text-white: #ffffff;
+      --text-muted: #707075;
+      --alert-red: #ff3b30;
+      --success-green: #10b981;
+      --secure-gray: #161618;
+      --avatar-border: #222225;
+      --link-blue: #3b82f6;
+      --link-blue-hover: #60a5fa;
+    }
+
     * {
-      box-sizing: border-box;
       margin: 0;
       padding: 0;
-      -webkit-tap-highlight-color: transparent;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-tap-highlight-color: transparent; /* Fixes the gray/blue blur box on tap */
+    }
+
+    /* Universal Button Bouncing Animation */
+    button {
+      outline: none;
+      cursor: pointer;
+      background: none;
+      border: none;
+      transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease !important;
+    }
+    
+    button:active, .action-btn:active, .view-btn:active, .nuke-btn:active, .copy-btn:active, .btn:active, .connect-btn:active {
+      transform: scale(0.95) !important;
     }
 
     body {
-      background-color: #000000;
-      color: #ffffff;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      height: 100vh;
-      height: 100dvh; /* Dynamic viewport height to prevent mobile browser UI cut-offs */
+      background-color: var(--bg-black);
+      color: var(--text-white);
+      min-height: 100vh;
+      min-height: 100dvh;
+    }
+
+    /* System Layout with clean Gray Shadow Box */
+    .app-container {
+      width: 100%;
+      max-width: 1200px;
+      height: 90vh;
+      background-color: #0b0b0c;
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      display: grid;
+      grid-template-columns: 350px 1fr;
+      overflow: hidden;
+      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.5);
+      transition: filter 0.3s ease, transform 0.2s ease;
+    }
+
+    /* Telemetry Info Pill */
+    .telemetry-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-muted);
+      background-color: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--card-border);
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-family: monospace;
+    }
+
+    .telemetry-pill span {
+      color: var(--neon-green);
+      font-weight: bold;
+    }
+
+    /* Left Sidebar: Chats List */
+    .sidebar {
+      border-right: 1px solid var(--card-border);
+      display: flex;
+      flex-direction: column;
+      background-color: #0c0c0e;
+      min-width: 0; 
+      height: 100%;
+      overflow: hidden;
+      transition: transform 0.3s ease-in-out;
+    }
+
+    .sidebar-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 0;
+      flex-shrink: 0;
+    }
+
+    .brand-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      min-width: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 17px;
+      letter-spacing: -0.5px;
+      color: var(--text-white);
+      white-space: nowrap;
+    }
+
+    /* Brand Logo styling for logo.png */
+    .brand img.custom-logo {
+      width: 28px;
+      height: 28px;
+      object-fit: contain;
+      transition: transform 0.3s ease;
+    }
+
+    .brand:hover img.custom-logo {
+      transform: rotate(15deg);
+    }
+
+    /* Connected Peers List */
+    .chats-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      min-width: 0;
+    }
+
+    .chat-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.2s ease;
+      margin-bottom: 6px;
+      min-width: 0;
+      position: relative;
+    }
+
+    .chat-item:hover {
+      background-color: rgba(255, 255, 255, 0.02);
+      border-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .chat-item.active {
+      background-color: #18181c !important;
+      border-color: #2c2c35 !important;
+    }
+
+    .avatar-indicator {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: #141416;
+      border: 1px solid #2a2a2e;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      flex-shrink: 0;
+      transition: all 0.2s ease;
+    }
+
+    .avatar-indicator svg {
+      width: 18px;
+      height: 18px;
+      fill: #808085;
+      transition: fill 0.2s ease;
+    }
+
+    .chat-item:hover .avatar-indicator {
+      border-color: #3e3e45;
+    }
+
+    .chat-item.active .avatar-indicator {
+      border-color: #4e4e55;
+      background: #1c1c1f;
+    }
+
+    .chat-item.active .avatar-indicator svg {
+      fill: var(--text-white);
+    }
+
+    /* Connection Status Ring Dots */
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      position: absolute;
+      bottom: -1px;
+      right: -1px;
+      border: 1.5px solid #0c0c0e;
+    }
+
+    .status-dot.online {
+      background-color: var(--neon-green);
+    }
+
+    .status-dot.offline {
+      background-color: var(--alert-red);
+    }
+
+    .chat-info {
+      flex: 1;
+      min-width: 0; 
+      padding-right: 45px;
+    }
+
+    .chat-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-white);
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chat-preview {
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Badge for unread counts */
+    .unread-badge {
+      position: absolute;
+      right: 58px;
+      top: 50%;
+      transform: translateY(-50%);
+      background-color: var(--neon-green);
+      color: #000;
+      font-size: 10px;
+      font-weight: bold;
+      padding: 2px 6px;
+      border-radius: 10px;
+      display: none;
+    }
+
+    /* Item Actions Container (Pencil & Trash) */
+    .chat-actions {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .chat-item:hover .chat-actions {
+      opacity: 1;
+    }
+
+    .action-btn {
+      background: none;
+      border: none;
+      color: #3c3c40;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .action-btn:hover {
+      background-color: rgba(255, 255, 255, 0.04);
+      color: var(--text-white);
+    }
+
+    .action-btn.delete-chat-btn:hover {
+      color: var(--alert-red);
+      background-color: rgba(255, 59, 48, 0.08);
+    }
+
+    .action-btn svg {
+      width: 13px;
+      height: 13px;
+    }
+
+    /* Connect Section */
+    .connect-card {
+      padding: 16px;
+      border-top: 1px solid var(--card-border);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex-shrink: 0;
+      background-color: rgba(255, 255, 255, 0.01);
+    }
+
+    .connect-card-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .connect-input {
+      background-color: var(--bg-black);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--text-white);
+      font-size: 11px;
+      font-family: monospace;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .connect-input:focus {
+      border-color: #3a3a40;
+    }
+
+    /* P2P Connection Button - Retuned modern glow */
+    .connect-btn {
+      background-color: rgba(16, 185, 129, 0.06);
+      color: var(--neon-green);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      padding: 11px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .connect-btn:hover {
+      background-color: rgba(16, 185, 129, 0.15);
+      border-color: var(--neon-green);
+      color: var(--text-white);
+    }
+
+    .connect-btn svg {
+      fill: none !important;
+      stroke: currentColor;
+      stroke-width: 2px;
+    }
+
+    /* Right Section: Chat Viewport */
+    .main-view {
+      display: flex;
+      flex-direction: column;
+      background-color: var(--bg-black);
+      min-width: 0;
+      height: 100%;
       overflow: hidden;
       position: relative;
     }
 
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: #000000; }
-    ::-webkit-scrollbar-thumb { background: #202327; border-radius: 9999px; }
+    .view-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      min-width: 0;
+      flex-shrink: 0;
+    }
 
-    /* ---------- Unified sidebar navigation (matches index.html) ---------- */
-    .app-container {
+    .view-tabs {
+      display: flex;
+      gap: 6px;
+      background-color: #0c0c0e;
+      padding: 4px;
+      border-radius: 10px;
+      border: 1px solid var(--card-border);
+    }
+
+    .view-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .view-btn svg {
+      width: 14px;
+      height: 14px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2px;
+    }
+
+    .view-btn:hover {
+      color: var(--text-white);
+    }
+
+    .view-btn.active {
+      background-color: rgba(255, 255, 255, 0.04);
+      color: var(--text-white);
+    }
+
+    .mobile-peers-btn {
+      display: none !important;
+    }
+
+    /* Content Area Screens */
+    .screen {
+      display: none;
+      flex-direction: column;
+      min-width: 0;
+      flex: 1;
+      height: calc(100% - 69px);
+      overflow: hidden;
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    /* Chat Messages Screen */
+    .messages-container {
+      flex: 1 1 0%;
+      min-height: 0;
+      padding: 20px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .messages-container::-webkit-scrollbar {
+      width: 4px;
+    }
+    .messages-container::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .messages-container::-webkit-scrollbar-thumb {
+      background: var(--card-border);
+      border-radius: 2px;
+    }
+
+    /* Unread Messages Separator Design */
+    .unread-separator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      margin: 16px 0;
+      color: var(--neon-green);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      opacity: 0.8;
+      flex-shrink: 0;
+    }
+
+    .unread-separator::before,
+    .unread-separator::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.4), transparent);
+      margin: 0 15px;
+    }
+
+    /* Compact Message Wrapper Structure */
+    .msg-bubble-wrapper {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .msg-bubble-wrapper.sent {
+      align-items: flex-end;
+    }
+
+    .msg-bubble-wrapper.received {
+      align-items: flex-start;
+    }
+
+    /* Form-Fitting Bubble */
+    .msg-bubble {
+      width: fit-content;
+      max-width: 70%;
+      padding: 6px 10px;
+      font-size: 13px;
+      line-height: 1.35;
+      position: relative;
+      word-break: break-word;
+      overflow-wrap: break-word;
+      white-space: pre-wrap;
+    }
+
+    /* Interactive styled blue links */
+    .msg-link {
+      color: var(--link-blue);
+      text-decoration: underline;
+      font-weight: 500;
+      transition: color 0.15s ease;
+    }
+
+    .msg-link:hover {
+      color: var(--link-blue-hover);
+    }
+
+    /* Sent Messages Bubble: Matte Green */
+    .msg-bubble.sent {
+      background-color: #0a2d1d;
+      color: #a4ebd4;
+      border: 1px solid #103e2a;
+      border-radius: 10px 10px 2px 10px;
+    }
+
+    /* Received Messages Bubble: Matte Charcoal */
+    .msg-bubble.received {
+      background-color: #121214;
+      border: 1px solid var(--card-border);
+      color: var(--text-white);
+      border-radius: 10px 10px 10px 2px;
+    }
+
+    /* Meta Line Outside Bubble */
+    .meta-line {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 3px;
+      padding: 0 4px;
+    }
+
+    .meta-tag {
+      font-family: monospace;
+      font-size: 8px;
+      color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Double Checkmark Status Indicators */
+    .delivery-status {
+      display: inline-flex;
+      align-items: center;
+      color: #444448;
+      font-size: 10px;
+      font-weight: bold;
+      line-height: 1;
+    }
+
+    .delivery-status.read {
+      color: var(--neon-green) !important;
+    }
+
+    @keyframes dotBlink {
+      0%, 100% { opacity: 0.3; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1.1); }
+    }
+
+    .typing-indicator-bubble {
+      align-self: flex-start;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 10px;
+      background-color: #121214;
+      border: 1px solid var(--card-border);
+      border-radius: 10px 10px 10px 2px;
+      width: fit-content;
+      flex-shrink: 0;
+    }
+
+    .typing-dot {
+      width: 4px;
+      height: 4px;
+      background-color: #606065;
+      border-radius: 50%;
+      animation: dotBlink 1.4s infinite ease-in-out;
+    }
+
+    .typing-dot:nth-child(1) { animation-delay: 0s; }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    /* Form Inputs */
+    .chat-input-area {
+      padding: 12px 20px 20px;
+      border-top: 1px solid var(--card-border);
+      background-color: var(--bg-black);
+      flex-shrink: 0;
+    }
+
+    .input-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 6px 10px;
+      transition: border-color 0.2s ease;
+    }
+
+    .input-wrapper:focus-within {
+      border-color: #2e2e35;
+    }
+
+    .input-field {
+      flex: 1;
+      background: none;
+      border: none;
+      color: var(--text-white);
+      font-size: 13px;
+      outline: none;
+    }
+
+    /* Send Button */
+    .action-icon-btn.send-btn {
+      background: none;
+      border: none;
+      color: var(--neon-green);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+      border-radius: 50%;
+    }
+
+    .action-icon-btn.send-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2px;
+    }
+
+    .action-icon-btn.send-btn:hover {
+      background-color: rgba(16, 185, 129, 0.08);
+    }
+
+    /* Settings Panel Layout */
+    .settings-container {
+      padding: 20px;
+      max-width: 600px;
+      margin: 0 auto;
+      width: 100%;
+      height: 100%;
+      overflow-y: auto;
+    }
+
+    .set-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .set-card-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .set-card-title svg, .set-card-title i {
+      width: 13px;
+      height: 13px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2px;
+    }
+
+    .set-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+    }
+
+    .set-row:last-child {
+      border-bottom: none;
+    }
+
+    /* Slimmed down Guide Button */
+    .clickable-row.slim-row {
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+      border-radius: 6px;
+      padding: 6px 8px;
+      margin: 0 -8px;
+    }
+
+    .clickable-row:hover {
+      background-color: rgba(255, 255, 255, 0.03);
+    }
+
+    .code-box {
+      background-color: var(--bg-black);
+      border: 1px solid var(--card-border);
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 11px;
+      color: var(--neon-green);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      word-break: break-all;
+    }
+
+    .copy-btn {
+      background: none;
+      border: none;
+      color: var(--text-white);
+      padding: 4px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .copy-btn:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .copy-btn svg {
+      width: 14px;
+      height: 14px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2px;
+      transition: stroke 0.2s ease;
+    }
+
+    @keyframes nuclearPulse {
+      0% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.2); }
+      70% { box-shadow: 0 0 0 10px rgba(255, 59, 48, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
+    }
+
+    .nuke-btn {
+      width: 100%;
+      background: rgba(255, 59, 48, 0.04);
+      border: 1px solid rgba(255, 59, 48, 0.15);
+      border-radius: 10px;
+      padding: 12px;
+      color: #ff8882;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .nuke-btn:hover {
+      background: rgba(255, 59, 48, 0.1);
+      border-color: rgba(255, 59, 48, 0.4);
+      color: #ffffff;
+      animation: nuclearPulse 1.5s infinite;
+    }
+
+    .nuke-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* --- SLEEK CONFIGURABLE MODALS SYSTEM --- */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(4, 4, 5, 0.85);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Shorter, smaller form factor modal layout */
+    .modal-card {
+      background-color: #0f0f12;
+      border: 1px solid var(--card-border); 
+      border-radius: 14px;
+      width: 90%;
+      max-width: 440px;
+      padding: 20px;
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.8);
+      transform: scale(0.92);
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      color: var(--text-white);
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-overlay.active .modal-card {
+      transform: scale(1);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-shrink: 0;
+    }
+
+    .warning-icon {
+      color: #ff453a;
+      width: 20px;
+      height: 20px;
+      stroke-width: 2.25px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .modal-body {
+      overflow-y: auto; 
+      flex: 1;
+      padding-right: 4px;
+    }
+
+    .modal-body p {
+      margin: 0 0 12px 0;
+      line-height: 1.45;
+      color: #9898a0;
+      font-size: 0.88rem;
+    }
+
+    .modal-body ol {
+      margin-left: 18px;
+      margin-bottom: 12px;
+      color: #9898a0;
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+
+    .modal-body ol li {
+      margin-bottom: 8px;
+    }
+
+    .modal-body .danger-subtext {
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 0;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 16px;
+      flex-shrink: 0;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.84rem;
+      font-weight: 600;
+    }
+
+    .btn-secondary {
+      background-color: transparent;
+      color: #a1a1aa;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .btn-secondary:hover {
+      background-color: rgba(255, 255, 255, 0.04);
+      color: var(--text-white);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .btn-danger {
+      background-color: rgba(255, 69, 58, 0.1);
+      color: #ff453a;
+      border: 1px solid rgba(255, 69, 58, 0.25);
+    }
+
+    .btn-danger:hover {
+      background-color: #ff453a;
+      color: #000000;
+      box-shadow: 0 4px 12px rgba(255, 69, 58, 0.25);
+    }
+
+    /* --- TAILWIND COMPATIBLE STYLES FOR THE INCOMING TOKEN MODAL --- */
+    .fixed { position: fixed; }
+    .inset-0 { top: 0; right: 0; bottom: 0; left: 0; }
+    .bg-black\/80 { background-color: rgba(0, 0, 0, 0.8); }
+    .flex { display: flex; }
+    .items-center { align-items: center; }
+    .justify-center { justify-content: center; }
+    .p-4 { padding: 1rem; }
+    .z-50 { z-index: 50; }
+    .relative { position: relative; }
+    .w-full { width: 100%; }
+    .max-w-md { max-width: 28rem; }
+    .bg-\[\#0b0f12\] { background-color: #0b0f12; }
+    .border-\[\#1b2a24\] { border: 1px solid #1b2a24; }
+    .rounded-xl { border-radius: 0.75rem; }
+    .p-6 { padding: 1.5rem; }
+    .shadow-2xl { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
+    .items-start { align-items: flex-start; }
+    .gap-3 { gap: 0.75rem; }
+    .mb-4 { margin-bottom: 1rem; }
+    .text-\[\#10b981\] { color: #10b981; }
+    .mt-0.5 { margin-top: 0.125rem; }
+    .text-white { color: #ffffff; }
+    .text-lg { font-size: 1.125rem; }
+    .font-semibold { font-weight: 600; }
+    .font-sans { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    .mt-1 { margin-top: 0.25rem; }
+    .text-sm { font-size: 0.875rem; }
+    .h-32 { height: 8rem; }
+    .bg-transparent { background-color: transparent; }
+    .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .resize-none { resize: none; }
+    .border-none { border-style: none; }
+    .focus\:ring-0:focus { box-shadow: none; }
+    .py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+    .bg-\[\#046a38\] { background-color: rgba(4, 106, 56, 0.2); border: 1px solid rgba(4, 106, 56, 0.4); }
+    .hover\:bg-\[\#057a41\]:hover { background-color: #046a38; color: #ffffff; }
+    .font-medium { font-weight: 500; }
+
+    #token-modal {
+      display: none; 
+    }
+
+    /* Smooth CSS Overlay Sidebar for Mobile Screens */
+    @media (max-width: 768px) {
+      .x-feed {
+        padding: 0;
+      }
+
+      .app-container {
+        grid-template-columns: 1fr;
+        height: 100vh;
+        height: 100dvh;
+        border-radius: 0;
+        border: none;
+      }
+      
+      .sidebar { 
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 280px;
+        height: 100%;
+        z-index: 500;
+        transform: translateX(-100%);
+        box-shadow: 10px 0 30px rgba(0,0,0,0.7);
+      }
+      
+      .sidebar.mobile-active {
+        transform: translateX(0);
+      }
+      
+      .main-view { 
+        display: flex !important; 
+        width: 100%;
+      }
+      
+      .mobile-peers-btn {
+        display: flex !important;
+        position: fixed;
+        right: 20px;
+        bottom: 90px; 
+        z-index: 40;
+        background-color: #10b981;
+        color: #000000;
+        border-radius: 50%;
+        width: 52px;
+        height: 52px;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
+        border: none;
+      }
+      .mobile-peers-btn svg, .mobile-peers-btn i {
+        width: 22px;
+        height: 22px;
+      }
+    }
+
+    /* Sidebar Mobile Backdrop Mask */
+    .sidebar-mask {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      z-index: 499;
+      display: none;
+    }
+    .sidebar-mask.active {
+      display: block;
+    }
+
+    @keyframes flash-destruction {
+      0% { background-color: var(--bg-black); }
+      20% { background-color: var(--alert-red); }
+      100% { background-color: var(--bg-black); }
+    }
+
+    .nuclear-wipe {
+      animation: flash-destruction 0.7s ease-out forwards;
+    }
+    /* ================================================================
+       SHARED SITE NAVIGATION (mirrors index.html exactly)
+       Outer grid is called .site-grid instead of .app-container to avoid
+       colliding with ichat's own .app-container chat shell below.
+       ================================================================ */
+    .site-grid {
       display: grid;
       grid-template-columns: 1fr;
-      height: 100%;
+      min-height: 100vh;
       background-color: #000000;
     }
 
     @media (min-width: 1024px) {
-      .app-container {
-        grid-template-columns: 1fr 275px 600px 300px 1fr;
+      .site-grid {
+        grid-template-columns: 1fr 275px minmax(0, 900px) 350px 1fr;
       }
     }
 
-    .x-sidebar { display: none; }
+    /* Sidebar Column */
+    .x-sidebar {
+      display: none;
+    }
 
     @media (min-width: 1024px) {
       .x-sidebar {
         display: flex;
         flex-direction: column;
         grid-column: 2;
-        height: 100%;
+        position: sticky;
+        top: 0;
+        height: 100vh;
         padding: 12px 12px 20px 12px;
         border-right: 1px solid #2f3336;
         overflow-y: auto;
@@ -61,12 +1112,14 @@
       }
     }
 
+    /* Main Feed Column (hosts the ichat app shell, centered) */
     .x-feed {
       grid-column: 1;
-      height: 100%;
+      min-height: 100vh;
       display: flex;
-      flex-direction: column;
-      overflow: hidden;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
     }
 
     @media (min-width: 1024px) {
@@ -76,20 +1129,26 @@
       }
     }
 
-    .x-widgets { display: none; }
+    /* Widgets Column */
+    .x-widgets {
+      display: none;
+    }
 
     @media (min-width: 1024px) {
       .x-widgets {
         display: flex;
         flex-direction: column;
         grid-column: 4;
-        height: 100%;
+        position: sticky;
+        top: 0;
+        height: 100vh;
         padding: 20px 24px;
         gap: 20px;
         overflow-y: auto;
       }
     }
 
+    /* Sidebar Navigation Item */
     .nav-item {
       display: flex;
       align-items: center;
@@ -98,7 +1157,7 @@
       border-radius: 9999px;
       font-size: 1.25rem;
       font-weight: 500;
-      color: #e7e9ea;
+      color: #ffffff !important;
       text-decoration: none;
       transition: background-color 0.2s ease;
       width: fit-content;
@@ -116,252 +1175,28 @@
       width: 26px;
       height: 26px;
       stroke-width: 2px;
+      stroke: #ffffff !important;
     }
 
-    .post-button {
-      display: block;
-      margin-top: 8px;
-      width: 91.66%;
-      background-color: #ffffff;
-      color: #000000;
-      font-weight: 700;
-      padding: 14px 0;
-      border-radius: 9999px;
-      text-align: center;
-      text-decoration: none;
-      font-size: 15px;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.3);
-      transition: background-color 0.2s ease;
-    }
-    .post-button:hover { background-color: #e5e5e5; }
-
-    .widget-card {
-      background-color: #16181c;
-      border-radius: 16px;
-      padding: 16px;
-      border: 1px solid #262626;
-    }
-    .widget-card h2 { font-size: 1rem; margin-bottom: 12px; color: #ffffff; }
-    .widget-card p { font-size: 0.75rem; line-height: 1.4; margin-bottom: 12px; color: #a0a0a0; }
-    .widget-card .widget-links { display: flex; flex-wrap: wrap; padding-top: 8px; }
-    .widget-link { color: #71767b; text-decoration: none; margin: 0 8px 6px 0; font-weight: 500; font-size: 0.8rem; transition: color 0.2s; display: inline-block; }
-    .widget-link:hover { color: #e7e9ea; }
-    .widget-card .widget-copyright { font-size: 11px; color: #52525b; margin-top: 12px; margin-bottom: 0; }
-
-    /* Header Section */
-    header {
-      padding: 16px;
-      border-bottom: 1px solid #1a1a1a;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-shrink: 0;
-    }
-
-    .brand-title {
-      font-size: 1.1rem;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-      color: #ffffff;
-    }
-
-    .settings-label {
-      font-size: 0.85rem;
-      color: #888888;
-      cursor: pointer;
-      transition: color 0.2s;
-    }
-
-    .settings-label:hover {
-      color: #ffffff;
-    }
-
-    /* Message Output Area */
-    #chat-area {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      /* Smooth scrolling for iOS */
-      -webkit-overflow-scrolling: touch;
-    }
-
-    .message-bubble {
-      max-width: 85%;
-      padding: 12px 16px;
-      border-radius: 12px;
-      line-height: 1.4;
-      font-size: 0.95rem;
-    }
-
-    .incoming {
-      background-color: #121212;
-      align-self: flex-start;
-      border: 1px solid #222222;
-    }
-
-    .outgoing {
-      background-color: #222222;
-      align-self: flex-end;
-    }
-
-    /* Input & Bottom Control Area (Protected from being cut off) */
-    .bottom-bar {
-      padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); /* Account for modern phone home bars */
-      border-top: 1px solid #1a1a1a;
-      background-color: #000000;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-shrink: 0;
-    }
-
-    .input-wrapper {
-      flex: 1;
-      position: relative;
-      display: flex;
-      align-items: center;
-    }
-
-    .message-input {
-      width: 100%;
-      background-color: #121212;
-      border: 1px solid #222222;
-      border-radius: 24px;
-      padding: 12px 18px;
-      color: #ffffff;
-      font-size: 0.95rem;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    .message-input:focus {
-      border-color: #444444;
-    }
-
-    /* Bottom-Right Contacts Button */
-    .icon-button {
-      background: none;
-      border: none;
-      color: #888888;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 8px;
-      border-radius: 50%;
-      transition: color 0.2s, background-color 0.2s;
-    }
-
-    .icon-button:hover {
-      color: #ffffff;
-      background-color: #121212;
-    }
-
-    .icon-button svg {
-      width: 22px;
-      height: 22px;
-    }
-
-    /* Security Splash Overlay Screen (No blur bugs, pure clean transition) */
-    #blurSplashOverlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: #000000; /* Pure deep black shield */
-      z-index: 9999;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      cursor: pointer;
-      transition: opacity 0.4s ease, visibility 0.4s ease;
-      opacity: 1;
-      visibility: visible;
-      padding: 24px;
-      text-align: center;
-    }
-
-    #blurSplashOverlay.hidden {
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-    }
-
-    .shield-prompt {
-      font-family: monospace;
-      font-size: 0.85rem;
-      letter-spacing: 0.15em;
-      color: #888888;
-      margin-bottom: 12px;
-      text-transform: uppercase;
-    }
-
-    .decrypt-trigger {
-      font-size: 1.1rem;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-      color: #ffffff;
-      border: 1px solid #333333;
-      padding: 16px 28px;
-      border-radius: 8px;
-      transition: background-color 0.2s, border-color 0.2s;
-    }
-
-    #blurSplashOverlay:hover .decrypt-trigger {
-      background-color: #111111;
-      border-color: #555555;
-    }
-
-    /* Hide splash overlay by default on desktop/non-touch if preferred,
-       otherwise remains active on touch devices */
-    @media (hover: hover) and (pointer: fine) {
-      /* Optional: Auto-bypass overlay on standard desktop mouse screens */
-      #blurSplashOverlay {
-        display: none;
-      }
-    }
-
-    /* ---------- Mobile bottom tab bar (site-wide nav) ---------- */
-    .bottom-tab-bar { display: none; }
-    .bottom-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #71767b; text-decoration: none; padding: 6px 10px; }
-    .bottom-tab.active { color: #ffffff; }
-    .bottom-tab svg { width: 20px; height: 20px; }
-
-    @media (max-width: 1023px) {
-      .x-feed { padding-bottom: 56px; }
-      .bottom-tab-bar {
-        display: flex; justify-content: space-around; align-items: center;
-        position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
-        background: rgba(0,0,0,0.97); backdrop-filter: blur(12px);
-        border-top: 1px solid #262626; padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
-      }
-    }
+    .footer-link { color: #71767b; text-decoration: none; margin: 0 8px; font-weight: 500; font-size: 0.8rem; transition: color 0.2s; display: inline-block; margin-bottom: 6px; }
+    .footer-link:hover { color: #e7e9ea; }
   </style>
-    <link rel="stylesheet" href="enhancements.css">
 </head>
 <body>
 
-  <!-- Touch Security Shield Overlay -->
-  <div id="blurSplashOverlay" onclick="decryptEnvironment()">
-    <div class="shield-prompt">SECURE RUNTIME SHIELD</div>
-    <div class="decrypt-trigger">TAP TO DECRYPT RUNTIME ENVIRONMENT</div>
-  </div>
+  <div class="site-grid">
 
-  <div class="app-container">
-
-    <!-- LEFT DESKTOP SIDEBAR -->
+    <!-- LEFT DESKTOP SIDEBAR (exact copy of index.html's site navigation) -->
     <aside class="x-sidebar">
-      <div class="py-2 px-3 mb-4" style="padding: 8px 12px; margin-bottom: 16px;">
+      <!-- Brand Logo -->
+      <div class="py-2 px-3 mb-4">
         <a href="index.html">
-          <img src="favicon2.png" alt="InteractInk Logo" style="width: 40px; height: 40px; object-fit: contain;">
+          <img src="favicon2.png" alt="InteractInk Logo" class="w-10 h-10 object-contain hover:opacity-90 transition">
         </a>
       </div>
-      <nav style="display: flex; flex-direction: column; gap: 4px; width: 100%; margin-bottom: 16px;">
+
+      <!-- Vertical Navigation -->
+      <nav class="flex flex-col gap-1 w-full mb-4">
         <a href="index.html" class="nav-item">
           <i data-lucide="home"></i>
           <span>Home</span>
@@ -391,94 +1226,1054 @@
           <span>Contact</span>
         </a>
       </nav>
-      <a href="index.html" class="post-button">Post</a>
+
+      <!-- Large Desktop Post Button -->
+      <a href="interactink.html" class="mt-2 w-11/12 bg-white text-black hover:bg-neutral-200 font-bold py-3.5 rounded-full text-center transition duration-200 text-[15px] shadow-sm">
+        Post
+      </a>
     </aside>
 
-    <!-- CENTER CHAT FEED -->
-    <div class="x-feed">
-      <header>
-        <div class="brand-title">SAYADI</div>
-        <!-- Changed security configuration to settings -->
-        <div class="settings-label">Settings</div>
-      </header>
+    <!-- CENTER: existing ichat application, unchanged -->
+    <main class="x-feed">
 
-      <!-- Chat/Content Area -->
-      <main id="chat-area">
-        <div class="message-bubble incoming">
-          Environment initialization successful. All channels routed securely.
-        </div>
-        <div class="message-bubble outgoing">
-          Awaiting input instructions.
-        </div>
-      </main>
+  <!-- Mobile Floating Contacts Trigger -->
+  <button id="mobileDrawerTrigger" class="mobile-peers-btn" title="View Contacts">
+    <i data-lucide="users"></i>
+  </button>
+  
+  <div id="sidebarMask" class="sidebar-mask"></div>
 
-      <!-- Input Footer Zone -->
-      <footer class="bottom-bar">
-        <div class="input-wrapper">
-          <input type="text" class="message-input" placeholder="Secure message..." aria-label="Secure message input">
+  <div class="app-container" id="appFrame">
+    
+    <!-- LEFT SIDEBAR -->
+    <aside class="sidebar" id="desktopSidebarContainer">
+      <div class="sidebar-header" id="sidebarHeaderDom">
+        <div class="brand-row">
+          <div class="brand">
+            <img class="custom-logo" src="logo.png" alt="ichat Logo">
+            ichat
+          </div>
+          <div class="telemetry-pill">
+            <span id="osLabel">...</span> | <span id="resolutionLabel">0x0</span>
+            <span id="device-os-badge" style="display:none;">Detecting...</span>
+          </div>
         </div>
+      </div>
 
-        <!-- Bottom-Right Contacts Button -->
-        <button class="icon-button" aria-label="Contacts list">
-          <!-- Lucide Contacts Icon replacement -->
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-            <circle cx="9" cy="7" r="4" />
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-          </svg>
-        </button>
-      </footer>
-    </div>
-
-    <!-- RIGHT DESKTOP SIDEBAR -->
-    <aside class="x-widgets">
-      <div class="widget-card">
-        <h2>About InteractInk</h2>
-        <p>A zero-friction, layout-focused environment to speak your mind freely.</p>
-        <div class="widget-links">
-          <a href="about.html" class="widget-link">About</a>
-          <a href="faq.html" class="widget-link">FAQ</a>
-          <a href="blog.html" class="widget-link">Blog</a>
-          <a href="contact.html" class="widget-link">Contact</a>
-          <a href="terms.html" class="widget-link">Terms</a>
-          <a href="guidelines.html" class="widget-link">Rules</a>
-          <a href="privacy.html" class="widget-link">Privacy</a>
+      <div class="chats-list" id="chatsList">
+        <!-- Self Notes Hub -->
+        <div class="chat-item active" id="selfChatNode" onclick="selectChat('self')">
+          <div class="avatar-indicator">
+            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            <div id="status-self" class="status-dot online"></div>
+          </div>
+          <div class="chat-info">
+            <div class="chat-name">Self-Secured Notes</div>
+            <div class="chat-preview" id="lastMessagePreview">Local cryptographic sandbox</div>
+          </div>
+          <div class="chat-actions">
+            <button class="action-btn delete-chat-btn" onclick="deleteHistory('self', event)" title="Clear local notes">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </div>
         </div>
-        <p class="widget-copyright">&copy; 2026 InteractInk</p>
+      </div>
+
+      <!-- Tunnel Connection Input Card -->
+      <div class="connect-card" id="sidebarConnectCardDom">
+        <div class="connect-card-title">Establish Tunnel</div>
+        <input type="text" class="connect-input" id="peerCodeInput" placeholder="Paste return token...">
+        
+        <div style="display:flex; flex-direction:column; gap: 8px;">
+          <button class="connect-btn" id="complete-connection-btn" onclick="acceptReturnToken()">
+            <i data-lucide="check-circle"></i> Complete Tunnel
+          </button>
+        </div>
       </div>
     </aside>
 
-    <!-- MOBILE BOTTOM TAB BAR -->
-    <nav class="bottom-tab-bar" aria-label="Mobile navigation">
-            <a href="index.html" class="bottom-tab"><i data-lucide="home"></i></a>
-            <a href="interactink.html" class="bottom-tab"><i data-lucide="message-square"></i></a>
-            <a href="ichat.html" class="bottom-tab active"><i data-lucide="message-circle-code"></i></a>
-            <a href="settings.html" class="bottom-tab"><i data-lucide="settings"></i></a>
-        </nav>
+    <!-- RIGHT MAIN VIEWPORT -->
+    <main class="main-view">
+      <header class="view-header">
+        <div id="activeChatMeta">
+          <h4 style="font-size: 14px; font-weight: 700; color: var(--text-white);" id="activeChatTitle">Self-Secured Notes</h4>
+          <span id="memberCountDisplay" style="font-size: 10px; color: var(--neon-green); display: none;"></span>
+          <span style="font-size: 10px; color: var(--text-muted); display: block;" id="activeChatStatus"></span>
+        </div>
+
+        <div class="view-tabs">
+          <button class="view-btn active" id="btnChatView" onclick="switchView('chat')">
+            <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            Feed
+          </button>
+          <button class="view-btn" id="btnSettingsView" onclick="switchView('settings')">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Chat Settings
+          </button>
+        </div>
+      </header>
+
+      <!-- View Area 1: Message Flow -->
+      <section class="screen active" id="chatScreen">
+        <div class="messages-container" id="messagesLog"></div>
+
+        <div class="chat-input-area">
+          <div class="input-wrapper">
+            <input type="text" class="input-field" id="messageField" placeholder="Send a message..." onkeydown="handleEnter(event)" oninput="broadcastTypingState()">
+            <button class="action-icon-btn send-btn" id="sendBtn" onclick="sendMessage()">
+              <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- View Area 2: Settings Panel -->
+      <section class="screen" id="settingsScreen">
+        <div class="settings-container">
+          
+          <!-- Slimmed Application Guide Row -->
+          <div class="set-card" style="padding: 12px 16px;">
+            <div class="set-row clickable-row slim-row" id="howToUseRow">
+              <div style="font-size: 12px; font-weight: 600; color: var(--text-white); display:flex; align-items:center; gap:6px;">
+                <i data-lucide="help-circle" style="width:14px; height:14px;"></i> How to start a secure chat
+              </div>
+              <i data-lucide="chevron-right" style="width: 14px; height: 14px; color: var(--text-muted);"></i>
+            </div>
+          </div>
+
+          <!-- Pure Serverless Panel -->
+          <div class="set-card">
+            <span class="set-card-title">
+              <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              Serverless P2P Cryptography
+            </span>
+            <p style="font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 12px;">
+              Signaling tokens transfer directly over WebRTC, completely bypassing intermediating coordinate logging nodes.
+            </p>
+
+            <div class="qr-button-container" style="display:block;">
+              <button class="connect-btn" id="create-invite-btn" style="font-size:11px; padding:10px; width:100%;" onclick="generateInviteLink()">
+                <i data-lucide="link"></i> Invite Link
+              </button>
+            </div>
+            
+            <div style="font-size: 10px; color: var(--text-muted); margin: 12px 0 6px 0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;">
+              Your Active WebRTC Code
+            </div>
+            <div class="code-box" style="margin-bottom: 16px;">
+              <span id="identityToken" style="font-size: 9px; max-height: 60px; overflow-y: auto; width: 100%;">Create an invitation to compile local tokens...</span>
+              <button class="copy-btn" id="tokenCopyBtn" onclick="copyIdentityToken()" title="Copy Token">
+                <svg id="copyBtnIcon" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="set-card">
+            <span class="set-card-title">
+              <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+              Instant Data Erasure
+            </span>
+            <p style="font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 16px;">
+              Instantly wipe all local key caches and history databases from memory. Completely restores original sandbox state.
+            </p>
+            <button class="nuke-btn" id="trigger-nuclear-wipeout-btn">
+              <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm0 3.5L20 19H4L12 5.5zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z"/></svg>
+              TRIGGER NUCLEAR WIPEOUT
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
 
   </div>
 
+    </main>
+
+    <!-- RIGHT DESKTOP SIDEBAR (exact copy of index.html's widget) -->
+    <aside class="x-widgets">
+      <div class="bg-[#16181c] rounded-2xl p-4 border border-neutral-900">
+        <h2 class="text-white font-bold text-base mb-3">About InteractInk</h2>
+        <p class="text-neutral-400 text-xs leading-normal mb-3">
+          A zero-friction, layout-focused environment to speak your mind freely.
+        </p>
+        <div class="flex flex-wrap pt-2">
+          <a href="about.html" class="footer-link">About</a>
+          <a href="faq.html" class="footer-link">FAQ</a>
+          <a href="blog.html" class="footer-link">Blog</a>
+          <a href="contact.html" class="footer-link">Contact</a>
+          <a href="terms.html" class="footer-link">Terms</a>
+          <a href="guidelines.html" class="footer-link">Rules</a>
+          <a href="privacy.html" class="footer-link">Privacy</a>
+        </div>
+        <p class="text-[11px] text-neutral-600 mt-3">&copy; 2026 InteractInk</p>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- DETAILED HANDSHAKE GUIDE MODAL -->
+  <div id="how-to-use-modal" class="modal-overlay">
+    <div class="modal-card" style="border-color: rgba(16, 185, 129, 0.3); max-width: 440px;">
+      <div class="modal-header" style="margin-bottom: 10px;">
+        <i data-lucide="help-circle" class="warning-icon" style="color: var(--neon-green);"></i>
+        <h3>How to Start a Secure Chat</h3>
+      </div>
+      <div class="modal-body">
+        <p>Because ichat operates entirely <strong>serverless</strong>, devices need a direct 2-step handshake to discover each other's local network coordinates.</p>
+        <ol style="margin-left: 14px; margin-bottom: 0; font-size: 0.84rem;">
+          <li><strong>Host Generates Offer:</strong> Click <strong>Invite Link</strong> to build a secure WebRTC invitation and <strong>copy it</strong> to your clipboard. Deliver it to your peer securely.</li>
+          <li><strong>Peer Generates Answer:</strong> Your partner simply opens that <strong>invitation link</strong> in their browser to automatically generate a <strong>Return Token</strong>.</li>
+          <li><strong>Complete Tunnel:</strong> <strong>Copy</strong> your partner's Return Token, paste it into the <strong>Establish Tunnel</strong> input field on your device, and click <strong>Complete Tunnel</strong>.</li>
+        </ol>
+        <p style="margin-top: 10px; font-size: 0.8rem; color: var(--neon-green);"><strong>Once processing finishes, the session is fully active.</strong></p>
+      </div>
+      <div class="modal-footer" style="margin-top: 12px;">
+        <button id="close-guide-btn" class="btn btn-secondary" style="padding: 6px 12px; font-size:0.8rem;">Got It</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NUCLEAR WARNING MODAL -->
+  <div id="nuclear-modal" class="modal-overlay">
+    <div class="modal-card" style="border-color: rgba(255, 59, 48, 0.3);">
+      <div class="modal-header">
+        <i data-lucide="triangle-alert" class="warning-icon" style="color: #ff453a;"></i>
+        <h3 style="color: #ff453a;">Confirm Nuclear Wipeout</h3>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure? This will permanently delete all logs, decrypted databases, and connection keys from this device.</p>
+        <p class="danger-subtext" style="color: #ff453a;">This action is irreversible.</p>
+      </div>
+      <div class="modal-footer">
+        <button id="cancel-wipeout-btn" class="btn btn-secondary">Cancel</button>
+        <button id="confirm-wipeout-btn" class="btn btn-danger">Yes, Wipe Everything</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DELETE CHAT MODAL -->
+  <div id="delete-chat-modal" class="modal-overlay">
+    <div class="modal-card" style="border-color: rgba(255, 255, 255, 0.08);">
+      <div class="modal-header">
+        <i data-lucide="trash-2" class="warning-icon" style="color: var(--text-muted);"></i>
+        <h3 style="color: var(--text-white);">Clear Chat Records</h3>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to clear all local cryptographic database records for <span id="delete-target-name" style="color: var(--neon-green); font-family: monospace;"></span>?</p>
+        <p class="danger-subtext" style="color: var(--text-muted);">This action is irreversible.</p>
+      </div>
+      <div class="modal-footer">
+        <button id="cancel-delete-btn" class="btn btn-secondary">Cancel</button>
+        <button id="confirm-delete-btn" class="btn" style="background-color: var(--neon-green); color: #000; font-weight: 700;">Clear Records</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAT RENAME MODAL -->
+  <div id="rename-chat-modal" class="modal-overlay">
+    <div class="modal-card" style="border-color: rgba(255, 255, 255, 0.08);">
+      <div class="modal-header">
+        <i data-lucide="pencil" class="warning-icon" style="color: var(--neon-green);"></i>
+        <h3 style="color: var(--text-white);">Configure Alias</h3>
+      </div>
+      <div class="modal-body">
+        <p>Assign a custom connection tag for:<br><span id="rename-target-id" style="color: var(--text-muted); font-family: monospace; font-size: 11px;"></span></p>
+        <input type="text" id="custom-alias-input" class="connect-input" style="width: 100%; padding: 10px; font-size: 13px; margin-top: 8px;" placeholder="Alias Name...">
+      </div>
+      <div class="modal-footer">
+        <button id="cancel-rename-btn" class="btn btn-secondary">Cancel</button>
+        <button id="confirm-rename-btn" class="btn" style="background-color: var(--neon-green); color: #000; font-weight: 700;">Save Alias</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- INTEGRATED WEBRTC RETURN TOKEN MODAL BACKGROUND -->
+  <div id="token-modal" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+    <div class="relative w-full max-w-md bg-[#0b0f12] border border-[#1b2a24] rounded-xl p-6 shadow-2xl">
+      
+      <!-- Modal Header -->
+      <div class="flex items-start gap-3 mb-4">
+        <div class="text-[#10b981] mt-0.5">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div>
+          <h3 class="text-white text-lg font-semibold font-sans">Return Token Generated</h3>
+          <p class="text-white text-sm mt-1">Your browser compiled your WebRTC Answer. Deliver this back to your host to open the tunnel:</p>
+        </div>
+      </div>
+
+      <!-- Token Textbox Area (Removed Gray background) -->
+      <div class="mb-4">
+        <textarea id="token-text" readonly class="w-full h-32 bg-transparent text-[#10b981] font-mono text-sm resize-none border-none focus:outline-none focus:ring-0" style="outline: none; background: transparent;"></textarea>
+      </div>
+
+      <!-- Copy Button Action -->
+      <button id="copy-token-btn" class="w-full py-3 bg-[#046a38] hover:bg-[#057a41] text-white font-medium rounded-lg transition-colors flex justify-center items-center gap-2 focus:outline-none">
+        Copy Text
+      </button>
+    </div>
+  </div>
+
   <script>
-    // Handle splash shield removal
-    function decryptEnvironment() {
-      const overlay = document.getElementById('blurSplashOverlay');
-      if (overlay) {
-        overlay.classList.add('hidden');
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    let peerConnection = null;
+    let dataChannel = null;
+    let localKeyPair = null;
+    let sharedCryptoKey = null; 
+    let activeChannel = 'self';
+    let typingTimeout = null;
+    let chatToDeletePending = null;
+    let renameTargetId = null;
+    let heartbeatInterval; 
+
+    let messageHistory = JSON.parse(localStorage.getItem('ink_message_history')) || [];
+    let unreadCountMap = JSON.parse(localStorage.getItem('ink_unread_counts')) || {};
+    let aliases = JSON.parse(localStorage.getItem('ink_aliases')) || {};
+
+    const iceServers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+    // DOM Elements for incoming token target layout configurations
+    const tokenModal = document.getElementById('token-modal');
+    const copyTokenBtn = document.getElementById('copy-token-btn');
+    const tokenText = document.getElementById('token-text');
+
+    function dismissModal() {
+      tokenModal.style.display = 'none'; 
+    }
+
+    copyTokenBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(tokenText.value);
+        copyTokenBtn.innerHTML = '<i data-lucide="check" style="width: 20px; height: 20px;"></i> Copied!';
+        lucide.createIcons();
+        copyTokenBtn.style.backgroundColor = '#10b981';
+        
+        setTimeout(() => {
+          dismissModal();
+          copyTokenBtn.innerHTML = 'Copy Text';
+          copyTokenBtn.style.backgroundColor = '#046a38';
+        }, 1500);
+      } catch (err) {
+        console.error('Failed to copy token automatically: ', err);
+        alert('Failed to copy token. Please select and copy manually.');
+      }
+    });
+
+    tokenModal.addEventListener('click', (e) => {
+      if (e.target === tokenModal) {
+        dismissModal();
+      }
+    });
+
+    function getDeviceOS() {
+      const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+      if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) return "iOS";
+      if (/android/i.test(userAgent)) return "Android";
+      if (/Macintosh|Mac OS X/i.test(userAgent)) return "macOS";
+      if (/Windows/i.test(userAgent)) return "Windows";
+      if (/Linux/.test(navigator.platform)) return "Linux Desktop";
+      return "Unknown Device";
+    }
+
+    let resizeTimeout;
+    function runDiagnostics() {
+      const os = getDeviceOS();
+      document.getElementById('osLabel').textContent = os;
+      document.getElementById('device-os-badge').textContent = os;
+      document.getElementById('resolutionLabel').textContent = `${window.innerWidth}x${window.innerHeight}`;
+    }
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(runDiagnostics, 250);
+    });
+    runDiagnostics();
+
+    document.getElementById('mobileDrawerTrigger').addEventListener('click', () => {
+      document.getElementById('desktopSidebarContainer').classList.toggle('mobile-active');
+      document.getElementById('sidebarMask').classList.toggle('active');
+    });
+
+    document.getElementById('sidebarMask').addEventListener('click', () => {
+      document.getElementById('desktopSidebarContainer').classList.remove('mobile-active');
+      document.getElementById('sidebarMask').classList.remove('active');
+    });
+
+    document.getElementById('howToUseRow').addEventListener('click', () => {
+      document.getElementById('how-to-use-modal').classList.add('active');
+    });
+    document.getElementById('close-guide-btn').addEventListener('click', () => {
+      document.getElementById('how-to-use-modal').classList.remove('active');
+    });
+    document.getElementById('trigger-nuclear-wipeout-btn').addEventListener('click', () => {
+      document.getElementById('nuclear-modal').classList.add('active');
+    });
+    document.getElementById('cancel-wipeout-btn').addEventListener('click', () => {
+      document.getElementById('nuclear-modal').classList.remove('active');
+    });
+    document.getElementById('confirm-wipeout-btn').addEventListener('click', () => {
+      localStorage.clear();
+      document.body.classList.add('nuclear-wipe');
+      setTimeout(() => window.location.reload(), 700);
+    });
+    document.getElementById('cancel-delete-btn').addEventListener('click', () => {
+      document.getElementById('delete-chat-modal').classList.remove('active');
+    });
+    document.getElementById('confirm-delete-btn').addEventListener('click', () => {
+      executeDeletedHistoryWipe();
+      document.getElementById('delete-chat-modal').classList.remove('active');
+    });
+    document.getElementById('cancel-rename-btn').addEventListener('click', () => {
+      document.getElementById('rename-chat-modal').classList.remove('active');
+    });
+    document.getElementById('confirm-rename-btn').addEventListener('click', () => {
+      const val = document.getElementById('custom-alias-input').value.trim();
+      if(val && renameTargetId) {
+        setAlias(renameTargetId, val);
+      }
+      document.getElementById('rename-chat-modal').classList.remove('active');
+    });
+
+    function linkify(text) {
+      const urlPattern = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+      return text.replace(urlPattern, '<a href="$1" target="_blank" class="msg-link">$1</a>');
+    }
+
+    async function generateECDHKeys() {
+      localKeyPair = await window.crypto.subtle.generateKey(
+        { name: "ECDH", namedCurve: "P-256" }, true, ["deriveKey", "deriveBits"]
+      );
+    }
+
+    async function exportPublicKey() {
+      const exported = await window.crypto.subtle.exportKey("raw", localKeyPair.publicKey);
+      return btoa(String.fromCharCode.apply(null, new Uint8Array(exported)));
+    }
+
+    async function deriveSharedSecret(remotePublicKeyBase64) {
+      const binaryString = atob(remotePublicKeyBase64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const importedRemotePublicKey = await window.crypto.subtle.importKey(
+        "raw", bytes, { name: "ECDH", namedCurve: "P-256" }, true, []
+      );
+      sharedCryptoKey = await window.crypto.subtle.deriveKey(
+        { name: "ECDH", public: importedRemotePublicKey },
+        localKeyPair.privateKey,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt", "decrypt"]
+      );
+    }
+
+    async function encryptPayload(text) {
+      if (activeChannel === 'self') {
+        return {
+          ciphertext: btoa(unescape(encodeURIComponent(text))),
+          iv: btoa(String.fromCharCode.apply(null, window.crypto.getRandomValues(new Uint8Array(12))))
+        };
+      }
+      const iv = window.crypto.getRandomValues(new Uint8Array(12));
+      const encoder = new TextEncoder();
+      let cipherBuffer = sharedCryptoKey ? 
+        await window.crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, sharedCryptoKey, encoder.encode(text)) : 
+        encoder.encode(text);
+      return {
+        ciphertext: btoa(String.fromCharCode.apply(null, new Uint8Array(cipherBuffer))),
+        iv: btoa(String.fromCharCode.apply(null, iv))
+      };
+    }
+
+    async function decryptPayload(ciphertextB64, ivB64, isSelfChat = false) {
+      try {
+        if (isSelfChat) {
+          return decodeURIComponent(escape(atob(ciphertextB64)));
+        }
+        if (!sharedCryptoKey) {
+          return "[Decrypted Data File]";
+        }
+        const iv = new Uint8Array(atob(ivB64).split("").map(c => c.charCodeAt(0)));
+        const rawCipher = new Uint8Array(atob(ciphertextB64).split("").map(c => c.charCodeAt(0)));
+        const decrypted = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, sharedCryptoKey, rawCipher);
+        return new TextDecoder().decode(decrypted);
+      } catch (e) {
+        return "[Decrypted Data File]";
       }
     }
 
-    // Keep active viewport calculations accurate for mobile virtual keyboards
-    const adjustViewportHeight = () => {
-      document.body.style.height = `${window.innerHeight}px`;
-    };
+    function packSDP(sdp) {
+      return btoa(sdp.replace(/\r\n/g, '|'));
+    }
 
-    window.addEventListener('resize', adjustViewportHeight);
-    window.addEventListener('orientationchange', adjustViewportHeight);
-    adjustViewportHeight();
+    function unpackSDP(packed) {
+      try {
+        return atob(packed).replace(/\|/g, '\r\n');
+      } catch(e) {
+        return packed;
+      }
+    }
 
-    if (window.lucide) lucide.createIcons();
+    function startHeartbeat(channelInstance) {
+      clearInterval(heartbeatInterval);
+      heartbeatInterval = setInterval(() => {
+        if (channelInstance.readyState === 'open') {
+          channelInstance.send(JSON.stringify({ type: 'PING' }));
+        }
+      }, 30000);
+    }
+
+    function copyIdentityToken() {
+      const tokenElement = document.getElementById('identityToken');
+      if (!tokenElement) return;
+      const text = tokenElement.textContent;
+      if (text.includes('Create an invitation')) return;
+      
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('tokenCopyBtn');
+        if (btn) {
+          const originalHTML = btn.innerHTML;
+          btn.innerHTML = '<i data-lucide="check" style="width: 14px; height: 14px; color: var(--neon-green);"></i>';
+          lucide.createIcons();
+          
+          setTimeout(() => {
+            btn.innerHTML = originalHTML;
+          }, 2000);
+        }
+      });
+    }
+
+    async function generateInviteLink() {
+      try {
+        if (peerConnection) {
+          peerConnection.close();
+        }
+        await generateECDHKeys();
+        initPeerConnection();
+        
+        dataChannel = peerConnection.createDataChannel("whisper-chan");
+        setupDataChannelCallbacks();
+
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+      } catch (error) {
+        console.error("SYSTEM LOG: Error creating connection offer.", error);
+      }
+    }
+
+    function initPeerConnection() {
+        peerConnection = new RTCPeerConnection(iceServers);
+
+        let hasFiredToken = false;
+        const fireTokenPayload = () => {
+          if (hasFiredToken) return;
+          hasFiredToken = true;
+          const packedOffer = packSDP(peerConnection.localDescription.sdp);
+          const inviteUrl = `${window.location.origin}${window.location.pathname}#offer=${packedOffer}`;
+          
+          const labelTarget = document.getElementById('identityToken');
+          if (labelTarget) labelTarget.textContent = inviteUrl;
+
+          copyIdentityToken();
+          appendSysMessage("Invite Link updated and copied!");
+          switchView('settings');
+        };
+
+        setTimeout(() => {
+          if (peerConnection && peerConnection.localDescription && !hasFiredToken) {
+            fireTokenPayload();
+          }
+        }, 1500);
+
+        peerConnection.onicegatheringstatechange = () => {
+          if (peerConnection.iceGatheringState === "complete") {
+            fireTokenPayload();
+          }
+        };
+
+        peerConnection.onicecandidate = (event) => {
+          if (!event.candidate) {
+            fireTokenPayload();
+          }
+        };
+    }
+
+    async function handleIncomingInvite() {
+      const hash = window.location.hash;
+      if (!hash.startsWith('#offer=')) return;
+
+      try {
+        const packedOffer = hash.substring(7);
+        let offerSDP;
+        
+        try {
+          if (packedOffer.startsWith('{') || atob(packedOffer).startsWith('{')) {
+             const rawData = packedOffer.startsWith('{') ? packedOffer : atob(packedOffer);
+             const parsed = JSON.parse(rawData);
+             offerSDP = parsed.sdp || parsed;
+          } else {
+             offerSDP = unpackSDP(packedOffer);
+          }
+        } catch(tokErr) {
+          offerSDP = unpackSDP(packedOffer);
+        }
+
+        await generateECDHKeys();
+        peerConnection = new RTCPeerConnection(iceServers);
+
+        peerConnection.ondatachannel = (event) => {
+          dataChannel = event.channel;
+          setupDataChannelCallbacks();
+        };
+
+        await peerConnection.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: offerSDP }));
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+
+        let hasFiredAnswer = false;
+        const fireAnswerPayload = () => {
+          if (hasFiredAnswer) return;
+          hasFiredAnswer = true;
+          const packedAnswer = packSDP(peerConnection.localDescription.sdp);
+          
+          tokenText.value = packedAnswer;
+          tokenModal.style.display = 'flex';
+        };
+
+        setTimeout(() => {
+          if (peerConnection && peerConnection.localDescription && !hasFiredAnswer) {
+            fireAnswerPayload();
+          }
+        }, 1500);
+
+        peerConnection.onicegatheringstatechange = () => {
+          if (peerConnection.iceGatheringState === "complete") {
+            fireAnswerPayload();
+          }
+        };
+
+        peerConnection.onicecandidate = (event) => {
+          if (!event.candidate) {
+            fireAnswerPayload();
+          }
+        };
+
+        addPeerToSidebarList("Remote-Peer");
+      } catch (error) {
+        console.error("SYSTEM LOG: Failed to parse incoming connection offer token.", error);
+      }
+    }
+
+    async function acceptReturnToken() {
+      const tokenInput = document.getElementById('peerCodeInput');
+      let token = tokenInput.value.trim();
+      
+      if (!token) {
+        appendSysMessage("Error: Please paste the Return Token first.");
+        return;
+      }
+
+      try {
+        if (token.includes('#answer=')) {
+            token = token.split('#answer=')[1];
+        } else if (token.includes('#offer=')) {
+            token = token.split('#offer=')[1];
+        }
+
+        let sdp;
+        try {
+          const decoded = atob(token);
+          if (decoded.startsWith('{')) {
+            sdp = JSON.parse(decoded).sdp;
+          } else {
+            sdp = unpackSDP(token);
+          }
+        } catch(e) {
+          sdp = unpackSDP(token);
+        }
+        
+        if (peerConnection && (peerConnection.signalingState === "have-local-offer" || peerConnection.signalingState === "stable")) {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription({ 
+              type: 'answer', 
+              sdp: sdp 
+            }));
+            addPeerToSidebarList("Remote-Peer");
+            appendSysMessage("Tunnel established successfully!");
+            tokenInput.value = '';
+        } else {
+            alert("Connection configuration mismatch. Ensure you generated an invitation offer first.");
+        }
+      } catch (err) {
+        console.error("Connection Error: ", err);
+        appendSysMessage("Failed to securely verify parsed handshake token.");
+      }
+    }
+
+    function setupDataChannelCallbacks() {
+      setupDataChannelEvents(dataChannel);
+    }
+
+    function setupDataChannelEvents(channel) {
+      if (!channel) return;
+      
+      channel.onopen = async () => {
+        const preview = document.getElementById(`preview-Remote-Peer`);
+        if (preview) preview.textContent = "Data tunnel active...";
+        document.getElementById('activeChatStatus').textContent = "Establishing Cryptographic Handshake...";
+        
+        const dot = document.getElementById(`status-Remote-Peer`);
+        if (dot) { 
+          dot.classList.remove('offline'); 
+          dot.classList.add('online'); 
+        }
+        
+        startHeartbeat(channel);
+
+        const publicExchangeKey = await exportPublicKey();
+        channel.send(JSON.stringify({ 
+          type: 'handshake', 
+          publicKey: publicExchangeKey 
+        }));
+      };
+
+      channel.onclose = () => {
+        clearInterval(heartbeatInterval);
+        const dot = document.getElementById(`status-Remote-Peer`);
+        if (dot) { 
+          dot.classList.remove('online'); 
+          dot.classList.add('offline'); 
+        }
+        document.getElementById('activeChatStatus').textContent = "Peer Disconnected";
+        appendSysMessage("Secure tunnel terminated by peer.");
+      };
+
+      channel.onmessage = (event) => {
+        handleIncomingMessage(event.data);
+      };
+    }
+
+    async function handleIncomingMessage(rawData) {
+        let data;
+        try { data = JSON.parse(rawData); } catch(e) { return; }
+        
+        if (data.type === 'PING') return; 
+
+        if (data.type === 'handshake') {
+          await deriveSharedSecret(data.publicKey);
+          document.getElementById('activeChatStatus').textContent = "E2EE Session Active (AES-GCM-256)";
+          const preview = document.getElementById(`preview-Remote-Peer`);
+          if (preview) preview.textContent = "Safe Connection Ready";
+          appendSysMessage("Direct End-to-End Handshake Complete.");
+          
+        } else if (data.type === 'typing') {
+          showRemoteTypingIndicator(data.isTyping);
+          
+        } else if (data.type === 'read-receipt') {
+          markOurMessagesAsReadInStorage("Remote-Peer");
+          if (activeChannel === "Remote-Peer") updateReadReceiptStyles();
+          
+        } else if (data.type === 'message') {
+          showRemoteTypingIndicator(false);
+          
+          const plaintext = await decryptPayload(data.payload.ciphertext, data.payload.iv, false);
+          let isUnread = (activeChannel !== "Remote-Peer");
+          
+          saveAndDisplayMessage(plaintext, 'received', data.payload.ciphertext, 'text', "Remote-Peer", isUnread);
+          
+          if (isUnread) {
+            unreadCountMap["Remote-Peer"] = (unreadCountMap["Remote-Peer"] || 0) + 1;
+            localStorage.setItem('ink_unread_counts', JSON.stringify(unreadCountMap));
+            updateUnreadSidebarBadge("Remote-Peer");
+          } else {
+            sendReadReceipt("Remote-Peer");
+          }
+        }
+    }
+
+    function broadcastTypingState() {
+      if (activeChannel !== 'self' && dataChannel && dataChannel.readyState === 'open') {
+        dataChannel.send(JSON.stringify({ type: 'typing', isTyping: true }));
+        if (typingTimeout) clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+          if (dataChannel && dataChannel.readyState === 'open') {
+            dataChannel.send(JSON.stringify({ type: 'typing', isTyping: false }));
+          }
+        }, 2000);
+      }
+    }
+
+    function showRemoteTypingIndicator(shouldShow) {
+      const existingIndicator = document.getElementById('typingIndicatorElement');
+      if (shouldShow) {
+        if (!existingIndicator) {
+          const container = document.getElementById('messagesLog');
+          const indicator = document.createElement('div');
+          indicator.className = 'typing-indicator-bubble';
+          indicator.id = 'typingIndicatorElement';
+          indicator.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+          container.appendChild(indicator);
+          container.scrollTop = container.scrollHeight;
+        }
+      } else if (existingIndicator) {
+        existingIndicator.remove();
+      }
+    }
+
+    function loadMessageLog() {
+      const container = document.getElementById('messagesLog');
+      container.innerHTML = '';
+      const filtered = messageHistory.filter(m => m.channel === activeChannel);
+
+      if (filtered.length === 0) {
+        container.innerHTML = activeChannel === 'self' ? 
+          '<div class="msg-bubble-wrapper received"><div class="msg-bubble received">Welcome to your local cryptographic vault. Any texts sent here are processed and stored locally.</div><span class="meta-tag" style="margin-top:3px; padding:0 4px;">Self-Secured Sandbox</span></div>' : 
+          `<div class="msg-bubble-wrapper received"><div class="msg-bubble received">Established secure connection with ${aliases[activeChannel] || activeChannel}. Ready to chat anonymously.</div><span class="meta-tag" style="margin-top:3px; padding:0 4px;">Direct P2P Link</span></div>`;
+      } else {
+        let insertedUnreadDivider = false;
+        filtered.forEach(m => {
+          if (m.unread && m.sender !== 'me' && !insertedUnreadDivider) {
+            const separator = document.createElement('div');
+            separator.className = 'unread-separator';
+            separator.textContent = 'Unread Messages';
+            container.appendChild(separator);
+            insertedUnreadDivider = true;
+          }
+          renderTextBubble(m.content, m.sender, m.hash, m.read);
+          if (m.unread) m.unread = false;
+        });
+        localStorage.setItem('ink_message_history', JSON.stringify(messageHistory));
+        if (unreadCountMap[activeChannel]) {
+          unreadCountMap[activeChannel] = 0;
+          localStorage.setItem('ink_unread_counts', JSON.stringify(unreadCountMap));
+          updateUnreadSidebarBadge(activeChannel);
+          sendReadReceipt(activeChannel);
+        }
+      }
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function saveAndDisplayMessage(content, sender, hash, type, channel, isUnread = false) {
+      messageHistory.push({ channel, sender, content, hash, type, timestamp: Date.now(), unread: isUnread, read: false });
+      localStorage.setItem('ink_message_history', JSON.stringify(messageHistory));
+      if (channel === activeChannel) {
+        showRemoteTypingIndicator(false);
+        renderTextBubble(content, sender, hash, false);
+        const container = document.getElementById('messagesLog');
+        container.scrollTop = container.scrollHeight;
+      }
+      const preview = channel === 'self' ? document.getElementById('lastMessagePreview') : document.getElementById(`preview-${channel}`);
+      if (preview) preview.textContent = content;
+    }
+
+    function renderTextBubble(text, sender, hash, isReadByPeer = false) {
+      const container = document.getElementById('messagesLog');
+      const wrapper = document.createElement('div');
+      wrapper.className = `msg-bubble-wrapper ${sender === 'me' ? 'sent' : 'received'}`;
+      
+      const bubble = document.createElement('div');
+      bubble.className = `msg-bubble ${sender === 'me' ? 'sent' : 'received'}`;
+      
+      const escapedText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      bubble.innerHTML = linkify(escapedText);
+      
+      const metaLine = document.createElement('div');
+      metaLine.className = 'meta-line';
+      const meta = document.createElement('span');
+      meta.className = 'meta-tag';
+      meta.textContent = `Crypto Hash: ${hash.substring(0, 16)}...`;
+      metaLine.appendChild(meta);
+
+      if (sender === 'me' && activeChannel !== 'self') {
+        const checkmarks = document.createElement('span');
+        checkmarks.className = `delivery-status ${isReadByPeer ? 'read' : ''}`;
+        checkmarks.innerHTML = '&#10003;&#10003;';
+        metaLine.appendChild(checkmarks);
+      }
+      wrapper.appendChild(bubble);
+      wrapper.appendChild(metaLine);
+      container.appendChild(wrapper);
+    }
+
+    function appendSysMessage(text) {
+      const container = document.getElementById('messagesLog');
+      const item = document.createElement('div');
+      item.className = 'meta-tag';
+      item.style.textAlign = 'center';
+      item.style.margin = '8px 0';
+      item.textContent = `SYSTEM LOG: ${text}`;
+      container.appendChild(item);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    async function sendMessage() {
+      const fld = document.getElementById('messageField');
+      const text = fld.value.trim();
+      if (!text) return;
+      if (typingTimeout) {
+        clearTimeout(typingTimeout);
+        if (activeChannel !== 'self' && dataChannel && dataChannel.readyState === 'open') {
+          dataChannel.send(JSON.stringify({ type: 'typing', isTyping: false }));
+        }
+      }
+      const encrypted = await encryptPayload(text);
+      if (activeChannel !== 'self' && dataChannel && dataChannel.readyState === 'open' && sharedCryptoKey) {
+        dataChannel.send(JSON.stringify({ type: 'message', payload: encrypted }));
+      }
+      saveAndDisplayMessage(text, 'me', encrypted.ciphertext, 'text', activeChannel);
+      fld.value = '';
+    }
+
+    function handleEnter(event) { if (event.key === 'Enter') sendMessage(); }
+    
+    function sendReadReceipt(peerId) { 
+      if (dataChannel && dataChannel.readyState === 'open' && peerId !== 'self') {
+        dataChannel.send(JSON.stringify({ type: 'read-receipt', channel: "Remote-Peer" })); 
+      }
+    }
+    
+    function markOurMessagesAsReadInStorage(channelId) {
+      messageHistory.forEach(m => { if (m.channel === channelId && m.sender === 'me') m.read = true; });
+      localStorage.setItem('ink_message_history', JSON.stringify(messageHistory));
+    }
+
+    function updateReadReceiptStyles() { document.querySelectorAll('.delivery-status').forEach(el => el.classList.add('read')); }
+    
+    function updateUnreadSidebarBadge(channelId) {
+      const count = unreadCountMap[channelId] || 0;
+      const badge = document.getElementById(`badge-${channelId}`);
+      if (badge) { badge.textContent = count; badge.style.display = count > 0 ? 'block' : 'none'; }
+    }
+
+    function promptRename(peerId) {
+      renameTargetId = peerId;
+      document.getElementById('rename-target-id').textContent = peerId;
+      document.getElementById('custom-alias-input').value = aliases[peerId] || "";
+      document.getElementById('rename-chat-modal').classList.add('active');
+    }
+
+    function setAlias(peerId, aliasName) {
+      aliases[peerId] = aliasName;
+      localStorage.setItem('ink_aliases', JSON.stringify(aliases));
+      const el = document.getElementById(`name-${peerId}`);
+      if (el) el.textContent = aliasName;
+      if (activeChannel === peerId) {
+        document.getElementById('activeChatTitle').textContent = aliasName;
+      }
+    }
+
+    function addPeerToSidebarList(peerId) {
+      let list = document.getElementById('chatsList');
+      let peerRow = document.getElementById(`chat-${peerId}`);
+      if (!peerRow) {
+        peerRow = document.createElement('div');
+        peerRow.className = 'chat-item';
+        peerRow.id = `chat-${peerId}`;
+        peerRow.onclick = () => selectChat(peerId);
+        list.appendChild(peerRow);
+      }
+      
+      const displayName = aliases[peerId] || peerId;
+
+      peerRow.innerHTML = `
+        <div class="avatar-indicator">
+          <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+          <div id="status-${peerId}" class="status-dot offline"></div>
+        </div>
+        <div class="chat-info">
+          <div class="chat-name" id="name-${peerId}">${displayName}</div>
+          <div class="chat-preview" id="preview-${peerId}">Verifying link...</div>
+        </div>
+        <div class="unread-badge" id="badge-${peerId}">0</div>
+        <div class="chat-actions">
+          <button class="action-btn edit-chat-btn" id="edit-btn-${peerId}" title="Rename connection alias">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="action-btn delete-chat-btn" id="delete-btn-${peerId}" title="Delete session feed">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        </div>
+      `;
+
+      document.getElementById(`edit-btn-${peerId}`).addEventListener('click', (e) => {
+        e.stopPropagation();
+        promptRename(peerId);
+      });
+
+      document.getElementById(`delete-btn-${peerId}`).addEventListener('click', (e) => {
+        deleteHistory(peerId, e);
+      });
+
+      selectChat(peerId);
+      updateUnreadSidebarBadge(peerId);
+    }
+
+    function selectChat(target) {
+      document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
+      activeChannel = target;
+      
+      const row = document.getElementById(target === 'self' ? 'selfChatNode' : `chat-${target}`);
+      if (row) row.classList.add('active');
+      
+      const displayName = target === 'self' ? "Self-Secured Notes" : (aliases[target] || target);
+      document.getElementById('activeChatTitle').textContent = displayName;
+      document.getElementById('activeChatStatus').textContent = target === 'self' ? "" : (dataChannel && dataChannel.readyState === 'open' ? "P2P End-to-End Encrypted Session Active" : "P2P Link Requested (Offline)");
+      
+      loadMessageLog();
+      
+      document.getElementById('desktopSidebarContainer').classList.remove('mobile-active');
+      document.getElementById('sidebarMask').classList.remove('active');
+    }
+
+    function switchView(target) {
+      ['btnChatView', 'btnSettingsView', 'chatScreen', 'settingsScreen'].forEach(id => document.getElementById(id).classList.remove('active'));
+      if (target === 'chat') {
+        document.getElementById('btnChatView').classList.add('active');
+        document.getElementById('chatScreen').classList.add('active');
+      } else {
+        document.getElementById('btnSettingsView').classList.add('active');
+        document.getElementById('settingsScreen').classList.add('active');
+      }
+    }
+
+    function deleteHistory(channelId, event) {
+      if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+      }
+      chatToDeletePending = channelId;
+      const targetName = channelId === 'self' ? 'Self-Secured Notes' : (aliases[channelId] || channelId);
+      document.getElementById('delete-target-name').textContent = targetName;
+      document.getElementById('delete-chat-modal').classList.add('active');
+    }
+
+    function executeDeletedHistoryWipe() {
+      if (!chatToDeletePending) return;
+      const channelId = chatToDeletePending;
+      
+      messageHistory = messageHistory.filter(m => m.channel !== channelId);
+      localStorage.setItem('ink_message_history', JSON.stringify(messageHistory));
+      delete unreadCountMap[channelId];
+      localStorage.setItem('ink_unread_counts', JSON.stringify(unreadCountMap));
+      
+      if (channelId === 'self') {
+        loadMessageLog();
+      } else {
+        const row = document.getElementById(`chat-${channelId}`);
+        if (row) row.remove();
+        if (activeChannel === channelId) selectChat('self');
+      }
+    }
+
+    window.addEventListener('load', () => {
+      if (window.location.hash.startsWith('#offer=')) {
+        handleIncomingInvite();
+      }
+    });
+
   </script>
-    <script src="enhancements.js" defer></script>
 </body>
 </html>
