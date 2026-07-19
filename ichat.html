@@ -54,15 +54,20 @@
     body {
       background-color: var(--bg-black);
       color: var(--text-white);
-      min-height: 100vh;
-      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      height: 100dvh;
     }
+
+    /* Ad banner sits at its natural height; never gets squeezed by the flex column */
+    .ad-slot { flex-shrink: 0; }
 
     /* System Layout with clean Gray Shadow Box */
     .app-container {
       width: 100%;
       max-width: 1200px;
-      height: 90vh;
+      height: min(90vh, 100%);
       background-color: #0b0b0c;
       border: 1px solid var(--card-border);
       border-radius: 16px;
@@ -1001,14 +1006,11 @@
       .x-feed {
         padding: 0;
         align-items: flex-start;
-        min-height: calc(100vh - 74px);
-        min-height: calc(100dvh - 74px);
       }
 
       .app-container {
         grid-template-columns: 1fr;
-        height: calc(100vh - 74px - 58px);
-        height: calc(100dvh - 74px - 58px);
+        height: calc(100% - 58px);
         border-radius: 0;
         border: none;
       }
@@ -1085,7 +1087,9 @@
     .site-grid {
       display: grid;
       grid-template-columns: 1fr;
-      min-height: 100vh;
+      grid-template-rows: minmax(0, 1fr);
+      flex: 1 1 auto;
+      min-height: 0;
       background-color: #000000;
     }
 
@@ -1105,9 +1109,7 @@
         display: flex;
         flex-direction: column;
         grid-column: 2;
-        position: sticky;
-        top: 0;
-        height: 100vh;
+        height: 100%;
         padding: 12px 12px 20px 12px;
         border-right: 1px solid #2f3336;
         overflow-y: auto;
@@ -1118,7 +1120,7 @@
     /* Main Feed Column (hosts the ichat app shell, centered) */
     .x-feed {
       grid-column: 1;
-      min-height: 100vh;
+      height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1142,9 +1144,7 @@
         display: flex;
         flex-direction: column;
         grid-column: 4;
-        position: sticky;
-        top: 0;
-        height: 100vh;
+        height: 100%;
         padding: 20px 24px;
         gap: 20px;
         overflow-y: auto;
