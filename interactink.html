@@ -322,14 +322,16 @@
         .share-menu i { width: 16px; height: 16px; flex-shrink: 0; }
 
         /* ==================================================================
-           BOARD NAVIGATION
-           - .board-select-wrap / .board-select : compact quick-switch dropdown in header
-           - .board-strip / .board-chip         : always-visible horizontal board rail
-           - .board-directory-*                 : full "browse all boards" modal grid
+           BOARD SWITCHER
+           One tap target in the header showing the current board. Tapping it
+           drops down a small anchored panel listing every board — tap one to
+           jump straight there. That's the entire board-navigation UI.
         ================================================================== */
-        .board-select-wrap { position: relative; display: inline-flex; align-items: center; flex-shrink: 0; }
-        .board-select {
-            padding: 5px 24px 5px 12px;
+        .board-switcher-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 10px 6px 12px;
             font-size: 11px;
             font-family: ui-monospace, Menlo, monospace;
             font-weight: 700;
@@ -340,163 +342,91 @@
             text-transform: uppercase;
             letter-spacing: 0.04em;
             cursor: pointer;
-            appearance: none;
-            -webkit-appearance: none;
-            outline: none;
-            max-width: 40vw;
+            flex-shrink: 0;
+            transition: border-color 0.15s ease, background-color 0.15s ease;
         }
-        .board-select:hover { border-color: rgba(16, 185, 129, 0.55); }
-        .board-select-chevron {
+        .board-switcher-btn:hover { border-color: rgba(16, 185, 129, 0.55); }
+        .board-switcher-btn[aria-expanded="true"] { background-color: rgba(16, 185, 129, 0.18); }
+        .board-switcher-chevron { width: 13px; height: 13px; color: #10b981; transition: transform 0.15s ease; }
+        .board-switcher-btn[aria-expanded="true"] .board-switcher-chevron { transform: rotate(180deg); }
+
+        .board-picker-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 44;
+            background: transparent;
+        }
+        .board-picker {
             position: absolute;
-            right: 7px;
+            top: calc(100% + 8px);
+            right: 16px;
+            z-index: 45;
+            width: min(320px, calc(100vw - 32px));
+            background: #0a0a0a;
+            border: 1px solid #2f3336;
+            border-radius: 16px;
+            padding: 12px;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+        }
+        .board-picker-search-wrap { position: relative; }
+        .board-picker-search-wrap i {
+            position: absolute;
+            left: 11px;
             top: 50%;
             transform: translateY(-50%);
-            width: 12px;
-            height: 12px;
-            color: #10b981;
-            pointer-events: none;
+            width: 14px;
+            height: 14px;
+            color: #71767b;
         }
-        .board-directory-trigger {
+        #boardPickerSearch {
+            width: 100%;
+            background: #16181c;
+            border: 1px solid #2f3336;
+            border-radius: 9999px;
+            padding: 8px 12px 8px 32px;
+            font-size: 13px;
+            color: #e7e9ea;
+        }
+        #boardPickerSearch:focus { outline: none; border-color: #525252; }
+        .board-picker-list {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            margin-top: 10px;
+            max-height: min(50vh, 380px);
+            overflow-y: auto;
+        }
+        .board-picker-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 8px;
+            border-radius: 10px;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background-color 0.12s ease;
+        }
+        .board-picker-item:hover { background: #16181c; }
+        .board-picker-item.active { background: rgba(16, 185, 129, 0.1); }
+        .board-picker-item-icon {
             display: flex;
             align-items: center;
             justify-content: center;
             width: 30px;
             height: 30px;
-            border-radius: 9999px;
-            border: 1px solid #262626;
-            background: #0a0a0a;
-            color: #a1a1aa;
-            cursor: pointer;
-            flex-shrink: 0;
-            transition: all 0.15s ease;
-        }
-        .board-directory-trigger:hover { color: #ffffff; border-color: #404040; background: #16181c; }
-        .board-directory-trigger i { width: 15px; height: 15px; }
-
-        .board-strip {
-            display: flex;
-            gap: 8px;
-            overflow-x: auto;
-            padding: 10px 12px;
-            border-bottom: 1px solid #1c1f23;
-            background-color: #000000;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-            scroll-behavior: smooth;
-        }
-        .board-strip::-webkit-scrollbar { display: none; }
-        .board-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 7px 14px;
-            border-radius: 9999px;
-            background: #0a0a0a;
-            border: 1px solid #262626;
-            color: #a1a1aa;
-            font-size: 12.5px;
-            font-weight: 600;
-            font-family: ui-monospace, Menlo, monospace;
-            white-space: nowrap;
-            text-decoration: none;
-            flex-shrink: 0;
-            scroll-snap-align: start;
-            transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-            cursor: pointer;
-        }
-        .board-chip:hover { border-color: #404040; color: #e7e9ea; }
-        .board-chip.active {
-            background: rgba(16, 185, 129, 0.12);
-            border-color: rgba(16, 185, 129, 0.5);
-            color: #10b981;
-        }
-        .board-chip i { width: 13px; height: 13px; flex-shrink: 0; }
-
-        .board-directory-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.75);
-            backdrop-filter: blur(6px);
-            z-index: 65;
-            display: flex;
-            align-items: flex-start;
-            justify-content: center;
-            padding: 8vh 16px 40px;
-            overflow-y: auto;
-        }
-        .board-directory-panel {
-            width: 100%;
-            max-width: 640px;
-            background: #000000;
-            border: 1px solid #262626;
-            border-radius: 20px;
-            padding: 18px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
-        }
-        .board-directory-search-wrap {
-            position: relative;
-            margin-top: 14px;
-        }
-        .board-directory-search-wrap i {
-            position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 15px;
-            height: 15px;
-            color: #71767b;
-        }
-        #boardDirectorySearch {
-            width: 100%;
-            background: #0a0a0a;
-            border: 1px solid #262626;
-            border-radius: 9999px;
-            padding: 9px 14px 9px 34px;
-            font-size: 13px;
-            color: #e7e9ea;
-        }
-        #boardDirectorySearch:focus { outline: none; border-color: #404040; }
-        .board-directory-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-top: 14px;
-            max-height: 56vh;
-            overflow-y: auto;
-            padding-right: 2px;
-        }
-        @media (min-width: 480px) {
-            .board-directory-grid { grid-template-columns: repeat(3, 1fr); }
-        }
-        .board-grid-card {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 12px;
-            border-radius: 14px;
-            border: 1px solid #262626;
-            background: #0a0a0a;
-            text-decoration: none;
-            transition: border-color 0.15s ease, background-color 0.15s ease;
-        }
-        .board-grid-card:hover { border-color: #404040; background: #111214; }
-        .board-grid-card.active { border-color: rgba(16, 185, 129, 0.5); background: rgba(16, 185, 129, 0.08); }
-        .board-grid-icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 34px;
-            height: 34px;
-            border-radius: 10px;
+            border-radius: 9px;
             background: #16181c;
-            color: #10b981;
+            color: #a1a1aa;
             flex-shrink: 0;
         }
-        .board-grid-icon i { width: 17px; height: 17px; }
-        .board-grid-meta { display: flex; flex-direction: column; min-width: 0; }
-        .board-grid-label { font-family: ui-monospace, Menlo, monospace; font-size: 12px; font-weight: 700; color: #10b981; }
-        .board-grid-name { font-size: 12px; color: #a1a1aa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .board-directory-empty { grid-column: 1 / -1; text-align: center; padding: 24px 0; font-size: 13px; color: #71767b; }
+        .board-picker-item.active .board-picker-item-icon { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+        .board-picker-item-icon i { width: 15px; height: 15px; }
+        .board-picker-item-meta { display: flex; flex-direction: column; min-width: 0; }
+        .board-picker-item-label { font-family: ui-monospace, Menlo, monospace; font-size: 12px; font-weight: 700; color: #10b981; }
+        .board-picker-item-name { font-size: 12.5px; color: #d4d4d8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .board-picker-item.active .board-picker-item-name { color: #ffffff; }
+        .board-picker-item-check { margin-left: auto; width: 15px; height: 15px; color: #10b981; flex-shrink: 0; }
+        .board-picker-empty { text-align: center; padding: 20px 0; font-size: 13px; color: #71767b; }
 
         /* ==================================================================
            THREAD PAGE (full-page comment view, replaces the old modal)
@@ -570,7 +500,7 @@
                     <i data-lucide="message-square"></i>
                     <span>Board</span>
                 </a>
-                <a href="#" onclick="openBoardDirectory(); return false;" class="nav-item">
+                <a href="#" onclick="toggleBoardPicker(); return false;" class="nav-item">
                     <i data-lucide="layout-grid"></i>
                     <span>Browse Boards</span>
                 </a>
@@ -610,25 +540,27 @@
                 <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
             </div>
  
-            <header class="sticky top-0 bg-black/90 backdrop-blur-md border-b border-neutral-800 z-40">
-                <div class="p-4 flex justify-between items-center gap-2">
-                    <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2 min-w-0">
-                        <img src="favicon2.png" alt="InteractInk logo" class="w-6 h-6 shrink-0">
-                        <span class="truncate">InteractInk</span>
-                    </h1>
-                    <div class="flex items-center gap-2 shrink-0">
-                        <div class="board-select-wrap">
-                            <select id="boardSwitcher" aria-label="Switch board" class="board-select"></select>
-                            <i data-lucide="chevron-down" class="board-select-chevron"></i>
-                        </div>
-                        <button type="button" onclick="openBoardDirectory()" class="board-directory-trigger" aria-label="Browse all boards" title="Browse all boards">
-                            <i data-lucide="layout-grid"></i>
-                        </button>
+            <header class="sticky top-0 bg-black/90 backdrop-blur-md border-b border-neutral-800 z-40 p-4 flex justify-between items-center gap-2">
+                <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2 min-w-0">
+                    <img src="favicon2.png" alt="InteractInk logo" class="w-6 h-6 shrink-0">
+                    <span class="truncate">InteractInk</span>
+                </h1>
+                <button type="button" id="boardSwitcherBtn" onclick="toggleBoardPicker()" class="board-switcher-btn" aria-haspopup="true" aria-expanded="false">
+                    <span id="boardSwitcherLabel">/b/</span>
+                    <i data-lucide="chevron-down" class="board-switcher-chevron"></i>
+                </button>
+
+                <!-- Board switcher: opens right under the button above. Tap a
+                     board to jump straight to it. -->
+                <div id="boardPickerPanel" class="board-picker hidden">
+                    <div class="board-picker-search-wrap">
+                        <i data-lucide="search"></i>
+                        <input type="text" id="boardPickerSearch" placeholder="Find a board..." autocomplete="off" oninput="filterBoardPicker(this.value)">
                     </div>
+                    <div id="boardPickerList" class="board-picker-list"></div>
                 </div>
-                <!-- Always-visible quick-switch board rail -->
-                <nav id="boardStrip" class="board-strip" aria-label="Boards"></nav>
             </header>
+            <div id="boardPickerBackdrop" class="board-picker-backdrop hidden" onclick="closeBoardPicker()"></div>
 
  
         <noscript>
@@ -770,33 +702,12 @@
         <nav class="bottom-tab-bar" aria-label="Mobile navigation">
             <a href="index.html" class="bottom-tab"><i data-lucide="home"></i></a>
             <a href="interactink.html" class="bottom-tab active"><i data-lucide="message-square"></i></a>
-            <button type="button" onclick="openBoardDirectory()" class="bottom-tab" aria-label="Browse boards"><i data-lucide="layout-grid"></i></button>
+            <button type="button" onclick="toggleBoardPicker()" class="bottom-tab" aria-label="Switch board"><i data-lucide="layout-grid"></i></button>
             <a href="ichat.html" class="bottom-tab"><i data-lucide="message-circle-code"></i></a>
             <a href="settings.html" class="bottom-tab"><i data-lucide="settings"></i></a>
         </nav>
     </div>
  
-    <!-- Board Directory: full grid of every board, opened from the header
-         trigger, sidebar "Browse Boards" item, or mobile tab bar. -->
-    <div id="boardDirectoryModal" class="board-directory-overlay hidden" onclick="if(event.target===this) closeBoardDirectory();">
-        <div class="board-directory-panel">
-            <div class="flex justify-between items-center">
-                <h2 class="text-white font-bold text-base flex items-center gap-2">
-                    <i data-lucide="layout-grid" class="w-4 h-4 text-emerald-500"></i>
-                    All Boards
-                </h2>
-                <button type="button" onclick="closeBoardDirectory()" class="text-neutral-400 hover:text-white p-1 hover:bg-neutral-900 rounded-full transition cursor-pointer" aria-label="Close">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
-            </div>
-            <div class="board-directory-search-wrap">
-                <i data-lucide="search"></i>
-                <input type="text" id="boardDirectorySearch" placeholder="Find a board..." autocomplete="off" oninput="filterBoardDirectory(this.value)">
-            </div>
-            <div id="boardDirectoryGrid" class="board-directory-grid"></div>
-        </div>
-    </div>
-
     <!-- Add this where your share menu placeholder is located -->
 <div id="shareMenu" class="share-menu hidden"></div>
 
@@ -905,20 +816,10 @@
  
     function updateBoardBadgeUI(boardId) {
         const meta = InkRouting.getBoardMeta(boardId);
-        const switcher = document.getElementById('boardSwitcher');
-        if (switcher && meta) {
-            // Populate the option list once, then keep it in sync on every switch.
-            if (switcher.options.length === 0) {
-                InkRouting.BOARDS.forEach(b => {
-                    const opt = document.createElement('option');
-                    opt.value = b.id;
-                    opt.textContent = `${b.label} — ${b.name}`;
-                    switcher.appendChild(opt);
-                });
-                switcher.addEventListener('change', () => switchToBoard(switcher.value));
-            }
-            switcher.value = meta.id;
-        }
+
+        const label = document.getElementById('boardSwitcherLabel');
+        if (label && meta) label.textContent = meta.label;
+
         if (meta) document.title = `${meta.label} — ${meta.name} | InteractInk`;
  
         const composer = document.getElementById('threadContent');
@@ -933,78 +834,84 @@
             boardNameEl.textContent = `— ${meta.name}`;
         }
 
-        renderBoardStrip(boardId);
+        // If the picker happens to be open while the board changes (e.g. via
+        // browser Back), keep its "active" highlight in sync.
+        if (!document.getElementById('boardPickerPanel').classList.contains('hidden')) {
+            renderBoardPickerList(boardId);
+        }
     }
 
     /**
-     * Renders the always-visible horizontal board rail under the header.
-     * Every board is a real link (buildBoardUrl) so it degrades gracefully
-     * without JS, but clicks are intercepted below for instant SPA switching.
+     * The entire board-switching UI: tap the current board's badge in the
+     * header, a small panel drops down right below it listing every board
+     * (searchable), tap one to jump straight there.
      */
-    function renderBoardStrip(activeBoardId) {
-        const strip = document.getElementById('boardStrip');
-        if (!strip) return;
-        strip.innerHTML = InkRouting.BOARDS.map(b => `
-            <a href="${InkRouting.buildBoardUrl(b.id)}" class="board-chip${b.id === activeBoardId ? ' active' : ''}" data-board-id="${b.id}">
-                <i data-lucide="${b.icon}"></i>${b.label}
-            </a>
-        `).join('');
-        strip.querySelectorAll('.board-chip').forEach(chip => {
-            chip.addEventListener('click', (e) => {
-                e.preventDefault();
-                const id = chip.getAttribute('data-board-id');
-                if (id !== appState.currentBoard) switchToBoard(id);
-            });
-        });
-        // Keep the active chip in view when it's off-screen (e.g. after a
-        // board switch triggered from the directory or the select).
-        const activeChip = strip.querySelector('.board-chip.active');
-        if (activeChip) activeChip.scrollIntoView({ behavior: 'auto', inline: 'center', block: 'nearest' });
-        if (window.lucide) lucide.createIcons();
+    function toggleBoardPicker() {
+        const panel = document.getElementById('boardPickerPanel');
+        if (panel.classList.contains('hidden')) openBoardPicker(); else closeBoardPicker();
     }
 
-    /**
-     * Full "browse all boards" directory. Reuses InkRouting.renderBoardGrid
-     * for the card markup, then intercepts clicks for SPA-style switching.
-     */
-    function openBoardDirectory() {
-        const modal = document.getElementById('boardDirectoryModal');
-        const grid = document.getElementById('boardDirectoryGrid');
-        InkRouting.renderBoardGrid(grid, appState.currentBoard);
-        grid.querySelectorAll('.board-grid-card').forEach(card => {
-            card.addEventListener('click', (e) => {
-                e.preventDefault();
-                const id = card.getAttribute('data-board-id');
-                closeBoardDirectory();
-                if (id !== appState.currentBoard) switchToBoard(id);
-            });
-        });
-        const search = document.getElementById('boardDirectorySearch');
+    function openBoardPicker() {
+        const panel = document.getElementById('boardPickerPanel');
+        const backdrop = document.getElementById('boardPickerBackdrop');
+        const btn = document.getElementById('boardSwitcherBtn');
+        const search = document.getElementById('boardPickerSearch');
+
+        renderBoardPickerList(appState.currentBoard);
         if (search) search.value = '';
-        modal.classList.remove('hidden');
+
+        panel.classList.remove('hidden');
+        backdrop.classList.remove('hidden');
+        if (btn) btn.setAttribute('aria-expanded', 'true');
         setTimeout(() => { if (search) search.focus(); }, 50);
     }
 
-    function closeBoardDirectory() {
-        document.getElementById('boardDirectoryModal').classList.add('hidden');
+    function closeBoardPicker() {
+        document.getElementById('boardPickerPanel').classList.add('hidden');
+        document.getElementById('boardPickerBackdrop').classList.add('hidden');
+        const btn = document.getElementById('boardSwitcherBtn');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
     }
 
-    function filterBoardDirectory(query) {
+    function renderBoardPickerList(activeBoardId) {
+        const list = document.getElementById('boardPickerList');
+        list.innerHTML = InkRouting.BOARDS.map(b => `
+            <a href="${InkRouting.buildBoardUrl(b.id)}" class="board-picker-item${b.id === activeBoardId ? ' active' : ''}" data-board-id="${b.id}" data-search="${b.label} ${b.name}">
+                <span class="board-picker-item-icon"><i data-lucide="${b.icon}"></i></span>
+                <span class="board-picker-item-meta">
+                    <span class="board-picker-item-label">${b.label}</span>
+                    <span class="board-picker-item-name">${b.name}</span>
+                </span>
+                ${b.id === activeBoardId ? '<i data-lucide="check" class="board-picker-item-check"></i>' : ''}
+            </a>
+        `).join('');
+        list.querySelectorAll('.board-picker-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const id = item.getAttribute('data-board-id');
+                closeBoardPicker();
+                if (id !== appState.currentBoard) switchToBoard(id);
+            });
+        });
+        if (window.lucide) lucide.createIcons();
+    }
+
+    function filterBoardPicker(query) {
         const q = query.trim().toLowerCase();
-        const grid = document.getElementById('boardDirectoryGrid');
-        const cards = grid.querySelectorAll('.board-grid-card');
+        const list = document.getElementById('boardPickerList');
+        const items = list.querySelectorAll('.board-picker-item');
         let visibleCount = 0;
-        cards.forEach(card => {
-            const matches = card.textContent.toLowerCase().includes(q);
-            card.style.display = matches ? '' : 'none';
+        items.forEach(item => {
+            const matches = (item.getAttribute('data-search') || '').toLowerCase().includes(q);
+            item.style.display = matches ? '' : 'none';
             if (matches) visibleCount++;
         });
-        let empty = grid.querySelector('.board-directory-empty');
+        let empty = list.querySelector('.board-picker-empty');
         if (visibleCount === 0) {
             if (!empty) {
                 empty = document.createElement('div');
-                empty.className = 'board-directory-empty';
-                grid.appendChild(empty);
+                empty.className = 'board-picker-empty';
+                list.appendChild(empty);
             }
             empty.textContent = `No boards match "${query}"`;
         } else if (empty) {
@@ -1014,8 +921,8 @@
 
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-            const modal = document.getElementById('boardDirectoryModal');
-            if (modal && !modal.classList.contains('hidden')) closeBoardDirectory();
+            const panel = document.getElementById('boardPickerPanel');
+            if (panel && !panel.classList.contains('hidden')) closeBoardPicker();
         }
     });
  
