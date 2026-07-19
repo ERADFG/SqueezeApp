@@ -1000,12 +1000,15 @@
     @media (max-width: 768px) {
       .x-feed {
         padding: 0;
+        align-items: flex-start;
+        min-height: calc(100vh - 74px);
+        min-height: calc(100dvh - 74px);
       }
 
       .app-container {
         grid-template-columns: 1fr;
-        height: 100vh;
-        height: 100dvh;
+        height: calc(100vh - 74px - 58px);
+        height: calc(100dvh - 74px - 58px);
         border-radius: 0;
         border: none;
       }
@@ -1180,9 +1183,37 @@
 
     .footer-link { color: #71767b; text-decoration: none; margin: 0 8px; font-weight: 500; font-size: 0.8rem; transition: color 0.2s; display: inline-block; margin-bottom: 6px; }
     .footer-link:hover { color: #e7e9ea; }
+
+    /* Ad banner wrapper (same as index.html) */
+    .ad-slot { width: 100%; }
+
+    /* Mobile bottom navigation (exact copy of index.html) */
+    .bottom-tab-bar { display: none; }
+    .bottom-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #71767b; text-decoration: none; padding: 6px 10px; }
+    .bottom-tab.active { color: #ffffff; }
+    .bottom-tab svg { width: 20px; height: 20px; }
+
+    @media (max-width: 1023px) {
+      .bottom-tab-bar {
+        display: flex; justify-content: space-around; align-items: center;
+        position: fixed; left: 0; right: 0; bottom: 0; z-index: 600;
+        background: rgba(0,0,0,0.97); backdrop-filter: blur(12px);
+        border-top: 1px solid #262626; padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+      }
+    }
   </style>
 </head>
 <body>
+
+  <!-- Top Banner Ad (Adsterra, same unit as index.html) -->
+  <div class="ad-slot">
+    <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
+      <script type="text/javascript">
+        atOptions = { 'key' : 'c2beae2a3c4b115088146fa8ef56a186', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+      </script>
+      <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
+    </div>
+  </div>
 
   <div class="site-grid">
 
