@@ -379,12 +379,11 @@
 
         <!-- CENTER MAIN CONTENT FEED -->
         <main class="x-feed">
-            <!-- Top Banner Ad space -->
+            <!-- Top Banner Ad space (sandboxed in its own iframe so the ad
+                 network's document.write() can only affect its own tiny
+                 document, never this page's layout/zoom) -->
             <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
-                <script type="text/javascript">
-                  atOptions = { 'key' : 'c2beae2a3c4b115088146fa8ef56a186', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
-                </script>
-                <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
+                <iframe title="Advertisement" style="width:320px;height:50px;border:0;overflow:hidden;display:block;" scrolling="no" sandbox="allow-scripts allow-same-origin allow-popups" srcdoc="<body style=&quot;margin:0;padding:0;&quot;><script>atOptions={key:'c2beae2a3c4b115088146fa8ef56a186',format:'iframe',height:50,width:320,params:{}};<\/script><script src=&quot;https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js&quot;><\/script></body>"></iframe>
             </div>
 
             <!-- Welcome page header -->
@@ -475,12 +474,9 @@
                 </div>
             </section>
 
-            <!-- Bottom Ad Space inside Main Column -->
+            <!-- Bottom Ad Space inside Main Column (sandboxed, see note above) -->
             <div class="w-full flex justify-center py-3 bg-black border-t border-b border-neutral-800 my-4">
-                <script type="text/javascript">
-                  atOptions = { 'key' : 'c2beae2a3c4b115088146fa8ef56a186', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
-                </script>
-                <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
+                <iframe title="Advertisement" style="width:320px;height:50px;border:0;overflow:hidden;display:block;" scrolling="no" sandbox="allow-scripts allow-same-origin allow-popups" srcdoc="<body style=&quot;margin:0;padding:0;&quot;><script>atOptions={key:'c2beae2a3c4b115088146fa8ef56a186',format:'iframe',height:50,width:320,params:{}};<\/script><script src=&quot;https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js&quot;><\/script></body>"></iframe>
             </div>
         </main>
 
