@@ -153,6 +153,20 @@
     </script>
  
     <style>
+        /* ------------------------------------------------------------------
+           ZOOM / OVERFLOW SAFETY NET
+           Mobile browsers auto-shrink (zoom out) the whole page whenever ANY
+           element ends up wider than the viewport (a long unbroken URL, a
+           deeply-nested comment, a stray fixed-width element, etc). Locking
+           horizontal overflow at the html/body level, plus making width
+           calculations include borders/padding everywhere, means a single
+           too-wide element can only overflow *itself* (scroll internally)
+           instead of stretching the whole page and forcing a zoomed-out view.
+        ------------------------------------------------------------------ */
+        html, body { max-width: 100%; overflow-x: hidden; }
+        * { min-width: 0; }
+        img, svg, video, canvas { max-width: 100%; height: auto; }
+        pre, code { overflow-x: auto; max-width: 100%; }
         body { background-color: #000000; color: #e7e9ea; }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #000000; }
@@ -606,7 +620,7 @@
                 <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
             </div>
  
-            <header class="sticky top-0 bg-black/90 backdrop-blur-md border-b border-neutral-800 z-40 p-4 flex justify-between items-center gap-2">
+            <header class="sticky top-0 bg-black/90 backdrop-blur-md border-b border-neutral-800 z-50 p-4 flex justify-between items-center gap-2">
                 <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2 min-w-0">
                     <img src="favicon2.png" alt="InteractInk logo" class="w-6 h-6 shrink-0">
                     <span class="truncate">InteractInk</span>
@@ -1752,11 +1766,24 @@ function initRealtimeSync() {
         }
  
         function buildCommentTreeUI(node, depth) {
+            // Indentation compounds with every nested reply level (each level
+            // wraps the next inside it). Uncapped, a long reply chain pushes
+            // the page far wider than the viewport, which is what forces
+            // mobile browsers to zoom the whole page out to fit it. Capping
+            // it means replies past this depth stop adding further
+            // indentation — they still nest logically, just flush against
+            // the last indent level instead of drifting off-screen.
+            const MAX_INDENT_DEPTH = 6;
+            const showIndent = depth > 0 && depth <= MAX_INDENT_DEPTH;
             const wrap = document.createElement('div');
-            wrap.className = `flex flex-col ${depth > 0 ? 'ml-4 border-l border-neutral-800 pl-4 mt-3' : 'border-b border-neutral-900 pb-3'}`;
+            wrap.className = `flex flex-col min-w-0 ${
+                showIndent ? 'ml-4 border-l border-neutral-800 pl-4 mt-3'
+                : depth > MAX_INDENT_DEPTH ? 'mt-3'
+                : 'border-b border-neutral-900 pb-3'
+            }`;
             
             const item = document.createElement('div');
-            item.className = "p-3 bg-neutral-950/40 rounded-xl border border-neutral-900 text-sm";
+            item.className = "p-3 bg-neutral-950/40 rounded-xl border border-neutral-900 text-sm min-w-0";
             item.id = `comment-${node.id}`;
  
             const dateStr = new Date(node.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });

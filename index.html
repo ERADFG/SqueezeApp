@@ -139,6 +139,15 @@
     </script>
 
     <style>
+        /* ------------------------------------------------------------------
+           ZOOM / OVERFLOW SAFETY NET — see interactink.html for full note.
+           Prevents any single too-wide element from stretching the whole
+           page and forcing mobile browsers to zoom the page out to fit it.
+        ------------------------------------------------------------------ */
+        html, body { max-width: 100%; overflow-x: hidden; }
+        * { min-width: 0; }
+        img, svg, video, canvas { max-width: 100%; height: auto; }
+        pre, code { overflow-x: auto; max-width: 100%; }
         body { background-color: #000000; color: #e7e9ea; }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #000000; }
@@ -658,7 +667,7 @@
                         <span class="font-mono text-[10px]">&gt;&gt;${thread.id}</span>
                     </span>
                 </div>
-                <p class="text-neutral-300 text-sm leading-relaxed line-clamp-3 mb-3">${excerpt}${(thread.content || '').length > 140 ? '&hellip;' : ''}</p>
+                <p class="text-neutral-300 text-sm leading-relaxed line-clamp-3 mb-3 break-words">${excerpt}${(thread.content || '').length > 140 ? '&hellip;' : ''}</p>
                 <div class="flex items-center gap-4 text-[11px] text-neutral-500 mt-auto pt-2 border-t border-neutral-900">
                     <span class="flex items-center gap-1"><i data-lucide="message-square" class="w-3.5 h-3.5"></i> ${thread.replies} ${thread.replies === 1 ? 'Reply' : 'Replies'}</span>
                     <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5"></i> ${timeAgo(thread.timestamp)}</span>
