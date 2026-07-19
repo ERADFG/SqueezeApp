@@ -429,54 +429,6 @@
         .board-picker-empty { text-align: center; padding: 20px 0; font-size: 13px; color: #71767b; }
 
         /* ==================================================================
-           BOARD TABS STRIP
-           Horizontally scrollable row of every board, sitting right under
-           the header. Swipe/scroll left-right, tap a chip to jump straight
-           to that board. This is the primary board-navigation surface.
-        ================================================================== */
-        .board-tabs-strip {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 16px;
-            overflow-x: auto;
-            overflow-y: hidden;
-            white-space: nowrap;
-            border-bottom: 1px solid #262626;
-            background: #000;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-            -webkit-overflow-scrolling: touch;
-            scroll-behavior: smooth;
-        }
-        .board-tabs-strip::-webkit-scrollbar { display: none; }
-        .board-tab-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            flex-shrink: 0;
-            padding: 7px 14px;
-            border-radius: 9999px;
-            background: #16181c;
-            border: 1px solid #2f3336;
-            color: #a1a1aa;
-            font-size: 12.5px;
-            font-weight: 600;
-            text-decoration: none;
-            cursor: pointer;
-            transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
-            user-select: none;
-        }
-        .board-tab-chip i { width: 14px; height: 14px; flex-shrink: 0; }
-        .board-tab-chip:hover { border-color: #525252; color: #e7e9ea; }
-        .board-tab-chip.active {
-            background: rgba(16, 185, 129, 0.15);
-            border-color: rgba(16, 185, 129, 0.55);
-            color: #10b981;
-        }
-        .board-tab-chip .board-tab-chip-label { font-family: ui-monospace, Menlo, monospace; }
-
-        /* ==================================================================
            THREAD PAGE (full-page comment view, replaces the old modal)
         ================================================================== */
         #threadPage { display: none; flex-direction: column; min-height: 100%; }
@@ -609,10 +561,6 @@
                 </div>
             </header>
             <div id="boardPickerBackdrop" class="board-picker-backdrop hidden" onclick="closeBoardPicker()"></div>
-
-            <!-- Scrollable board navigation: drag/swipe/scroll horizontally,
-                 tap a chip to switch boards instantly. -->
-            <div id="boardTabsStrip" class="board-tabs-strip" role="tablist" aria-label="Boards"></div>
 
  
         <noscript>
@@ -890,41 +838,6 @@
         if (!document.getElementById('boardPickerPanel').classList.contains('hidden')) {
             renderBoardPickerList(boardId);
         }
-
-        renderBoardTabsStrip(boardId);
-    }
-
-    /**
-     * Populates the horizontally-scrollable board strip under the header and
-     * keeps the active chip highlighted. Chips are plain links (so middle
-     * click / open-in-new-tab still works) but are intercepted on normal
-     * click to switch boards in-place without a full page reload. The
-     * currently active board is scrolled into view so the strip always
-     * orients the user to where they are.
-     */
-    function renderBoardTabsStrip(activeBoardId) {
-        const strip = document.getElementById('boardTabsStrip');
-        if (!strip) return;
-
-        strip.innerHTML = InkRouting.BOARDS.map(b => `
-            <a href="${InkRouting.buildBoardUrl(b.id)}" class="board-tab-chip${b.id === activeBoardId ? ' active' : ''}" data-board-id="${b.id}" role="tab" aria-selected="${b.id === activeBoardId}">
-                <i data-lucide="${b.icon}"></i>
-                <span class="board-tab-chip-label">${b.label}</span>
-            </a>
-        `).join('');
-
-        strip.querySelectorAll('.board-tab-chip').forEach(chip => {
-            chip.addEventListener('click', (e) => {
-                e.preventDefault();
-                const id = chip.getAttribute('data-board-id');
-                if (id !== appState.currentBoard) switchToBoard(id);
-            });
-        });
-
-        if (window.lucide) lucide.createIcons();
-
-        const activeChip = strip.querySelector('.board-tab-chip.active');
-        if (activeChip) activeChip.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     }
 
     /**
