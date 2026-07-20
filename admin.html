@@ -259,7 +259,7 @@
             const key = `${item._kind}:${item.id}`;
             const mediaPath = item.media_url ? item.media_url.split('/').slice(-2).join('/') : '';
             const status = item.moderation_status || 'approved';
-            const statusColor = status === 'flagged' ? 'text-red-400' : status === 'approved' ? 'text-emerald-400' : 'text-neutral-400';
+            const statusColor = status === 'approved' ? 'text-emerald-400' : status === 'flagged' ? 'text-red-400' : 'text-amber-400';
             return `
             <div class="border border-neutral-800 rounded-lg p-4">
                 <div class="flex items-start gap-3">
@@ -269,7 +269,7 @@
                         <p class="text-sm whitespace-pre-wrap">${escapeHTML(item.content || item.text)}</p>
                         ${mediaHTML(item.media_url, item.media_type)}
                         <div class="flex gap-2 mt-3">
-                            ${status === 'flagged' ? `<button onclick="approveItem('${item._kind}', '${item.id}')" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-xs font-bold">Approve</button>` : ''}
+                            ${status !== 'approved' ? `<button onclick="approveItem('${item._kind}', '${item.id}')" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-xs font-bold">Approve</button>` : ''}
                             <button onclick="removeItem('${item._kind}', '${item.id}', ${JSON.stringify(item.media_url ? item.media_url.split('/').slice(-2).join('/') : null)})" class="px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded text-xs font-bold">Delete</button>
                         </div>
                     </div>
