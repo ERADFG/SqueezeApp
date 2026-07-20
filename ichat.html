@@ -69,15 +69,15 @@
     body {
       background-color: var(--bg-black);
       color: var(--text-white);
-      min-height: 100vh;
-      min-height: 100dvh;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
     }
 
     /* System Layout with clean Gray Shadow Box */
     .app-container {
       width: 100%;
       max-width: 1200px;
-      height: 90vh;
       background-color: #0b0b0c;
       border: 1px solid var(--card-border);
       border-radius: 16px;
@@ -1015,8 +1015,6 @@
     @media (max-width: 768px) {
       .app-container {
         grid-template-columns: 1fr;
-        height: 100vh;
-        height: 100dvh;
         border-radius: 0;
         border: none;
       }
@@ -1096,8 +1094,10 @@
     .site-shell {
       display: grid;
       grid-template-columns: 1fr;
-      min-height: 100vh;
+      height: 100vh;
+      height: 100dvh;
       background-color: #000000;
+      overflow: hidden;
     }
 
     @media (min-width: 1024px) {
@@ -1113,9 +1113,7 @@
         display: flex;
         flex-direction: column;
         grid-column: 2;
-        position: sticky;
-        top: 0;
-        height: 100vh;
+        height: 100%;
         padding: 12px 12px 20px 12px;
         border-right: 1px solid #2f3336;
         overflow-y: auto;
@@ -1123,19 +1121,23 @@
       }
     }
 
+    /* x-feed fills the full column height: the ad slot takes its natural
+       size and the chat widget flexes to fill whatever is left, so the
+       whole page fits one screen with no page-level scroll. */
     .x-feed {
       grid-column: 1;
-      min-height: 100vh;
-      padding-bottom: 80px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
 
-    .ad-slot { width: 100%; }
+    .ad-slot { width: 100%; flex-shrink: 0; }
 
     @media (min-width: 1024px) {
       .x-feed {
         grid-column: 3;
         border-right: 1px solid #2f3336;
-        padding-bottom: 24px;
       }
     }
 
@@ -1146,9 +1148,7 @@
         display: flex;
         flex-direction: column;
         grid-column: 4;
-        position: sticky;
-        top: 0;
-        height: 100vh;
+        height: 100%;
         padding: 20px 24px;
         gap: 20px;
         overflow-y: auto;
@@ -1195,20 +1195,27 @@
         background: rgba(0,0,0,0.97); backdrop-filter: blur(12px);
         border-top: 1px solid #262626; padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
       }
-      body { padding-bottom: 60px; }
+      /* No page-level scroll, so instead of body padding we shrink the
+         feed column itself to leave room for the fixed tab bar. */
+      .x-feed {
+        height: calc(100vh - 60px);
+        height: calc(100dvh - 60px);
+      }
     }
 
     /* Keep the ichat widget nicely contained inside the new x-feed column
-       instead of relying on body's old flex-centering (removed below). */
+       and let it flex to fill whatever height is left after the ad slot,
+       instead of a fixed vh (which caused page scroll once the ad + nav
+       chrome were added). */
     .app-container {
-      margin: 20px auto;
+      margin: 12px;
+      flex: 1;
+      min-height: 0;
     }
 
     @media (max-width: 768px) {
       .app-container {
         margin: 0;
-        height: calc(100vh - 60px);
-        height: calc(100dvh - 60px);
       }
     }
   </style>
@@ -1429,16 +1436,6 @@
     </main>
 
   </div>
-
-      <!-- Bottom Ad Space inside Main Column (sandboxed, see note above) -->
-      <div class="ad-slot">
-        <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
-          <script type="text/javascript">
-            atOptions = { 'key' : 'c2beae2a3c4b115088146fa8ef56a186', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
-          </script>
-          <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
-        </div>
-      </div>
     </main>
 
     <!-- RIGHT DESKTOP SIDEBAR -->
