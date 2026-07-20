@@ -2012,6 +2012,15 @@ function initRealtimeSync() {
          * either silently blocked or silently let through.
          */
         async function runModerationCheck({ text, mediaUrl, mediaType, mediaStoragePath }) {
+            // TEMP: the moderate-post Edge Function isn't deployed yet.
+            // Text-only posts are allowed through unscanned in the meantime,
+            // but media (images/video) is still hard-blocked below — that's
+            // the part that needs CSAM/NSFW scanning before it can safely
+            // go live, so it stays off until the function is built and this
+            // early-return is removed.
+            if (!mediaUrl) {
+                return { allowed: true, status: 'approved' };
+            }
             try {
                 const { data, error } = await supabaseClient.functions.invoke('moderate-post', {
                     body: { text, mediaUrl, mediaType, mediaStoragePath }
@@ -2022,8 +2031,8 @@ function initRealtimeSync() {
                 console.error('Moderation check failed:', e);
                 // No manual-review queue to fall back on anymore, so a
                 // moderation-service outage must reject the post rather
-                // than letting unscanned content (including media) through.
-                return { allowed: false, status: 'blocked', reason: 'Moderation check unavailable right now — please try again shortly.' };
+                // than letting unscanned media through.
+                return { allowed: false, status: 'blocked', reason: 'Media posting is temporarily disabled until moderation is set up. Text-only posts still work.' };
             }
         }
 
