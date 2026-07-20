@@ -60,11 +60,9 @@
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     window.addEventListener('load', async () => {
-        if (sessionStorage.getItem('modAuthed') === '1') await enterDashboard();
+        const { data: { session } } = await sb.auth.getSession();
+        if (session) await enterDashboard();
     });
-
-    const ALLOWED_MODERATOR_EMAIL = "mohad10alli@gmail.com";
-    const ALLOWED_MODERATOR_PASSWORD = "sayadi 1233";
 
     async function doLogin() {
         const email = document.getElementById('loginEmail').value.trim();
@@ -72,18 +70,19 @@
         const errEl = document.getElementById('loginError');
         errEl.classList.add('hidden');
 
-        if (email.toLowerCase() !== ALLOWED_MODERATOR_EMAIL.toLowerCase() || password !== ALLOWED_MODERATOR_PASSWORD) {
+        const { error } = await sb.auth.signInWithPassword({ email, password });
+        if (error) {
             errEl.textContent = 'Invalid email or password.';
             errEl.classList.remove('hidden');
             return;
         }
 
-        sessionStorage.setItem('modAuthed', '1');
         await enterDashboard();
     }
 
     async function enterDashboard() {
-        if (sessionStorage.getItem('modAuthed') !== '1') {
+        const { data: { session } } = await sb.auth.getSession();
+        if (!session) {
             document.getElementById('loginError').textContent = 'Not authorized.';
             document.getElementById('loginError').classList.remove('hidden');
             return;
@@ -94,7 +93,7 @@
     }
 
     async function doLogout() {
-        sessionStorage.removeItem('modAuthed');
+        await sb.auth.signOut();
         location.reload();
     }
 

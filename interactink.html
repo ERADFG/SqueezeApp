@@ -840,6 +840,11 @@
             <a href="ichat.html" class="bottom-tab"><i data-lucide="message-circle-code"></i></a>
             <a href="settings.html" class="bottom-tab"><i data-lucide="settings"></i></a>
         </nav>
+
+        <!-- MOBILE COMPOSE FAB (styled in CSS above; jumps to the post composer) -->
+        <button type="button" id="mobileComposeFab" class="compose-fab" onclick="focusComposer()" aria-label="New post">
+            <i data-lucide="pencil"></i>
+        </button>
     </div>
  
     <!-- Add this where your share menu placeholder is located -->
@@ -1829,6 +1834,13 @@ function initRealtimeSync() {
             );
         }
 
+        // Safely embed a JSON value inside a double-quoted HTML attribute
+        // (e.g. onclick="fn(${attrJSON(value)})"). JSON.stringify emits raw
+        // double quotes, which would otherwise terminate the attribute early.
+        function attrJSON(value) {
+            return JSON.stringify(value).replace(/"/g, '&quot;');
+        }
+
         // ================== Media (image / video) attachments ==================
 
         function formatBytes(n) {
@@ -2140,6 +2152,8 @@ function initRealtimeSync() {
             document.getElementById('threadPage').classList.remove('active');
             document.getElementById('feedView').classList.remove('hidden');
             appState.activeThreadId = null;
+            const fab = document.getElementById('mobileComposeFab');
+            if (fab) fab.style.display = '';
 
             if (pushHistory) {
                 history.pushState({}, '', InkRouting.buildBoardUrl(appState.currentBoard, 'interactink.html'));
@@ -2180,6 +2194,8 @@ function initRealtimeSync() {
         const threadPageEl = document.getElementById('threadPage');
         threadPageEl.classList.remove('hidden');
         threadPageEl.classList.add('active');
+        const fab = document.getElementById('mobileComposeFab');
+        if (fab) fab.style.display = 'none';
         window.scrollTo({ top: 0, behavior: 'auto' });
         
         const container = document.getElementById('commentTreeContainer');
@@ -2213,9 +2229,8 @@ function initRealtimeSync() {
             rawCommentsList.forEach(c => commentMapRef[c.id] = { ...c, children: [] });
             rawCommentsList.forEach(c => {
                 const node = commentMapRef[c.id];
-                const match = c.text.match(/^&gt;&gt;([A-Fa-f0-9]{8})/); 
                 const rawMatch = c.text.match(/^>>([A-Fa-f0-9]{8})/);
-                const targetedParentId = (rawMatch ? rawMatch[1] : null) || (match ? match[1] : null);
+                const targetedParentId = rawMatch ? rawMatch[1] : null;
  
                 if (targetedParentId && commentMapRef[targetedParentId]) {
                     commentMapRef[targetedParentId].children.push(node);
@@ -2366,12 +2381,14 @@ function initRealtimeSync() {
                 { name: 'Reddit', icon: 'message-circle', href: `https://www.reddit.com/submit?url=${encodedUrl}&title=${encodedText}` },
                 { name: 'WhatsApp', icon: 'phone', href: `https://api.whatsapp.com/send?text=${encodedText}%20${encodedUrl}` },
                 { name: 'Telegram', icon: 'send', href: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}` },
-                { name: 'Email', icon: 'mail', href: `mailto:?subject=${encodeURIComponent(payload.title || 'InteractInk post')}&body=${encodedText}%20${encodedUrl}` }
+                { name: 'Email', icon: 'mail', href: `mailto:?subject=${encodeURIComponent(payload.title || 'InteractInk post')}&body=${encodedText}%20${encodedUrl}` },
+                { name: 'Copy Link', icon: 'link', copy: true }
             ];
  
             menu.innerHTML = platforms.map(p => 
-            p.href ? `<a href="${p.href}" target="_blank" class="flex gap-2 p-2 hover:bg-neutral-800"><i data-lucide="${p.icon}"></i> ${p.name}</a>` 
-            : `<button onclick="(${p.action.toString()})()" class="flex gap-2 p-2 w-full hover:bg-neutral-800"><i data-lucide="${p.icon}"></i> ${p.name}</button>`
+            p.copy
+            ? `<button onclick="copyShareLink(${attrJSON(payload.url)})" class="flex gap-2 p-2 w-full hover:bg-neutral-800"><i data-lucide="${p.icon}"></i> ${p.name}</button>`
+            : `<a href="${p.href}" target="_blank" class="flex gap-2 p-2 hover:bg-neutral-800"><i data-lucide="${p.icon}"></i> ${p.name}</a>`
         ).join('');
  
         const rect = anchorEl.getBoundingClientRect();
@@ -2382,7 +2399,9 @@ function initRealtimeSync() {
     }
  
         function copyShareLink(url) {
-            navigator.clipboard.writeText(url).catch(() => {});
+            navigator.clipboard.writeText(url)
+                .then(() => showToast('Link copied to clipboard.'))
+                .catch(() => showToast('Could not copy link.', true));
             document.getElementById('shareMenu').classList.add('hidden');
         }
  
