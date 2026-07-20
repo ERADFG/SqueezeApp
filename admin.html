@@ -48,11 +48,20 @@
         if (session) await enterDashboard();
     });
 
+    const ALLOWED_MODERATOR_EMAIL = "mohad10alli@gmail.com";
+
     async function doLogin() {
         const email = document.getElementById('loginEmail').value.trim();
         const password = document.getElementById('loginPassword').value;
         const errEl = document.getElementById('loginError');
         errEl.classList.add('hidden');
+
+        if (email.toLowerCase() !== ALLOWED_MODERATOR_EMAIL.toLowerCase()) {
+            errEl.textContent = 'This account is not authorized as a moderator.';
+            errEl.classList.remove('hidden');
+            return;
+        }
+
         const { error } = await sb.auth.signInWithPassword({ email, password });
         if (error) {
             errEl.textContent = error.message;
