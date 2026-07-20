@@ -1256,8 +1256,21 @@
         // Reserved display name shown with a verified badge. Typing the
         // matching passcode into the optional name field posts as this
         // name instead of the usual Anon# tripcode.
+        //
+        // NOTE ON "HIDING" THIS: this is a static HTML/JS file, so anything
+        // that runs in the browser can ultimately be read by the browser —
+        // there is no way to make a client-side secret truly unreadable to
+        // someone who opens dev tools. What's below stores a SHA-256 hash of
+        // the passcode instead of the passcode itself, so it doesn't sit in
+        // plain text in view-source. That stops casual snooping, but it is
+        // NOT real security — anyone who really wants the plaintext can
+        // brute-force short/guessable phrases against the hash offline, or
+        // just watch the "resolvedName" value in dev tools while typing it
+        // in. Treat this as a fun easter egg, not an auth system: never gate
+        // anything sensitive behind it, and if it ever leaks, just change the
+        // passcode text and regenerate the hash (sha256, lowercased input).
         const VERIFIED_DISPLAY_NAME = 'InteractInk';
-        const VERIFIED_NAME_PASSCODE = 'ink sayadi 1233';
+        const VERIFIED_NAME_PASSCODE_HASH = 'fdb9eac8a0de342a5ad8722c24dc51b9d7db195a2c08e5fa6f874b9c67f036ca';
 
         // Small inline SVG badge, shown next to VERIFIED_DISPLAY_NAME.
         const VERIFIED_BADGE_SVG = `<svg viewBox="0 0 22 22" class="inline-block w-3.5 h-3.5 -mt-0.5 ml-0.5 align-middle" aria-label="Verified">
@@ -1265,15 +1278,22 @@
             <path fill="#fff" d="M9.7 14.3l-3-3 1.1-1.1 1.9 1.9 4.4-4.4 1.1 1.1z"/>
         </svg>`;
 
+        async function sha256Hex(text) {
+            const data = new TextEncoder().encode(text);
+            const hash = await crypto.subtle.digest('SHA-256', data);
+            return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
         // Given whatever the user typed into the optional name field for a
         // post, resolve what should actually be stored/shown:
         //  - the secret passcode -> the verified display name
         //  - any other non-empty text -> that text, used as-is (unverified)
         //  - left blank -> null, so callers fall back to the Anon# tripcode
-        function resolvePosterName(rawName) {
+        async function resolvePosterName(rawName) {
             const trimmed = (rawName || '').trim();
             if (!trimmed) return null;
-            if (trimmed.toLowerCase() === VERIFIED_NAME_PASSCODE) return VERIFIED_DISPLAY_NAME;
+            const candidateHash = await sha256Hex(trimmed.toLowerCase());
+            if (candidateHash === VERIFIED_NAME_PASSCODE_HASH) return VERIFIED_DISPLAY_NAME;
             return trimmed;
         }
 
@@ -1568,7 +1588,8 @@ function initRealtimeSync() {
                 }
 
                 const id = Math.random().toString(16).substring(2, 10);
-                const parsedTitle = title.value.trim() || 'Anonymous';
+                const resolvedThreadName = await resolvePosterName(title.value);
+                const parsedTitle = resolvedThreadName || 'Anonymous';
                 const newThread = { id, board_id: appState.currentBoard, title: parsedTitle, content: contentVal, timestamp: Date.now(), upvotes: 1, media_url: null, media_type: null, moderation_status: 'approved' };
 
                 const submitBtn = e.target.querySelector('button[type="submit"]');
@@ -1663,7 +1684,7 @@ function initRealtimeSync() {
 
                 const id = Math.random().toString(16).substring(2, 10);
                 const nameInput = document.getElementById('commentNameInput');
-                const resolvedName = resolvePosterName(nameInput ? nameInput.value : '');
+                const resolvedName = await resolvePosterName(nameInput ? nameInput.value : '');
                 const tripcode = resolvedName || await generateTripcode(appState.activeThreadId, appState.userSeed);
                 const newComment = { id, thread_id: appState.activeThreadId, board_id: appState.currentBoard, tripcode, text: textVal, timestamp: Date.now(), media_url: null, media_type: null, moderation_status: 'approved' };
 
@@ -1809,7 +1830,7 @@ function initRealtimeSync() {
             
             card.innerHTML = `
                 <div class="flex items-center justify-between text-xs text-neutral-500 mb-1">
-                    <span class="font-bold text-neutral-300 uppercase tracking-wide truncate max-w-[70%]">${escapeHTML(thread.title)}</span>
+                    <span class="font-bold text-neutral-300 uppercase tracking-wide truncate max-w-[70%]">${renderTripcodeLabel(thread.title)}</span>
                     <span class="font-mono text-[11px]">>>${thread.id} · ${dateStr}</span>
                 </div>
                 <div class="post-card-body text-neutral-300 text-sm leading-relaxed mb-3 break-words whitespace-pre-wrap">${processedContent}</div>
@@ -2192,7 +2213,7 @@ function initRealtimeSync() {
 
         const meta = InkRouting.getBoardMeta(appState.currentBoard);
         document.getElementById('threadPageMeta').innerText = `${meta.label} · Thread >>${thread.id}`;
-        document.getElementById('threadPageTitle').innerText = thread.title;
+        document.getElementById('threadPageTitle').innerHTML = renderTripcodeLabel(thread.title);
         document.getElementById('threadPageOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content)) + renderPostMediaHTML(thread.media_url, thread.media_type);
 
         document.getElementById('feedView').classList.add('hidden');
