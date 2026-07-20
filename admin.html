@@ -147,16 +147,32 @@
         const threadIds = items.filter(i => i.kind === 'thread').map(i => i.id);
         const commentIds = items.filter(i => i.kind === 'comment').map(i => i.id);
         const mediaPaths = items.filter(i => i.mediaPath).map(i => i.mediaPath);
+
+        // Any selected threads may still have child comments referencing them.
+        // Remove those first (and track their media) so the thread delete doesn't fail.
+        if (threadIds.length) {
+            const { data: childComments, error: childErr } = await sb
+                .from('comments').select('id, media_url').in('thread_id', threadIds);
+            if (childErr) { console.error(childErr); alert(childErr.message); return; }
+            if (childComments && childComments.length) {
+                childComments.forEach(c => {
+                    if (c.media_url) mediaPaths.push(c.media_url.split('/').slice(-2).join('/'));
+                });
+                const { error: delChildErr } = await sb.from('comments').delete().in('thread_id', threadIds);
+                if (delChildErr) { console.error(delChildErr); alert(delChildErr.message); return; }
+            }
+        }
+
         const ops = [];
         if (threadIds.length) ops.push(sb.from('threads').delete().in('id', threadIds));
         if (commentIds.length) ops.push(sb.from('comments').delete().in('id', commentIds));
         const results = await Promise.all(ops);
         const failed = results.find(r => r.error);
-        if (failed) { alert(failed.error.message); return; }
+        if (failed) { console.error(failed.error); alert(failed.error.message); return; }
         if (mediaPaths.length) await sb.storage.from(MEDIA_BUCKET).remove(mediaPaths);
         selectedItems.clear();
         loadAllPosts();
-        if (commentIds.length) loadComments();
+        loadComments();
     }
 
     function onCommentCheck(cb) {
@@ -192,7 +208,7 @@
         const ids = items.map(i => i.id);
         const mediaPaths = items.filter(i => i.mediaPath).map(i => i.mediaPath);
         const { error } = await sb.from('comments').delete().in('id', ids);
-        if (error) { alert(error.message); return; }
+        if (error) { console.error(error); alert(error.message); return; }
         if (mediaPaths.length) await sb.storage.from(MEDIA_BUCKET).remove(mediaPaths);
         selectedComments.clear();
         loadComments();
@@ -346,12 +362,30 @@
 
     async function removeItem(kind, id, mediaPath) {
         if (!confirm('Remove this content permanently?')) return;
+        const mediaPaths = mediaPath ? [mediaPath] : [];
+
+        // Threads can have child comments referencing them (thread_id foreign key).
+        // Deleting a thread first would fail (or leave orphaned comments), so
+        // remove its comments first and clean up their media too.
+        if (kind === 'thread') {
+            const { data: childComments, error: childErr } = await sb
+                .from('comments').select('id, media_url').eq('thread_id', id);
+            if (childErr) { console.error(childErr); alert(childErr.message); return; }
+            if (childComments && childComments.length) {
+                (childComments || []).forEach(c => {
+                    if (c.media_url) mediaPaths.push(c.media_url.split('/').slice(-2).join('/'));
+                });
+                const { error: delChildErr } = await sb.from('comments').delete().eq('thread_id', id);
+                if (delChildErr) { console.error(delChildErr); alert(delChildErr.message); return; }
+            }
+        }
+
         const table = kind === 'thread' ? 'threads' : 'comments';
         const { error } = await sb.from(table).delete().eq('id', id);
-        if (error) { alert(error.message); return; }
-        if (mediaPath) await sb.storage.from(MEDIA_BUCKET).remove([mediaPath]);
+        if (error) { console.error(error); alert(error.message); return; }
+        if (mediaPaths.length) await sb.storage.from(MEDIA_BUCKET).remove(mediaPaths);
         loadAllPosts();
-        if (kind === 'comment') loadComments();
+        if (kind === 'comment' || kind === 'thread') loadComments();
     }
 
     async function markReportReviewed(reportId) {
