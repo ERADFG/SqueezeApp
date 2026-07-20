@@ -26,13 +26,20 @@
     </div>
 
     <div class="flex gap-2 mb-4 border-b border-neutral-800">
-        <button id="tabFlaggedBtn" onclick="switchTab('flagged')" class="px-4 py-2 text-sm font-bold border-b-2 border-white">Flagged Posts</button>
+        <button id="tabFlaggedBtn" onclick="switchTab('flagged')" class="px-4 py-2 text-sm font-bold border-b-2 border-white">All Posts</button>
         <button id="tabReportsBtn" onclick="switchTab('reports')" class="px-4 py-2 text-sm font-bold border-b-2 border-transparent text-neutral-500">Reports</button>
         <button id="tabIncidentsBtn" onclick="switchTab('incidents')" class="px-4 py-2 text-sm font-bold border-b-2 border-transparent text-neutral-500">Incident Log</button>
         <button onclick="loadAll()" class="ml-auto px-3 py-2 text-xs text-neutral-500 hover:text-white">Refresh</button>
     </div>
 
-    <div id="flaggedList" class="space-y-4"></div>
+    <div id="flaggedPane">
+        <div class="flex items-center gap-3 mb-3 text-xs">
+            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this.checked)"> Select all</label>
+            <span id="selectedCount" class="text-neutral-500"></span>
+            <button id="deleteSelectedBtn" onclick="removeSelected()" disabled class="px-3 py-1.5 bg-red-800 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed rounded text-xs font-bold">Delete selected</button>
+        </div>
+        <div id="flaggedList" class="space-y-4"></div>
+    </div>
     <div id="reportsList" class="space-y-4 hidden"></div>
     <div id="incidentsList" class="space-y-4 hidden"></div>
 </div>
@@ -82,16 +89,64 @@
         location.reload();
     }
 
+    const TAB_PANES = { flagged: 'flaggedPane', reports: 'reportsList', incidents: 'incidentsList' };
     function switchTab(tab) {
         for (const t of ['flagged', 'reports', 'incidents']) {
             document.getElementById(`tab${cap(t)}Btn`).className = `px-4 py-2 text-sm font-bold border-b-2 ${t === tab ? 'border-white' : 'border-transparent text-neutral-500'}`;
-            document.getElementById(`${t}List`).classList.toggle('hidden', t !== tab);
+            document.getElementById(TAB_PANES[t]).classList.toggle('hidden', t !== tab);
         }
     }
     function cap(s) { return s[0].toUpperCase() + s.slice(1); }
 
     async function loadAll() {
-        await Promise.all([loadFlagged(), loadReports(), loadIncidents()]);
+        await Promise.all([loadAllPosts(), loadReports(), loadIncidents()]);
+    }
+
+    let selectedItems = new Map(); // key `${kind}:${id}` -> { kind, id, mediaPath }
+
+    function onItemCheck(cb) {
+        const key = cb.dataset.key;
+        if (cb.checked) {
+            const [kind, id] = key.split(':');
+            selectedItems.set(key, { kind, id, mediaPath: cb.dataset.media || null });
+        } else {
+            selectedItems.delete(key);
+        }
+        updateBulkBar();
+    }
+
+    function toggleSelectAll(checked) {
+        document.querySelectorAll('.itemCheckbox').forEach(cb => {
+            cb.checked = checked;
+            onItemCheck(cb);
+        });
+    }
+
+    function updateBulkBar() {
+        const count = selectedItems.size;
+        document.getElementById('selectedCount').textContent = count ? `${count} selected` : '';
+        document.getElementById('deleteSelectedBtn').disabled = count === 0;
+        const allCbs = document.querySelectorAll('.itemCheckbox');
+        const selectAll = document.getElementById('selectAllCheckbox');
+        selectAll.checked = allCbs.length > 0 && count === allCbs.length;
+    }
+
+    async function removeSelected() {
+        const items = Array.from(selectedItems.values());
+        if (items.length === 0) return;
+        if (!confirm(`Permanently delete ${items.length} post${items.length > 1 ? 's' : ''}?`)) return;
+        const threadIds = items.filter(i => i.kind === 'thread').map(i => i.id);
+        const commentIds = items.filter(i => i.kind === 'comment').map(i => i.id);
+        const mediaPaths = items.filter(i => i.mediaPath).map(i => i.mediaPath);
+        const ops = [];
+        if (threadIds.length) ops.push(sb.from('threads').delete().in('id', threadIds));
+        if (commentIds.length) ops.push(sb.from('comments').delete().in('id', commentIds));
+        const results = await Promise.all(ops);
+        const failed = results.find(r => r.error);
+        if (failed) { alert(failed.error.message); return; }
+        if (mediaPaths.length) await sb.storage.from(MEDIA_BUCKET).remove(mediaPaths);
+        selectedItems.clear();
+        loadAllPosts();
     }
 
     function escapeHTML(str) {
@@ -106,28 +161,42 @@
             : `<img src="${url}" class="max-h-64 rounded mt-2">`;
     }
 
-    async function loadFlagged() {
+    async function loadAllPosts() {
         const list = document.getElementById('flaggedList');
         list.innerHTML = '<p class="text-neutral-600 text-sm">Loading…</p>';
-        const [{ data: threads }, { data: comments }] = await Promise.all([
-            sb.from('threads').select('*').eq('moderation_status', 'flagged').order('timestamp', { ascending: false }),
-            sb.from('comments').select('*').eq('moderation_status', 'flagged').order('timestamp', { ascending: false }),
+        selectedItems.clear();
+        const [{ data: threads, error: tErr }, { data: comments, error: cErr }] = await Promise.all([
+            sb.from('threads').select('*').order('timestamp', { ascending: false }),
+            sb.from('comments').select('*').order('timestamp', { ascending: false }),
         ]);
+        if (tErr || cErr) { list.innerHTML = `<p class="text-red-400 text-sm">${escapeHTML((tErr || cErr).message)}</p>`; return; }
         const items = [
             ...(threads || []).map(t => ({ ...t, _kind: 'thread' })),
             ...(comments || []).map(c => ({ ...c, _kind: 'comment' })),
-        ];
-        if (items.length === 0) { list.innerHTML = '<p class="text-neutral-600 text-sm">Nothing pending review.</p>'; return; }
-        list.innerHTML = items.map(item => `
+        ].sort((a, b) => b.timestamp - a.timestamp);
+        if (items.length === 0) { list.innerHTML = '<p class="text-neutral-600 text-sm">No posts yet.</p>'; updateBulkBar(); return; }
+        list.innerHTML = items.map(item => {
+            const key = `${item._kind}:${item.id}`;
+            const mediaPath = item.media_url ? item.media_url.split('/').slice(-2).join('/') : '';
+            const status = item.moderation_status || 'approved';
+            const statusColor = status === 'flagged' ? 'text-red-400' : status === 'approved' ? 'text-emerald-400' : 'text-neutral-400';
+            return `
             <div class="border border-neutral-800 rounded-lg p-4">
-                <div class="text-xs text-neutral-500 mb-1">${item._kind.toUpperCase()} · board /${escapeHTML(item.board_id)}/ · ${new Date(item.timestamp).toLocaleString()}</div>
-                <p class="text-sm whitespace-pre-wrap">${escapeHTML(item.content || item.text)}</p>
-                ${mediaHTML(item.media_url, item.media_type)}
-                <div class="flex gap-2 mt-3">
-                    <button onclick="approveItem('${item._kind}', '${item.id}')" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-xs font-bold">Approve</button>
-                    <button onclick="removeItem('${item._kind}', '${item.id}', ${JSON.stringify(item.media_url ? item.media_url.split('/').slice(-2).join('/') : null)})" class="px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded text-xs font-bold">Remove</button>
+                <div class="flex items-start gap-3">
+                    <input type="checkbox" class="itemCheckbox mt-1" data-key="${key}" data-media="${escapeHTML(mediaPath)}" onchange="onItemCheck(this)">
+                    <div class="flex-1 min-w-0">
+                        <div class="text-xs text-neutral-500 mb-1">${item._kind.toUpperCase()} · board /${escapeHTML(item.board_id)}/ · <span class="${statusColor} font-bold">${escapeHTML(status)}</span> · ${new Date(item.timestamp).toLocaleString()}</div>
+                        <p class="text-sm whitespace-pre-wrap">${escapeHTML(item.content || item.text)}</p>
+                        ${mediaHTML(item.media_url, item.media_type)}
+                        <div class="flex gap-2 mt-3">
+                            ${status === 'flagged' ? `<button onclick="approveItem('${item._kind}', '${item.id}')" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-xs font-bold">Approve</button>` : ''}
+                            <button onclick="removeItem('${item._kind}', '${item.id}', ${JSON.stringify(item.media_url ? item.media_url.split('/').slice(-2).join('/') : null)})" class="px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded text-xs font-bold">Delete</button>
+                        </div>
+                    </div>
                 </div>
-            </div>`).join('');
+            </div>`;
+        }).join('');
+        updateBulkBar();
     }
 
     async function loadReports() {
@@ -136,16 +205,36 @@
         const { data, error } = await sb.from('reports').select('*').eq('reviewed', false).order('timestamp', { ascending: false });
         if (error) { list.innerHTML = `<p class="text-red-400 text-sm">${escapeHTML(error.message)}</p>`; return; }
         if (!data || data.length === 0) { list.innerHTML = '<p class="text-neutral-600 text-sm">No open reports.</p>'; return; }
-        list.innerHTML = data.map(r => `
+
+        // Pull in the actual reported post (content + media) so it can be judged inline.
+        const threadIds = data.filter(r => r.content_type === 'thread').map(r => r.content_id);
+        const commentIds = data.filter(r => r.content_type === 'comment').map(r => r.content_id);
+        const [{ data: threads }, { data: comments }] = await Promise.all([
+            threadIds.length ? sb.from('threads').select('*').in('id', threadIds) : Promise.resolve({ data: [] }),
+            commentIds.length ? sb.from('comments').select('*').in('id', commentIds) : Promise.resolve({ data: [] }),
+        ]);
+        const contentMap = new Map();
+        (threads || []).forEach(t => contentMap.set(`thread:${t.id}`, t));
+        (comments || []).forEach(c => contentMap.set(`comment:${c.id}`, c));
+
+        list.innerHTML = data.map(r => {
+            const post = contentMap.get(`${r.content_type}:${r.content_id}`);
+            const mediaPath = post && post.media_url ? post.media_url.split('/').slice(-2).join('/') : null;
+            const postHTML = post
+                ? `<p class="text-sm whitespace-pre-wrap mt-2 pt-2 border-t border-neutral-800">${escapeHTML(post.content || post.text)}</p>${mediaHTML(post.media_url, post.media_type)}`
+                : `<p class="text-xs text-neutral-600 italic mt-2 pt-2 border-t border-neutral-800">Original post no longer exists.</p>`;
+            return `
             <div class="border border-neutral-800 rounded-lg p-4">
                 <div class="text-xs text-neutral-500 mb-1">${r.content_type.toUpperCase()} ${escapeHTML(r.content_id)} · board /${escapeHTML(r.board_id || '')}/ · ${new Date(r.timestamp).toLocaleString()}</div>
                 <p class="text-sm">Reason: <span class="font-bold">${escapeHTML(r.reason)}</span></p>
+                ${postHTML}
                 <div class="flex gap-2 mt-3">
                     <a href="interactink.html?board=${encodeURIComponent(r.board_id || '')}&thread=${encodeURIComponent(r.thread_id || r.content_id)}" target="_blank" class="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 rounded text-xs font-bold">View post</a>
-                    <button onclick="markReportReviewed(${r.id})" class="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 rounded text-xs font-bold">Mark reviewed</button>
-                    <button onclick="removeItem('${r.content_type}', '${r.content_id}', null); markReportReviewed(${r.id});" class="px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded text-xs font-bold">Remove content</button>
+                    <button onclick="markReportReviewed(${r.id})" class="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 rounded text-xs font-bold">Dismiss (false report)</button>
+                    ${post ? `<button onclick="removeItem('${r.content_type}', '${r.content_id}', ${JSON.stringify(mediaPath)}); markReportReviewed(${r.id});" class="px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded text-xs font-bold">Delete post</button>` : ''}
                 </div>
-            </div>`).join('');
+            </div>`;
+        }).join('');
     }
 
     async function loadIncidents() {
@@ -163,7 +252,7 @@
     async function approveItem(kind, id) {
         const table = kind === 'thread' ? 'threads' : 'comments';
         const { error } = await sb.from(table).update({ moderation_status: 'approved' }).eq('id', id);
-        if (error) alert(error.message); else loadFlagged();
+        if (error) alert(error.message); else loadAllPosts();
     }
 
     async function removeItem(kind, id, mediaPath) {
@@ -172,7 +261,7 @@
         const { error } = await sb.from(table).delete().eq('id', id);
         if (error) { alert(error.message); return; }
         if (mediaPath) await sb.storage.from(MEDIA_BUCKET).remove([mediaPath]);
-        loadFlagged();
+        loadAllPosts();
     }
 
     async function markReportReviewed(reportId) {
