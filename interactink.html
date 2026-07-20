@@ -708,6 +708,9 @@
                 <input type="text" id="threadHoneypot" name="website" tabindex="-1" autocomplete="off"
                        class="ink-honeypot" aria-hidden="true">
 
+                <div id="threadMediaPreviewWrap" class="hidden mt-3"></div>
+                <div id="threadMediaError" class="hidden mt-2 text-xs text-red-400"></div>
+
                 <div class="flex items-center gap-2 mt-3 pt-3 border-t border-neutral-950">
                     <label id="threadCaptchaBox" class="ink-captcha-box">
                         <input type="checkbox" id="threadCaptchaCheckbox" class="ink-captcha-checkbox" onclick="return handleCaptchaClick(event, 'thread')">
@@ -718,6 +721,10 @@
 
                 <div class="flex justify-between items-center border-t border-neutral-950 pt-3 mt-2">
                     <div class="text-neutral-600 flex gap-4 items-center text-sm">
+                        <label for="threadMediaInput" class="cursor-pointer hover:text-neutral-300 transition flex items-center" title="Attach image or video">
+                            <i data-lucide="image-plus" class="w-4 h-4"></i>
+                        </label>
+                        <input type="file" id="threadMediaInput" accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm" class="hidden">
                         <i data-lucide="shield-check" class="w-4 h-4 text-neutral-500" title="You'll get an automatic anonymous ID for this thread"></i>
                         <span class="text-xs text-neutral-500 hidden sm:inline">Anonymous Posting</span>
                     </div>
@@ -782,12 +789,18 @@
                         </button>
                     </div>
                     <div class="flex items-center gap-2 pl-7">
+                        <label for="commentMediaInput" class="cursor-pointer text-neutral-500 hover:text-neutral-300 transition flex items-center" title="Attach image or video">
+                            <i data-lucide="image-plus" class="w-3.5 h-3.5"></i>
+                        </label>
+                        <input type="file" id="commentMediaInput" accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm" class="hidden">
                         <label id="commentCaptchaBox" class="ink-captcha-box ink-captcha-box-sm">
                             <input type="checkbox" id="commentCaptchaCheckbox" class="ink-captcha-checkbox" onclick="return handleCaptchaClick(event, 'comment')">
                             <span class="text-[11px] text-neutral-300">I'm not a robot</span>
                             <i data-lucide="shield-check" class="w-3 h-3 text-neutral-600"></i>
                         </label>
                     </div>
+                    <div id="commentMediaPreviewWrap" class="hidden pl-7"></div>
+                    <div id="commentMediaError" class="hidden pl-7 text-xs text-red-400"></div>
                     <!-- Honeypot field: invisible to real users, bots often auto-fill it -->
                     <input type="text" id="commentHoneypot" name="website" tabindex="-1" autocomplete="off"
                            class="ink-honeypot" aria-hidden="true">
@@ -852,11 +865,38 @@
  
 <!-- Hover preview tooltip for >>ID cross-links inside comments -->
 <div id="hoverPreviewBox" class="hidden fixed z-[70] max-w-xs bg-neutral-950 border border-neutral-800 rounded-lg p-3 text-xs text-neutral-300 shadow-2xl pointer-events-none"></div>
+
+<!-- Fullscreen lightbox for viewing posted media at full size -->
+<div id="mediaLightbox" class="hidden fixed inset-0 z-[80] bg-black/90 flex items-center justify-center p-4" onclick="closeLightbox(event)">
+    <button type="button" onclick="closeLightbox(event)" class="absolute top-4 right-4 text-neutral-300 hover:text-white cursor-pointer" aria-label="Close">
+        <i data-lucide="x" class="w-7 h-7"></i>
+    </button>
+    <div id="mediaLightboxContent" class="max-w-full max-h-full"></div>
+</div>
+
+<!-- Report reason picker -->
+<div id="reportModal" class="hidden fixed inset-0 z-[80] bg-black/80 flex items-center justify-center p-4" onclick="if(event.target===this) closeReportModal();">
+    <div class="bg-neutral-950 border border-neutral-800 rounded-xl p-4 w-full max-w-sm">
+        <h3 class="text-white font-bold text-sm mb-3">Report this post</h3>
+        <div id="reportReasonList" class="flex flex-col gap-2"></div>
+        <button type="button" onclick="closeReportModal()" class="mt-3 w-full text-center text-xs text-neutral-500 hover:text-neutral-300 py-2 cursor-pointer">Cancel</button>
+    </div>
+</div>
  
 <script>
     const SUPABASE_URL = "https://xdshsodkuyawljzuirqt.supabase.co";
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
-    
+
+    // ---------- Media upload config ----------
+    const MEDIA_BUCKET = 'post-media';
+    const MAX_IMAGE_BYTES = 8 * 1024 * 1024;   // 8 MB
+    const MAX_VIDEO_BYTES = 25 * 1024 * 1024;  // 25 MB
+    const MAX_IMAGE_DIMENSION = 2048;          // longest edge, px, after resize
+    const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+    const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm'];
+    // Selected-but-not-yet-posted file for each composer, keyed by composer id.
+    const selectedMedia = { thread: null, comment: null };
+
     let supabaseClient;
     const appState = { 
         threads: {}, 
@@ -1444,6 +1484,7 @@ function initRealtimeSync() {
         }
 
         function bindEventListeners() {
+            setupMediaInputs();
             const threadContent = document.getElementById('threadContent');
             const threadCharCounter = document.getElementById('threadCharCounter');
             threadContent.addEventListener('input', () => {
@@ -1490,10 +1531,23 @@ function initRealtimeSync() {
 
                 const id = Math.random().toString(16).substring(2, 10);
                 const parsedTitle = title.value.trim() || 'Anonymous';
-                const newThread = { id, board_id: appState.currentBoard, title: parsedTitle, content: contentVal, timestamp: Date.now(), upvotes: 1 };
+                const newThread = { id, board_id: appState.currentBoard, title: parsedTitle, content: contentVal, timestamp: Date.now(), upvotes: 1, media_url: null, media_type: null };
 
                 const submitBtn = e.target.querySelector('button[type="submit"]');
                 if (submitBtn) submitBtn.disabled = true;
+
+                if (selectedMedia.thread) {
+                    try {
+                        const { url, type } = await uploadSelectedMedia(selectedMedia.thread, appState.currentBoard);
+                        newThread.media_url = url;
+                        newThread.media_type = type;
+                    } catch (uploadErr) {
+                        if (submitBtn) submitBtn.disabled = false;
+                        console.error('Media upload failed:', uploadErr);
+                        showToast(`Media upload failed: ${uploadErr.message || 'unknown error'}`, true);
+                        return;
+                    }
+                }
 
                 const { error } = await supabaseClient.from('threads').insert([newThread]);
 
@@ -1516,6 +1570,7 @@ function initRealtimeSync() {
 
                 title.value = ''; threadContent.value = '';
                 threadCharCounter.innerText = '0/1000';
+                clearSelectedMedia('thread');
             });
  
             document.getElementById('commentForm').addEventListener('submit', async (e) => {
@@ -1551,10 +1606,23 @@ function initRealtimeSync() {
 
                 const id = Math.random().toString(16).substring(2, 10);
                 const tripcode = await generateTripcode(appState.activeThreadId, appState.userSeed);
-                const newComment = { id, thread_id: appState.activeThreadId, board_id: appState.currentBoard, tripcode, text: textVal, timestamp: Date.now() };
+                const newComment = { id, thread_id: appState.activeThreadId, board_id: appState.currentBoard, tripcode, text: textVal, timestamp: Date.now(), media_url: null, media_type: null };
 
                 const submitBtn = e.target.querySelector('button[type="submit"]');
                 if (submitBtn) submitBtn.disabled = true;
+
+                if (selectedMedia.comment) {
+                    try {
+                        const { url, type } = await uploadSelectedMedia(selectedMedia.comment, appState.currentBoard);
+                        newComment.media_url = url;
+                        newComment.media_type = type;
+                    } catch (uploadErr) {
+                        if (submitBtn) submitBtn.disabled = false;
+                        console.error('Media upload failed:', uploadErr);
+                        showToast(`Media upload failed: ${uploadErr.message || 'unknown error'}`, true);
+                        return;
+                    }
+                }
 
                 const { error } = await supabaseClient.from('comments').insert([newComment]);
 
@@ -1577,6 +1645,7 @@ function initRealtimeSync() {
                 renderCommentTree();
                 commentInput.value = '';
                 commentCharCounter.innerText = '0/300';
+                clearSelectedMedia('comment');
             });
         }
  
@@ -1668,9 +1737,11 @@ function initRealtimeSync() {
                     <span class="font-mono text-[11px]">>>${thread.id} · ${dateStr}</span>
                 </div>
                 <div class="post-card-body text-neutral-300 text-sm leading-relaxed mb-3 break-words whitespace-pre-wrap">${processedContent}</div>
+                ${renderPostMediaHTML(thread.media_url, thread.media_type)}
                 <div class="flex items-center gap-6 text-xs text-neutral-500">
                     <span class="flex items-center gap-1.5 hover:text-neutral-300 transition"><i data-lucide="message-square" class="w-4 h-4"></i> ${dynamicCommentCount} Replies</span>
                     <button type="button" class="flex items-center gap-1.5 hover:text-neutral-300 transition cursor-pointer" onclick="event.preventDefault(); event.stopPropagation(); shareThread('${thread.id}', event.currentTarget);"><i data-lucide="share" class="w-4 h-4"></i> Share</button>
+                    <button type="button" class="flex items-center gap-1.5 hover:text-red-400 transition cursor-pointer" onclick="event.preventDefault(); event.stopPropagation(); openReportModal('thread', '${thread.id}', '${thread.id}');"><i data-lucide="flag" class="w-4 h-4"></i> Report</button>
                 </div>
             `;
             return card;
@@ -1681,6 +1752,242 @@ function initRealtimeSync() {
             return str.replace(/[&<>'"]/g, 
                 tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
             );
+        }
+
+        // ================== Media (image / video) attachments ==================
+
+        function formatBytes(n) {
+            if (n < 1024 * 1024) return `${Math.round(n / 1024)}KB`;
+            return `${(n / (1024 * 1024)).toFixed(1)}MB`;
+        }
+
+        function setMediaError(kind, msg) {
+            const el = document.getElementById(`${kind}MediaError`);
+            if (!el) return;
+            if (!msg) { el.classList.add('hidden'); el.innerText = ''; return; }
+            el.classList.remove('hidden');
+            el.innerText = msg;
+        }
+
+        /**
+         * Re-draws an image onto a canvas and re-encodes it. This both caps
+         * the dimensions of huge phone-camera photos AND, as a side effect,
+         * strips EXIF metadata (GPS location, device info, timestamps) that
+         * the canvas never copies over — important since posts here are
+         * anonymous and we don't want to leak a poster's location.
+         * GIFs are passed through untouched so animation isn't lost.
+         */
+        function prepareImageForUpload(file) {
+            if (file.type === 'image/gif') return Promise.resolve(file);
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                const objectUrl = URL.createObjectURL(file);
+                img.onload = () => {
+                    URL.revokeObjectURL(objectUrl);
+                    let { width, height } = img;
+                    const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(width, height));
+                    width = Math.round(width * scale);
+                    height = Math.round(height * scale);
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width; canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    canvas.toBlob((blob) => {
+                        if (!blob) { reject(new Error('Could not process image.')); return; }
+                        resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }));
+                    }, 'image/jpeg', 0.88);
+                };
+                img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Could not read image file.')); };
+                img.src = objectUrl;
+            });
+        }
+
+        function validateMediaFile(file) {
+            const isImage = ALLOWED_IMAGE_TYPES.includes(file.type);
+            const isVideo = ALLOWED_VIDEO_TYPES.includes(file.type);
+            if (!isImage && !isVideo) {
+                return 'Unsupported file type. Use JPG, PNG, WEBP, GIF, MP4 or WEBM.';
+            }
+            if (isImage && file.size > MAX_IMAGE_BYTES) {
+                return `Image too large (max ${formatBytes(MAX_IMAGE_BYTES)}).`;
+            }
+            if (isVideo && file.size > MAX_VIDEO_BYTES) {
+                return `Video too large (max ${formatBytes(MAX_VIDEO_BYTES)}).`;
+            }
+            return null;
+        }
+
+        function renderMediaPreview(kind, file) {
+            const wrap = document.getElementById(`${kind}MediaPreviewWrap`);
+            wrap.classList.remove('hidden');
+            const url = URL.createObjectURL(file);
+            const isVideo = file.type.startsWith('video/');
+            wrap.innerHTML = `
+                <div class="relative inline-block">
+                    ${isVideo
+                        ? `<video src="${url}" class="max-h-40 rounded-lg border border-neutral-800" muted></video>`
+                        : `<img src="${url}" class="max-h-40 rounded-lg border border-neutral-800">`}
+                    <button type="button" onclick="clearSelectedMedia('${kind}')" class="absolute -top-2 -right-2 bg-neutral-900 border border-neutral-700 rounded-full w-6 h-6 flex items-center justify-center text-neutral-300 hover:text-white cursor-pointer">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>`;
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function clearSelectedMedia(kind) {
+            selectedMedia[kind] = null;
+            const input = document.getElementById(`${kind}MediaInput`);
+            if (input) input.value = '';
+            const wrap = document.getElementById(`${kind}MediaPreviewWrap`);
+            wrap.classList.add('hidden');
+            wrap.innerHTML = '';
+            setMediaError(kind, null);
+        }
+
+        async function onMediaFileSelected(kind, fileInput) {
+            const file = fileInput.files && fileInput.files[0];
+            if (!file) return;
+            setMediaError(kind, null);
+
+            const err = validateMediaFile(file);
+            if (err) {
+                setMediaError(kind, err);
+                fileInput.value = '';
+                return;
+            }
+
+            let finalFile = file;
+            if (file.type.startsWith('image/')) {
+                try {
+                    finalFile = await prepareImageForUpload(file);
+                } catch (e) {
+                    setMediaError(kind, 'Could not process that image. Try a different file.');
+                    fileInput.value = '';
+                    return;
+                }
+            }
+
+            selectedMedia[kind] = finalFile;
+            renderMediaPreview(kind, finalFile);
+        }
+
+        function setupMediaInputs() {
+            const threadInput = document.getElementById('threadMediaInput');
+            if (threadInput) threadInput.addEventListener('change', () => onMediaFileSelected('thread', threadInput));
+            const commentInput = document.getElementById('commentMediaInput');
+            if (commentInput) commentInput.addEventListener('change', () => onMediaFileSelected('comment', commentInput));
+        }
+
+        /** Uploads the given file to Supabase Storage and returns {url, type}. */
+        async function uploadSelectedMedia(file, boardId) {
+            const ext = (file.name.match(/\.\w+$/) || ['.bin'])[0];
+            const path = `${boardId}/${Date.now()}-${Math.random().toString(16).slice(2, 10)}${ext}`;
+            const { error } = await supabaseClient.storage.from(MEDIA_BUCKET).upload(path, file, {
+                cacheControl: '3600',
+                contentType: file.type,
+                upsert: false
+            });
+            if (error) throw error;
+            const { data } = supabaseClient.storage.from(MEDIA_BUCKET).getPublicUrl(path);
+            return { url: data.publicUrl, type: file.type.startsWith('video/') ? 'video' : 'image' };
+        }
+
+        /**
+         * Media is rendered blurred behind a "tap to view" overlay by
+         * default. This isn't a moderation system on its own, but it means
+         * nothing graphic renders directly into the feed unprompted, and it
+         * buys a beat before a viewer sees an image/video at full clarity.
+         */
+        function renderPostMediaHTML(mediaUrl, mediaType) {
+            if (!mediaUrl) return '';
+            const safeUrl = escapeHTML(mediaUrl);
+            const inner = mediaType === 'video'
+                ? `<video src="${safeUrl}" class="w-full max-h-80 object-cover" muted playsinline></video>`
+                : `<img src="${safeUrl}" loading="lazy" class="w-full max-h-80 object-cover">`;
+            return `
+                <div class="post-media-wrap relative mt-2 mb-2 rounded-lg overflow-hidden border border-neutral-800 cursor-pointer max-w-sm" data-revealed="false"
+                     onclick="event.preventDefault(); event.stopPropagation(); handleMediaTap(event, '${safeUrl}', '${mediaType}');">
+                    ${inner}
+                    <div class="post-media-veil absolute inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center text-xs text-neutral-200 font-medium gap-1.5">
+                        <i data-lucide="eye" class="w-4 h-4"></i> Tap to view ${mediaType === 'video' ? 'video' : 'image'}
+                    </div>
+                </div>`;
+        }
+
+        function handleMediaTap(evt, url, mediaType) {
+            const wrap = evt.currentTarget;
+            if (wrap.getAttribute('data-revealed') !== 'true') {
+                wrap.setAttribute('data-revealed', 'true');
+                const veil = wrap.querySelector('.post-media-veil');
+                if (veil) veil.remove();
+                const vid = wrap.querySelector('video');
+                if (vid) vid.controls = true;
+                return;
+            }
+            openLightbox(url, mediaType);
+        }
+
+        function openLightbox(url, mediaType) {
+            const content = document.getElementById('mediaLightboxContent');
+            content.innerHTML = mediaType === 'video'
+                ? `<video src="${url}" class="max-w-full max-h-[85vh] rounded" controls autoplay></video>`
+                : `<img src="${url}" class="max-w-full max-h-[85vh] rounded">`;
+            document.getElementById('mediaLightbox').classList.remove('hidden');
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function closeLightbox(evt) {
+            if (evt && evt.target.closest('#mediaLightboxContent') && evt.target.tagName !== 'DIV') return;
+            document.getElementById('mediaLightbox').classList.add('hidden');
+            document.getElementById('mediaLightboxContent').innerHTML = '';
+        }
+
+        // ================== Reporting ==================
+
+        const REPORT_REASONS = [
+            'Illegal content / CSAM',
+            'Violence or gore',
+            'Harassment or doxxing',
+            'Spam or scam',
+            'Something else'
+        ];
+        let pendingReport = null;
+
+        function openReportModal(contentType, contentId, threadId) {
+            pendingReport = { contentType, contentId, threadId };
+            const list = document.getElementById('reportReasonList');
+            list.innerHTML = REPORT_REASONS.map(r => `
+                <button type="button" onclick="submitReport('${r.replace(/'/g, "\\'")}')"
+                        class="text-left text-sm text-neutral-200 hover:bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 cursor-pointer">
+                    ${escapeHTML(r)}
+                </button>`).join('');
+            document.getElementById('reportModal').classList.remove('hidden');
+        }
+
+        function closeReportModal() {
+            document.getElementById('reportModal').classList.add('hidden');
+            pendingReport = null;
+        }
+
+        async function submitReport(reason) {
+            if (!pendingReport) return;
+            const payload = {
+                content_type: pendingReport.contentType,
+                content_id: pendingReport.contentId,
+                thread_id: pendingReport.threadId,
+                board_id: appState.currentBoard,
+                reason,
+                timestamp: Date.now()
+            };
+            closeReportModal();
+            try {
+                const { error } = await supabaseClient.from('reports').insert([payload]);
+                if (error) throw error;
+                showToast('Thanks — this post has been reported for review.');
+            } catch (e) {
+                console.error('Report insert failed:', e);
+                showToast('Could not submit report. Please try again.', true);
+            }
         }
  
         function focusComposer() {
@@ -1740,7 +2047,7 @@ function initRealtimeSync() {
         const meta = InkRouting.getBoardMeta(appState.currentBoard);
         document.getElementById('threadPageMeta').innerText = `${meta.label} · Thread >>${thread.id}`;
         document.getElementById('threadPageTitle').innerText = thread.title;
-        document.getElementById('threadPageOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content));
+        document.getElementById('threadPageOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content)) + renderPostMediaHTML(thread.media_url, thread.media_type);
 
         document.getElementById('feedView').classList.add('hidden');
         const threadPageEl = document.getElementById('threadPage');
@@ -1825,9 +2132,11 @@ function initRealtimeSync() {
                     <span class="font-mono text-[11px]">${dateStr} [>>${node.id}]</span>
                 </div>
                 <div class="text-neutral-300 leading-relaxed break-words whitespace-pre-wrap">${structuralLinkedProcessedText}</div>
+                ${renderPostMediaHTML(node.media_url, node.media_type)}
                 <div class="flex justify-end items-center gap-4 mt-2">
                     <button onclick="shareComment('${appState.activeThreadId}', '${node.id}', event.currentTarget)" class="text-xs text-neutral-500 hover:text-white flex items-center gap-1 font-medium cursor-pointer"><i data-lucide="share" class="w-3.5 h-3.5"></i> Share</button>
                     <button onclick="appendReplyPointer('${node.id}')" class="text-xs text-neutral-500 hover:text-white flex items-center gap-1 font-medium cursor-pointer"><i data-lucide="reply" class="w-3.5 h-3.5"></i> Reply</button>
+                    <button onclick="openReportModal('comment', '${node.id}', '${appState.activeThreadId}')" class="text-xs text-neutral-500 hover:text-red-400 flex items-center gap-1 font-medium cursor-pointer"><i data-lucide="flag" class="w-3.5 h-3.5"></i> Report</button>
                 </div>
             `;
             wrap.appendChild(item);
