@@ -44,11 +44,11 @@
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     window.addEventListener('load', async () => {
-        const { data: { session } } = await sb.auth.getSession();
-        if (session) await enterDashboard();
+        if (sessionStorage.getItem('modAuthed') === '1') await enterDashboard();
     });
 
     const ALLOWED_MODERATOR_EMAIL = "mohad10alli@gmail.com";
+    const ALLOWED_MODERATOR_PASSWORD = "sayadi 1233";
 
     async function doLogin() {
         const email = document.getElementById('loginEmail').value.trim();
@@ -56,31 +56,20 @@
         const errEl = document.getElementById('loginError');
         errEl.classList.add('hidden');
 
-        if (email.toLowerCase() !== ALLOWED_MODERATOR_EMAIL.toLowerCase()) {
-            errEl.textContent = 'This account is not authorized as a moderator.';
+        if (email.toLowerCase() !== ALLOWED_MODERATOR_EMAIL.toLowerCase() || password !== ALLOWED_MODERATOR_PASSWORD) {
+            errEl.textContent = 'Invalid email or password.';
             errEl.classList.remove('hidden');
             return;
         }
 
-        const { error } = await sb.auth.signInWithPassword({ email, password });
-        if (error) {
-            errEl.textContent = error.message;
-            errEl.classList.remove('hidden');
-            return;
-        }
+        sessionStorage.setItem('modAuthed', '1');
         await enterDashboard();
     }
 
     async function enterDashboard() {
-        // Confirm this account is an actual moderator (see moderators table
-        // in SUPABASE_SETUP.md) — being able to log in isn't enough, since
-        // Supabase Auth alone doesn't scope who can see flagged content.
-        const { data: { user } } = await sb.auth.getUser();
-        const { data: modRow } = await sb.from('moderators').select('id').eq('id', user.id).maybeSingle();
-        if (!modRow) {
-            document.getElementById('loginError').textContent = 'This account is not authorized as a moderator.';
+        if (sessionStorage.getItem('modAuthed') !== '1') {
+            document.getElementById('loginError').textContent = 'Not authorized.';
             document.getElementById('loginError').classList.remove('hidden');
-            await sb.auth.signOut();
             return;
         }
         document.getElementById('loginView').classList.add('hidden');
@@ -89,7 +78,7 @@
     }
 
     async function doLogout() {
-        await sb.auth.signOut();
+        sessionStorage.removeItem('modAuthed');
         location.reload();
     }
 
