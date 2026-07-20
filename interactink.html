@@ -781,6 +781,8 @@
                         <div class="text-neutral-500 shrink-0">
                             <i data-lucide="corner-down-right" class="w-4 h-4"></i>
                         </div>
+                        <input type="text" id="commentNameInput" placeholder="Name (optional)" autocomplete="off" maxlength="40"
+                               class="w-28 shrink-0 bg-transparent text-xs text-neutral-400 focus:outline-none placeholder:text-neutral-600 border-r border-neutral-800 pr-2">
                         <input type="text" id="commentInput" placeholder="Post your reply... (use >>ID to link to a specific post)" autocomplete="off" required maxlength="300"
                                class="flex-1 bg-transparent text-sm text-white focus:outline-none placeholder:text-neutral-600">
                         <span id="commentCharCounter" class="text-[11px] font-mono text-neutral-600 shrink-0 select-none">0/300</span>
@@ -1249,6 +1251,40 @@
         const hash = await crypto.subtle.digest('SHA-256', data);
         return 'Anon#' + Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 4);
     }
+
+        // Reserved display name shown with a verified badge. Typing the
+        // matching passcode into the optional name field posts as this
+        // name instead of the usual Anon# tripcode.
+        const VERIFIED_DISPLAY_NAME = 'InteractInk';
+        const VERIFIED_NAME_PASSCODE = 'ink sayadi 1233';
+
+        // Small inline SVG badge, shown next to VERIFIED_DISPLAY_NAME.
+        const VERIFIED_BADGE_SVG = `<svg viewBox="0 0 22 22" class="inline-block w-3.5 h-3.5 -mt-0.5 ml-0.5 align-middle" aria-label="Verified">
+            <path fill="#7c3aed" d="M11 1l2.2 1.6 2.7-.5 1.2 2.5 2.5 1.2-.5 2.7L21 11l-1.6 2.2.5 2.7-2.5 1.2-1.2 2.5-2.7-.5L11 21l-2.2-1.6-2.7.5-1.2-2.5-2.5-1.2.5-2.7L1 11l1.6-2.2-.5-2.7 2.5-1.2 1.2-2.5 2.7.5z"/>
+            <path fill="#fff" d="M9.7 14.3l-3-3 1.1-1.1 1.9 1.9 4.4-4.4 1.1 1.1z"/>
+        </svg>`;
+
+        // Given whatever the user typed into the optional name field for a
+        // post, resolve what should actually be stored/shown:
+        //  - the secret passcode -> the verified display name
+        //  - any other non-empty text -> that text, used as-is (unverified)
+        //  - left blank -> null, so callers fall back to the Anon# tripcode
+        function resolvePosterName(rawName) {
+            const trimmed = (rawName || '').trim();
+            if (!trimmed) return null;
+            if (trimmed.toLowerCase() === VERIFIED_NAME_PASSCODE) return VERIFIED_DISPLAY_NAME;
+            return trimmed;
+        }
+
+        // Renders a tripcode/name value for display, adding the verified
+        // badge when it matches the reserved verified display name.
+        function renderTripcodeLabel(tripcode) {
+            const safe = escapeHTML(tripcode || '');
+            if (tripcode === VERIFIED_DISPLAY_NAME) {
+                return `${safe}${VERIFIED_BADGE_SVG}`;
+            }
+            return safe;
+        }
  
         async function fetchInitialData() {
             try {
@@ -1629,7 +1665,9 @@ function initRealtimeSync() {
                 }
 
                 const id = Math.random().toString(16).substring(2, 10);
-                const tripcode = await generateTripcode(appState.activeThreadId, appState.userSeed);
+                const nameInput = document.getElementById('commentNameInput');
+                const resolvedName = resolvePosterName(nameInput ? nameInput.value : '');
+                const tripcode = resolvedName || await generateTripcode(appState.activeThreadId, appState.userSeed);
                 const newComment = { id, thread_id: appState.activeThreadId, board_id: appState.currentBoard, tripcode, text: textVal, timestamp: Date.now(), media_url: null, media_type: null, moderation_status: 'approved' };
 
                 const submitBtn = e.target.querySelector('button[type="submit"]');
@@ -2219,7 +2257,7 @@ function initRealtimeSync() {
  
             item.innerHTML = `
                 <div class="flex justify-between items-center text-xs text-neutral-500 mb-2 border-b border-neutral-900 pb-1">
-                    <span class="font-bold text-neutral-300 font-mono bg-neutral-900 px-1.5 py-0.5 rounded">${node.tripcode}</span>
+                    <span class="font-bold text-neutral-300 font-mono bg-neutral-900 px-1.5 py-0.5 rounded">${renderTripcodeLabel(node.tripcode)}</span>
                     <span class="font-mono text-[11px]">${dateStr} [>>${node.id}]</span>
                 </div>
                 <div class="text-neutral-300 leading-relaxed break-words whitespace-pre-wrap">${structuralLinkedProcessedText}</div>
@@ -2265,7 +2303,7 @@ function initRealtimeSync() {
                 const targetId = link.getAttribute('data-preview-id');
                 const comment = (appState.comments[appState.activeThreadId] || {})[targetId];
                 if (comment) {
-                    previewBox.innerHTML = `<div class="font-bold border-b border-neutral-700 pb-1 mb-1">${comment.tripcode}</div><p>${escapeHTML(comment.text)}</p>`;
+                    previewBox.innerHTML = `<div class="font-bold border-b border-neutral-700 pb-1 mb-1">${renderTripcodeLabel(comment.tripcode)}</div><p>${escapeHTML(comment.text)}</p>`;
                     previewBox.classList.remove('hidden');
                     previewBox.style.left = `${e.pageX + 10}px`;
                     previewBox.style.top = `${e.pageY + 10}px`;
