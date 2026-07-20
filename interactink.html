@@ -891,6 +891,7 @@
     const MEDIA_BUCKET = 'post-media';
     const MAX_IMAGE_BYTES = 8 * 1024 * 1024;   // 8 MB
     const MAX_VIDEO_BYTES = 25 * 1024 * 1024;  // 25 MB
+    const MAX_VIDEO_SECONDS = 58;              // Sightengine's synchronous video check only covers clips under 1 minute
     const MAX_IMAGE_DIMENSION = 2048;          // longest edge, px, after resize
     const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
     const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm'];
@@ -1259,6 +1260,7 @@
                 const { data: threads, error: threadsError } = await supabaseClient.from('threads')
                     .select('*')
                     .eq('board_id', board)
+                    .or('moderation_status.eq.approved,moderation_status.is.null')
                     .order('timestamp', { ascending: false })
                     .limit(100);
                 if (threadsError) throw threadsError;
@@ -1266,7 +1268,8 @@
 
                 const { data: commentIds, error: commentsError } = await supabaseClient.from('comments')
                     .select('thread_id')
-                    .eq('board_id', board);
+                    .eq('board_id', board)
+                    .or('moderation_status.eq.approved,moderation_status.is.null');
                 if (commentsError) throw commentsError;
                 if (commentIds) {
                     commentIds.forEach(c => {
@@ -1320,6 +1323,7 @@ function initRealtimeSync() {
             realtimeChannel = supabaseClient.channel(`board-changes-${board}`)
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'threads', filter: `board_id=eq.${board}` }, payload => {
                     if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+                        if (payload.new.moderation_status && payload.new.moderation_status !== 'approved') return;
                         appState.threads[payload.new.id] = payload.new;
                     }
                     renderThreads();
@@ -1327,6 +1331,7 @@ function initRealtimeSync() {
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'comments', filter: `board_id=eq.${board}` }, payload => {
                     if (payload.eventType === 'INSERT') {
                         const c = payload.new;
+                        if (c.moderation_status && c.moderation_status !== 'approved') return;
                         const alreadyHave = !!(appState.comments[c.thread_id] && appState.comments[c.thread_id][c.id]);
                         if (!alreadyHave) {
                             appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
@@ -1531,16 +1536,18 @@ function initRealtimeSync() {
 
                 const id = Math.random().toString(16).substring(2, 10);
                 const parsedTitle = title.value.trim() || 'Anonymous';
-                const newThread = { id, board_id: appState.currentBoard, title: parsedTitle, content: contentVal, timestamp: Date.now(), upvotes: 1, media_url: null, media_type: null };
+                const newThread = { id, board_id: appState.currentBoard, title: parsedTitle, content: contentVal, timestamp: Date.now(), upvotes: 1, media_url: null, media_type: null, moderation_status: 'approved' };
 
                 const submitBtn = e.target.querySelector('button[type="submit"]');
                 if (submitBtn) submitBtn.disabled = true;
 
+                let mediaStoragePath = null;
                 if (selectedMedia.thread) {
                     try {
-                        const { url, type } = await uploadSelectedMedia(selectedMedia.thread, appState.currentBoard);
+                        const { url, type, path } = await uploadSelectedMedia(selectedMedia.thread, appState.currentBoard);
                         newThread.media_url = url;
                         newThread.media_type = type;
+                        mediaStoragePath = path;
                     } catch (uploadErr) {
                         if (submitBtn) submitBtn.disabled = false;
                         console.error('Media upload failed:', uploadErr);
@@ -1548,6 +1555,17 @@ function initRealtimeSync() {
                         return;
                     }
                 }
+
+                const modResult = await runModerationCheck({
+                    text: contentVal, mediaUrl: newThread.media_url, mediaType: newThread.media_type, mediaStoragePath
+                });
+                if (!modResult.allowed) {
+                    if (submitBtn) submitBtn.disabled = false;
+                    showToast(modResult.reason || 'This post was blocked by our content filters.', true);
+                    clearSelectedMedia('thread');
+                    return;
+                }
+                newThread.moderation_status = modResult.status || 'approved';
 
                 const { error } = await supabaseClient.from('threads').insert([newThread]);
 
@@ -1564,9 +1582,15 @@ function initRealtimeSync() {
                 resetCaptcha('thread');
 
                 // Don't wait on the realtime channel to reflect our own post back to us -
-                // add it locally right away so it always appears instantly.
-                appState.threads[id] = newThread;
-                renderThreads();
+                // add it locally right away so it always appears instantly, unless it's
+                // been held for manual review (flagged), in which case only the poster
+                // sees a confirmation, not the public feed.
+                if (newThread.moderation_status === 'approved') {
+                    appState.threads[id] = newThread;
+                    renderThreads();
+                } else {
+                    showToast('Your post is held for manual review before it appears publicly.');
+                }
 
                 title.value = ''; threadContent.value = '';
                 threadCharCounter.innerText = '0/1000';
@@ -1606,16 +1630,18 @@ function initRealtimeSync() {
 
                 const id = Math.random().toString(16).substring(2, 10);
                 const tripcode = await generateTripcode(appState.activeThreadId, appState.userSeed);
-                const newComment = { id, thread_id: appState.activeThreadId, board_id: appState.currentBoard, tripcode, text: textVal, timestamp: Date.now(), media_url: null, media_type: null };
+                const newComment = { id, thread_id: appState.activeThreadId, board_id: appState.currentBoard, tripcode, text: textVal, timestamp: Date.now(), media_url: null, media_type: null, moderation_status: 'approved' };
 
                 const submitBtn = e.target.querySelector('button[type="submit"]');
                 if (submitBtn) submitBtn.disabled = true;
 
+                let mediaStoragePath = null;
                 if (selectedMedia.comment) {
                     try {
-                        const { url, type } = await uploadSelectedMedia(selectedMedia.comment, appState.currentBoard);
+                        const { url, type, path } = await uploadSelectedMedia(selectedMedia.comment, appState.currentBoard);
                         newComment.media_url = url;
                         newComment.media_type = type;
+                        mediaStoragePath = path;
                     } catch (uploadErr) {
                         if (submitBtn) submitBtn.disabled = false;
                         console.error('Media upload failed:', uploadErr);
@@ -1623,6 +1649,17 @@ function initRealtimeSync() {
                         return;
                     }
                 }
+
+                const modResult = await runModerationCheck({
+                    text: textVal, mediaUrl: newComment.media_url, mediaType: newComment.media_type, mediaStoragePath
+                });
+                if (!modResult.allowed) {
+                    if (submitBtn) submitBtn.disabled = false;
+                    showToast(modResult.reason || 'This reply was blocked by our content filters.', true);
+                    clearSelectedMedia('comment');
+                    return;
+                }
+                newComment.moderation_status = modResult.status || 'approved';
 
                 const { error } = await supabaseClient.from('comments').insert([newComment]);
 
@@ -1638,11 +1675,15 @@ function initRealtimeSync() {
                 markPosted('comment');
                 resetCaptcha('comment');
 
-                if (!appState.comments[appState.activeThreadId]) appState.comments[appState.activeThreadId] = {};
-                appState.comments[appState.activeThreadId][id] = newComment;
-                appState.commentCounts[appState.activeThreadId] = (appState.commentCounts[appState.activeThreadId] || 0) + 1;
+                if (newComment.moderation_status === 'approved') {
+                    if (!appState.comments[appState.activeThreadId]) appState.comments[appState.activeThreadId] = {};
+                    appState.comments[appState.activeThreadId][id] = newComment;
+                    appState.commentCounts[appState.activeThreadId] = (appState.commentCounts[appState.activeThreadId] || 0) + 1;
+                    renderCommentTree();
+                } else {
+                    showToast('Your reply is held for manual review before it appears publicly.');
+                }
 
-                renderCommentTree();
                 commentInput.value = '';
                 commentCharCounter.innerText = '0/300';
                 clearSelectedMedia('comment');
@@ -1844,6 +1885,17 @@ function initRealtimeSync() {
             setMediaError(kind, null);
         }
 
+        function getVideoDuration(file) {
+            return new Promise((resolve, reject) => {
+                const video = document.createElement('video');
+                const url = URL.createObjectURL(file);
+                video.preload = 'metadata';
+                video.onloadedmetadata = () => { URL.revokeObjectURL(url); resolve(video.duration); };
+                video.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read video file.')); };
+                video.src = url;
+            });
+        }
+
         async function onMediaFileSelected(kind, fileInput) {
             const file = fileInput.files && fileInput.files[0];
             if (!file) return;
@@ -1854,6 +1906,21 @@ function initRealtimeSync() {
                 setMediaError(kind, err);
                 fileInput.value = '';
                 return;
+            }
+
+            if (file.type.startsWith('video/')) {
+                try {
+                    const duration = await getVideoDuration(file);
+                    if (duration > MAX_VIDEO_SECONDS) {
+                        setMediaError(kind, `Video too long — clips must be under ${MAX_VIDEO_SECONDS} seconds so it can be scanned automatically.`);
+                        fileInput.value = '';
+                        return;
+                    }
+                } catch (e) {
+                    setMediaError(kind, 'Could not read that video file. Try a different one.');
+                    fileInput.value = '';
+                    return;
+                }
             }
 
             let finalFile = file;
@@ -1889,7 +1956,30 @@ function initRealtimeSync() {
             });
             if (error) throw error;
             const { data } = supabaseClient.storage.from(MEDIA_BUCKET).getPublicUrl(path);
-            return { url: data.publicUrl, type: file.type.startsWith('video/') ? 'video' : 'image' };
+            return { url: data.publicUrl, type: file.type.startsWith('video/') ? 'video' : 'image', path };
+        }
+
+        /**
+         * Calls the `moderate-post` Edge Function (the automated moderation
+         * "bot" — spam heuristics + Sightengine NSFW/violence + Thorn Safer
+         * CSAM hash matching, see /supabase/functions/moderate-post).
+         * Runs BEFORE the row is ever inserted, so nothing unapproved is
+         * written to a publicly-readable table, even for an instant.
+         * Fails closed: if the moderation call itself errors out (network,
+         * function down, etc.) the post is held as 'flagged' rather than
+         * either silently blocked or silently let through.
+         */
+        async function runModerationCheck({ text, mediaUrl, mediaType, mediaStoragePath }) {
+            try {
+                const { data, error } = await supabaseClient.functions.invoke('moderate-post', {
+                    body: { text, mediaUrl, mediaType, mediaStoragePath }
+                });
+                if (error) throw error;
+                return data; // { allowed, status: 'approved'|'flagged'|'blocked', reason }
+            } catch (e) {
+                console.error('Moderation check failed:', e);
+                return { allowed: true, status: 'flagged', reason: 'Moderation service unavailable — held for manual review.' };
+            }
         }
 
         /**
@@ -2063,6 +2153,7 @@ function initRealtimeSync() {
         const { data: comments } = await supabaseClient.from('comments')
             .select('*')
             .eq('thread_id', tId)
+            .or('moderation_status.eq.approved,moderation_status.is.null')
             .order('timestamp', { ascending: true });
         appState.comments[tId] = {};
         if (comments) comments.forEach(c => appState.comments[tId][c.id] = c);

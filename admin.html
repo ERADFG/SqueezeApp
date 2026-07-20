@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InteractInk — Moderation</title>
+<meta name="robots" content="noindex, nofollow">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>body{background:#0a0a0a;color:#e5e5e5;font-family:system-ui,sans-serif;}</style>
+</head>
+<body class="min-h-screen">
+
+<div id="loginView" class="max-w-sm mx-auto mt-24 p-6 border border-neutral-800 rounded-xl">
+    <h1 class="text-lg font-bold mb-4">Moderator sign in</h1>
+    <input id="loginEmail" type="email" placeholder="Email" class="w-full bg-neutral-900 border border-neutral-800 rounded px-3 py-2 mb-2 text-sm">
+    <input id="loginPassword" type="password" placeholder="Password" class="w-full bg-neutral-900 border border-neutral-800 rounded px-3 py-2 mb-3 text-sm">
+    <button onclick="doLogin()" class="w-full bg-white text-black font-bold rounded py-2 text-sm">Sign in</button>
+    <p id="loginError" class="hidden text-red-400 text-xs mt-2"></p>
+</div>
+
+<div id="dashboardView" class="hidden max-w-4xl mx-auto p-6">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-lg font-bold">InteractInk Moderation</h1>
+        <button onclick="doLogout()" class="text-xs text-neutral-500 hover:text-white">Sign out</button>
+    </div>
+
+    <div class="flex gap-2 mb-4 border-b border-neutral-800">
+        <button id="tabFlaggedBtn" onclick="switchTab('flagged')" class="px-4 py-2 text-sm font-bold border-b-2 border-white">Flagged Posts</button>
+        <button id="tabReportsBtn" onclick="switchTab('reports')" class="px-4 py-2 text-sm font-bold border-b-2 border-transparent text-neutral-500">Reports</button>
+        <button id="tabIncidentsBtn" onclick="switchTab('incidents')" class="px-4 py-2 text-sm font-bold border-b-2 border-transparent text-neutral-500">Incident Log</button>
+        <button onclick="loadAll()" class="ml-auto px-3 py-2 text-xs text-neutral-500 hover:text-white">Refresh</button>
+    </div>
+
+    <div id="flaggedList" class="space-y-4"></div>
+    <div id="reportsList" class="space-y-4 hidden"></div>
+    <div id="incidentsList" class="space-y-4 hidden"></div>
+</div>
+
+<script>
+    const SUPABASE_URL = "https://xdshsodkuyawljzuirqt.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
+    const MEDIA_BUCKET = "post-media";
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    window.addEventListener('load', async () => {
+        const { data: { session } } = await sb.auth.getSession();
+        if (session) await enterDashboard();
+    });
+
+    async function doLogin() {
+        const email = document.getElementById('loginEmail').value.trim();
+        const password = document.getElementById('loginPassword').value;
+        const errEl = document.getElementById('loginError');
+        errEl.classList.add('hidden');
+        const { error } = await sb.auth.signInWithPassword({ email, password });
+        if (error) {
+            errEl.textContent = error.message;
+            errEl.classList.remove('hidden');
+            return;
+        }
+        await enterDashboard();
+    }
+
+    async function enterDashboard() {
+        // Confirm this account is an actual moderator (see moderators table
+        // in SUPABASE_SETUP.md) — being able to log in isn't enough, since
+        // Supabase Auth alone doesn't scope who can see flagged content.
+        const { data: { user } } = await sb.auth.getUser();
+        const { data: modRow } = await sb.from('moderators').select('id').eq('id', user.id).maybeSingle();
+        if (!modRow) {
+            document.getElementById('loginError').textContent = 'This account is not authorized as a moderator.';
+            document.getElementById('loginError').classList.remove('hidden');
+            await sb.auth.signOut();
+            return;
+        }
+        document.getElementById('loginView').classList.add('hidden');
+        document.getElementById('dashboardView').classList.remove('hidden');
+        loadAll();
+    }
+
+    async function doLogout() {
+        await sb.auth.signOut();
+        location.reload();
+    }
+
+    function switchTab(tab) {
+        for (const t of ['flagged', 'reports', 'incidents']) {
+            document.getElementById(`tab${cap(t)}Btn`).className = `px-4 py-2 text-sm font-bold border-b-2 ${t === tab ? 'border-white' : 'border-transparent text-neutral-500'}`;
+            document.getElementById(`${t}List`).classList.toggle('hidden', t !== tab);
+        }
+    }
+    function cap(s) { return s[0].toUpperCase() + s.slice(1); }
+
+    async function loadAll() {
+        await Promise.all([loadFlagged(), loadReports(), loadIncidents()]);
+    }
+
+    function escapeHTML(str) {
+        if (!str) return '';
+        return str.replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]));
+    }
+
+    function mediaHTML(url, type) {
+        if (!url) return '';
+        return type === 'video'
+            ? `<video src="${url}" controls class="max-h-64 rounded mt-2"></video>`
+            : `<img src="${url}" class="max-h-64 rounded mt-2">`;
+    }
+
+    async function loadFlagged() {
+        const list = document.getElementById('flaggedList');
+        list.innerHTML = '<p class="text-neutral-600 text-sm">Loading…</p>';
+        const [{ data: threads }, { data: comments }] = await Promise.all([
+            sb.from('threads').select('*').eq('moderation_status', 'flagged').order('timestamp', { ascending: false }),
+            sb.from('comments').select('*').eq('moderation_status', 'flagged').order('timestamp', { ascending: false }),
+        ]);
+        const items = [
+            ...(threads || []).map(t => ({ ...t, _kind: 'thread' })),
+            ...(comments || []).map(c => ({ ...c, _kind: 'comment' })),
+        ];
+        if (items.length === 0) { list.innerHTML = '<p class="text-neutral-600 text-sm">Nothing pending review.</p>'; return; }
+        list.innerHTML = items.map(item => `
+            <div class="border border-neutral-800 rounded-lg p-4">
+                <div class="text-xs text-neutral-500 mb-1">${item._kind.toUpperCase()} · board /${escapeHTML(item.board_id)}/ · ${new Date(item.timestamp).toLocaleString()}</div>
+                <p class="text-sm whitespace-pre-wrap">${escapeHTML(item.content || item.text)}</p>
+                ${mediaHTML(item.media_url, item.media_type)}
+                <div class="flex gap-2 mt-3">
+                    <button onclick="approveItem('${item._kind}', '${item.id}')" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-xs font-bold">Approve</button>
+                    <button onclick="removeItem('${item._kind}', '${item.id}', ${JSON.stringify(item.media_url ? item.media_url.split('/').slice(-2).join('/') : null)})" class="px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded text-xs font-bold">Remove</button>
+                </div>
+            </div>`).join('');
+    }
+
+    async function loadReports() {
+        const list = document.getElementById('reportsList');
+        list.innerHTML = '<p class="text-neutral-600 text-sm">Loading…</p>';
+        const { data, error } = await sb.from('reports').select('*').eq('reviewed', false).order('timestamp', { ascending: false });
+        if (error) { list.innerHTML = `<p class="text-red-400 text-sm">${escapeHTML(error.message)}</p>`; return; }
+        if (!data || data.length === 0) { list.innerHTML = '<p class="text-neutral-600 text-sm">No open reports.</p>'; return; }
+        list.innerHTML = data.map(r => `
+            <div class="border border-neutral-800 rounded-lg p-4">
+                <div class="text-xs text-neutral-500 mb-1">${r.content_type.toUpperCase()} ${escapeHTML(r.content_id)} · board /${escapeHTML(r.board_id || '')}/ · ${new Date(r.timestamp).toLocaleString()}</div>
+                <p class="text-sm">Reason: <span class="font-bold">${escapeHTML(r.reason)}</span></p>
+                <div class="flex gap-2 mt-3">
+                    <a href="interactink.html?board=${encodeURIComponent(r.board_id || '')}&thread=${encodeURIComponent(r.thread_id || r.content_id)}" target="_blank" class="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 rounded text-xs font-bold">View post</a>
+                    <button onclick="markReportReviewed(${r.id})" class="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 rounded text-xs font-bold">Mark reviewed</button>
+                    <button onclick="removeItem('${r.content_type}', '${r.content_id}', null); markReportReviewed(${r.id});" class="px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded text-xs font-bold">Remove content</button>
+                </div>
+            </div>`).join('');
+    }
+
+    async function loadIncidents() {
+        const list = document.getElementById('incidentsList');
+        list.innerHTML = '<p class="text-neutral-600 text-sm">Loading…</p>';
+        const { data, error } = await sb.from('moderation_incidents').select('*').order('timestamp', { ascending: false }).limit(200);
+        if (error) { list.innerHTML = `<p class="text-red-400 text-sm">${escapeHTML(error.message)}</p>`; return; }
+        if (!data || data.length === 0) { list.innerHTML = '<p class="text-neutral-600 text-sm">No incidents logged.</p>'; return; }
+        list.innerHTML = data.map(i => `
+            <div class="border border-neutral-800 rounded-lg p-3 text-xs text-neutral-400">
+                <span class="font-bold text-red-400">${escapeHTML(i.kind)}</span> · ${escapeHTML(i.media_type || '')} · board /${escapeHTML(i.board_id || '')}/ · ${new Date(i.timestamp).toLocaleString()}
+            </div>`).join('');
+    }
+
+    async function approveItem(kind, id) {
+        const table = kind === 'thread' ? 'threads' : 'comments';
+        const { error } = await sb.from(table).update({ moderation_status: 'approved' }).eq('id', id);
+        if (error) alert(error.message); else loadFlagged();
+    }
+
+    async function removeItem(kind, id, mediaPath) {
+        if (!confirm('Remove this content permanently?')) return;
+        const table = kind === 'thread' ? 'threads' : 'comments';
+        const { error } = await sb.from(table).delete().eq('id', id);
+        if (error) { alert(error.message); return; }
+        if (mediaPath) await sb.storage.from(MEDIA_BUCKET).remove([mediaPath]);
+        loadFlagged();
+    }
+
+    async function markReportReviewed(reportId) {
+        const { error } = await sb.from('reports').update({ reviewed: true }).eq('id', reportId);
+        if (error) alert(error.message); else loadReports();
+    }
+</script>
+</body>
+</html>
