@@ -27,6 +27,7 @@
 
     <div class="flex gap-2 mb-4 border-b border-neutral-800">
         <button id="tabFlaggedBtn" onclick="switchTab('flagged')" class="px-4 py-2 text-sm font-bold border-b-2 border-white">All Posts</button>
+        <button id="tabCommentsBtn" onclick="switchTab('comments')" class="px-4 py-2 text-sm font-bold border-b-2 border-transparent text-neutral-500">Comments</button>
         <button id="tabReportsBtn" onclick="switchTab('reports')" class="px-4 py-2 text-sm font-bold border-b-2 border-transparent text-neutral-500">Reports</button>
         <button id="tabIncidentsBtn" onclick="switchTab('incidents')" class="px-4 py-2 text-sm font-bold border-b-2 border-transparent text-neutral-500">Incident Log</button>
         <button onclick="loadAll()" class="ml-auto px-3 py-2 text-xs text-neutral-500 hover:text-white">Refresh</button>
@@ -39,6 +40,14 @@
             <button id="deleteSelectedBtn" onclick="removeSelected()" disabled class="px-3 py-1.5 bg-red-800 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed rounded text-xs font-bold">Delete selected</button>
         </div>
         <div id="flaggedList" class="space-y-4"></div>
+    </div>
+    <div id="commentsPane" class="hidden">
+        <div class="flex items-center gap-3 mb-3 text-xs">
+            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="selectAllCommentsCheckbox" onchange="toggleSelectAllComments(this.checked)"> Select all</label>
+            <span id="selectedCommentsCount" class="text-neutral-500"></span>
+            <button id="deleteSelectedCommentsBtn" onclick="removeSelectedComments()" disabled class="px-3 py-1.5 bg-red-800 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed rounded text-xs font-bold">Delete selected</button>
+        </div>
+        <div id="commentsList" class="space-y-4"></div>
     </div>
     <div id="reportsList" class="space-y-4 hidden"></div>
     <div id="incidentsList" class="space-y-4 hidden"></div>
@@ -89,9 +98,9 @@
         location.reload();
     }
 
-    const TAB_PANES = { flagged: 'flaggedPane', reports: 'reportsList', incidents: 'incidentsList' };
+    const TAB_PANES = { flagged: 'flaggedPane', comments: 'commentsPane', reports: 'reportsList', incidents: 'incidentsList' };
     function switchTab(tab) {
-        for (const t of ['flagged', 'reports', 'incidents']) {
+        for (const t of ['flagged', 'comments', 'reports', 'incidents']) {
             document.getElementById(`tab${cap(t)}Btn`).className = `px-4 py-2 text-sm font-bold border-b-2 ${t === tab ? 'border-white' : 'border-transparent text-neutral-500'}`;
             document.getElementById(TAB_PANES[t]).classList.toggle('hidden', t !== tab);
         }
@@ -99,10 +108,11 @@
     function cap(s) { return s[0].toUpperCase() + s.slice(1); }
 
     async function loadAll() {
-        await Promise.all([loadAllPosts(), loadReports(), loadIncidents()]);
+        await Promise.all([loadAllPosts(), loadComments(), loadReports(), loadIncidents()]);
     }
 
     let selectedItems = new Map(); // key `${kind}:${id}` -> { kind, id, mediaPath }
+    let selectedComments = new Map(); // key `${id}` -> { id, mediaPath }
 
     function onItemCheck(cb) {
         const key = cb.dataset.key;
@@ -147,6 +157,76 @@
         if (mediaPaths.length) await sb.storage.from(MEDIA_BUCKET).remove(mediaPaths);
         selectedItems.clear();
         loadAllPosts();
+        if (commentIds.length) loadComments();
+    }
+
+    function onCommentCheck(cb) {
+        const id = cb.dataset.id;
+        if (cb.checked) {
+            selectedComments.set(id, { id, mediaPath: cb.dataset.media || null });
+        } else {
+            selectedComments.delete(id);
+        }
+        updateCommentsBulkBar();
+    }
+
+    function toggleSelectAllComments(checked) {
+        document.querySelectorAll('.commentCheckbox').forEach(cb => {
+            cb.checked = checked;
+            onCommentCheck(cb);
+        });
+    }
+
+    function updateCommentsBulkBar() {
+        const count = selectedComments.size;
+        document.getElementById('selectedCommentsCount').textContent = count ? `${count} selected` : '';
+        document.getElementById('deleteSelectedCommentsBtn').disabled = count === 0;
+        const allCbs = document.querySelectorAll('.commentCheckbox');
+        const selectAll = document.getElementById('selectAllCommentsCheckbox');
+        selectAll.checked = allCbs.length > 0 && count === allCbs.length;
+    }
+
+    async function removeSelectedComments() {
+        const items = Array.from(selectedComments.values());
+        if (items.length === 0) return;
+        if (!confirm(`Permanently delete ${items.length} comment${items.length > 1 ? 's' : ''}?`)) return;
+        const ids = items.map(i => i.id);
+        const mediaPaths = items.filter(i => i.mediaPath).map(i => i.mediaPath);
+        const { error } = await sb.from('comments').delete().in('id', ids);
+        if (error) { alert(error.message); return; }
+        if (mediaPaths.length) await sb.storage.from(MEDIA_BUCKET).remove(mediaPaths);
+        selectedComments.clear();
+        loadComments();
+        loadAllPosts();
+    }
+
+    async function loadComments() {
+        const list = document.getElementById('commentsList');
+        list.innerHTML = '<p class="text-neutral-600 text-sm">Loading…</p>';
+        selectedComments.clear();
+        const { data: comments, error } = await sb.from('comments').select('*').order('timestamp', { ascending: false });
+        if (error) { list.innerHTML = `<p class="text-red-400 text-sm">${escapeHTML(error.message)}</p>`; return; }
+        if (!comments || comments.length === 0) { list.innerHTML = '<p class="text-neutral-600 text-sm">No comments yet.</p>'; updateCommentsBulkBar(); return; }
+        list.innerHTML = comments.map(c => {
+            const mediaPath = c.media_url ? c.media_url.split('/').slice(-2).join('/') : '';
+            const status = c.moderation_status || 'approved';
+            const statusColor = status === 'flagged' ? 'text-red-400' : status === 'approved' ? 'text-emerald-400' : 'text-neutral-400';
+            return `
+            <div class="border border-neutral-800 rounded-lg p-4">
+                <div class="flex items-start gap-3">
+                    <input type="checkbox" class="commentCheckbox mt-1" data-id="${c.id}" data-media="${escapeHTML(mediaPath)}" onchange="onCommentCheck(this)">
+                    <div class="flex-1 min-w-0">
+                        <div class="text-xs text-neutral-500 mb-1">COMMENT · board /${escapeHTML(c.board_id)}/ · thread ${escapeHTML(c.thread_id)} · <span class="${statusColor} font-bold">${escapeHTML(status)}</span> · ${new Date(c.timestamp).toLocaleString()}</div>
+                        <p class="text-sm whitespace-pre-wrap">${escapeHTML(c.text)}</p>
+                        ${mediaHTML(c.media_url, c.media_type)}
+                        <div class="flex gap-2 mt-3">
+                            <button onclick="removeItem('comment', '${c.id}', ${JSON.stringify(c.media_url ? c.media_url.split('/').slice(-2).join('/') : null)})" class="px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded text-xs font-bold">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+        updateCommentsBulkBar();
     }
 
     function escapeHTML(str) {
@@ -252,7 +332,9 @@
     async function approveItem(kind, id) {
         const table = kind === 'thread' ? 'threads' : 'comments';
         const { error } = await sb.from(table).update({ moderation_status: 'approved' }).eq('id', id);
-        if (error) alert(error.message); else loadAllPosts();
+        if (error) { alert(error.message); return; }
+        loadAllPosts();
+        if (kind === 'comment') loadComments();
     }
 
     async function removeItem(kind, id, mediaPath) {
@@ -262,6 +344,7 @@
         if (error) { alert(error.message); return; }
         if (mediaPath) await sb.storage.from(MEDIA_BUCKET).remove([mediaPath]);
         loadAllPosts();
+        if (kind === 'comment') loadComments();
     }
 
     async function markReportReviewed(reportId) {
