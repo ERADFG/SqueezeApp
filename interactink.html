@@ -1601,7 +1601,11 @@ function initRealtimeSync() {
                     clearSelectedMedia('thread');
                     return;
                 }
-                newThread.moderation_status = modResult.status || 'approved';
+                // Anything not hard-blocked above posts immediately — no
+                // manual-review queue. (modResult.status may still say
+                // 'flagged' for spam/borderline signals; we no longer act
+                // on that here.)
+                newThread.moderation_status = 'approved';
 
                 const { error } = await supabaseClient.from('threads').insert([newThread]);
 
@@ -1618,15 +1622,9 @@ function initRealtimeSync() {
                 resetCaptcha('thread');
 
                 // Don't wait on the realtime channel to reflect our own post back to us -
-                // add it locally right away so it always appears instantly, unless it's
-                // been held for manual review (flagged), in which case only the poster
-                // sees a confirmation, not the public feed.
-                if (newThread.moderation_status === 'approved') {
-                    appState.threads[id] = newThread;
-                    renderThreads();
-                } else {
-                    showToast('Your post is held for manual review before it appears publicly.');
-                }
+                // add it locally right away so it always appears instantly.
+                appState.threads[id] = newThread;
+                renderThreads();
 
                 title.value = ''; threadContent.value = '';
                 threadCharCounter.innerText = '0/1000';
@@ -1697,7 +1695,9 @@ function initRealtimeSync() {
                     clearSelectedMedia('comment');
                     return;
                 }
-                newComment.moderation_status = modResult.status || 'approved';
+                // Anything not hard-blocked above posts immediately — no
+                // manual-review queue.
+                newComment.moderation_status = 'approved';
 
                 const { error } = await supabaseClient.from('comments').insert([newComment]);
 
@@ -1713,14 +1713,10 @@ function initRealtimeSync() {
                 markPosted('comment');
                 resetCaptcha('comment');
 
-                if (newComment.moderation_status === 'approved') {
-                    if (!appState.comments[appState.activeThreadId]) appState.comments[appState.activeThreadId] = {};
-                    appState.comments[appState.activeThreadId][id] = newComment;
-                    appState.commentCounts[appState.activeThreadId] = (appState.commentCounts[appState.activeThreadId] || 0) + 1;
-                    renderCommentTree();
-                } else {
-                    showToast('Your reply is held for manual review before it appears publicly.');
-                }
+                if (!appState.comments[appState.activeThreadId]) appState.comments[appState.activeThreadId] = {};
+                appState.comments[appState.activeThreadId][id] = newComment;
+                appState.commentCounts[appState.activeThreadId] = (appState.commentCounts[appState.activeThreadId] || 0) + 1;
+                renderCommentTree();
 
                 commentInput.value = '';
                 commentCharCounter.innerText = '0/300';
@@ -2016,7 +2012,10 @@ function initRealtimeSync() {
                 return data; // { allowed, status: 'approved'|'flagged'|'blocked', reason }
             } catch (e) {
                 console.error('Moderation check failed:', e);
-                return { allowed: true, status: 'flagged', reason: 'Moderation service unavailable — held for manual review.' };
+                // No manual-review queue to fall back on anymore, so a
+                // moderation-service outage must reject the post rather
+                // than letting unscanned content (including media) through.
+                return { allowed: false, status: 'blocked', reason: 'Moderation check unavailable right now — please try again shortly.' };
             }
         }
 
