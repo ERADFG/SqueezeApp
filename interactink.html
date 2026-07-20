@@ -1296,7 +1296,6 @@
                 const { data: threads, error: threadsError } = await supabaseClient.from('threads')
                     .select('*')
                     .eq('board_id', board)
-                    .or('moderation_status.eq.approved,moderation_status.is.null')
                     .order('timestamp', { ascending: false })
                     .limit(100);
                 if (threadsError) throw threadsError;
@@ -1304,8 +1303,7 @@
 
                 const { data: commentIds, error: commentsError } = await supabaseClient.from('comments')
                     .select('thread_id')
-                    .eq('board_id', board)
-                    .or('moderation_status.eq.approved,moderation_status.is.null');
+                    .eq('board_id', board);
                 if (commentsError) throw commentsError;
                 if (commentIds) {
                     commentIds.forEach(c => {
@@ -1359,7 +1357,6 @@ function initRealtimeSync() {
             realtimeChannel = supabaseClient.channel(`board-changes-${board}`)
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'threads', filter: `board_id=eq.${board}` }, payload => {
                     if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-                        if (payload.new.moderation_status && payload.new.moderation_status !== 'approved') return;
                         appState.threads[payload.new.id] = payload.new;
                     }
                     renderThreads();
@@ -1367,7 +1364,6 @@ function initRealtimeSync() {
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'comments', filter: `board_id=eq.${board}` }, payload => {
                     if (payload.eventType === 'INSERT') {
                         const c = payload.new;
-                        if (c.moderation_status && c.moderation_status !== 'approved') return;
                         const alreadyHave = !!(appState.comments[c.thread_id] && appState.comments[c.thread_id][c.id]);
                         if (!alreadyHave) {
                             appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
@@ -1602,10 +1598,12 @@ function initRealtimeSync() {
                     return;
                 }
                 // Anything not hard-blocked above posts immediately — no
-                // manual-review queue. (modResult.status may still say
-                // 'flagged' for spam/borderline signals; we no longer act
-                // on that here.)
-                newThread.moderation_status = 'approved';
+                // manual-review queue holding it back. If the automated
+                // check flagged it as borderline, it still goes live for
+                // everyone right away, but we keep the 'flagged' status so
+                // it's called out in the admin dashboard for a human to
+                // approve (clear the flag) or delete.
+                newThread.moderation_status = modResult.status || 'approved';
 
                 const { error } = await supabaseClient.from('threads').insert([newThread]);
 
@@ -1696,8 +1694,10 @@ function initRealtimeSync() {
                     return;
                 }
                 // Anything not hard-blocked above posts immediately — no
-                // manual-review queue.
-                newComment.moderation_status = 'approved';
+                // manual-review queue holding it back. Flagged replies still
+                // go live for everyone right away, but keep the 'flagged'
+                // status so it shows up in the admin dashboard for review.
+                newComment.moderation_status = modResult.status || 'approved';
 
                 const { error } = await supabaseClient.from('comments').insert([newComment]);
 
@@ -2190,7 +2190,6 @@ function initRealtimeSync() {
         const { data: comments } = await supabaseClient.from('comments')
             .select('*')
             .eq('thread_id', tId)
-            .or('moderation_status.eq.approved,moderation_status.is.null')
             .order('timestamp', { ascending: true });
         appState.comments[tId] = {};
         if (comments) comments.forEach(c => appState.comments[tId][c.id] = c);
