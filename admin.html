@@ -164,15 +164,28 @@
         }
 
         const ops = [];
-        if (threadIds.length) ops.push(sb.from('threads').delete().in('id', threadIds));
-        if (commentIds.length) ops.push(sb.from('comments').delete().in('id', commentIds));
+        if (threadIds.length) ops.push(sb.from('threads').delete().in('id', threadIds).select('id'));
+        if (commentIds.length) ops.push(sb.from('comments').delete().in('id', commentIds).select('id'));
         const results = await Promise.all(ops);
         const failed = results.find(r => r.error);
         if (failed) { console.error(failed.error); alert(failed.error.message); return; }
+        const deletedCount = results.reduce((n, r) => n + (r.data ? r.data.length : 0), 0);
+        if (deletedCount === 0) {
+            alertBlockedByRLS();
+            return;
+        }
         if (mediaPaths.length) await sb.storage.from(MEDIA_BUCKET).remove(mediaPaths);
         selectedItems.clear();
         loadAllPosts();
         loadComments();
+    }
+
+    // Supabase Row Level Security silently deletes 0 rows (no error) when the
+    // signed-in user isn't covered by a DELETE policy on the table. Without this
+    // check, the UI would just refresh and the post would still be there with
+    // no explanation of why.
+    function alertBlockedByRLS() {
+        alert('Nothing was deleted. Your moderator account likely does not have a Row Level Security (RLS) policy allowing DELETE on this table. Check Supabase → Authentication → Policies for "threads" and "comments".');
     }
 
     function onCommentCheck(cb) {
@@ -207,8 +220,9 @@
         if (!confirm(`Permanently delete ${items.length} comment${items.length > 1 ? 's' : ''}?`)) return;
         const ids = items.map(i => i.id);
         const mediaPaths = items.filter(i => i.mediaPath).map(i => i.mediaPath);
-        const { error } = await sb.from('comments').delete().in('id', ids);
+        const { data: deleted, error } = await sb.from('comments').delete().in('id', ids).select('id');
         if (error) { console.error(error); alert(error.message); return; }
+        if (!deleted || deleted.length === 0) { alertBlockedByRLS(); return; }
         if (mediaPaths.length) await sb.storage.from(MEDIA_BUCKET).remove(mediaPaths);
         selectedComments.clear();
         loadComments();
@@ -235,7 +249,7 @@
                         <p class="text-sm whitespace-pre-wrap">${escapeHTML(c.text)}</p>
                         ${mediaHTML(c.media_url, c.media_type)}
                         <div class="flex gap-2 mt-3">
-                            <button onclick="removeItem('comment', '${c.id}', ${attrJSON(c.media_url ? c.media_url.split('/').slice(-2).join('/') : null)})" class="px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded text-xs font-bold">Delete</button>
+                            <button onclick="removeItem('comment', ${attrJSON(c.id)}, ${attrJSON(c.media_url ? c.media_url.split('/').slice(-2).join('/') : null)})" class="px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded text-xs font-bold">Delete</button>
                         </div>
                     </div>
                 </div>
@@ -292,8 +306,8 @@
                         <p class="text-sm whitespace-pre-wrap">${escapeHTML(item.content || item.text)}</p>
                         ${mediaHTML(item.media_url, item.media_type)}
                         <div class="flex gap-2 mt-3">
-                            ${status !== 'approved' ? `<button onclick="approveItem('${item._kind}', '${item.id}')" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-xs font-bold">Approve</button>` : ''}
-                            <button onclick="removeItem('${item._kind}', '${item.id}', ${attrJSON(item.media_url ? item.media_url.split('/').slice(-2).join('/') : null)})" class="px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded text-xs font-bold">Delete</button>
+                            ${status !== 'approved' ? `<button onclick="approveItem(${attrJSON(item._kind)}, ${attrJSON(item.id)})" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-xs font-bold">Approve</button>` : ''}
+                            <button onclick="removeItem(${attrJSON(item._kind)}, ${attrJSON(item.id)}, ${attrJSON(item.media_url ? item.media_url.split('/').slice(-2).join('/') : null)})" class="px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded text-xs font-bold">Delete</button>
                         </div>
                     </div>
                 </div>
@@ -334,7 +348,7 @@
                 <div class="flex gap-2 mt-3">
                     <a href="interactink.html?board=${encodeURIComponent(r.board_id || '')}&thread=${encodeURIComponent(r.thread_id || r.content_id)}" target="_blank" class="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 rounded text-xs font-bold">View post</a>
                     <button onclick="markReportReviewed(${r.id})" class="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 rounded text-xs font-bold">Dismiss (false report)</button>
-                    ${post ? `<button onclick="removeItem('${r.content_type}', '${r.content_id}', ${attrJSON(mediaPath)}); markReportReviewed(${r.id});" class="px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded text-xs font-bold">Delete post</button>` : ''}
+                    ${post ? `<button onclick="removeItem(${attrJSON(r.content_type)}, ${attrJSON(r.content_id)}, ${attrJSON(mediaPath)}); markReportReviewed(${r.id});" class="px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded text-xs font-bold">Delete post</button>` : ''}
                 </div>
             </div>`;
         }).join('');
@@ -381,8 +395,9 @@
         }
 
         const table = kind === 'thread' ? 'threads' : 'comments';
-        const { error } = await sb.from(table).delete().eq('id', id);
+        const { data: deleted, error } = await sb.from(table).delete().eq('id', id).select('id');
         if (error) { console.error(error); alert(error.message); return; }
+        if (!deleted || deleted.length === 0) { alertBlockedByRLS(); return; }
         if (mediaPaths.length) await sb.storage.from(MEDIA_BUCKET).remove(mediaPaths);
         loadAllPosts();
         if (kind === 'comment' || kind === 'thread') loadComments();
