@@ -220,13 +220,21 @@
                         <p class="text-sm whitespace-pre-wrap">${escapeHTML(c.text)}</p>
                         ${mediaHTML(c.media_url, c.media_type)}
                         <div class="flex gap-2 mt-3">
-                            <button onclick="removeItem('comment', '${c.id}', ${JSON.stringify(c.media_url ? c.media_url.split('/').slice(-2).join('/') : null)})" class="px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded text-xs font-bold">Delete</button>
+                            <button onclick="removeItem('comment', '${c.id}', ${attrJSON(c.media_url ? c.media_url.split('/').slice(-2).join('/') : null)})" class="px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded text-xs font-bold">Delete</button>
                         </div>
                     </div>
                 </div>
             </div>`;
         }).join('');
         updateCommentsBulkBar();
+    }
+
+    // Safely embed a JSON value inside a double-quoted HTML attribute (e.g.
+    // onclick="...('${attrJSON(path)}')..."). JSON.stringify emits raw
+    // double quotes, which would otherwise terminate the attribute early
+    // and silently break the handler for any value that isn't null.
+    function attrJSON(value) {
+        return JSON.stringify(value).replace(/"/g, '&quot;');
     }
 
     function escapeHTML(str) {
@@ -270,7 +278,7 @@
                         ${mediaHTML(item.media_url, item.media_type)}
                         <div class="flex gap-2 mt-3">
                             ${status !== 'approved' ? `<button onclick="approveItem('${item._kind}', '${item.id}')" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-xs font-bold">Approve</button>` : ''}
-                            <button onclick="removeItem('${item._kind}', '${item.id}', ${JSON.stringify(item.media_url ? item.media_url.split('/').slice(-2).join('/') : null)})" class="px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded text-xs font-bold">Delete</button>
+                            <button onclick="removeItem('${item._kind}', '${item.id}', ${attrJSON(item.media_url ? item.media_url.split('/').slice(-2).join('/') : null)})" class="px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded text-xs font-bold">Delete</button>
                         </div>
                     </div>
                 </div>
@@ -311,7 +319,7 @@
                 <div class="flex gap-2 mt-3">
                     <a href="interactink.html?board=${encodeURIComponent(r.board_id || '')}&thread=${encodeURIComponent(r.thread_id || r.content_id)}" target="_blank" class="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 rounded text-xs font-bold">View post</a>
                     <button onclick="markReportReviewed(${r.id})" class="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 rounded text-xs font-bold">Dismiss (false report)</button>
-                    ${post ? `<button onclick="removeItem('${r.content_type}', '${r.content_id}', ${JSON.stringify(mediaPath)}); markReportReviewed(${r.id});" class="px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded text-xs font-bold">Delete post</button>` : ''}
+                    ${post ? `<button onclick="removeItem('${r.content_type}', '${r.content_id}', ${attrJSON(mediaPath)}); markReportReviewed(${r.id});" class="px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded text-xs font-bold">Delete post</button>` : ''}
                 </div>
             </div>`;
         }).join('');
