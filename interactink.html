@@ -597,6 +597,13 @@
         .bookmark-btn.bookmark-active svg { fill: currentColor; }
 
         /* ==================================================================
+           REPORTS
+        ================================================================== */
+        .report-btn svg { fill: none; transition: fill 0.15s ease, color 0.15s ease; }
+        .report-btn.report-active { color: #f87171 !important; cursor: default; pointer-events: none; }
+        .report-btn.report-active svg { fill: currentColor; }
+
+        /* ==================================================================
            THREAD PAGE (full-page comment view, replaces the old modal)
         ================================================================== */
         #threadPage { display: none; flex-direction: column; min-height: 100%; }
@@ -2105,7 +2112,7 @@ function initRealtimeSync() {
                     <span class="flex items-center gap-1.5 hover:text-neutral-300 transition"><i data-lucide="message-square" class="w-4 h-4"></i> ${dynamicCommentCount} Replies</span>
                     <button type="button" class="flex items-center gap-1.5 hover:text-neutral-300 transition cursor-pointer" onclick="event.preventDefault(); event.stopPropagation(); shareThread('${thread.id}', event.currentTarget);"><i data-lucide="share" class="w-4 h-4"></i> Share</button>
                     <button type="button" data-bookmark-key="thread:${thread.id}" class="bookmark-btn flex items-center gap-1.5 hover:text-yellow-400 transition cursor-pointer${isBookmarked('thread:' + thread.id) ? ' bookmark-active' : ''}" onclick="event.preventDefault(); event.stopPropagation(); toggleThreadBookmark('${thread.id}');"><i data-lucide="bookmark" class="w-4 h-4"></i> <span class="bookmark-label">${isBookmarked('thread:' + thread.id) ? 'Saved' : 'Save'}</span></button>
-                    <button type="button" class="flex items-center gap-1.5 hover:text-red-400 transition cursor-pointer" onclick="event.preventDefault(); event.stopPropagation(); openReportModal('thread', '${thread.id}', '${thread.id}');"><i data-lucide="flag" class="w-4 h-4"></i> Report</button>
+                    <button type="button" data-report-key="thread:${thread.id}" class="report-btn flex items-center gap-1.5 hover:text-red-400 transition cursor-pointer${isReported('thread:' + thread.id) ? ' report-active' : ''}" onclick="event.preventDefault(); event.stopPropagation(); openReportModal('thread', '${thread.id}', '${thread.id}');"><i data-lucide="flag" class="w-4 h-4"></i> <span class="report-label">${isReported('thread:' + thread.id) ? 'Reported' : 'Report'}</span></button>
                 </div>
             `;
             return card;
@@ -2477,8 +2484,41 @@ function initRealtimeSync() {
         ];
         let pendingReport = null;
 
+        // Which posts this browser has already reported, so the Report button
+        // can stay showing "Reported" (and stay disabled) across re-renders,
+        // refreshes, and future visits — mirrors the bookmarks pattern above.
+        const REPORTED_STORAGE_KEY = 'ink_reported';
+
+        function getReportedMap() {
+            try {
+                return JSON.parse(localStorage.getItem(REPORTED_STORAGE_KEY)) || {};
+            } catch (e) { return {}; }
+        }
+
+        function saveReportedMap(map) {
+            try { localStorage.setItem(REPORTED_STORAGE_KEY, JSON.stringify(map)); } catch (e) {}
+        }
+
+        function isReported(key) {
+            return !!getReportedMap()[key];
+        }
+
+        function markReported(key) {
+            const map = getReportedMap();
+            map[key] = Date.now();
+            saveReportedMap(map);
+            document.querySelectorAll(`[data-report-key="${key}"]`).forEach(btn => {
+                btn.classList.add('report-active');
+                btn.setAttribute('disabled', 'true');
+                const label = btn.querySelector('.report-label');
+                if (label) label.textContent = 'Reported';
+            });
+        }
+
         function openReportModal(contentType, contentId, threadId) {
-            pendingReport = { contentType, contentId, threadId };
+            const key = `${contentType}:${contentId}`;
+            if (isReported(key)) return;
+            pendingReport = { contentType, contentId, threadId, key };
             const list = document.getElementById('reportReasonList');
             list.innerHTML = REPORT_REASONS.map(r => `
                 <button type="button" onclick="submitReport('${r.replace(/'/g, "\\'")}')"
@@ -2495,10 +2535,11 @@ function initRealtimeSync() {
 
         async function submitReport(reason) {
             if (!pendingReport) return;
+            const { contentType, contentId, threadId, key } = pendingReport;
             const payload = {
-                content_type: pendingReport.contentType,
-                content_id: pendingReport.contentId,
-                thread_id: pendingReport.threadId,
+                content_type: contentType,
+                content_id: contentId,
+                thread_id: threadId,
                 board_id: appState.currentBoard,
                 reason,
                 timestamp: Date.now()
@@ -2507,6 +2548,7 @@ function initRealtimeSync() {
             try {
                 const { error } = await supabaseClient.from('reports').insert([payload]);
                 if (error) throw error;
+                markReported(key);
                 showToast('Thanks — this post has been reported for review.');
             } catch (e) {
                 console.error('Report insert failed:', e);
@@ -2577,7 +2619,7 @@ function initRealtimeSync() {
         document.getElementById('threadPageOpActions').innerHTML = `
             <button type="button" class="flex items-center gap-1.5 hover:text-neutral-300 transition cursor-pointer" onclick="shareThread('${thread.id}', event.currentTarget);"><i data-lucide="share" class="w-4 h-4"></i> Share</button>
             <button type="button" data-bookmark-key="thread:${thread.id}" class="bookmark-btn flex items-center gap-1.5 hover:text-yellow-400 transition cursor-pointer${isBookmarked('thread:' + thread.id) ? ' bookmark-active' : ''}" onclick="toggleThreadBookmark('${thread.id}');"><i data-lucide="bookmark" class="w-4 h-4"></i> <span class="bookmark-label">${isBookmarked('thread:' + thread.id) ? 'Saved' : 'Save'}</span></button>
-            <button type="button" class="flex items-center gap-1.5 hover:text-red-400 transition cursor-pointer" onclick="openReportModal('thread', '${thread.id}', '${thread.id}');"><i data-lucide="flag" class="w-4 h-4"></i> Report</button>
+            <button type="button" data-report-key="thread:${thread.id}" class="report-btn flex items-center gap-1.5 hover:text-red-400 transition cursor-pointer${isReported('thread:' + thread.id) ? ' report-active' : ''}" onclick="openReportModal('thread', '${thread.id}', '${thread.id}');"><i data-lucide="flag" class="w-4 h-4"></i> <span class="report-label">${isReported('thread:' + thread.id) ? 'Reported' : 'Report'}</span></button>
         `;
 
         document.getElementById('feedView').classList.add('hidden');
@@ -2669,7 +2711,7 @@ function initRealtimeSync() {
                     <button onclick="shareComment('${appState.activeThreadId}', '${node.id}', event.currentTarget)" class="text-xs text-neutral-500 hover:text-white flex items-center gap-1 font-medium cursor-pointer"><i data-lucide="share" class="w-3.5 h-3.5"></i> Share</button>
                     <button data-bookmark-key="comment:${node.id}" onclick="toggleCommentBookmark('${appState.activeThreadId}', '${node.id}')" class="bookmark-btn text-xs text-neutral-500 hover:text-yellow-400 flex items-center gap-1 font-medium cursor-pointer${isBookmarked('comment:' + node.id) ? ' bookmark-active' : ''}"><i data-lucide="bookmark" class="w-3.5 h-3.5"></i> <span class="bookmark-label">${isBookmarked('comment:' + node.id) ? 'Saved' : 'Save'}</span></button>
                     <button onclick="appendReplyPointer('${node.id}')" class="text-xs text-neutral-500 hover:text-white flex items-center gap-1 font-medium cursor-pointer"><i data-lucide="reply" class="w-3.5 h-3.5"></i> Reply</button>
-                    <button onclick="openReportModal('comment', '${node.id}', '${appState.activeThreadId}')" class="text-xs text-neutral-500 hover:text-red-400 flex items-center gap-1 font-medium cursor-pointer"><i data-lucide="flag" class="w-3.5 h-3.5"></i> Report</button>
+                    <button data-report-key="comment:${node.id}" onclick="openReportModal('comment', '${node.id}', '${appState.activeThreadId}')" class="report-btn text-xs text-neutral-500 hover:text-red-400 flex items-center gap-1 font-medium cursor-pointer${isReported('comment:' + node.id) ? ' report-active' : ''}"><i data-lucide="flag" class="w-3.5 h-3.5"></i> <span class="report-label">${isReported('comment:' + node.id) ? 'Reported' : 'Report'}</span></button>
                 </div>
             `;
             wrap.appendChild(item);
