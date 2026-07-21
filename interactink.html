@@ -392,7 +392,7 @@
             box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
         }
         .board-picker-search-wrap { position: relative; }
-        .board-picker-search-wrap i {
+        .board-picker-search-wrap .board-picker-search-icon {
             position: absolute;
             left: 11px;
             top: 50%;
@@ -400,6 +400,7 @@
             width: 14px;
             height: 14px;
             color: #71767b;
+            pointer-events: none;
         }
         #boardPickerSearch {
             width: 100%;
@@ -664,7 +665,7 @@
                      board to jump straight to it. -->
                 <div id="boardPickerPanel" class="board-picker hidden">
                     <div class="board-picker-search-wrap">
-                        <i data-lucide="search"></i>
+                        <i data-lucide="search" class="board-picker-search-icon"></i>
                         <input type="text" id="boardPickerSearch" placeholder="Find a board..." autocomplete="off" oninput="filterBoardPicker(this.value)">
                     </div>
                     <div id="boardPickerList" class="board-picker-list"></div>
