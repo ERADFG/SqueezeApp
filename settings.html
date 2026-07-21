@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin>
+    <link rel="preconnect" href="https://pagead2.googlesyndication.com" crossorigin>
+    <link rel="preconnect" href="https://www.highperformanceformat.com" crossorigin>
     <title>Settings - InteractInk</title>
 
     <meta name="description" content="InteractInk settings — About, FAQ, Blog, Contact, Terms, Guidelines, and Privacy Policy.">
@@ -23,6 +25,7 @@
 
     <meta name="google-adsense-account" content="ca-pub-9357677827244243">
 
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9357677827244243" crossorigin="anonymous"></script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-527BWKF63G"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
@@ -44,6 +47,8 @@
         ::-webkit-scrollbar-thumb { background: #202327; border-radius: 9999px; }
         .footer-link { color: #e7e9ea; text-decoration: none; margin: 0 14px; font-weight: 500; font-size: 0.85rem; transition: opacity 0.2s; display: inline-block; margin-bottom: 8px; }
         .footer-link:hover { opacity: 0.7; }
+
+        .ad-slot { width: 100%; }
 
         /* ---------- Responsive 3-Column Grid (matches interactink.html) ---------- */
         .app-container {
@@ -194,6 +199,18 @@
                 <img src="favicon2.png" alt="InteractInk logo" class="w-6 h-6 shrink-0">
                 <h1 class="text-xl font-bold tracking-tight text-white">Settings</h1>
             </header>
+
+            <!-- Top Banner Ad space (sandboxed in its own iframe so the ad
+                 network's document.write() can only affect its own tiny
+                 document, never this page's layout/zoom) -->
+            <div class="ad-slot">
+                <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
+                    <script type="text/javascript">
+                      atOptions = { 'key' : 'c2beae2a3c4b115088146fa8ef56a186', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+                    </script>
+                    <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
+                </div>
+            </div>
 
             <section class="p-4 border-b border-neutral-800">
                 <p class="text-neutral-400 text-sm leading-relaxed">
