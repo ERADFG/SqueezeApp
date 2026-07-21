@@ -1440,6 +1440,18 @@
                 if (threadsError) throw threadsError;
                 if (threads) threads.forEach(t => appState.threads[t.id] = t);
 
+                // Globally-pinned threads (posted with the verified name) show
+                // up at the top of every board, not just the one they were
+                // posted in. This is a separate, unfiltered query so it isn't
+                // limited by the current board's board_id.
+                const { data: globalPinned, error: globalPinnedError } = await supabaseClient.from('threads')
+                    .select('*')
+                    .eq('pinned', true)
+                    .order('timestamp', { ascending: false })
+                    .limit(20);
+                if (globalPinnedError) throw globalPinnedError;
+                if (globalPinned) globalPinned.forEach(t => appState.threads[t.id] = t);
+
                 const { data: commentIds, error: commentsError } = await supabaseClient.from('comments')
                     .select('thread_id')
                     .eq('board_id', board);
@@ -1448,6 +1460,25 @@
                     commentIds.forEach(c => {
                         appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
                     });
+                }
+
+                // Comment counts for globally-pinned threads that live on a
+                // different board than the one currently being viewed, since
+                // the query above is scoped to `board` and would otherwise
+                // miss them.
+                const foreignPinnedIds = (globalPinned || [])
+                    .filter(t => t.board_id !== board)
+                    .map(t => t.id);
+                if (foreignPinnedIds.length) {
+                    const { data: foreignCommentIds, error: foreignCommentsError } = await supabaseClient.from('comments')
+                        .select('thread_id')
+                        .in('thread_id', foreignPinnedIds);
+                    if (foreignCommentsError) throw foreignCommentsError;
+                    if (foreignCommentIds) {
+                        foreignCommentIds.forEach(c => {
+                            appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
+                        });
+                    }
                 }
             } catch (err) {
                 console.error(err);
