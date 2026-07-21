@@ -47,6 +47,7 @@
         @media (min-width: 1024px) {
             .app-container {
                 grid-template-columns: 1fr 275px 700px 300px 1fr;
+                align-items: start;
             }
         }
 
@@ -59,6 +60,7 @@
                 grid-column: 2;
                 position: sticky;
                 top: 0;
+                align-self: start;
                 height: 100vh;
                 padding: 12px 12px 20px 12px;
                 border-right: 1px solid #2f3336;
@@ -116,6 +118,7 @@
                 grid-column: 4;
                 position: sticky;
                 top: 0;
+                align-self: start;
                 height: 100vh;
                 padding: 20px 24px;
                 gap: 20px;
@@ -176,6 +179,10 @@
                 <a href="contact.html" class="nav-item">
                     <i data-lucide="mail"></i>
                     <span>Contact</span>
+                </a>
+                <a href="settings.html" class="nav-item">
+                    <i data-lucide="settings"></i>
+                    <span>Settings</span>
                 </a>
             </nav>
             <a href="index.html" class="mt-2 w-11/12 bg-white text-black hover:bg-neutral-200 font-bold py-3.5 rounded-full text-center transition duration-200 text-[15px] shadow-sm">
