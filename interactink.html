@@ -412,6 +412,52 @@
             color: #e7e9ea;
         }
         #boardPickerSearch:focus { outline: none; border-color: #525252; }
+
+        /* ==================================================================
+           GLOBAL SEARCH
+           A header button opens a full-page view (same pattern as the
+           thread page) with a search box that queries posts across every
+           board, not just the one currently open.
+        ================================================================== */
+        .search-trigger-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            border-radius: 9999px;
+            color: #e7e9ea;
+            background: none;
+            border: 1px solid #2f3336;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: background-color 0.15s ease, border-color 0.15s ease;
+        }
+        .search-trigger-btn:hover { background: #16181c; border-color: #525252; }
+        .search-trigger-btn i { width: 16px; height: 16px; }
+
+        .search-view-input-wrap { position: relative; flex: 1; min-width: 0; }
+        .search-view-input-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 15px;
+            height: 15px;
+            color: #71767b;
+            pointer-events: none;
+        }
+        #globalSearchInput {
+            width: 100%;
+            background: #16181c;
+            border: 1px solid #2f3336;
+            border-radius: 9999px;
+            padding: 8px 14px 8px 34px;
+            font-size: 14px;
+            color: #e7e9ea;
+        }
+        #globalSearchInput:focus { outline: none; border-color: #525252; }
+        .search-result-board-tag { font-size: 11px; font-weight: 700; color: #10b981; font-family: ui-monospace, Menlo, monospace; }
         .board-picker-list {
             display: flex;
             flex-direction: column;
@@ -663,6 +709,9 @@
                     <img src="favicon2.png" alt="InteractInk logo" class="w-6 h-6 shrink-0">
                     <span class="truncate">InteractInk</span>
                 </h1>
+                <button type="button" id="globalSearchBtn" onclick="openSearchView()" class="search-trigger-btn" aria-label="Search all boards" title="Search all boards">
+                    <i data-lucide="search"></i>
+                </button>
                 <button type="button" id="boardSwitcherBtn" onclick="toggleBoardPicker()" class="board-switcher-btn" aria-haspopup="true" aria-expanded="false">
                     <span id="boardSwitcherLabel">/b/</span>
                     <i data-lucide="chevron-down" class="board-switcher-chevron"></i>
@@ -819,8 +868,28 @@
             </div>
         </div>
         <!-- /threadPage -->
+
+        <!-- Full-page global search view: replaces feedView, lets users
+             search post titles and bodies across every board at once
+             (not just whichever board is currently open). -->
+        <div id="searchView" class="hidden">
+            <div class="thread-page-header">
+                <button type="button" onclick="closeSearchView()" class="thread-back-btn" aria-label="Back to board">
+                    <i data-lucide="arrow-left"></i>
+                </button>
+                <div class="search-view-input-wrap">
+                    <i data-lucide="search" class="search-view-input-icon"></i>
+                    <input type="text" id="globalSearchInput" placeholder="Search posts across all boards..." autocomplete="off"
+                           oninput="handleGlobalSearchInput(this.value)"
+                           onkeydown="if(event.key==='Enter'){event.preventDefault(); clearTimeout(searchDebounceTimer); performGlobalSearch(this.value.trim());} else if(event.key==='Escape'){closeSearchView();}">
+                </div>
+            </div>
+            <div id="searchResultsContainer" class="divide-y divide-neutral-800"></div>
+        </div>
+        <!-- /searchView -->
         </div>
         <!-- /x-feed -->
+
  
         <!-- RIGHT DESKTOP SIDEBAR -->
         <aside class="x-widgets">
@@ -1370,6 +1439,169 @@
             if (latestContainer) {
                 latestContainer.innerHTML = `<div class="text-red-400 text-center py-10 text-sm px-6">${escapeHTML(message)}</div>`;
             }
+        }
+
+        // ================== Global search (across every board) ==================
+        // Unlike the main feed, which is always scoped to appState.currentBoard,
+        // this queries the 'threads' table with no board_id filter at all, so
+        // results can come from any board.
+        let searchDebounceTimer = null;
+        let searchRequestToken = 0;
+        const SEARCH_RESULTS_LIMIT = 50;
+
+        function openSearchView() {
+            document.getElementById('feedView').classList.add('hidden');
+            const threadPageEl = document.getElementById('threadPage');
+            threadPageEl.classList.add('hidden');
+            threadPageEl.classList.remove('active');
+            appState.activeThreadId = null;
+
+            const searchViewEl = document.getElementById('searchView');
+            searchViewEl.classList.remove('hidden');
+
+            const fab = document.getElementById('mobileComposeFab');
+            if (fab) fab.style.display = 'none';
+
+            const input = document.getElementById('globalSearchInput');
+            input.value = '';
+            document.getElementById('searchResultsContainer').innerHTML =
+                `<div class="text-neutral-500 text-center py-10 text-sm px-6">Search post titles and bodies across every board.</div>`;
+
+            window.scrollTo({ top: 0, behavior: 'auto' });
+            lucide.createIcons();
+            setTimeout(() => input.focus(), 50);
+        }
+
+        function closeSearchView() {
+            document.getElementById('searchView').classList.add('hidden');
+            document.getElementById('feedView').classList.remove('hidden');
+            const fab = document.getElementById('mobileComposeFab');
+            if (fab) fab.style.display = '';
+            // Cancel any in-flight/pending search so a stale response can't
+            // render after the user has already navigated away.
+            clearTimeout(searchDebounceTimer);
+            searchRequestToken++;
+        }
+
+        function handleGlobalSearchInput(value) {
+            clearTimeout(searchDebounceTimer);
+            const q = value.trim();
+            const container = document.getElementById('searchResultsContainer');
+            if (q.length === 0) {
+                searchRequestToken++;
+                container.innerHTML = `<div class="text-neutral-500 text-center py-10 text-sm px-6">Search post titles and bodies across every board.</div>`;
+                return;
+            }
+            if (q.length < 2) {
+                searchRequestToken++;
+                container.innerHTML = `<div class="text-neutral-500 text-center py-10 text-sm px-6">Keep typing&hellip;</div>`;
+                return;
+            }
+            searchDebounceTimer = setTimeout(() => performGlobalSearch(q), 350);
+        }
+
+        // Escapes LIKE/ILIKE wildcard characters so a literal "%" or "_" in
+        // the search box is treated as a literal character, not a wildcard.
+        function escapeLikePattern(str) {
+            return str.replace(/[\\%_]/g, match => '\\' + match);
+        }
+
+        async function performGlobalSearch(query) {
+            if (!query) return;
+            const container = document.getElementById('searchResultsContainer');
+            const requestToken = ++searchRequestToken;
+            container.innerHTML = `<div class="text-neutral-500 text-center py-10 text-sm font-mono">Searching...</div>`;
+
+            try {
+                const pattern = `%${escapeLikePattern(query)}%`;
+                const [titleRes, contentRes] = await Promise.all([
+                    supabaseClient.from('threads').select('*').ilike('title', pattern).order('timestamp', { ascending: false }).limit(SEARCH_RESULTS_LIMIT),
+                    supabaseClient.from('threads').select('*').ilike('content', pattern).order('timestamp', { ascending: false }).limit(SEARCH_RESULTS_LIMIT)
+                ]);
+                if (requestToken !== searchRequestToken) return; // superseded by a newer search
+                if (titleRes.error) throw titleRes.error;
+                if (contentRes.error) throw contentRes.error;
+
+                const merged = {};
+                (titleRes.data || []).forEach(t => merged[t.id] = t);
+                (contentRes.data || []).forEach(t => merged[t.id] = t);
+                const results = Object.values(merged).sort((a, b) => b.timestamp - a.timestamp);
+
+                if (results.length === 0) {
+                    container.innerHTML = `<div class="text-neutral-500 text-center py-10 text-sm px-6">No posts match &ldquo;${escapeHTML(query)}&rdquo;.</div>`;
+                    return;
+                }
+
+                const counts = await fetchCommentCountsForThreads(results.map(t => t.id));
+                if (requestToken !== searchRequestToken) return;
+
+                container.innerHTML = '';
+                results.forEach(t => container.appendChild(createSearchResultCard(t, counts[t.id] || 0)));
+                lucide.createIcons();
+            } catch (err) {
+                if (requestToken !== searchRequestToken) return;
+                console.error(err);
+                container.innerHTML = `<div class="text-red-400 text-center py-10 text-sm px-6">Search failed: ${escapeHTML(err.message || 'unknown error')}</div>`;
+            }
+        }
+
+        async function fetchCommentCountsForThreads(threadIds) {
+            if (!threadIds.length) return {};
+            try {
+                const { data, error } = await supabaseClient.from('comments').select('thread_id').in('thread_id', threadIds);
+                if (error) throw error;
+                const counts = {};
+                (data || []).forEach(c => { counts[c.thread_id] = (counts[c.thread_id] || 0) + 1; });
+                return counts;
+            } catch (err) {
+                console.error(err);
+                return {};
+            }
+        }
+
+        function createSearchResultCard(thread, commentCount) {
+            const dateStr = new Date(thread.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' });
+            const meta = InkRouting.getBoardMeta(thread.board_id);
+            const card = document.createElement('a');
+            card.href = InkRouting.buildThreadUrl(thread.board_id, thread.id, 'interactink.html');
+            card.className = "p-4 hover:bg-neutral-900/40 cursor-pointer transition duration-200 flex flex-col no-underline text-inherit";
+            card.addEventListener('click', (e) => {
+                e.preventDefault();
+                openSearchResultThread(thread);
+            });
+
+            const processedContent = parseRichTextContent(escapeHTML(thread.content));
+
+            card.innerHTML = `
+                <div class="flex items-center gap-2 text-[11px] text-neutral-500 mb-1.5">
+                    <span class="search-result-board-tag">${meta.label}</span>
+                    <span class="text-neutral-700">&middot;</span>
+                    <span class="truncate">${escapeHTML(meta.name)}</span>
+                    <span class="ml-auto font-mono shrink-0">${dateStr}</span>
+                </div>
+                <div class="flex items-center justify-between text-xs text-neutral-500 mb-1">
+                    <span class="font-bold text-neutral-300 uppercase tracking-wide truncate max-w-[90%]">${renderTripcodeLabel(thread.title)}</span>
+                </div>
+                <div class="post-card-body text-neutral-300 text-sm leading-relaxed mb-2 break-words whitespace-pre-wrap">${processedContent}</div>
+                <div class="flex items-center gap-6 text-xs text-neutral-500">
+                    <span class="flex items-center gap-1.5"><i data-lucide="message-square" class="w-4 h-4"></i> ${commentCount} Replies</span>
+                </div>
+            `;
+            return card;
+        }
+
+        // Opens a search result's thread, switching to its board first if
+        // it's not the one currently loaded. The full thread object is
+        // stashed into appState.threads directly so the thread page can
+        // open it immediately even if it falls outside that board's most
+        // recent 100 threads (the window fetchInitialData loads).
+        async function openSearchResultThread(thread) {
+            closeSearchView();
+            if (thread.board_id !== appState.currentBoard) {
+                await switchToBoard(thread.board_id);
+            }
+            appState.threads[thread.id] = thread;
+            openThreadPage(thread.id);
         }
  
         let realtimeChannel = null;
