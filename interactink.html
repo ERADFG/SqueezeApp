@@ -26,8 +26,10 @@
     <meta name="twitter:description" content="A free anonymous text board. No accounts, no profiles, no tracking - just post and reply.">
     <meta name="twitter:image" content="https://interactink.vercel.app/favicon2.png">
  
-    <!-- Favicon Links -->
-    <link rel="icon" type="image/png" href="favicon2.png">
+    <!-- Favicon Links (absolute URLs so this still resolves correctly
+         from /thread/:id and any other non-root path) -->
+    <link rel="icon" type="image/png" href="https://interactink.vercel.app/favicon2.png">
+    <link rel="shortcut icon" href="https://interactink.vercel.app/favicon2.png">
  
     <meta name="google-adsense-account" content="ca-pub-9357677827244243">
     <meta name="google-site-verification" content="DOvTKyh77YUQreg4Dg6SaL1wEM33Da783l6lqsLek7Q" />
@@ -42,7 +44,13 @@
       "publisher": {
         "@type": "Organization",
         "name": "InteractInk",
-        "logo": "https://interactink.vercel.app/favicon2.png"
+        "url": "https://interactink.vercel.app/",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://interactink.vercel.app/favicon2.png",
+          "width": 500,
+          "height": 500
+        }
       }
     }
     </script>
