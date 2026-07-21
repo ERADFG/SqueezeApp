@@ -1871,7 +1871,11 @@ function initRealtimeSync() {
                 const id = Math.random().toString(16).substring(2, 10);
                 const resolvedThreadName = await resolvePosterName(title.value);
                 const parsedTitle = resolvedThreadName || 'Anonymous';
-                const newThread = { id, board_id: appState.currentBoard, title: parsedTitle, content: contentVal, timestamp: Date.now(), upvotes: 1, media_url: null, media_type: null, moderation_status: 'approved' };
+                // Posts made with the reserved verified name are auto-pinned
+                // to the top of whichever board they're posted in. Replies/
+                // comments never get this treatment, only top-level threads.
+                const isVerifiedPost = resolvedThreadName === VERIFIED_DISPLAY_NAME;
+                const newThread = { id, board_id: appState.currentBoard, title: parsedTitle, content: contentVal, timestamp: Date.now(), upvotes: 1, media_url: null, media_type: null, moderation_status: 'approved', pinned: isVerifiedPost };
 
                 const submitBtn = e.target.querySelector('button[type="submit"]');
                 if (submitBtn) submitBtn.disabled = true;
@@ -2033,13 +2037,17 @@ function initRealtimeSync() {
             
             if (appState.feedFilter === 'trending') {
                 sorted = [...threadList].sort((a, b) => {
+                    if (!!b.pinned !== !!a.pinned) return (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
                     const scoreA = appState.commentCounts[a.id] || 0;
                     const scoreB = appState.commentCounts[b.id] || 0;
                     if (scoreA === scoreB) return b.timestamp - a.timestamp; 
                     return scoreB - scoreA;
                 });
             } else {
-                sorted = [...threadList].sort((a, b) => b.timestamp - a.timestamp);
+                sorted = [...threadList].sort((a, b) => {
+                    if (!!b.pinned !== !!a.pinned) return (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
+                    return b.timestamp - a.timestamp;
+                });
             }
  
             const startIndex = (appState.currentPage - 1) * appState.threadsPerPage;
@@ -2110,6 +2118,7 @@ function initRealtimeSync() {
             const processedContent = parseRichTextContent(escapeHTML(thread.content));
             
             card.innerHTML = `
+                ${thread.pinned ? `<div class="flex items-center gap-1 text-[11px] font-bold text-emerald-500 uppercase tracking-wide mb-1"><i data-lucide="pin" class="w-3 h-3"></i> Pinned</div>` : ''}
                 <div class="flex items-center justify-between text-xs text-neutral-500 mb-1">
                     <span class="font-bold text-neutral-300 uppercase tracking-wide truncate max-w-[70%]">${renderTripcodeLabel(thread.title)}</span>
                     <span class="font-mono text-[11px]">>>${thread.id} · ${dateStr}</span>
