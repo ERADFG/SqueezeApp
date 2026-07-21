@@ -106,6 +106,34 @@
         .settings-link .settings-sub { font-size: 12px; color: #71767b; margin-top: 1px; }
         .settings-link .chevron { margin-left: auto; color: #52525b; }
 
+        /* ---------- Bookmarks section ---------- */
+        #bookmarksPanel { display: none; }
+        #bookmarksPanel.open { display: block; }
+        .settings-link.bookmarks-toggle .settings-icon { color: #eab308; }
+        .bookmark-item {
+            display: block; padding: 14px 16px; border-bottom: 1px solid #1c1c1c;
+            color: #e7e9ea; text-decoration: none; transition: background-color 0.15s ease;
+            position: relative;
+        }
+        .bookmark-item:hover { background-color: #0a0a0a; }
+        .bookmark-item:last-child { border-bottom: none; }
+        .bookmark-item .bookmark-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+        .bookmark-item .bookmark-tag { font-size: 11px; font-weight: 700; color: #10b981; text-transform: uppercase; font-family: ui-monospace, Menlo, monospace; }
+        .bookmark-item .bookmark-title { font-weight: 700; font-size: 13px; color: #e7e9ea; text-transform: uppercase; }
+        .bookmark-item .bookmark-body { font-size: 13px; color: #9ca3af; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        .bookmark-item .bookmark-date { font-size: 11px; color: #52525b; font-family: ui-monospace, Menlo, monospace; }
+        .unbookmark-btn {
+            display: flex; align-items: center; justify-content: center;
+            width: 30px; height: 30px; border-radius: 9999px; flex-shrink: 0;
+            background: none; border: none; color: #eab308; cursor: pointer;
+            transition: background-color 0.15s ease;
+        }
+        .unbookmark-btn:hover { background: #1c1c1c; }
+        .unbookmark-btn svg { width: 16px; height: 16px; fill: currentColor; }
+        .bookmarks-empty { padding: 32px 16px; text-align: center; color: #71767b; font-size: 13px; }
+        .bookmarks-back { display: flex; align-items: center; gap: 8px; padding: 14px 16px; color: #71767b; font-size: 13px; cursor: pointer; border-bottom: 1px solid #1c1c1c; background: none; border-left: none; border-right: none; border-top: none; width: 100%; text-align: left; }
+        .bookmarks-back:hover { color: #e7e9ea; }
+
         /* ---------- Responsive device-adaptive layout ---------- */
         .bottom-tab-bar { display: none; }
         .bottom-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #71767b; text-decoration: none; padding: 6px 10px; cursor: pointer; background: none; border: none; }
@@ -173,7 +201,15 @@
                 </p>
             </section>
 
-            <section class="divide-y divide-[#1c1c1c]">
+            <section class="divide-y divide-[#1c1c1c]" id="settingsMainList">
+                <a href="#" id="bookmarksToggleLink" class="settings-link bookmarks-toggle">
+                    <span class="settings-icon"><i data-lucide="bookmark" class="w-4 h-4"></i></span>
+                    <span>
+                        <span class="settings-label block">Bookmarks</span>
+                        <span class="settings-sub">Posts you've saved for later</span>
+                    </span>
+                    <i data-lucide="chevron-right" class="w-4 h-4 chevron"></i>
+                </a>
                 <a href="about.html" class="settings-link">
                     <span class="settings-icon"><i data-lucide="info" class="w-4 h-4"></i></span>
                     <span>
@@ -232,6 +268,14 @@
                 </a>
             </section>
 
+            <!-- BOOKMARKS PANEL -->
+            <section id="bookmarksPanel">
+                <button type="button" class="bookmarks-back" id="bookmarksBackBtn">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Settings
+                </button>
+                <div id="bookmarksList" class="divide-y divide-[#1c1c1c]"></div>
+            </section>
+
             <footer style="width: 100%; text-align: center; padding: 32px 20px;">
                 <p style="font-size: 0.85rem; color: #71767b;">&copy; 2026 InteractInk. All rights reserved.</p>
             </footer>
@@ -259,6 +303,100 @@
 
     <script>
         lucide.createIcons();
+
+        // ================== Bookmarks ==================
+        // Reads the same 'ink_bookmarks' localStorage entry that interactink.html
+        // writes to, so a post stays bookmarked here until it's explicitly
+        // un-bookmarked from either page.
+        const BOOKMARKS_STORAGE_KEY = 'ink_bookmarks';
+
+        function getBookmarksMap() {
+            try {
+                return JSON.parse(localStorage.getItem(BOOKMARKS_STORAGE_KEY)) || {};
+            } catch (e) { return {}; }
+        }
+
+        function saveBookmarksMap(map) {
+            try { localStorage.setItem(BOOKMARKS_STORAGE_KEY, JSON.stringify(map)); } catch (e) {}
+        }
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>'"]/g,
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+
+        function buildBookmarkTargetUrl(entry) {
+            const threadId = entry.type === 'thread' ? entry.id : entry.threadId;
+            const base = `interactink.html?board=${encodeURIComponent(entry.board_id || 'b')}&thread=${encodeURIComponent(threadId)}`;
+            return entry.type === 'comment' ? `${base}#comment-${entry.id}` : base;
+        }
+
+        function renderBookmarksList() {
+            const listEl = document.getElementById('bookmarksList');
+            const map = getBookmarksMap();
+            const entries = Object.entries(map).sort((a, b) => (b[1].bookmarkedAt || 0) - (a[1].bookmarkedAt || 0));
+
+            if (entries.length === 0) {
+                listEl.innerHTML = `<div class="bookmarks-empty">No bookmarks yet. Tap the bookmark icon on any post or reply to save it here.</div>`;
+                return;
+            }
+
+            listEl.innerHTML = entries.map(([key, entry]) => {
+                const isThread = entry.type === 'thread';
+                const dateStr = new Date(entry.bookmarkedAt || entry.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' });
+                const bodyText = isThread ? entry.content : entry.text;
+                const label = isThread ? (entry.title || 'Untitled thread') : `Reply to >>${entry.threadId}`;
+                return `
+                    <div class="bookmark-item">
+                        <a href="${buildBookmarkTargetUrl(entry)}" style="text-decoration:none; color:inherit; display:block;">
+                            <div class="bookmark-meta">
+                                <span class="bookmark-tag">/${entry.board_id || 'b'}/ · ${isThread ? 'Thread' : 'Reply'}</span>
+                                <span class="bookmark-date">${dateStr}</span>
+                            </div>
+                            <div class="bookmark-title">${escapeHTML(label)}</div>
+                            <div class="bookmark-body">${escapeHTML(bodyText)}</div>
+                        </a>
+                        <button type="button" class="unbookmark-btn" style="position:absolute; top:10px; right:10px;" data-key="${key}" aria-label="Remove bookmark" title="Remove bookmark">
+                            <i data-lucide="bookmark" ></i>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+
+            listEl.querySelectorAll('.unbookmark-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const map2 = getBookmarksMap();
+                    delete map2[btn.getAttribute('data-key')];
+                    saveBookmarksMap(map2);
+                    renderBookmarksList();
+                });
+            });
+        }
+
+        function openBookmarksPanel() {
+            document.getElementById('settingsMainList').style.display = 'none';
+            document.getElementById('bookmarksPanel').classList.add('open');
+            document.querySelector('.x-feed header h1').textContent = 'Bookmarks';
+            renderBookmarksList();
+        }
+
+        function closeBookmarksPanel() {
+            document.getElementById('bookmarksPanel').classList.remove('open');
+            document.getElementById('settingsMainList').style.display = '';
+            document.querySelector('.x-feed header h1').textContent = 'Settings';
+        }
+
+        document.getElementById('bookmarksToggleLink').addEventListener('click', (e) => {
+            e.preventDefault();
+            openBookmarksPanel();
+        });
+        document.getElementById('bookmarksBackBtn').addEventListener('click', closeBookmarksPanel);
     </script>
     <script src="enhancements.js" defer></script>
 </body>

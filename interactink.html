@@ -523,6 +523,13 @@
         }
 
         /* ==================================================================
+           BOOKMARKS
+        ================================================================== */
+        .bookmark-btn svg { fill: none; transition: fill 0.15s ease, color 0.15s ease; }
+        .bookmark-btn.bookmark-active { color: #eab308 !important; }
+        .bookmark-btn.bookmark-active svg { fill: currentColor; }
+
+        /* ==================================================================
            THREAD PAGE (full-page comment view, replaces the old modal)
         ================================================================== */
         #threadPage { display: none; flex-direction: column; min-height: 100%; }
@@ -769,6 +776,7 @@
                         <span id="threadPageTitle" class="font-bold text-white text-base truncate uppercase tracking-wide border-b border-neutral-900 pb-1 w-full">Subject Target</span>
                     </div>
                     <p id="threadPageOpBody" class="text-neutral-200 text-sm leading-relaxed break-words whitespace-pre-wrap pt-1"></p>
+                    <div id="threadPageOpActions" class="flex items-center gap-6 text-xs text-neutral-500 pt-3"></div>
                 </div>
 
                 <div class="border-b border-neutral-800"></div>
@@ -1839,12 +1847,105 @@ function initRealtimeSync() {
                 <div class="flex items-center gap-6 text-xs text-neutral-500">
                     <span class="flex items-center gap-1.5 hover:text-neutral-300 transition"><i data-lucide="message-square" class="w-4 h-4"></i> ${dynamicCommentCount} Replies</span>
                     <button type="button" class="flex items-center gap-1.5 hover:text-neutral-300 transition cursor-pointer" onclick="event.preventDefault(); event.stopPropagation(); shareThread('${thread.id}', event.currentTarget);"><i data-lucide="share" class="w-4 h-4"></i> Share</button>
+                    <button type="button" data-bookmark-key="thread:${thread.id}" class="bookmark-btn flex items-center gap-1.5 hover:text-yellow-400 transition cursor-pointer${isBookmarked('thread:' + thread.id) ? ' bookmark-active' : ''}" onclick="event.preventDefault(); event.stopPropagation(); toggleThreadBookmark('${thread.id}');"><i data-lucide="bookmark" class="w-4 h-4"></i> <span class="bookmark-label">${isBookmarked('thread:' + thread.id) ? 'Saved' : 'Save'}</span></button>
                     <button type="button" class="flex items-center gap-1.5 hover:text-red-400 transition cursor-pointer" onclick="event.preventDefault(); event.stopPropagation(); openReportModal('thread', '${thread.id}', '${thread.id}');"><i data-lucide="flag" class="w-4 h-4"></i> Report</button>
                 </div>
             `;
             return card;
         }
  
+        // ================== Bookmarks ==================
+        // Bookmarks are stored in localStorage (not sessionStorage / the DB) so
+        // they persist across refreshes, closed tabs, and new sessions, and stay
+        // saved until the user explicitly un-bookmarks them. Each entry carries
+        // enough of a snapshot of the post to render it on the Settings page
+        // without needing a live database round-trip.
+        const BOOKMARKS_STORAGE_KEY = 'ink_bookmarks';
+
+        function getBookmarksMap() {
+            try {
+                return JSON.parse(localStorage.getItem(BOOKMARKS_STORAGE_KEY)) || {};
+            } catch (e) { return {}; }
+        }
+
+        function saveBookmarksMap(map) {
+            try { localStorage.setItem(BOOKMARKS_STORAGE_KEY, JSON.stringify(map)); } catch (e) {}
+        }
+
+        function isBookmarked(key) {
+            return !!getBookmarksMap()[key];
+        }
+
+        function applyBookmarkButtonState(btn, active) {
+            if (!btn) return;
+            btn.classList.toggle('bookmark-active', active);
+            const label = btn.querySelector('.bookmark-label');
+            if (label) label.textContent = active ? 'Saved' : 'Save';
+        }
+
+        function refreshBookmarkButtons(key, active) {
+            document.querySelectorAll(`[data-bookmark-key="${key}"]`).forEach(btn => applyBookmarkButtonState(btn, active));
+        }
+
+        function toggleThreadBookmark(threadId) {
+            const thread = appState.threads[threadId];
+            if (!thread) return;
+            const key = `thread:${threadId}`;
+            const map = getBookmarksMap();
+            let active;
+            if (map[key]) {
+                delete map[key];
+                active = false;
+                showToast('Removed from bookmarks.');
+            } else {
+                map[key] = {
+                    type: 'thread',
+                    id: threadId,
+                    board_id: thread.board_id || appState.currentBoard,
+                    title: thread.title,
+                    content: thread.content,
+                    timestamp: thread.timestamp,
+                    media_url: thread.media_url || null,
+                    media_type: thread.media_type || null,
+                    bookmarkedAt: Date.now()
+                };
+                active = true;
+                showToast('Post bookmarked.');
+            }
+            saveBookmarksMap(map);
+            refreshBookmarkButtons(key, active);
+        }
+
+        function toggleCommentBookmark(threadId, commentId) {
+            const comment = (appState.comments[threadId] || {})[commentId];
+            if (!comment) return;
+            const key = `comment:${commentId}`;
+            const map = getBookmarksMap();
+            let active;
+            if (map[key]) {
+                delete map[key];
+                active = false;
+                showToast('Removed from bookmarks.');
+            } else {
+                map[key] = {
+                    type: 'comment',
+                    id: commentId,
+                    threadId: threadId,
+                    board_id: comment.board_id || appState.currentBoard,
+                    tripcode: comment.tripcode,
+                    text: comment.text,
+                    timestamp: comment.timestamp,
+                    media_url: comment.media_url || null,
+                    media_type: comment.media_type || null,
+                    bookmarkedAt: Date.now()
+                };
+                active = true;
+                showToast('Reply bookmarked.');
+            }
+            saveBookmarksMap(map);
+            refreshBookmarkButtons(key, active);
+        }
+
         function escapeHTML(str) {
             if (!str) return '';
             return str.replace(/[&<>'"]/g, 
@@ -2216,6 +2317,11 @@ function initRealtimeSync() {
         document.getElementById('threadPageMeta').innerText = `${meta.label} · Thread >>${thread.id}`;
         document.getElementById('threadPageTitle').innerHTML = renderTripcodeLabel(thread.title);
         document.getElementById('threadPageOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content)) + renderPostMediaHTML(thread.media_url, thread.media_type);
+        document.getElementById('threadPageOpActions').innerHTML = `
+            <button type="button" class="flex items-center gap-1.5 hover:text-neutral-300 transition cursor-pointer" onclick="shareThread('${thread.id}', event.currentTarget);"><i data-lucide="share" class="w-4 h-4"></i> Share</button>
+            <button type="button" data-bookmark-key="thread:${thread.id}" class="bookmark-btn flex items-center gap-1.5 hover:text-yellow-400 transition cursor-pointer${isBookmarked('thread:' + thread.id) ? ' bookmark-active' : ''}" onclick="toggleThreadBookmark('${thread.id}');"><i data-lucide="bookmark" class="w-4 h-4"></i> <span class="bookmark-label">${isBookmarked('thread:' + thread.id) ? 'Saved' : 'Save'}</span></button>
+            <button type="button" class="flex items-center gap-1.5 hover:text-red-400 transition cursor-pointer" onclick="openReportModal('thread', '${thread.id}', '${thread.id}');"><i data-lucide="flag" class="w-4 h-4"></i> Report</button>
+        `;
 
         document.getElementById('feedView').classList.add('hidden');
         const threadPageEl = document.getElementById('threadPage');
@@ -2304,6 +2410,7 @@ function initRealtimeSync() {
                 ${renderPostMediaHTML(node.media_url, node.media_type)}
                 <div class="flex justify-end items-center gap-4 mt-2">
                     <button onclick="shareComment('${appState.activeThreadId}', '${node.id}', event.currentTarget)" class="text-xs text-neutral-500 hover:text-white flex items-center gap-1 font-medium cursor-pointer"><i data-lucide="share" class="w-3.5 h-3.5"></i> Share</button>
+                    <button data-bookmark-key="comment:${node.id}" onclick="toggleCommentBookmark('${appState.activeThreadId}', '${node.id}')" class="bookmark-btn text-xs text-neutral-500 hover:text-yellow-400 flex items-center gap-1 font-medium cursor-pointer${isBookmarked('comment:' + node.id) ? ' bookmark-active' : ''}"><i data-lucide="bookmark" class="w-3.5 h-3.5"></i> <span class="bookmark-label">${isBookmarked('comment:' + node.id) ? 'Saved' : 'Save'}</span></button>
                     <button onclick="appendReplyPointer('${node.id}')" class="text-xs text-neutral-500 hover:text-white flex items-center gap-1 font-medium cursor-pointer"><i data-lucide="reply" class="w-3.5 h-3.5"></i> Reply</button>
                     <button onclick="openReportModal('comment', '${node.id}', '${appState.activeThreadId}')" class="text-xs text-neutral-500 hover:text-red-400 flex items-center gap-1 font-medium cursor-pointer"><i data-lucide="flag" class="w-3.5 h-3.5"></i> Report</button>
                 </div>
