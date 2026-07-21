@@ -1,0 +1,183 @@
+/* =========================================================================
+   InteractInk — Enhancements Layer
+   Shared, site-wide animation & interaction upgrades.
+   Loaded on every page via <link rel="stylesheet" href="enhancements.css">
+   Safe by design: opacity-only page transitions (no transform on body),
+   so position:fixed / position:sticky elements (bottom tab bar, sticky
+   headers) are never affected. Respects prefers-reduced-motion.
+   ========================================================================= */
+
+/* ---------------------------------------------------------------------
+   0. Reduced-motion users get near-instant, still-functional transitions
+   --------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* ---------------------------------------------------------------------
+   1. Page-load / page-exit transitions
+   --------------------------------------------------------------------- */
+body {
+  animation: ink-page-in 280ms ease both;
+}
+
+@keyframes ink-page-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+body.ink-page-exit {
+  animation: ink-page-out 190ms ease both;
+  pointer-events: none;
+}
+
+@keyframes ink-page-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* Slim top progress bar shown during cross-page navigation */
+.ink-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 0%;
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.65);
+  border-radius: 0 3px 3px 0;
+  z-index: 99999;
+  transition: width 260ms cubic-bezier(.22,.9,.35,1), opacity 200ms ease;
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------------
+   2. Bouncing buttons — applies to every real button and every
+      button-like control across the site (nav items, footer/widget
+      links, tab bar, cards, board chips, report/bookmark actions, etc.)
+   --------------------------------------------------------------------- */
+button,
+input[type="submit"],
+input[type="button"],
+[role="button"],
+.nav-item,
+.post-button,
+.footer-link,
+.widget-link,
+.bottom-tab,
+.board-grid-card,
+.board-switcher-btn,
+.bookmark-btn,
+.report-btn,
+.search-trigger-btn,
+.thread-back-btn,
+.back-link,
+.inline-link,
+[data-bounce] {
+  transition: transform 140ms cubic-bezier(.34,1.56,.64,1), filter 140ms ease, opacity 140ms ease;
+  will-change: transform;
+}
+
+/* Gentle lift + brighten on hover so the UI feels alive before it's clicked */
+button:hover,
+input[type="submit"]:hover,
+input[type="button"]:hover,
+[role="button"]:hover,
+.nav-item:hover,
+.post-button:hover,
+.bottom-tab:hover,
+.board-grid-card:hover,
+.board-switcher-btn:hover,
+.bookmark-btn:hover,
+.report-btn:hover,
+.search-trigger-btn:hover,
+.thread-back-btn:hover,
+[data-bounce]:hover {
+  transform: translateY(-1px) scale(1.015);
+  filter: brightness(1.06);
+}
+
+.footer-link:hover,
+.widget-link:hover,
+.back-link:hover,
+.inline-link:hover {
+  transform: translateY(-1px);
+}
+
+/* The actual "bounce" — an elastic overshoot triggered on click via JS
+   (adds .ink-bounce for ~420ms). Works on any element matched above,
+   including ones created dynamically after the page has loaded. */
+@keyframes ink-bounce {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(0.90); }
+  55%  { transform: scale(1.10); }
+  75%  { transform: scale(0.97); }
+  100% { transform: scale(1); }
+}
+
+.ink-bounce {
+  animation: ink-bounce 420ms cubic-bezier(.34,1.56,.64,1);
+}
+
+/* Buttons that combine translateY hover + bounce shouldn't fight —
+   the animation takes over transform entirely while it plays. */
+.ink-bounce:hover {
+  animation-fill-mode: both;
+}
+
+button:active,
+input[type="submit"]:active,
+input[type="button"]:active,
+[role="button"]:active,
+.nav-item:active,
+.post-button:active,
+.bottom-tab:active,
+.board-grid-card:active,
+[data-bounce]:active {
+  transform: scale(0.94);
+}
+
+/* ---------------------------------------------------------------------
+   3. Card / list-item polish (popular posts, board grid, thread cards)
+   --------------------------------------------------------------------- */
+.board-grid-card,
+.fade-in-up {
+  transition: transform 180ms ease, background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.board-grid-card:hover {
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+
+/* Staggered fade/slide entrance for dynamically rendered feed items
+   (index.html / interactink.html already set animationDelay inline) */
+@keyframes ink-fade-in-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in-up {
+  animation: ink-fade-in-up 420ms cubic-bezier(.22,.9,.35,1) both;
+}
+
+/* ---------------------------------------------------------------------
+   4. Small accessibility niceties
+   --------------------------------------------------------------------- */
+a:focus-visible,
+button:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
