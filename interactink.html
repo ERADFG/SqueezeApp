@@ -417,24 +417,45 @@
            GLOBAL SEARCH
            A header button opens a full-page view (same pattern as the
            thread page) with a search box that queries posts across every
-           board, not just the one currently open.
+           board, not just the one currently open. It's grouped with the
+           board switcher on the right of the header (rather than floating
+           alone) so the two feel like a single cluster of header controls,
+           and it's styled like a compact search field rather than a bare
+           icon so its purpose reads instantly.
         ================================================================== */
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
         .search-trigger-btn {
             display: flex;
             align-items: center;
-            justify-content: center;
-            width: 34px;
-            height: 34px;
+            gap: 7px;
+            padding: 7px 14px 7px 11px;
             border-radius: 9999px;
-            color: #e7e9ea;
-            background: none;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #71767b;
+            background-color: #16181c;
             border: 1px solid #2f3336;
             cursor: pointer;
             flex-shrink: 0;
-            transition: background-color 0.15s ease, border-color 0.15s ease;
+            transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
         }
-        .search-trigger-btn:hover { background: #16181c; border-color: #525252; }
-        .search-trigger-btn i { width: 16px; height: 16px; }
+        .search-trigger-btn:hover {
+            border-color: #525252;
+            background-color: #1c1f23;
+            color: #e7e9ea;
+        }
+        .search-trigger-btn i { width: 15px; height: 15px; flex-shrink: 0; }
+        .search-trigger-label { white-space: nowrap; }
+
+        @media (max-width: 420px) {
+            .search-trigger-btn { padding: 7px; }
+        }
 
         .search-view-input-wrap { position: relative; flex: 1; min-width: 0; }
         .search-view-input-icon {
@@ -709,16 +730,20 @@
                     <img src="favicon2.png" alt="InteractInk logo" class="w-6 h-6 shrink-0">
                     <span class="truncate">InteractInk</span>
                 </h1>
-                <button type="button" id="globalSearchBtn" onclick="openSearchView()" class="search-trigger-btn" aria-label="Search all boards" title="Search all boards">
-                    <i data-lucide="search"></i>
-                </button>
-                <button type="button" id="boardSwitcherBtn" onclick="toggleBoardPicker()" class="board-switcher-btn" aria-haspopup="true" aria-expanded="false">
-                    <span id="boardSwitcherLabel">/b/</span>
-                    <i data-lucide="chevron-down" class="board-switcher-chevron"></i>
-                </button>
+
+                <div class="header-actions">
+                    <button type="button" id="globalSearchBtn" onclick="openSearchView()" class="search-trigger-btn" aria-label="Search all boards" title="Search all boards">
+                        <i data-lucide="search"></i>
+                        <span class="search-trigger-label hidden sm:inline">Search</span>
+                    </button>
+                    <button type="button" id="boardSwitcherBtn" onclick="toggleBoardPicker()" class="board-switcher-btn" aria-haspopup="true" aria-expanded="false">
+                        <span id="boardSwitcherLabel">/b/</span>
+                        <i data-lucide="chevron-down" class="board-switcher-chevron"></i>
+                    </button>
+                </div>
 
                 <!-- Board switcher: opens right under the button above. Tap a
-                     board to jump straight to it. -->
+                     board to jump straight there. -->
                 <div id="boardPickerPanel" class="board-picker hidden">
                     <div class="board-picker-search-wrap">
                         <i data-lucide="search" class="board-picker-search-icon"></i>
