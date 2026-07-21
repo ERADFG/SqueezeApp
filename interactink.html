@@ -248,14 +248,17 @@
             .x-sidebar {
                 display: flex;
                 flex-direction: column;
-                grid-column: 2;
-                position: sticky;
+                position: fixed;
                 top: 0;
+                left: calc((100vw - 1265px) / 2);
+                width: 275px;
                 height: 100vh;
                 padding: 12px 12px 20px 12px;
                 border-right: 1px solid #2f3336;
                 overflow-y: auto;
                 align-items: flex-start;
+                box-sizing: border-box;
+                z-index: 30;
             }
         }
  
@@ -283,13 +286,16 @@
             .x-widgets {
                 display: flex;
                 flex-direction: column;
-                grid-column: 4;
-                position: sticky;
+                position: fixed;
                 top: 0;
+                right: calc((100vw - 1265px) / 2);
+                width: 350px;
                 height: 100vh;
                 padding: 20px 24px;
                 gap: 20px;
                 overflow-y: auto;
+                box-sizing: border-box;
+                z-index: 30;
             }
         }
  
@@ -723,6 +729,10 @@
                 <a href="contact.html" class="nav-item">
                     <i data-lucide="mail"></i>
                     <span>Contact</span>
+                </a>
+                <a href="settings.html" class="nav-item">
+                    <i data-lucide="settings"></i>
+                    <span>Settings</span>
                 </a>
             </nav>
  
