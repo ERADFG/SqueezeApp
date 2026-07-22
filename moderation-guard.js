@@ -98,4 +98,4 @@ document.addEventListener('submit', async (event) => {
       submitBtn.textContent = originalLabel;
     }
   }
-}, true); // capture: true — this is what guarantees we run before interactink.html's own listener 
+}, true); // capture: true — this is what guarantees we run before interactink.html's own listener
