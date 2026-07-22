@@ -100,6 +100,8 @@
       padding: 4px 10px;
       border-radius: 8px;
       font-family: monospace;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
 
     .telemetry-pill span {
@@ -135,6 +137,8 @@
       align-items: center;
       width: 100%;
       min-width: 0;
+      flex-wrap: wrap;
+      row-gap: 8px;
     }
 
     .brand {
@@ -407,7 +411,26 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
       min-width: 0;
+      flex-shrink: 0;
+    }
+
+    #activeChatMeta {
+      min-width: 0;
+      flex: 1 1 auto;
+      overflow: hidden;
+    }
+
+    #activeChatMeta h4,
+    #activeChatMeta span {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .view-tabs {
       flex-shrink: 0;
     }
 
@@ -1100,19 +1123,21 @@
       overflow: hidden;
     }
 
-    @media (min-width: 1024px) {
+    @media (min-width: 1340px) {
       .site-shell {
-        grid-template-columns: 1fr 275px 640px 350px 1fr;
+        grid-template-columns: 260px minmax(760px, 1fr) 320px;
+        max-width: 1600px;
+        margin: 0 auto;
       }
     }
 
     .x-sidebar { display: none; }
 
-    @media (min-width: 1024px) {
+    @media (min-width: 1340px) {
       .x-sidebar {
         display: flex;
         flex-direction: column;
-        grid-column: 2;
+        grid-column: 1;
         height: 100%;
         padding: 12px 12px 20px 12px;
         border-right: 1px solid #2f3336;
@@ -1134,20 +1159,21 @@
 
     .ad-slot { width: 100%; flex-shrink: 0; }
 
-    @media (min-width: 1024px) {
+    @media (min-width: 1340px) {
       .x-feed {
-        grid-column: 3;
+        grid-column: 2;
         border-right: 1px solid #2f3336;
+        min-width: 0;
       }
     }
 
     .x-widgets { display: none; }
 
-    @media (min-width: 1024px) {
+    @media (min-width: 1340px) {
       .x-widgets {
         display: flex;
         flex-direction: column;
-        grid-column: 4;
+        grid-column: 3;
         height: 100%;
         padding: 20px 24px;
         gap: 20px;
@@ -1188,7 +1214,7 @@
     .bottom-tab.active { color: #ffffff; }
     .bottom-tab svg { width: 20px; height: 20px; }
 
-    @media (max-width: 1023px) {
+    @media (max-width: 1339px) {
       .bottom-tab-bar {
         display: flex; justify-content: space-around; align-items: center;
         position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
