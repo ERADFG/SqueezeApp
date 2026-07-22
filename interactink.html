@@ -861,7 +861,7 @@
              opening an overlay, and the Back arrow returns to the feed. -->
         <div id="threadPage" class="hidden">
             <div class="thread-page-header">
-                <button type="button" onclick="closeThreadPage()" class="thread-back-btn" aria-label="Back to board">
+                <button type="button" onclick="handleThreadBackButtonClick()" class="thread-back-btn" aria-label="Back">
                     <i data-lucide="arrow-left"></i>
                 </button>
                 <div class="thread-page-headline min-w-0">
@@ -1035,6 +1035,7 @@
         comments: {}, 
         commentCounts: {}, 
         activeThreadId: null, 
+        commentFocusStack: [],
         userSeed: null, 
         feedFilter: 'latest', 
         currentPage: 1, 
@@ -2637,6 +2638,7 @@ function initRealtimeSync() {
             document.getElementById('threadPage').classList.remove('active');
             document.getElementById('feedView').classList.remove('hidden');
             appState.activeThreadId = null;
+            appState.commentFocusStack = [];
             const fab = document.getElementById('mobileComposeFab');
             if (fab) fab.style.display = '';
 
@@ -2663,6 +2665,7 @@ function initRealtimeSync() {
         InkRouting.captureStateBeforeNavigation(appState.currentBoard);
  
         appState.activeThreadId = tId;
+        appState.commentFocusStack = [];
         const thread = appState.threads[tId];
         if (!thread) return;
 
@@ -2702,17 +2705,12 @@ function initRealtimeSync() {
         renderCommentTree();
      }
  
-        function renderCommentTree() {
-            const container = document.getElementById('commentTreeContainer');
-            container.innerHTML = '';
-            const commentsMap = appState.comments[appState.activeThreadId] || {};
+        // Builds the parent/child comment tree for a thread without rendering
+        // anything. Kept separate from renderCommentTree so both the root
+        // list and the focus view (see below) can look up a node's children.
+        function buildCommentTree(threadId) {
+            const commentsMap = appState.comments[threadId] || {};
             const rawCommentsList = Object.values(commentsMap).sort((a, b) => a.timestamp - b.timestamp);
- 
-            if (rawCommentsList.length === 0) {
-                container.innerHTML = `<div class="text-xs text-neutral-600 text-center py-6 font-mono">No comments yet.</div>`;
-                return;
-            }
- 
             const commentMapRef = {};
             const treeRootNodes = [];
  
@@ -2729,34 +2727,73 @@ function initRealtimeSync() {
                 }
             });
  
-            treeRootNodes.forEach(rootNode => container.appendChild(buildCommentTreeUI(rootNode, 0)));
+            return { commentMapRef, treeRootNodes };
+        }
+ 
+        // Comments no longer nest indefinitely inline — a comment with lots
+        // of replies used to compound indentation at every level, squeezing
+        // the text down and breaking the layout on mobile. Instead, replies
+        // behave like posts: the root list only ever shows one flat row of
+        // cards, each with a reply count. Clicking a card opens a focus view
+        // for that comment (its text up top, its direct replies below), the
+        // same way clicking a post opens the thread page. appState.commentFocusStack
+        // tracks how many levels deep the user has drilled in, so the shared
+        // back button can pop one level at a time instead of always exiting
+        // to the board feed.
+        function renderCommentTree() {
+            const container = document.getElementById('commentTreeContainer');
+            container.innerHTML = '';
+            const commentsMap = appState.comments[appState.activeThreadId] || {};
+ 
+            if (Object.keys(commentsMap).length === 0) {
+                container.innerHTML = `<div class="text-xs text-neutral-600 text-center py-6 font-mono">No comments yet.</div>`;
+                updateThreadPageHeaderForFocus(null);
+                return;
+            }
+ 
+            const { commentMapRef, treeRootNodes } = buildCommentTree(appState.activeThreadId);
+ 
+            // The stack may reference a comment that no longer resolves
+            // (e.g. it was deleted/rejected) — fall back a level rather
+            // than rendering a blank page.
+            while (appState.commentFocusStack.length > 0 &&
+                   !commentMapRef[appState.commentFocusStack[appState.commentFocusStack.length - 1]]) {
+                appState.commentFocusStack.pop();
+            }
+ 
+            const focusId = appState.commentFocusStack[appState.commentFocusStack.length - 1] || null;
+            const focusNode = focusId ? commentMapRef[focusId] : null;
+ 
+            if (focusNode) {
+                renderCommentFocusView(container, focusNode);
+            } else if (treeRootNodes.length === 0) {
+                container.innerHTML = `<div class="text-xs text-neutral-600 text-center py-6 font-mono">No comments yet.</div>`;
+                updateThreadPageHeaderForFocus(null);
+            } else {
+                treeRootNodes.forEach(node => container.appendChild(buildCommentCard(node)));
+                updateThreadPageHeaderForFocus(null);
+            }
+ 
             setupCrossLinkHoverPreviews();
             lucide.createIcons();
         }
  
-        function buildCommentTreeUI(node, depth) {
-            // Indentation compounds with every nested reply level (each level
-            // wraps the next inside it). Uncapped, a long reply chain pushes
-            // the page far wider than the viewport, which is what forces
-            // mobile browsers to zoom the whole page out to fit it. Capping
-            // it means replies past this depth stop adding further
-            // indentation — they still nest logically, just flush against
-            // the last indent level instead of drifting off-screen.
-            const MAX_INDENT_DEPTH = 6;
-            const showIndent = depth > 0 && depth <= MAX_INDENT_DEPTH;
+        // A single reply, rendered as its own flat card — never with nested
+        // children inline. If it has replies of its own, tapping the card
+        // (or its reply-count pill) opens the focus view for it.
+        function buildCommentCard(node) {
             const wrap = document.createElement('div');
-            wrap.className = `flex flex-col min-w-0 ${
-                showIndent ? 'ml-4 border-l border-neutral-800 pl-4 mt-3'
-                : depth > MAX_INDENT_DEPTH ? 'mt-3'
-                : 'border-b border-neutral-900 pb-3'
-            }`;
-            
+            wrap.className = "flex flex-col min-w-0";
+ 
             const item = document.createElement('div');
-            item.className = "p-3 bg-neutral-950/40 rounded-xl border border-neutral-900 text-sm min-w-0";
+            item.className = "p-3 bg-neutral-950/40 rounded-xl border border-neutral-900 text-sm min-w-0 cursor-pointer hover:border-neutral-700 transition";
             item.id = `comment-${node.id}`;
+            item.setAttribute('role', 'button');
+            item.setAttribute('tabindex', '0');
  
             const dateStr = new Date(node.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             const structuralLinkedProcessedText = parseRichTextContent(escapeHTML(node.text));
+            const replyCount = node.children ? node.children.length : 0;
  
             item.innerHTML = `
                 <div class="flex justify-between items-center text-xs text-neutral-500 mb-2 border-b border-neutral-900 pb-1">
@@ -2765,19 +2802,93 @@ function initRealtimeSync() {
                 </div>
                 <div class="text-neutral-300 leading-relaxed break-words whitespace-pre-wrap">${structuralLinkedProcessedText}</div>
                 ${renderPostMediaHTML(node.media_url, node.media_type)}
-                <div class="flex justify-end items-center gap-4 mt-2">
-                    <button onclick="shareComment('${appState.activeThreadId}', '${node.id}', event.currentTarget)" class="text-xs text-neutral-500 hover:text-white flex items-center gap-1 font-medium cursor-pointer"><i data-lucide="share" class="w-3.5 h-3.5"></i> Share</button>
-                    <button data-bookmark-key="comment:${node.id}" onclick="toggleCommentBookmark('${appState.activeThreadId}', '${node.id}')" class="bookmark-btn text-xs text-neutral-500 hover:text-yellow-400 flex items-center gap-1 font-medium cursor-pointer${isBookmarked('comment:' + node.id) ? ' bookmark-active' : ''}"><i data-lucide="bookmark" class="w-3.5 h-3.5"></i> <span class="bookmark-label">${isBookmarked('comment:' + node.id) ? 'Saved' : 'Save'}</span></button>
-                    <button onclick="appendReplyPointer('${node.id}')" class="text-xs text-neutral-500 hover:text-white flex items-center gap-1 font-medium cursor-pointer"><i data-lucide="reply" class="w-3.5 h-3.5"></i> Reply</button>
-                    <button data-report-key="comment:${node.id}" onclick="openReportModal('comment', '${node.id}', '${appState.activeThreadId}')" class="report-btn text-xs text-neutral-500 hover:text-red-400 flex items-center gap-1 font-medium cursor-pointer${isReported('comment:' + node.id) ? ' report-active' : ''}"><i data-lucide="flag" class="w-3.5 h-3.5"></i> <span class="report-label">${isReported('comment:' + node.id) ? 'Reported' : 'Report'}</span></button>
+                <div class="flex justify-between items-center gap-4 mt-2">
+                    <button onclick="event.stopPropagation(); openCommentFocus('${node.id}')" class="text-xs ${replyCount > 0 ? 'text-neutral-300' : 'text-neutral-500'} hover:text-white flex items-center gap-1.5 font-medium cursor-pointer">
+                        <i data-lucide="message-circle" class="w-3.5 h-3.5"></i> ${replyCount > 0 ? `${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}` : 'View'}
+                    </button>
+                    <div class="flex items-center gap-4">
+                        <button onclick="event.stopPropagation(); shareComment('${appState.activeThreadId}', '${node.id}', event.currentTarget)" class="text-xs text-neutral-500 hover:text-white flex items-center gap-1 font-medium cursor-pointer"><i data-lucide="share" class="w-3.5 h-3.5"></i> Share</button>
+                        <button data-bookmark-key="comment:${node.id}" onclick="event.stopPropagation(); toggleCommentBookmark('${appState.activeThreadId}', '${node.id}')" class="bookmark-btn text-xs text-neutral-500 hover:text-yellow-400 flex items-center gap-1 font-medium cursor-pointer${isBookmarked('comment:' + node.id) ? ' bookmark-active' : ''}"><i data-lucide="bookmark" class="w-3.5 h-3.5"></i> <span class="bookmark-label">${isBookmarked('comment:' + node.id) ? 'Saved' : 'Save'}</span></button>
+                        <button onclick="event.stopPropagation(); appendReplyPointer('${node.id}')" class="text-xs text-neutral-500 hover:text-white flex items-center gap-1 font-medium cursor-pointer"><i data-lucide="reply" class="w-3.5 h-3.5"></i> Reply</button>
+                        <button data-report-key="comment:${node.id}" onclick="event.stopPropagation(); openReportModal('comment', '${node.id}', '${appState.activeThreadId}')" class="report-btn text-xs text-neutral-500 hover:text-red-400 flex items-center gap-1 font-medium cursor-pointer${isReported('comment:' + node.id) ? ' report-active' : ''}"><i data-lucide="flag" class="w-3.5 h-3.5"></i> <span class="report-label">${isReported('comment:' + node.id) ? 'Reported' : 'Report'}</span></button>
+                    </div>
                 </div>
             `;
+            item.addEventListener('click', () => openCommentFocus(node.id));
+            item.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCommentFocus(node.id); } });
             wrap.appendChild(item);
- 
-            if (node.children && node.children.length > 0) {
-                node.children.forEach(child => wrap.appendChild(buildCommentTreeUI(child, depth + 1)));
-            }
             return wrap;
+        }
+ 
+        // The "comment as its own post" view: the focused comment rendered
+        // full-size at the top (mirrors the thread OP block's styling),
+        // followed by its direct replies as a flat list of cards below —
+        // exactly like the thread page renders the OP plus its comments.
+        function renderCommentFocusView(container, node) {
+            const dateStr = new Date(node.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const structuralLinkedProcessedText = parseRichTextContent(escapeHTML(node.text));
+            const replyCount = node.children ? node.children.length : 0;
+ 
+            const focusBlock = document.createElement('div');
+            focusBlock.className = "min-w-0";
+            focusBlock.innerHTML = `
+                <div class="p-4 bg-neutral-950/60 rounded-xl border border-neutral-800 text-sm min-w-0" id="comment-${node.id}">
+                    <div class="flex justify-between items-center text-xs text-neutral-500 mb-2 border-b border-neutral-900 pb-2">
+                        <span class="font-bold text-neutral-300 font-mono bg-neutral-900 px-1.5 py-0.5 rounded">${renderTripcodeLabel(node.tripcode)}</span>
+                        <span class="font-mono text-[11px]">${dateStr} [>>${node.id}]</span>
+                    </div>
+                    <div class="text-neutral-200 leading-relaxed break-words whitespace-pre-wrap text-[0.95rem] pt-1">${structuralLinkedProcessedText}</div>
+                    ${renderPostMediaHTML(node.media_url, node.media_type)}
+                    <div class="flex items-center gap-6 text-xs text-neutral-500 pt-3">
+                        <button onclick="shareComment('${appState.activeThreadId}', '${node.id}', event.currentTarget)" class="hover:text-white flex items-center gap-1.5 font-medium cursor-pointer"><i data-lucide="share" class="w-4 h-4"></i> Share</button>
+                        <button data-bookmark-key="comment:${node.id}" onclick="toggleCommentBookmark('${appState.activeThreadId}', '${node.id}')" class="bookmark-btn hover:text-yellow-400 flex items-center gap-1.5 font-medium cursor-pointer${isBookmarked('comment:' + node.id) ? ' bookmark-active' : ''}"><i data-lucide="bookmark" class="w-4 h-4"></i> <span class="bookmark-label">${isBookmarked('comment:' + node.id) ? 'Saved' : 'Save'}</span></button>
+                        <button onclick="appendReplyPointer('${node.id}')" class="hover:text-white flex items-center gap-1.5 font-medium cursor-pointer"><i data-lucide="reply" class="w-4 h-4"></i> Reply</button>
+                        <button data-report-key="comment:${node.id}" onclick="openReportModal('comment', '${node.id}', '${appState.activeThreadId}')" class="report-btn hover:text-red-400 flex items-center gap-1.5 font-medium cursor-pointer${isReported('comment:' + node.id) ? ' report-active' : ''}"><i data-lucide="flag" class="w-4 h-4"></i> <span class="report-label">${isReported('comment:' + node.id) ? 'Reported' : 'Report'}</span></button>
+                    </div>
+                </div>
+                <div class="border-b border-neutral-800 my-4"></div>
+                <div class="text-xs text-neutral-600 font-mono mb-3">${replyCount > 0 ? `${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}` : 'No replies yet.'}</div>
+            `;
+            container.appendChild(focusBlock);
+ 
+            const repliesWrap = document.createElement('div');
+            repliesWrap.className = "space-y-4";
+            (node.children || []).forEach(child => repliesWrap.appendChild(buildCommentCard(child)));
+            container.appendChild(repliesWrap);
+ 
+            updateThreadPageHeaderForFocus(node);
+        }
+ 
+        // Reflects how deep the user has drilled into a reply chain in the
+        // thread page's header strip, so it's clear the back arrow will step
+        // out of the comment rather than leave the thread entirely.
+        function updateThreadPageHeaderForFocus(node) {
+            const thread = appState.threads[appState.activeThreadId];
+            if (!thread) return;
+            const meta = InkRouting.getBoardMeta(appState.currentBoard);
+            document.getElementById('threadPageMeta').innerText = node
+                ? `${meta.label} · Replies to >>${node.id}`
+                : `${meta.label} · Thread >>${thread.id}`;
+        }
+ 
+        function openCommentFocus(commentId) {
+            appState.commentFocusStack.push(commentId);
+            renderCommentTree();
+            window.scrollTo({ top: 0, behavior: 'auto' });
+        }
+ 
+        // The thread page's back arrow does double duty: while the user is
+        // drilled into a comment's replies it steps back out one level at a
+        // time; once they're back at the root comment list it falls through
+        // to the normal "leave the thread" behavior.
+        function handleThreadBackButtonClick() {
+            if (appState.commentFocusStack.length > 0) {
+                appState.commentFocusStack.pop();
+                renderCommentTree();
+                window.scrollTo({ top: 0, behavior: 'auto' });
+            } else {
+                closeThreadPage();
+            }
         }
  
         function appendReplyPointer(cId) {
