@@ -2013,7 +2013,18 @@ function initRealtimeSync() {
                 const nameInput = document.getElementById('commentNameInput');
                 const resolvedName = await resolvePosterName(nameInput ? nameInput.value : '');
                 const tripcode = resolvedName || await generateTripcode(appState.activeThreadId, appState.userSeed);
-                const newComment = { id, thread_id: appState.activeThreadId, board_id: appState.currentBoard, tripcode, text: textVal, timestamp: Date.now(), media_url: null, media_type: null, moderation_status: 'approved' };
+                // If the user is inside a comment's focus view (they clicked
+                // into a comment to see its replies) and just typed into the
+                // bar without hitting "Reply" on a specific post, the reply
+                // should still land under that comment rather than becoming
+                // a new root-level comment. Only add the pointer when the
+                // text doesn't already carry one — clicking "Reply" (see
+                // appendReplyPointer) already writes an explicit >>ID, and
+                // that always wins.
+                const hasExplicitPointer = /^>>([A-Fa-f0-9]{8})/.test(textVal);
+                const focusedCommentId = appState.commentFocusStack[appState.commentFocusStack.length - 1] || null;
+                const finalText = (!hasExplicitPointer && focusedCommentId) ? `>>${focusedCommentId} ${textVal}` : textVal;
+                const newComment = { id, thread_id: appState.activeThreadId, board_id: appState.currentBoard, tripcode, text: finalText, timestamp: Date.now(), media_url: null, media_type: null, moderation_status: 'approved' };
 
                 const submitBtn = e.target.querySelector('button[type="submit"]');
                 if (submitBtn) submitBtn.disabled = true;
