@@ -2227,7 +2227,7 @@
       }
     }
 
-    function addPeerToSidebarList(peerId) {
+    function addPeerToSidebarList(peerId, activate = true) {
       let list = document.getElementById('chatsList');
       let peerRow = document.getElementById(`chat-${peerId}`);
       if (!peerRow) {
@@ -2269,7 +2269,7 @@
         deleteHistory(peerId, e);
       });
 
-      selectChat(peerId);
+      if (activate) selectChat(peerId);
       updateUnreadSidebarBadge(peerId);
     }
 
@@ -2330,7 +2330,46 @@
       }
     }
 
+    function getLastMessageForChannel(channel) {
+      const msgs = messageHistory.filter(m => m.channel === channel);
+      return msgs.length ? msgs[msgs.length - 1].content : null;
+    }
+
+    function restorePersistedChats() {
+      // Restore the "Self-Secured Notes" preview from saved history.
+      const selfLast = getLastMessageForChannel('self');
+      if (selfLast) {
+        const selfPreview = document.getElementById('lastMessagePreview');
+        if (selfPreview) selfPreview.textContent = selfLast;
+      }
+
+      // Rebuild sidebar entries for every peer chat found in saved history
+      // so past conversations remain visible after a refresh or revisit,
+      // even though the underlying P2P link itself has to be re-established.
+      const peerChannels = [...new Set(
+        messageHistory.filter(m => m.channel !== 'self').map(m => m.channel)
+      )];
+
+      peerChannels.forEach(peerId => {
+        addPeerToSidebarList(peerId, false);
+        const previewEl = document.getElementById(`preview-${peerId}`);
+        if (previewEl) {
+          const last = getLastMessageForChannel(peerId);
+          previewEl.textContent = last ? last : 'Link closed – tap to view history';
+        }
+        const statusDot = document.getElementById(`status-${peerId}`);
+        if (statusDot) {
+          statusDot.classList.remove('online');
+          statusDot.classList.add('offline');
+        }
+      });
+
+      // Keep the currently active chat (defaults to Self-Secured Notes) in sync.
+      loadMessageLog();
+    }
+
     window.addEventListener('load', () => {
+      restorePersistedChats();
       if (window.location.hash.startsWith('#offer=')) {
         handleIncomingInvite();
       }
