@@ -39,10 +39,10 @@
         .x-feed { grid-column: 1; min-height: 100vh; }
         .x-widgets { display: none; }
         @media (min-width: 1024px) {
-            .app-container { grid-template-columns: 1fr 275px 700px 300px 1fr; }
+            .app-container { grid-template-columns: 1fr 275px 640px 350px 1fr; }
             .x-sidebar {
                 display: flex; flex-direction: column;
-                position: fixed; top: 0; left: calc((100vw - 1275px) / 2);
+                position: fixed; top: 0; left: calc((100vw - 1265px) / 2);
                 width: 275px; height: 100vh; box-sizing: border-box; z-index: 30;
                 padding: 12px 12px 20px 12px; border-right: 1px solid var(--glass-border);
                 overflow-y: auto; align-items: flex-start;
@@ -50,8 +50,8 @@
             .x-feed { grid-column: 3; border-right: 1px solid var(--glass-border); }
             .x-widgets {
                 display: flex; flex-direction: column;
-                position: fixed; top: 0; right: calc((100vw - 1275px) / 2);
-                width: 300px; height: 100vh; box-sizing: border-box; z-index: 30;
+                position: fixed; top: 0; right: calc((100vw - 1265px) / 2);
+                width: 350px; height: 100vh; box-sizing: border-box; z-index: 30;
                 padding: 20px 24px; gap: 20px; overflow-y: auto;
             }
         }
