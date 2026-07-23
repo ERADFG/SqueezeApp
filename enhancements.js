@@ -53,13 +53,26 @@
     if (!el || el.hasAttribute('data-no-bounce')) return;
 
     el.classList.remove('ink-bounce');
-    // Force reflow so the animation restarts if clicked again quickly.
-    void el.offsetWidth;
-    el.classList.add('ink-bounce');
 
-    el.addEventListener('animationend', function handler() {
-      el.classList.remove('ink-bounce');
-      el.removeEventListener('animationend', handler);
+    // Apply the bounce class on the next frame, not synchronously here.
+    // This listener runs in the capture phase, i.e. BEFORE the element's
+    // own click handler (target phase) and any bubble-phase listeners.
+    // Pages like interactink.html read anchorEl.getBoundingClientRect()
+    // in their own click handlers (e.g. to position the share menu), and
+    // getBoundingClientRect() reflects live CSS transforms — so adding
+    // the scale/translate bounce class synchronously here would make
+    // those position reads land mid-animation and throw off the result.
+    // Deferring by a frame keeps the click handler's layout read accurate
+    // while still starting the bounce essentially instantly.
+    requestAnimationFrame(function () {
+      // Force reflow so the animation restarts if clicked again quickly.
+      void el.offsetWidth;
+      el.classList.add('ink-bounce');
+
+      el.addEventListener('animationend', function handler() {
+        el.classList.remove('ink-bounce');
+        el.removeEventListener('animationend', handler);
+      });
     });
   }, true);
 
