@@ -20,6 +20,13 @@
  */
 
 import { checkTextContent, checkForDoxxing, checkLinksInText, SpamBotDetector } from './contentModeration.js';
+import { checkTextContentFull } from './contentModeration.severe.js';
+
+// NOTE: this client-side check is a UX nicety (fast feedback for the
+// poster) — it is NOT the enforcement point. Someone can disable JS or
+// POST directly to your Supabase endpoint and skip this file entirely.
+// The moderate-post edge function (supabase/functions/moderate-post) is
+// what actually enforces this; see README.md.
 
 const spamDetector = new SpamBotDetector();
 spamDetector.attachListeners();
@@ -61,12 +68,22 @@ document.addEventListener('submit', async (event) => {
   }
 
   try {
-    const textResult = checkTextContent(text);
+    const textResult = checkTextContentFull(text);
     const doxxingResult = checkForDoxxing(text);
     const linkResults = checkLinksInText(text);
     const spamResult = spamDetector.evaluate({ honeypotValue, text });
 
     const unsafeLinks = linkResults.filter((l) => !l.safe);
+
+    // Severe hits get a generic rejection message — deliberately not
+    // telling the poster why, since detailed feedback here just teaches
+    // evasion. This still isn't the real enforcement point (see note
+    // above); the edge function will catch it server-side regardless.
+    if (textResult.severe) {
+      alert('This post can\'t be submitted.');
+      return;
+    }
+
     const reasons = [];
     if (textResult.score > 0) reasons.push(`Flagged content: ${Object.keys(textResult.hits).join(', ')}`);
     if (!doxxingResult.safe) reasons.push(`Possible personal info detected: ${Object.keys(doxxingResult.findings).join(', ')}`);
