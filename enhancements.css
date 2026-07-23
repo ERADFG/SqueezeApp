@@ -86,13 +86,7 @@ input[type="button"],
 .inline-link,
 [data-bounce] {
   transition: transform 140ms cubic-bezier(.34,1.56,.64,1), filter 140ms ease, opacity 140ms ease;
-  /* will-change intentionally omitted here: applying it permanently to every
-     button/link on the page (many of which sit inside the desktop-only,
-     fixed/scrolling sidebar and widgets panes) creates dozens of persistent
-     GPU compositing layers at all times — a real perf cost and a source of
-     desktop rendering glitches. We only turn it on for the brief window an
-     element is actually animating (see :hover / .ink-bounce below), which
-     is the correct, intended use of will-change. */
+  will-change: transform;
 }
 
 /* Gentle lift + brighten on hover so the UI feels alive before it's clicked */
@@ -112,7 +106,6 @@ input[type="button"]:hover,
 [data-bounce]:hover {
   transform: translateY(-1px) scale(1.015);
   filter: brightness(1.06);
-  will-change: transform;
 }
 
 .footer-link:hover,
@@ -135,7 +128,6 @@ input[type="button"]:hover,
 
 .ink-bounce {
   animation: ink-bounce 420ms cubic-bezier(.34,1.56,.64,1);
-  will-change: transform;
 }
 
 /* Buttons that combine translateY hover + bounce shouldn't fight —
