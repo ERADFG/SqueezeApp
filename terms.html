@@ -22,8 +22,8 @@
       gtag('config', 'G-527BWKF63G');
     </script>
 
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="tailwind-build.css">
+    <script src="https://unpkg.com/lucide@1.25.0" defer></script>
 
     <style>
         body { background-color: #000000; color: #e7e9ea; }
@@ -203,7 +203,7 @@
             'params' : {}
           };
         </script>
-        <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
+        <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js" async></script>
     </div>
     <div class="max-w-2xl mx-auto min-h-screen flex flex-col border-x border-neutral-800">
         <header class="sticky top-[49px] bg-black/90 backdrop-blur-md border-b border-neutral-800 p-4 z-40 flex items-center gap-2">
@@ -251,7 +251,7 @@
             'params' : {}
           };
         </script>
-        <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
+        <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js" async></script>
     </div>
 
     <footer style="width: 100%; text-align: center; padding: 40px 20px; margin-top: 24px; border-top: 1px solid #262626; color: #71767b;">
@@ -293,7 +293,9 @@
 
 
     <script>
-        if (window.lucide) lucide.createIcons();
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.lucide) lucide.createIcons();
+        });
     </script>
     <script src="enhancements.js" defer></script>
 </body>
