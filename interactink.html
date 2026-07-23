@@ -2341,6 +2341,26 @@ function initRealtimeSync() {
             el.innerText = msg;
         }
 
+        // Detect once whether this browser's canvas can actually encode WebP
+        // (Safari < 14 and a few older browsers silently fall back to PNG).
+        // WebP gives noticeably smaller files than JPEG at the same visual
+        // quality, so we prefer it and only fall back to JPEG when needed.
+        let webpSupportPromise = null;
+        function supportsWebpEncoding() {
+            if (!webpSupportPromise) {
+                webpSupportPromise = new Promise((resolve) => {
+                    const probe = document.createElement('canvas');
+                    probe.width = 1; probe.height = 1;
+                    probe.toBlob((blob) => resolve(!!blob && blob.type === 'image/webp'), 'image/webp');
+                });
+            }
+            return webpSupportPromise;
+        }
+
+        function canvasToBlob(canvas, mimeType, quality) {
+            return new Promise((resolve) => canvas.toBlob(resolve, mimeType, quality));
+        }
+
         /**
          * Re-draws an image onto a canvas and re-encodes it. This both caps
          * the dimensions of huge phone-camera photos AND, as a side effect,
@@ -2348,26 +2368,49 @@ function initRealtimeSync() {
          * the canvas never copies over — important since posts here are
          * anonymous and we don't want to leak a poster's location.
          * GIFs are passed through untouched so animation isn't lost.
+         *
+         * Encodes as WebP (falling back to JPEG on browsers that can't
+         * encode WebP) starting at a near-lossless quality, then only steps
+         * the quality down a little at a time — and only if the file is
+         * still large — so we get the smallest file that doesn't give up
+         * visible quality, rather than a fixed compression level.
          */
         function prepareImageForUpload(file) {
             if (file.type === 'image/gif') return Promise.resolve(file);
             return new Promise((resolve, reject) => {
                 const img = new Image();
                 const objectUrl = URL.createObjectURL(file);
-                img.onload = () => {
+                img.onload = async () => {
                     URL.revokeObjectURL(objectUrl);
-                    let { width, height } = img;
-                    const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(width, height));
-                    width = Math.round(width * scale);
-                    height = Math.round(height * scale);
-                    const canvas = document.createElement('canvas');
-                    canvas.width = width; canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-                    canvas.toBlob((blob) => {
+                    try {
+                        let { width, height } = img;
+                        const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(width, height));
+                        width = Math.round(width * scale);
+                        height = Math.round(height * scale);
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width; canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        const useWebp = await supportsWebpEncoding();
+                        const mimeType = useWebp ? 'image/webp' : 'image/jpeg';
+                        const newExt = useWebp ? '.webp' : '.jpg';
+
+                        // Start near-lossless, then only back off if the file
+                        // is still large — most photos exit after one pass.
+                        const QUALITY_STEPS = [0.92, 0.85, 0.78];
+                        const SIZE_TARGET = 1.5 * 1024 * 1024; // 1.5MB
+                        let blob = null;
+                        for (const quality of QUALITY_STEPS) {
+                            blob = await canvasToBlob(canvas, mimeType, quality);
+                            if (!blob) continue;
+                            if (blob.size <= SIZE_TARGET) break;
+                        }
                         if (!blob) { reject(new Error('Could not process image.')); return; }
-                        resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }));
-                    }, 'image/jpeg', 0.88);
+                        resolve(new File([blob], file.name.replace(/\.\w+$/, newExt), { type: mimeType }));
+                    } catch (e) {
+                        reject(e);
+                    }
                 };
                 img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Could not read image file.')); };
                 img.src = objectUrl;
