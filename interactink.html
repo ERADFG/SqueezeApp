@@ -2771,12 +2771,17 @@ function initRealtimeSync() {
 
         // A fixed-position popover doesn't track the page as it scrolls, so
         // rather than leaving it floating away from the button it was
-        // anchored to, close it — the same pattern already used for the
-        // share menu. Capture:true so this also catches scrolling inside
-        // any inner scroll container, not just the window itself.
-        window.addEventListener('scroll', () => {
+        // anchored to, close it when the PAGE scrolls — the same pattern
+        // already used for the share menu. Capture:true so this also
+        // catches scrolling inside other containers, not just the window
+        // itself, but we explicitly ignore scroll events that originate
+        // inside the popover (the GIF results grid) so scrolling through
+        // the results doesn't close it out from under you.
+        window.addEventListener('scroll', (e) => {
             const popover = document.getElementById('gifPickerPopover');
-            if (!popover.classList.contains('hidden')) closeGifPicker();
+            if (popover.classList.contains('hidden')) return;
+            if (popover.contains(e.target)) return;
+            closeGifPicker();
         }, true);
 
         function setGifPickerStatus(msg) {
