@@ -1,0 +1,2 @@
+[functions.moderate-post]
+verify_jwt = false

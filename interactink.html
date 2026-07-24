@@ -2706,19 +2706,39 @@ function initRealtimeSync() {
             // The anon client never writes to storage directly (that's what
             // was tripping the row-level security error, and intentionally
             // so — see runModerationCheck's comment above). Instead this
-            // posts to the `upload-media` Edge Function, which stages the
+            // posts to the `moderate-post` Edge Function, which stages the
             // file in a private quarantine bucket, runs CSAM/NSFW scanning,
             // and only then promotes it to the public bucket and hands back
             // a URL. Nothing unscanned ever becomes publicly reachable.
             const form = new FormData();
             form.append('file', file);
             form.append('boardId', boardId);
-            const res = await fetch(`${SUPABASE_URL}/functions/v1/moderate-post`, {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${SUPABASE_KEY}` },
-                body: form
-            });
-            const result = await res.json();
+
+            let res;
+            try {
+                res = await fetch(`${SUPABASE_URL}/functions/v1/moderate-post`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${SUPABASE_KEY}` },
+                    body: form
+                });
+            } catch (networkErr) {
+                // fetch() itself threw — the request never got a response at
+                // all. This is CORS, DNS, the function not being deployed,
+                // or the browser blocking a mixed-content/invalid URL — never
+                // a moderation rejection (that would be a normal HTTP response
+                // with res.ok === false, caught below instead).
+                console.error('Upload network error (fetch never completed):', networkErr);
+                throw new Error('Could not reach the upload service. Check that the moderate-post function is deployed and that verify_jwt is disabled for it.');
+            }
+
+            let result;
+            try {
+                result = await res.json();
+            } catch (parseErr) {
+                console.error('Upload response was not JSON. Status:', res.status, res.statusText);
+                throw new Error(`Upload service returned an unexpected response (HTTP ${res.status}).`);
+            }
+
             if (!res.ok || !result.allowed) {
                 throw new Error(result.reason || result.error || 'Upload was rejected');
             }
