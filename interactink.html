@@ -1041,8 +1041,8 @@
 
     // ---------- Media upload config ----------
     const MEDIA_BUCKET = 'post-media';
-    const MAX_IMAGE_BYTES = 8 * 1024 * 1024;   // 8 MB
-    const MAX_VIDEO_BYTES = 25 * 1024 * 1024;  // 25 MB
+    const MAX_IMAGE_BYTES = 50 * 1024 * 1024;  // 50 MB
+    const MAX_VIDEO_BYTES = 50 * 1024 * 1024;  // 50 MB
     const MAX_VIDEO_SECONDS = 58;              // Sightengine's synchronous video check only covers clips under 1 minute
     const MAX_IMAGE_DIMENSION = 2048;          // longest edge, px, after resize
     const MAX_VIDEO_DIMENSION = 1280;          // longest edge, px, after re-encode
@@ -1054,11 +1054,8 @@
     const selectedMedia = { thread: null, comment: null };
 
     // ---------- GIPHY picker config ----------
-    // 'dc6zaTOxFJmzC' is GIPHY's own public beta/demo key (documented at
-    // developers.giphy.com) — it works out of the box but is shared and
-    // rate-limited. Before this goes live, get a free production key at
-    // https://developers.giphy.com/dashboard/ and swap it in here.
-    const GIPHY_API_KEY = 'dc6zaTOxFJmzC';
+    // Production GIPHY API key.
+    const GIPHY_API_KEY = 'scZpzXUsed7n7upRvfmQ2oZMRQkF6qxu';
     const GIPHY_RATING = 'pg-13';
 
     let supabaseClient;
@@ -2430,7 +2427,12 @@ function initRealtimeSync() {
 
                         // Start near-lossless, then only back off if the file
                         // is still large — most photos exit after one pass.
-                        const QUALITY_STEPS = [0.92, 0.85, 0.78];
+                        // Fine-grained steps starting near-lossless: we walk
+                        // down only as far as needed and stop at the FIRST
+                        // (i.e. highest-quality) step that hits the size
+                        // target, so we shrink as much as the target
+                        // requires without giving up more quality than that.
+                        const QUALITY_STEPS = [0.92, 0.87, 0.82, 0.76, 0.7, 0.62];
                         const SIZE_TARGET = 1.5 * 1024 * 1024; // 1.5MB
                         let blob = null;
                         for (const quality of QUALITY_STEPS) {
@@ -2449,15 +2451,23 @@ function initRealtimeSync() {
             });
         }
 
-        // Tiered bitrate targets, keyed by the longest edge after any
-        // downscale. Chosen high enough that motion/detail loss isn't
-        // visible on a phone or laptop screen — this is a storage optimizer,
-        // not an aggressive compressor.
-        function pickVideoBitrate(longestEdge) {
+        // Ceiling: "more bits than the eye needs" for that resolution — never
+        // exceeded, even if the source was encoded more richly than this.
+        function pickVideoBitrateCeiling(longestEdge) {
             if (longestEdge <= 480) return 1_200_000;
             if (longestEdge <= 720) return 2_500_000;
             if (longestEdge <= 1080) return 4_500_000;
             return 6_000_000;
+        }
+        // Floor: below this, detail loss starts being visible at that
+        // resolution — never gone below, even if the source was already
+        // more heavily compressed than this (re-encoding shouldn't make a
+        // video worse than it already was).
+        function pickVideoBitrateFloor(longestEdge) {
+            if (longestEdge <= 480) return 500_000;
+            if (longestEdge <= 720) return 900_000;
+            if (longestEdge <= 1080) return 1_800_000;
+            return 3_000_000;
         }
 
         /**
@@ -2495,9 +2505,22 @@ function initRealtimeSync() {
                         const scale = Math.min(1, MAX_VIDEO_DIMENSION / Math.max(srcW, srcH));
                         const width = Math.max(2, Math.round(srcW * scale / 2) * 2);
                         const height = Math.max(2, Math.round(srcH * scale / 2) * 2);
+                        const longestEdge = Math.max(width, height);
+                        const ceiling = pickVideoBitrateCeiling(longestEdge);
+                        const floor = pickVideoBitrateFloor(longestEdge);
+                        const durationSec = Math.max(1, video.duration || 1);
+                        const sourceBitrate = (file.size * 8) / durationSec;
+                        // Aim for roughly half the source's own bitrate — enough
+                        // to meaningfully shrink an over-encoded phone video —
+                        // but clamped between floor and ceiling so we never
+                        // push quality below what's safe for this resolution,
+                        // and never waste bits above what the eye can use.
+                        const targetBitrate = Math.round(Math.min(ceiling, Math.max(floor, sourceBitrate * 0.55)));
 
-                        // Already small — re-encoding risks quality for little gain.
-                        if (scale === 1 && srcW * srcH <= 640 * 480) { finish(file); return; }
+                        // Skip only when re-encoding genuinely can't help: no
+                        // downscale needed AND the source is already at or
+                        // below our own floor for this resolution.
+                        if (scale === 1 && sourceBitrate <= floor * 1.1) { finish(file); return; }
 
                         const canvas = document.createElement('canvas');
                         canvas.width = width; canvas.height = height;
@@ -2513,7 +2536,7 @@ function initRealtimeSync() {
 
                         const recorder = new MediaRecorder(combined, {
                             mimeType,
-                            videoBitsPerSecond: pickVideoBitrate(Math.max(width, height))
+                            videoBitsPerSecond: targetBitrate
                         });
                         const chunks = [];
                         recorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
