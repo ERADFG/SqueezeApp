@@ -2714,29 +2714,52 @@ function initRealtimeSync() {
 
         // ================== GIPHY GIF picker ==================
 
-        let gifPickerState = { kind: null, requestSeq: 0 };
+        let gifPickerState = { kind: null, requestSeq: 0, anchorEl: null };
         let gifSearchDebounceTimer = null;
 
         function openGifPicker(kind, anchorEl) {
             gifPickerState.kind = kind;
-            const popover = document.getElementById('gifPickerPopover');
-            const rect = anchorEl.getBoundingClientRect();
-            const popoverWidth = 288; // matches w-72
-            let left = rect.left + window.scrollX;
-            left = Math.min(left, window.scrollX + document.documentElement.clientWidth - popoverWidth - 8);
-            left = Math.max(8, left);
-            popover.style.top = `${rect.bottom + window.scrollY + 6}px`;
-            popover.style.left = `${left}px`;
-            popover.classList.remove('hidden');
+            gifPickerState.anchorEl = anchorEl;
+            positionGifPicker(anchorEl);
+            document.getElementById('gifPickerPopover').classList.remove('hidden');
             const input = document.getElementById('gifPickerSearchInput');
             input.value = '';
             input.focus();
             loadTrendingGifs();
         }
 
+        /**
+         * The popover is `position: fixed`, which is already relative to the
+         * viewport — same frame as getBoundingClientRect(). Adding
+         * window.scrollX/scrollY on top of that (the old bug) double-counted
+         * scroll and pushed the popover further off-screen the more the page
+         * had scrolled. Also flips above the button, and clamps within the
+         * viewport, so it never renders cut off at the screen edge.
+         */
+        function positionGifPicker(anchorEl) {
+            const popover = document.getElementById('gifPickerPopover');
+            const rect = anchorEl.getBoundingClientRect();
+            const popoverWidth = 288;   // matches w-72
+            const popoverHeight = 320;  // rough max height incl. padding/status/attribution
+            const viewportW = document.documentElement.clientWidth;
+            const viewportH = document.documentElement.clientHeight;
+
+            let left = Math.min(rect.left, viewportW - popoverWidth - 8);
+            left = Math.max(8, left);
+
+            let top = rect.bottom + 6;
+            if (top + popoverHeight > viewportH) {
+                top = Math.max(8, rect.top - popoverHeight - 6); // not enough room below — open upward instead
+            }
+
+            popover.style.left = `${left}px`;
+            popover.style.top = `${top}px`;
+        }
+
         function closeGifPicker() {
             document.getElementById('gifPickerPopover').classList.add('hidden');
             gifPickerState.kind = null;
+            gifPickerState.anchorEl = null;
         }
 
         document.addEventListener('click', (e) => {
@@ -2745,6 +2768,16 @@ function initRealtimeSync() {
                 closeGifPicker();
             }
         });
+
+        // A fixed-position popover doesn't track the page as it scrolls, so
+        // rather than leaving it floating away from the button it was
+        // anchored to, close it — the same pattern already used for the
+        // share menu. Capture:true so this also catches scrolling inside
+        // any inner scroll container, not just the window itself.
+        window.addEventListener('scroll', () => {
+            const popover = document.getElementById('gifPickerPopover');
+            if (!popover.classList.contains('hidden')) closeGifPicker();
+        }, true);
 
         function setGifPickerStatus(msg) {
             const el = document.getElementById('gifPickerStatus');
