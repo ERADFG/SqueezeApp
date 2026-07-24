@@ -689,6 +689,9 @@
         /* Reserve room at the bottom of the scrollable thread body so the
            last comment never ends up hidden behind the floating reply bar. */
         #threadPageScrollBody { padding-bottom: 180px; }
+    /* Media player */
+    .lightbox-zoomed { transform: scale(1.6); cursor: zoom-out; transition: transform .15s ease; }
+    #mediaLightboxContent img { transition: transform .15s ease; }
     </style>
     <link rel="stylesheet" href="enhancements.css">
 </head>
@@ -2700,16 +2703,26 @@ function initRealtimeSync() {
                 return { url: fileOrGif.url, type: 'gif', path: null };
             }
             const file = fileOrGif;
-            const ext = (file.name.match(/\.\w+$/) || ['.bin'])[0];
-            const path = `${boardId}/${Date.now()}-${Math.random().toString(16).slice(2, 10)}${ext}`;
-            const { error } = await supabaseClient.storage.from(MEDIA_BUCKET).upload(path, file, {
-                cacheControl: '3600',
-                contentType: file.type,
-                upsert: false
+            // The anon client never writes to storage directly (that's what
+            // was tripping the row-level security error, and intentionally
+            // so — see runModerationCheck's comment above). Instead this
+            // posts to the `upload-media` Edge Function, which stages the
+            // file in a private quarantine bucket, runs CSAM/NSFW scanning,
+            // and only then promotes it to the public bucket and hands back
+            // a URL. Nothing unscanned ever becomes publicly reachable.
+            const form = new FormData();
+            form.append('file', file);
+            form.append('boardId', boardId);
+            const res = await fetch(`${SUPABASE_URL}/functions/v1/moderate-post`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${SUPABASE_KEY}` },
+                body: form
             });
-            if (error) throw error;
-            const { data } = supabaseClient.storage.from(MEDIA_BUCKET).getPublicUrl(path);
-            return { url: data.publicUrl, type: file.type.startsWith('video/') ? 'video' : 'image', path };
+            const result = await res.json();
+            if (!res.ok || !result.allowed) {
+                throw new Error(result.reason || result.error || 'Upload was rejected');
+            }
+            return { url: result.url, type: result.type, path: result.path };
         }
 
         // ================== GIPHY GIF picker ==================
@@ -2905,25 +2918,71 @@ function initRealtimeSync() {
         function renderPostMediaHTML(mediaUrl, mediaType) {
             if (!mediaUrl) return '';
             const safeUrl = escapeHTML(mediaUrl);
+            const uid = 'm' + Math.random().toString(36).slice(2, 9);
             if (mediaType === 'gif') {
                 // Pre-moderated by GIPHY itself, so no reveal veil needed.
                 return `
-                    <div class="post-media-wrap relative mt-2 mb-2 rounded-lg overflow-hidden border border-neutral-800 max-w-sm">
-                        <img src="${safeUrl}" loading="lazy" class="w-full max-h-80 object-contain bg-black">
+                    <div class="post-media-wrap relative mt-2 mb-2 rounded-lg overflow-hidden border border-neutral-800 max-w-sm bg-neutral-900">
+                        <div class="media-skeleton absolute inset-0 animate-pulse bg-neutral-800"></div>
+                        <img src="${safeUrl}" loading="lazy" class="relative w-full max-h-80 object-contain bg-black"
+                             onload="this.previousElementSibling.remove()" onerror="handleMediaError(this)">
                         <span class="absolute bottom-1.5 right-1.5 bg-black/70 text-[9px] px-1.5 py-0.5 rounded text-neutral-300 tracking-wide">GIPHY</span>
                     </div>`;
             }
             const inner = mediaType === 'video'
-                ? `<video src="${safeUrl}" class="w-full max-h-80 object-cover" muted playsinline></video>`
-                : `<img src="${safeUrl}" loading="lazy" class="w-full max-h-80 object-cover">`;
+                ? `<video id="${uid}" src="${safeUrl}#t=0.1" class="w-full max-h-80 object-cover" muted playsinline preload="metadata"
+                        onloadedmetadata="handleMediaLoad(this); tagVideoDuration('${uid}')" onerror="handleMediaError(this)"></video>
+                   <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                       <div class="w-12 h-12 rounded-full bg-black/60 flex items-center justify-center">
+                           <i data-lucide="play" class="w-6 h-6 text-white ml-0.5"></i>
+                       </div>
+                   </div>
+                   <span class="media-duration absolute bottom-1.5 left-1.5 bg-black/70 text-[10px] px-1.5 py-0.5 rounded text-neutral-200 tabular-nums"></span>`
+                : `<img src="${safeUrl}" loading="lazy" class="w-full max-h-80 object-cover" onload="handleMediaLoad(this)" onerror="handleMediaError(this)">`;
             return `
-                <div class="post-media-wrap relative mt-2 mb-2 rounded-lg overflow-hidden border border-neutral-800 cursor-pointer max-w-sm" data-revealed="false"
+                <div class="post-media-wrap relative mt-2 mb-2 rounded-lg overflow-hidden border border-neutral-800 cursor-pointer max-w-sm bg-neutral-900" data-revealed="false" data-media-type="${mediaType}"
                      onclick="event.preventDefault(); event.stopPropagation(); handleMediaTap(event, '${safeUrl}', '${mediaType}');">
+                    <div class="media-skeleton absolute inset-0 animate-pulse bg-neutral-800 flex items-center justify-center">
+                        <i data-lucide="${mediaType === 'video' ? 'video' : 'image'}" class="w-6 h-6 text-neutral-600"></i>
+                    </div>
                     ${inner}
                     <div class="post-media-veil absolute inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center text-xs text-neutral-200 font-medium gap-1.5">
                         <i data-lucide="eye" class="w-4 h-4"></i> Tap to view ${mediaType === 'video' ? 'video' : 'image'}
                     </div>
                 </div>`;
+        }
+
+        // Removes the loading skeleton once the real media has decoded.
+        function handleMediaLoad(el) {
+            const wrap = el.closest('.post-media-wrap');
+            const skeleton = wrap && wrap.querySelector('.media-skeleton');
+            if (skeleton) skeleton.remove();
+        }
+
+        // Swaps a failed image/video out for a clear "unavailable" state
+        // instead of a broken-image icon or a silently frozen player.
+        function handleMediaError(el) {
+            const wrap = el.closest('.post-media-wrap');
+            if (!wrap) return;
+            wrap.setAttribute('data-revealed', 'true');
+            wrap.classList.remove('cursor-pointer');
+            wrap.removeAttribute('onclick');
+            wrap.innerHTML = `
+                <div class="flex flex-col items-center justify-center gap-1.5 py-10 text-neutral-500 text-xs">
+                    <i data-lucide="image-off" class="w-5 h-5"></i>
+                    Media unavailable
+                </div>`;
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function tagVideoDuration(uid) {
+            const vid = document.getElementById(uid);
+            const wrap = vid && vid.closest('.post-media-wrap');
+            const badge = wrap && wrap.querySelector('.media-duration');
+            if (!vid || !badge || !isFinite(vid.duration)) return;
+            const m = Math.floor(vid.duration / 60);
+            const s = Math.floor(vid.duration % 60).toString().padStart(2, '0');
+            badge.textContent = `${m}:${s}`;
         }
 
         function handleMediaTap(evt, url, mediaType) {
@@ -2932,8 +2991,16 @@ function initRealtimeSync() {
                 wrap.setAttribute('data-revealed', 'true');
                 const veil = wrap.querySelector('.post-media-veil');
                 if (veil) veil.remove();
-                const vid = wrap.querySelector('video');
-                if (vid) vid.controls = true;
+                if (mediaType === 'video') {
+                    // First tap just reveals — second tap (on the now-visible
+                    // player) opens the full lightbox instead of autoplaying
+                    // inline, so a tap-to-view video doesn't blast sound/motion
+                    // the instant it's uncovered.
+                    const playIcon = wrap.querySelector('.pointer-events-none');
+                    const vid = wrap.querySelector('video');
+                    if (vid) vid.controls = false;
+                    if (playIcon) playIcon.classList.remove('hidden');
+                }
                 return;
             }
             openLightbox(url, mediaType);
@@ -2941,17 +3008,37 @@ function initRealtimeSync() {
 
         function openLightbox(url, mediaType) {
             const content = document.getElementById('mediaLightboxContent');
-            content.innerHTML = mediaType === 'video'
-                ? `<video src="${url}" class="max-w-full max-h-[85vh] rounded" controls autoplay></video>`
-                : `<img src="${url}" class="max-w-full max-h-[85vh] rounded">`;
+            content.innerHTML = `<div class="lightbox-spinner flex items-center justify-center w-16 h-16">
+                    <i data-lucide="loader-2" class="w-8 h-8 text-neutral-400 animate-spin"></i>
+                </div>` + (mediaType === 'video'
+                ? `<video src="${url}" class="hidden max-w-full max-h-[85vh] rounded" controls autoplay playsinline
+                        oncanplay="this.classList.remove('hidden'); this.previousElementSibling.remove();"
+                        onerror="lightboxMediaError()"></video>`
+                : `<img src="${url}" class="hidden max-w-full max-h-[85vh] rounded cursor-zoom-in" onclick="event.stopPropagation(); this.classList.toggle('lightbox-zoomed');"
+                        onload="this.classList.remove('hidden'); this.previousElementSibling.remove();"
+                        onerror="lightboxMediaError()">`);
             document.getElementById('mediaLightbox').classList.remove('hidden');
+            document.addEventListener('keydown', handleLightboxKeydown);
             if (window.lucide) lucide.createIcons();
+        }
+
+        function lightboxMediaError() {
+            document.getElementById('mediaLightboxContent').innerHTML = `
+                <div class="flex flex-col items-center gap-2 text-neutral-400 text-sm">
+                    <i data-lucide="image-off" class="w-8 h-8"></i> Media failed to load
+                </div>`;
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function handleLightboxKeydown(e) {
+            if (e.key === 'Escape') closeLightbox();
         }
 
         function closeLightbox(evt) {
             if (evt && evt.target.closest('#mediaLightboxContent') && evt.target.tagName !== 'DIV') return;
             document.getElementById('mediaLightbox').classList.add('hidden');
             document.getElementById('mediaLightboxContent').innerHTML = '';
+            document.removeEventListener('keydown', handleLightboxKeydown);
         }
 
         // ================== Reporting ==================
