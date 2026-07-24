@@ -835,6 +835,7 @@
                             <i data-lucide="image-plus" class="w-4 h-4"></i>
                         </label>
                         <input type="file" id="threadMediaInput" accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm" class="hidden">
+                        <button type="button" data-gif-trigger class="cursor-pointer hover:text-neutral-300 transition flex items-center border border-neutral-700 rounded px-1 leading-none text-[10px] font-black tracking-tight" title="Attach a GIF from GIPHY" onclick="openGifPicker('thread', this)">GIF</button>
                         <i data-lucide="shield-check" class="w-4 h-4 text-neutral-500" title="You'll get an automatic anonymous ID for this thread"></i>
                         <span class="text-xs text-neutral-500 hidden sm:inline">Anonymous Posting</span>
                     </div>
@@ -906,6 +907,7 @@
                             <i data-lucide="image-plus" class="w-3.5 h-3.5"></i>
                         </label>
                         <input type="file" id="commentMediaInput" accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm" class="hidden">
+                        <button type="button" data-gif-trigger class="cursor-pointer text-neutral-500 hover:text-neutral-300 transition flex items-center border border-neutral-700 rounded px-1 leading-none text-[9px] font-black tracking-tight" title="Attach a GIF from GIPHY" onclick="openGifPicker('comment', this)">GIF</button>
                         <label id="commentCaptchaBox" class="ink-captcha-box ink-captcha-box-sm">
                             <input type="checkbox" id="commentCaptchaCheckbox" class="ink-captcha-checkbox" onclick="return handleCaptchaClick(event, 'comment')">
                             <span class="text-[11px] text-neutral-300">I'm not a robot</span>
@@ -1008,6 +1010,22 @@
     <div id="mediaLightboxContent" class="max-w-full max-h-full"></div>
 </div>
 
+<!-- GIPHY GIF picker popover, reused by both the thread and comment composers -->
+<div id="gifPickerPopover" class="hidden fixed z-[90] w-72 bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl p-2" onclick="event.stopPropagation();">
+    <div class="flex items-center gap-2 mb-2">
+        <input type="text" id="gifPickerSearchInput" placeholder="Search GIPHY..." autocomplete="off"
+               class="flex-1 bg-neutral-800 text-sm text-white rounded px-2 py-1.5 focus:outline-none placeholder:text-neutral-500">
+        <button type="button" onclick="closeGifPicker()" class="text-neutral-500 hover:text-white shrink-0">
+            <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+    </div>
+    <div id="gifPickerResults" class="grid grid-cols-3 gap-1 max-h-56 overflow-y-auto"></div>
+    <div id="gifPickerStatus" class="text-xs text-neutral-500 text-center py-4"></div>
+    <div class="text-center pt-1">
+        <span class="text-[9px] text-neutral-600 tracking-wide">Powered by GIPHY</span>
+    </div>
+</div>
+
 <!-- Report reason picker -->
 <div id="reportModal" class="hidden fixed inset-0 z-[80] bg-black/80 flex items-center justify-center p-4" onclick="if(event.target===this) closeReportModal();">
     <div class="bg-neutral-950 border border-neutral-800 rounded-xl p-4 w-full max-w-sm">
@@ -1027,10 +1045,21 @@
     const MAX_VIDEO_BYTES = 25 * 1024 * 1024;  // 25 MB
     const MAX_VIDEO_SECONDS = 58;              // Sightengine's synchronous video check only covers clips under 1 minute
     const MAX_IMAGE_DIMENSION = 2048;          // longest edge, px, after resize
+    const MAX_VIDEO_DIMENSION = 1280;          // longest edge, px, after re-encode
     const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
     const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm'];
     // Selected-but-not-yet-posted file for each composer, keyed by composer id.
+    // Holds either a File (local upload) or a { isGiphy: true, url, previewUrl }
+    // reference (GIF picked from GIPHY — never touches our own storage).
     const selectedMedia = { thread: null, comment: null };
+
+    // ---------- GIPHY picker config ----------
+    // 'dc6zaTOxFJmzC' is GIPHY's own public beta/demo key (documented at
+    // developers.giphy.com) — it works out of the box but is shared and
+    // rate-limited. Before this goes live, get a free production key at
+    // https://developers.giphy.com/dashboard/ and swap it in here.
+    const GIPHY_API_KEY = 'dc6zaTOxFJmzC';
+    const GIPHY_RATING = 'pg-13';
 
     let supabaseClient;
     const appState = { 
@@ -1899,6 +1928,7 @@ function initRealtimeSync() {
 
         function bindEventListeners() {
             setupMediaInputs();
+            setupGifPickerSearch();
             const threadContent = document.getElementById('threadContent');
             const threadCharCounter = document.getElementById('threadCharCounter');
             threadContent.addEventListener('input', () => {
@@ -2419,6 +2449,115 @@ function initRealtimeSync() {
             });
         }
 
+        // Tiered bitrate targets, keyed by the longest edge after any
+        // downscale. Chosen high enough that motion/detail loss isn't
+        // visible on a phone or laptop screen — this is a storage optimizer,
+        // not an aggressive compressor.
+        function pickVideoBitrate(longestEdge) {
+            if (longestEdge <= 480) return 1_200_000;
+            if (longestEdge <= 720) return 2_500_000;
+            if (longestEdge <= 1080) return 4_500_000;
+            return 6_000_000;
+        }
+
+        /**
+         * Re-encodes a video to WebM (VP9/VP8 + Opus) at a capped resolution
+         * and a sane bitrate, the same "shrink without visible loss" idea as
+         * prepareImageForUpload but for video. Works by playing the source
+         * video, drawing each frame onto a canvas (which also caps
+         * dimensions), and feeding the canvas's video track plus the
+         * source's own audio track into MediaRecorder.
+         *
+         * This never blocks a post: any missing browser API, playback
+         * error, or a result that isn't meaningfully smaller than the
+         * original falls straight back to the original file untouched.
+         */
+        function prepareVideoForUpload(file) {
+            return new Promise((resolve) => {
+                const fallback = () => resolve(file);
+                const canCapture = window.MediaRecorder && document.createElement('video').captureStream;
+                if (!canCapture) { fallback(); return; }
+
+                const video = document.createElement('video');
+                video.muted = false;
+                video.volume = 0;       // silent playback — audio still flows into the recorder
+                video.playsInline = true;
+                const objectUrl = URL.createObjectURL(file);
+                video.src = objectUrl;
+
+                let settled = false;
+                const finish = (result) => { if (!settled) { settled = true; URL.revokeObjectURL(objectUrl); resolve(result); } };
+
+                video.onloadedmetadata = async () => {
+                    try {
+                        const srcW = video.videoWidth, srcH = video.videoHeight;
+                        if (!srcW || !srcH) { finish(file); return; }
+                        const scale = Math.min(1, MAX_VIDEO_DIMENSION / Math.max(srcW, srcH));
+                        const width = Math.max(2, Math.round(srcW * scale / 2) * 2);
+                        const height = Math.max(2, Math.round(srcH * scale / 2) * 2);
+
+                        // Already small — re-encoding risks quality for little gain.
+                        if (scale === 1 && srcW * srcH <= 640 * 480) { finish(file); return; }
+
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width; canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+
+                        const sourceStream = video.captureStream();
+                        const audioTracks = sourceStream.getAudioTracks();
+                        const canvasStream = canvas.captureStream(30);
+                        const combined = new MediaStream([...canvasStream.getVideoTracks(), ...audioTracks]);
+
+                        const mimeType = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
+                            .find(t => MediaRecorder.isTypeSupported(t)) || 'video/webm';
+
+                        const recorder = new MediaRecorder(combined, {
+                            mimeType,
+                            videoBitsPerSecond: pickVideoBitrate(Math.max(width, height))
+                        });
+                        const chunks = [];
+                        recorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+
+                        let drawing = true;
+                        function drawFrame() {
+                            if (!drawing) return;
+                            try { ctx.drawImage(video, 0, 0, width, height); } catch (e) {}
+                            requestAnimationFrame(drawFrame);
+                        }
+
+                        recorder.onstop = () => {
+                            drawing = false;
+                            const blob = new Blob(chunks, { type: 'video/webm' });
+                            // Only keep the re-encode if it actually saved
+                            // meaningful space; otherwise the original wins.
+                            if (blob.size > 0 && blob.size < file.size * 0.92) {
+                                finish(new File([blob], file.name.replace(/\.\w+$/, '.webm'), { type: 'video/webm' }));
+                            } else {
+                                finish(file);
+                            }
+                        };
+                        recorder.onerror = () => { drawing = false; finish(file); };
+                        video.onerror = () => { drawing = false; finish(file); };
+                        video.onended = () => { if (recorder.state !== 'inactive') recorder.stop(); };
+
+                        // Safety timeout in case 'onended' never fires (e.g. a
+                        // stalled decode) — never let a post hang on this.
+                        const safetyTimer = setTimeout(() => {
+                            if (recorder.state !== 'inactive') recorder.stop();
+                        }, (MAX_VIDEO_SECONDS + 5) * 1000);
+                        recorder.addEventListener('stop', () => clearTimeout(safetyTimer));
+
+                        await video.play();
+                        recorder.start();
+                        drawFrame();
+                    } catch (e) {
+                        finish(file);
+                    }
+                };
+                video.onerror = () => finish(file);
+            });
+        }
+
         function validateMediaFile(file) {
             const isImage = ALLOWED_IMAGE_TYPES.includes(file.type);
             const isVideo = ALLOWED_VIDEO_TYPES.includes(file.type);
@@ -2434,16 +2573,18 @@ function initRealtimeSync() {
             return null;
         }
 
-        function renderMediaPreview(kind, file) {
+        function renderMediaPreview(kind, fileOrGif) {
             const wrap = document.getElementById(`${kind}MediaPreviewWrap`);
             wrap.classList.remove('hidden');
-            const url = URL.createObjectURL(file);
-            const isVideo = file.type.startsWith('video/');
+            const isGiphy = !!(fileOrGif && fileOrGif.isGiphy);
+            const url = isGiphy ? fileOrGif.previewUrl : URL.createObjectURL(fileOrGif);
+            const isVideo = !isGiphy && fileOrGif.type.startsWith('video/');
             wrap.innerHTML = `
                 <div class="relative inline-block">
                     ${isVideo
                         ? `<video src="${url}" class="max-h-40 rounded-lg border border-neutral-800" muted></video>`
                         : `<img src="${url}" class="max-h-40 rounded-lg border border-neutral-800">`}
+                    ${isGiphy ? `<span class="absolute bottom-1 left-1 bg-black/70 text-[9px] px-1.5 py-0.5 rounded text-neutral-300 tracking-wide">GIPHY</span>` : ''}
                     <button type="button" onclick="clearSelectedMedia('${kind}')" class="absolute -top-2 -right-2 bg-neutral-900 border border-neutral-700 rounded-full w-6 h-6 flex items-center justify-center text-neutral-300 hover:text-white cursor-pointer">
                         <i data-lucide="x" class="w-3.5 h-3.5"></i>
                     </button>
@@ -2508,6 +2649,10 @@ function initRealtimeSync() {
                     fileInput.value = '';
                     return;
                 }
+            } else if (file.type.startsWith('video/')) {
+                // Best-effort — prepareVideoForUpload always resolves, falling
+                // back to the original file rather than rejecting.
+                finalFile = await prepareVideoForUpload(file);
             }
 
             selectedMedia[kind] = finalFile;
@@ -2521,8 +2666,17 @@ function initRealtimeSync() {
             if (commentInput) commentInput.addEventListener('change', () => onMediaFileSelected('comment', commentInput));
         }
 
-        /** Uploads the given file to Supabase Storage and returns {url, type}. */
-        async function uploadSelectedMedia(file, boardId) {
+        /**
+         * Uploads the given selection and returns {url, type, path}.
+         * A GIPHY reference never touches our Supabase Storage at all — it's
+         * already hosted on GIPHY's CDN, so posting one costs us zero
+         * storage and zero bandwidth on our end.
+         */
+        async function uploadSelectedMedia(fileOrGif, boardId) {
+            if (fileOrGif && fileOrGif.isGiphy) {
+                return { url: fileOrGif.url, type: 'gif', path: null };
+            }
+            const file = fileOrGif;
             const ext = (file.name.match(/\.\w+$/) || ['.bin'])[0];
             const path = `${boardId}/${Date.now()}-${Math.random().toString(16).slice(2, 10)}${ext}`;
             const { error } = await supabaseClient.storage.from(MEDIA_BUCKET).upload(path, file, {
@@ -2533,6 +2687,110 @@ function initRealtimeSync() {
             if (error) throw error;
             const { data } = supabaseClient.storage.from(MEDIA_BUCKET).getPublicUrl(path);
             return { url: data.publicUrl, type: file.type.startsWith('video/') ? 'video' : 'image', path };
+        }
+
+        // ================== GIPHY GIF picker ==================
+
+        let gifPickerState = { kind: null, requestSeq: 0 };
+        let gifSearchDebounceTimer = null;
+
+        function openGifPicker(kind, anchorEl) {
+            gifPickerState.kind = kind;
+            const popover = document.getElementById('gifPickerPopover');
+            const rect = anchorEl.getBoundingClientRect();
+            const popoverWidth = 288; // matches w-72
+            let left = rect.left + window.scrollX;
+            left = Math.min(left, window.scrollX + document.documentElement.clientWidth - popoverWidth - 8);
+            left = Math.max(8, left);
+            popover.style.top = `${rect.bottom + window.scrollY + 6}px`;
+            popover.style.left = `${left}px`;
+            popover.classList.remove('hidden');
+            const input = document.getElementById('gifPickerSearchInput');
+            input.value = '';
+            input.focus();
+            loadTrendingGifs();
+        }
+
+        function closeGifPicker() {
+            document.getElementById('gifPickerPopover').classList.add('hidden');
+            gifPickerState.kind = null;
+        }
+
+        document.addEventListener('click', (e) => {
+            const popover = document.getElementById('gifPickerPopover');
+            if (!popover.classList.contains('hidden') && !popover.contains(e.target) && !e.target.closest('[data-gif-trigger]')) {
+                closeGifPicker();
+            }
+        });
+
+        function setGifPickerStatus(msg) {
+            const el = document.getElementById('gifPickerStatus');
+            if (el) el.textContent = msg || '';
+        }
+
+        function loadTrendingGifs() {
+            runGiphyRequest(`https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_API_KEY}&limit=15&rating=${GIPHY_RATING}`);
+        }
+
+        async function runGiphyRequest(url) {
+            const seq = ++gifPickerState.requestSeq;
+            setGifPickerStatus('Loading…');
+            document.getElementById('gifPickerResults').innerHTML = '';
+            try {
+                const res = await fetch(url);
+                if (!res.ok) throw new Error('GIPHY request failed');
+                const data = await res.json();
+                if (seq !== gifPickerState.requestSeq) return; // superseded by a newer search
+                const items = data.data || [];
+                setGifPickerStatus(items.length ? '' : 'No GIFs found.');
+                renderGifResults(items);
+            } catch (e) {
+                if (seq !== gifPickerState.requestSeq) return;
+                setGifPickerStatus('Could not reach GIPHY. Try again.');
+            }
+        }
+
+        function renderGifResults(items) {
+            const grid = document.getElementById('gifPickerResults');
+            grid.innerHTML = items.map(item => {
+                const thumb = item.images.fixed_width_small || item.images.fixed_width;
+                if (!thumb) return '';
+                return `<button type="button" class="block w-full aspect-square overflow-hidden rounded bg-neutral-800 hover:ring-2 hover:ring-emerald-500" onclick='selectGiphyResult(${attrJSON(item)})'>
+                    <img src="${escapeHTML(thumb.url)}" class="w-full h-full object-cover" loading="lazy">
+                </button>`;
+            }).join('');
+        }
+
+        function selectGiphyResult(item) {
+            const kind = gifPickerState.kind;
+            if (!kind || !item || !item.images) return;
+            // "downsized_medium" is GIPHY's own size-capped rendition — using
+            // it instead of "original" keeps the post lighter without any
+            // visible quality loss, and since it's GIPHY's CDN this costs us
+            // no storage either way.
+            const rendition = item.images.downsized_medium || item.images.downsized || item.images.original;
+            const preview = item.images.fixed_width_small || item.images.fixed_width || rendition;
+            if (!rendition || !rendition.url) return;
+            selectedMedia[kind] = {
+                isGiphy: true,
+                url: rendition.url,
+                previewUrl: preview.url
+            };
+            renderMediaPreview(kind, selectedMedia[kind]);
+            closeGifPicker();
+        }
+
+        function setupGifPickerSearch() {
+            const input = document.getElementById('gifPickerSearchInput');
+            if (!input) return;
+            input.addEventListener('input', () => {
+                clearTimeout(gifSearchDebounceTimer);
+                const q = input.value.trim();
+                gifSearchDebounceTimer = setTimeout(() => {
+                    if (!q) { loadTrendingGifs(); return; }
+                    runGiphyRequest(`https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(q)}&limit=15&rating=${GIPHY_RATING}`);
+                }, 350);
+            });
         }
 
         /**
@@ -2553,6 +2811,13 @@ function initRealtimeSync() {
             // go live, so it stays off until the function is built and this
             // early-return is removed.
             if (!mediaUrl) {
+                return { allowed: true, status: 'approved' };
+            }
+            // GIPHY GIFs never touch our storage and are already moderated
+            // by GIPHY itself (search is restricted to GIPHY_RATING), so
+            // they're exempt from the not-yet-built scanner below — unlike
+            // arbitrary user-uploaded images/video, which stay hard-blocked.
+            if (mediaType === 'gif') {
                 return { allowed: true, status: 'approved' };
             }
             try {
@@ -2579,6 +2844,14 @@ function initRealtimeSync() {
         function renderPostMediaHTML(mediaUrl, mediaType) {
             if (!mediaUrl) return '';
             const safeUrl = escapeHTML(mediaUrl);
+            if (mediaType === 'gif') {
+                // Pre-moderated by GIPHY itself, so no reveal veil needed.
+                return `
+                    <div class="post-media-wrap relative mt-2 mb-2 rounded-lg overflow-hidden border border-neutral-800 max-w-sm">
+                        <img src="${safeUrl}" loading="lazy" class="w-full max-h-80 object-contain bg-black">
+                        <span class="absolute bottom-1.5 right-1.5 bg-black/70 text-[9px] px-1.5 py-0.5 rounded text-neutral-300 tracking-wide">GIPHY</span>
+                    </div>`;
+            }
             const inner = mediaType === 'video'
                 ? `<video src="${safeUrl}" class="w-full max-h-80 object-cover" muted playsinline></video>`
                 : `<img src="${safeUrl}" loading="lazy" class="w-full max-h-80 object-cover">`;
