@@ -24,9 +24,6 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SIGHTENGINE_API_USER = Deno.env.get("SIGHTENGINE_API_USER");
 const SIGHTENGINE_API_SECRET = Deno.env.get("SIGHTENGINE_API_SECRET");
-// Not yet provisioned — see README. Leave unset until Thorn Safer approves
-// API access; the CSAM check below fails closed (blocks) while it's unset.
-const SAFER_API_KEY = Deno.env.get("THORN_SAFER_API_KEY");
 
 const MAX_FILE_BYTES = 25 * 1024 * 1024; // 25MB
 const ALLOWED_TYPES = new Set([
@@ -112,43 +109,35 @@ async function handleFileUpload(req: Request): Promise<Response> {
     return json({ allowed: false, reason: "Could not prepare file for scanning" }, 500);
   }
 
+  // No automated CSAM detector is connected yet (Thorn Safer / Microsoft
+  // PhotoDNA access pending), so nothing gets auto-published. Instead:
+  // run the general NSFW/violence pre-filter to reject obviously
+  // disallowed content outright, and send everything that passes to a
+  // human-review queue rather than the public bucket. Nothing reaches
+  // `post-media` without a moderator explicitly approving it.
   const isVideo = file.type.startsWith("video/");
-  const verdict = isVideo
-    ? await scanVideo(signed.signedUrl)
-    : await scanImage(signed.signedUrl);
-
-  if (!verdict.allowed) {
-    // Reject: delete from quarantine, never let it reach the public bucket.
+  const prefilter = await runPrefilterOnly(signed.signedUrl, isVideo);
+  if (!prefilter.allowed) {
     await admin.storage.from("post-media-quarantine").remove([quarantinePath]);
-    return json({ allowed: false, reason: verdict.reason }, 200);
+    return json({ allowed: false, reason: prefilter.reason }, 200);
   }
 
-  // 3. Promote: copy quarantine -> public bucket, then clean up quarantine.
-  const { data: fileData, error: downloadErr } = await admin.storage
-    .from("post-media-quarantine")
-    .download(quarantinePath);
-  if (downloadErr || !fileData) {
+  const { error: insertErr } = await admin.from("pending_media").insert({
+    storage_path: quarantinePath,
+    board_id: boardId,
+    media_type: isVideo ? "video" : "image",
+    status: "pending",
+  });
+  if (insertErr) {
+    console.error("pending_media insert failed:", insertErr);
     await admin.storage.from("post-media-quarantine").remove([quarantinePath]);
-    return json({ allowed: false, reason: "Could not finalize upload" }, 500);
+    return json({ allowed: false, reason: "Could not queue file for review" }, 500);
   }
-
-  const publicPath = quarantinePath;
-  const { error: publicUploadErr } = await admin.storage
-    .from("post-media")
-    .upload(publicPath, fileData, { contentType: file.type });
-  await admin.storage.from("post-media-quarantine").remove([quarantinePath]);
-
-  if (publicUploadErr) {
-    return json({ allowed: false, reason: "Could not publish file" }, 500);
-  }
-
-  const { data: pub } = admin.storage.from("post-media").getPublicUrl(publicPath);
 
   return json({
     allowed: true,
-    url: pub.publicUrl,
-    type: isVideo ? "video" : "image",
-    path: publicPath,
+    pending: true,
+    reason: "Submitted for review — this may take a little while before it's visible to others.",
   });
 }
 
@@ -157,28 +146,127 @@ async function handleFileUpload(req: Request): Promise<Response> {
 // ---------------------------------------------------------------------
 async function handleFinalCheck(req: Request): Promise<Response> {
   const body = await req.json();
-  // Media itself was already scanned in handleFileUpload above. This pass
-  // is mainly a text check plus a sanity re-check that the media path
-  // looks like something this system actually produced.
   const text = String(body.text || "");
 
-  if (looksLikeSpamOrAbuse(text)) {
-    return json({ allowed: false, status: "flagged", reason: "Post held for review" });
+  if (!text.trim()) {
+    return json({ allowed: true, status: "approved" });
   }
 
-  return json({ allowed: true, status: "approved" });
+  // 1. Format-based checks: doxxing (phone numbers, street addresses) and
+  //    spam. These are pattern-matching, not semantic — cheap, fast, and
+  //    don't need an external call.
+  const doxx = detectDoxxing(text);
+  if (doxx) {
+    return json({ allowed: false, status: "blocked", reason: "Post appears to contain personal contact information and was blocked." });
+  }
+  if (looksLikeSpam(text)) {
+    return json({ allowed: true, status: "flagged", reason: "Flagged as possible spam" });
+  }
+
+  // 2. Semantic checks: hate speech, harassment, threats, self-harm content,
+  //    and sexual content involving minors. This needs real language
+  //    understanding, not keyword matching, so it's routed to OpenAI's
+  //    moderation model rather than a hand-maintained word list (which is
+  //    both weak against phrasing variation and, for the CSAM-adjacent
+  //    category specifically, not something that should be reimplemented
+  //    as a static term list).
+  const modResult = await runTextModeration(text);
+  return json(modResult);
+}
+
+/**
+ * OpenAI's free moderation endpoint. Categories relevant here:
+ * hate, harassment, threatening, self-harm, sexual, sexual/minors, violence.
+ * Docs: https://platform.openai.com/docs/guides/moderation
+ */
+async function runTextModeration(text: string): Promise<{ allowed: boolean; status: string; reason?: string }> {
+  const apiKey = Deno.env.get("OPENAI_API_KEY");
+  if (!apiKey) {
+    // Fail closed, same philosophy as the image pipeline: no configured
+    // scanner means text isn't waved through unchecked.
+    return { allowed: false, status: "blocked", reason: "Text moderation is not yet configured" };
+  }
+
+  try {
+    const res = await fetch("https://api.openai.com/v1/moderations", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ model: "omni-moderation-latest", input: text }),
+    });
+    if (!res.ok) throw new Error(`Moderation API returned ${res.status}`);
+    const data = await res.json();
+    const result = data?.results?.[0];
+    if (!result) throw new Error("Unexpected moderation response shape");
+
+    // Sexual content involving minors is always a hard block, regardless
+    // of the model's confidence threshold for other categories.
+    if (result.categories?.["sexual/minors"]) {
+      return { allowed: false, status: "blocked", reason: "This post was blocked." };
+    }
+    if (result.categories?.["self-harm/intent"] || result.categories?.["self-harm/instructions"]) {
+      return { allowed: false, status: "blocked", reason: "This post was blocked. If you're struggling, please reach out to a crisis line or someone you trust." };
+    }
+    if (result.flagged) {
+      const hardBlockCategories = [
+        "hate", "hate/threatening",
+        "harassment", "harassment/threatening",
+        "violence/graphic",
+      ];
+      const isHardBlock = hardBlockCategories.some((c) => result.categories?.[c]);
+      if (isHardBlock) {
+        return { allowed: false, status: "blocked", reason: "This post violates our content guidelines." };
+      }
+      // Only genuinely borderline categories left (e.g. mild general
+      // "violence" discussion, non-graphic) go live flagged for review.
+      return { allowed: true, status: "flagged", reason: "Flagged for review" };
+    }
+    return { allowed: true, status: "approved" };
+  } catch (e) {
+    console.error("Text moderation call failed:", e);
+    // Fail closed — same reasoning as the image pipeline.
+    return { allowed: false, status: "blocked", reason: "Moderation service temporarily unavailable, please try again shortly." };
+  }
+}
+
+/**
+ * Flags US-style phone numbers and street-address-shaped text. Not
+ * exhaustive (doxxing can take many forms — usernames, workplaces,
+ * indirect identifiers) but catches the most common, unambiguous cases
+ * without false-positiving on ordinary numbers in posts.
+ */
+function detectDoxxing(text: string): boolean {
+  const phonePattern = /(\+?\d{1,2}[-.\s]?)?\(?\d{3}\)?[-.\s]\d{3}[-.\s]\d{4}\b/;
+  const streetAddressPattern = /\b\d{1,5}\s+([A-Za-z]+\s){1,4}(street|st|avenue|ave|road|rd|boulevard|blvd|lane|ln|drive|dr|court|ct|way|place|pl)\b/i;
+  return phonePattern.test(text) || streetAddressPattern.test(text);
+}
+
+function looksLikeSpam(text: string): boolean {
+  const lower = text.toLowerCase();
+  const spamPatterns = [/https?:\/\/\S+\.\S+.*https?:\/\/\S+\.\S+/, /\b(buy now|click here|free money)\b/];
+  return spamPatterns.some((p) => p.test(lower));
 }
 
 // ---------------------------------------------------------------------
 // Scanning helpers
 // ---------------------------------------------------------------------
-async function scanImage(url: string): Promise<{ allowed: boolean; reason?: string }> {
-  const csam = await checkCsamHash(url);
-  if (!csam.allowed) return csam;
-
+/**
+ * Runs ONLY the general NSFW/violence pre-filter (Sightengine) — this is
+ * not a substitute for CSAM detection, just a first pass that keeps
+ * obviously extreme content out of the human-review queue entirely.
+ * Everything that passes still needs a moderator's manual approval before
+ * it becomes publicly visible (see handleFileUpload).
+ */
+async function runPrefilterOnly(url: string, isVideo: boolean): Promise<{ allowed: boolean; reason?: string }> {
+  if (isVideo) {
+    // No video pre-filter wired up yet — goes straight to the review
+    // queue for a human to check manually.
+    return { allowed: true };
+  }
   if (!SIGHTENGINE_API_USER || !SIGHTENGINE_API_SECRET) {
-    // Fail closed — no scanner configured yet.
-    return { allowed: false, reason: "Image scanning is not yet configured" };
+    return { allowed: true }; // pre-filter optional; human review is the real gate
   }
 
   const params = new URLSearchParams({
@@ -188,44 +276,17 @@ async function scanImage(url: string): Promise<{ allowed: boolean; reason?: stri
     api_secret: SIGHTENGINE_API_SECRET,
   });
 
-  const res = await fetch(`https://api.sightengine.com/1.0/check.json?${params}`);
-  const data = await res.json();
-
-  const nudityScore = data?.nudity?.sexual_activity ?? data?.nudity?.raw ?? 0;
-  const goreScore = data?.gore?.prob ?? 0;
-  const violenceScore = data?.violence?.prob ?? 0;
-  const offensiveScore = data?.offensive?.prob ?? 0;
-
-  if (nudityScore > 0.6 || goreScore > 0.6 || violenceScore > 0.7 || offensiveScore > 0.7) {
-    return { allowed: false, reason: "Image failed content review" };
+  try {
+    const res = await fetch(`https://api.sightengine.com/1.0/check.json?${params}`);
+    const data = await res.json();
+    const nudityScore = data?.nudity?.sexual_activity ?? data?.nudity?.raw ?? 0;
+    const goreScore = data?.gore?.prob ?? 0;
+    if (nudityScore > 0.6 || goreScore > 0.6) {
+      return { allowed: false, reason: "Image failed automatic content review" };
+    }
+    return { allowed: true };
+  } catch (e) {
+    console.error("Sightengine pre-filter failed:", e);
+    return { allowed: true }; // pre-filter is best-effort; human review is the real gate
   }
-  return { allowed: true };
-}
-
-async function scanVideo(url: string): Promise<{ allowed: boolean; reason?: string }> {
-  // Sightengine's video endpoint is async (webhook-based) and needs a
-  // dedicated table + callback route to track job status; wire that up
-  // the same way once you're ready to accept video, following the same
-  // fail-closed pattern used here. Until then, video stays blocked.
-  const csam = await checkCsamHash(url);
-  if (!csam.allowed) return csam;
-  return { allowed: false, reason: "Video scanning is not yet configured" };
-}
-
-async function checkCsamHash(url: string): Promise<{ allowed: boolean; reason?: string }> {
-  if (!SAFER_API_KEY) {
-    // Fail closed until Thorn Safer access is approved and this key is set.
-    return { allowed: false, reason: "Safety scanning is not yet configured" };
-  }
-  // Once approved, implement per Thorn Safer's integration docs
-  // (https://safer.io/) — typically: submit the file/hash to their API,
-  // check the match result, and block on any positive match.
-  // Placeholder left intentionally unimplemented pending API access.
-  return { allowed: true };
-}
-
-function looksLikeSpamOrAbuse(text: string): boolean {
-  const lower = text.toLowerCase();
-  const spamPatterns = [/https?:\/\/\S+\.\S+.*https?:\/\/\S+\.\S+/, /\b(buy now|click here|free money)\b/];
-  return spamPatterns.some((p) => p.test(lower));
 }

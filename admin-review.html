@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>InteractInk — Media Review</title>
+<style>
+  body { background:#0a0a0a; color:#eee; font-family: system-ui, sans-serif; padding: 24px; }
+  h1 { font-size: 1.3rem; }
+  #loginBox input { padding:8px; font-size:1rem; width:280px; }
+  #loginBox button { padding:8px 16px; margin-left:8px; }
+  .item { border:1px solid #333; border-radius:8px; padding:12px; margin-bottom:16px; display:flex; gap:16px; align-items:flex-start; }
+  .item img, .item video { max-width:280px; max-height:280px; border-radius:6px; background:#111; }
+  .meta { font-size:0.85rem; color:#999; margin-bottom:8px; }
+  button.approve { background:#16a34a; color:white; border:none; padding:8px 14px; border-radius:6px; cursor:pointer; margin-right:8px; }
+  button.reject { background:#dc2626; color:white; border:none; padding:8px 14px; border-radius:6px; cursor:pointer; }
+  #status { color:#f87171; margin-top:8px; }
+</style>
+</head>
+<body>
+  <h1>InteractInk — Pending Media Review</h1>
+
+  <div id="loginBox">
+    <input id="secretInput" type="password" placeholder="Admin secret">
+    <button onclick="login()">Load queue</button>
+    <div id="status"></div>
+  </div>
+
+  <div id="queue"></div>
+
+<script>
+  // Set this to your project's function URL.
+  const FUNCTION_URL = "https://xdshsodkuyawljzuirqt.supabase.co/functions/v1/review-media";
+  let adminSecret = "";
+
+  async function callFn(body) {
+    const res = await fetch(FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error(`Request failed (${res.status})`);
+    return res.json();
+  }
+
+  async function login() {
+    adminSecret = document.getElementById('secretInput').value;
+    document.getElementById('status').textContent = "";
+    try {
+      await loadQueue();
+    } catch (e) {
+      document.getElementById('status').textContent = "Wrong secret or connection error.";
+    }
+  }
+
+  async function loadQueue() {
+    const data = await callFn({ action: "list" });
+    const container = document.getElementById('queue');
+    if (!data.items || data.items.length === 0) {
+      container.innerHTML = "<p>No pending items. 🎉</p>";
+      return;
+    }
+    container.innerHTML = data.items.map(item => `
+      <div class="item" id="item-${item.id}">
+        <div>
+          ${item.media_type === 'video'
+            ? `<video src="${item.previewUrl}" controls></video>`
+            : `<img src="${item.previewUrl}" alt="pending upload">`}
+        </div>
+        <div>
+          <div class="meta">Board: ${item.board_id} · ${new Date(item.created_at).toLocaleString()}</div>
+          <button class="approve" onclick="decide('${item.id}','approve')">Approve</button>
+          <button class="reject" onclick="decide('${item.id}','reject')">Reject</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function decide(id, action) {
+    try {
+      await callFn({ action, id });
+      document.getElementById(`item-${id}`).remove();
+    } catch (e) {
+      alert("Action failed: " + e.message);
+    }
+  }
+</script>
+</body>
+</html>
