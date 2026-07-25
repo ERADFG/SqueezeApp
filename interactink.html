@@ -2024,6 +2024,7 @@ function initRealtimeSync() {
                 });
                 if (!modResult.allowed) {
                     if (submitBtn) submitBtn.disabled = false;
+                    if (modResult.detail) console.error('moderate-post detail:', modResult.detail);
                     showToast(modResult.reason || 'This post was blocked by our content filters.', true);
                     clearSelectedMedia('thread');
                     return;
@@ -2135,6 +2136,7 @@ function initRealtimeSync() {
                 });
                 if (!modResult.allowed) {
                     if (submitBtn) submitBtn.disabled = false;
+                    if (modResult.detail) console.error('moderate-post detail:', modResult.detail);
                     showToast(modResult.reason || 'This reply was blocked by our content filters.', true);
                     clearSelectedMedia('comment');
                     return;
@@ -2776,7 +2778,9 @@ function initRealtimeSync() {
             }
 
             if (!res.ok || !result.allowed) {
-                throw new Error(result.reason || result.error || 'Upload was rejected');
+                if (result.detail) console.error('moderate-post detail:', result.detail);
+                const msg = result.detail ? `${result.reason || result.error} (${result.detail})` : (result.reason || result.error || 'Upload was rejected');
+                throw new Error(msg);
             }
             // File passed the pre-filter and is queued for human review —
             // it has no public url yet (that only exists once a moderator
