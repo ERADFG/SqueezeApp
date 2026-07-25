@@ -174,7 +174,7 @@ async function handleFinalCheck(req: Request): Promise<Response> {
     return json({ allowed: false, status: "blocked", reason: "This post was blocked." });
   }
   if (looksLikeSpam(text)) {
-    return json({ allowed: true, status: "flagged", reason: "Flagged as possible spam" });
+    return json({ allowed: false, status: "blocked", reason: "This looks like spam and was blocked." });
   }
 
   // 2. Semantic checks: hate speech, harassment, threats, self-harm content,
@@ -248,7 +248,7 @@ async function runTextModeration(text: string): Promise<{ allowed: boolean; stat
     // Fail OPEN here: this is a bonus check on top of the spam/doxxing
     // checks that already ran. If OpenAI is misconfigured or having
     // issues, don't take the whole site down over it.
-    return { allowed: true, status: "flagged", reason: "Unmoderated (semantic check unavailable)" };
+    return { allowed: true, status: "approved" }; // fail open, fully automatic -- no manual queue
   }
 }
 

@@ -149,15 +149,31 @@
     }
 
     async function reviewMediaAction(action, id) {
-        const res = await fetch(REVIEW_MEDIA_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-admin-secret': ADMIN_SECRET },
-            body: JSON.stringify({ action, id }),
-        });
-        const data = await res.json();
-        if (!res.ok) { alert(data.error || 'Action failed'); return; }
         const el = document.getElementById(`pending-${id}`);
-        if (el) el.remove();
+        try {
+            const res = await fetch(REVIEW_MEDIA_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-admin-secret': ADMIN_SECRET },
+                body: JSON.stringify({ action, id }),
+            });
+            let data;
+            try {
+                data = await res.json();
+            } catch (parseErr) {
+                alert(`Server didn't return a valid response (status ${res.status}). Check the review-media function logs in Supabase.`);
+                console.error('review-media: bad response', res.status, await res.text().catch(() => '(no body)'));
+                return;
+            }
+            if (!res.ok) {
+                alert(`Action failed: ${data.error || 'unknown error'} (status ${res.status})`);
+                console.error('review-media error:', data);
+                return;
+            }
+            if (el) el.remove();
+        } catch (networkErr) {
+            alert(`Could not reach the review service: ${networkErr.message}`);
+            console.error('review-media network error:', networkErr);
+        }
     }
     function approveMedia(id) { reviewMediaAction('approve', id); }
     function rejectMedia(id) { reviewMediaAction('reject', id); }
