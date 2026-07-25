@@ -3627,6 +3627,15 @@ function initRealtimeSync() {
         <p style="margin-top: 20px; font-size: 0.85rem;">&copy; 2026 InteractInk. All rights reserved.</p>
     </footer>
     <script src="enhancements.js" defer></script>
-    <script type="module" src="moderation-guard.js"></script>
+    <!-- moderation-guard.js removed: it wasn't called by anything in the
+         posting flow (real moderation happens server-side in the
+         moderate-post Edge Function), and its bare npm imports
+         (@tensorflow/tfjs, nsfwjs, tesseract.js) can't resolve without a
+         bundler, so it just threw on every page load. If client-side
+         NSFW/OCR pre-filtering is wanted later, contentModeration.js needs
+         either a build step (Vite/webpack) or its imports rewritten to
+         full CDN URLs (e.g. https://esm.sh/@tensorflow/tfjs) plus an
+         actual call site wiring it into the thread/comment submit
+         handlers — right now nothing invokes it at all.
 </body>
 </html>
