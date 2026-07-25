@@ -1045,7 +1045,7 @@
     // ---------- Media upload config ----------
     const MEDIA_BUCKET = 'post-media';
     const MAX_IMAGE_BYTES = 50 * 1024 * 1024;  // 50 MB
-    const MAX_VIDEO_BYTES = 50 * 1024 * 1024;  // 50 MB
+    const MAX_VIDEO_BYTES = 25 * 1024 * 1024;  // 25 MB — must match MAX_FILE_BYTES in moderate-post/index.ts
     const MAX_VIDEO_SECONDS = 58;              // Sightengine's synchronous video check only covers clips under 1 minute
     const MAX_IMAGE_DIMENSION = 2048;          // longest edge, px, after resize
     const MAX_VIDEO_DIMENSION = 1280;          // longest edge, px, after re-encode
@@ -2514,8 +2514,15 @@ function initRealtimeSync() {
                 if (!canCapture) { fallback(); return; }
 
                 const video = document.createElement('video');
-                video.muted = false;
-                video.volume = 0;       // silent playback — audio still flows into the recorder
+                // Must be muted, not just volume=0: browsers block unmuted
+                // programmatic play() outside a direct user gesture (which
+                // this async callback isn't), so play() was throwing every
+                // time and silently falling back to the original,
+                // un-shrunk file. Muting only stops local speaker output —
+                // captureStream() below still pulls the real audio track
+                // from the underlying media resource, so the re-encoded
+                // video keeps its sound.
+                video.muted = true;
                 video.playsInline = true;
                 const objectUrl = URL.createObjectURL(file);
                 video.src = objectUrl;
