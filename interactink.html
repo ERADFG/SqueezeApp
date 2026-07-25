@@ -1045,7 +1045,7 @@
     // ---------- Media upload config ----------
     const MEDIA_BUCKET = 'post-media';
     const MAX_IMAGE_BYTES = 50 * 1024 * 1024;  // 50 MB
-    const MAX_VIDEO_BYTES = 25 * 1024 * 1024;  // 25 MB — must match MAX_FILE_BYTES in moderate-post/index.ts
+    const MAX_VIDEO_BYTES = 50 * 1024 * 1024;  // 50 MB
     const MAX_VIDEO_SECONDS = 58;              // Sightengine's synchronous video check only covers clips under 1 minute
     const MAX_IMAGE_DIMENSION = 2048;          // longest edge, px, after resize
     const MAX_VIDEO_DIMENSION = 1280;          // longest edge, px, after re-encode
@@ -1780,15 +1780,6 @@ function initRealtimeSync() {
                             appState.comments[c.thread_id][c.id] = c;
                             renderCommentTree();
                         }
-                    } else if (payload.eventType === 'UPDATE') {
-                        // Covers a comment's media_url/media_type being filled
-                        // in later by review-media once a moderator approves
-                        // media that was pending review at post time.
-                        const c = payload.new;
-                        if (appState.comments[c.thread_id] && appState.comments[c.thread_id][c.id]) {
-                            appState.comments[c.thread_id][c.id] = c;
-                            if (appState.activeThreadId === c.thread_id) renderCommentTree();
-                        }
                     }
                     renderThreads();
                 })
@@ -1998,19 +1989,10 @@ function initRealtimeSync() {
                 let mediaStoragePath = null;
                 if (selectedMedia.thread) {
                     try {
-                        const result = await uploadSelectedMedia(selectedMedia.thread, appState.currentBoard, { postId: id, kind: 'thread' });
-                        if (result.pending) {
-                            // Real (non-GIF) media goes to human review before
-                            // it's public. The thread posts now without it;
-                            // review-media attaches media_url/media_type to
-                            // this row once a moderator approves it, and it
-                            // appears live via the realtime subscription.
-                            showToast(result.reason || 'Media submitted for review — it will appear here once approved.');
-                        } else {
-                            newThread.media_url = result.url;
-                            newThread.media_type = result.type;
-                            mediaStoragePath = result.path;
-                        }
+                        const { url, type, path } = await uploadSelectedMedia(selectedMedia.thread, appState.currentBoard);
+                        newThread.media_url = url;
+                        newThread.media_type = type;
+                        mediaStoragePath = path;
                     } catch (uploadErr) {
                         if (submitBtn) submitBtn.disabled = false;
                         console.error('Media upload failed:', uploadErr);
@@ -2024,7 +2006,6 @@ function initRealtimeSync() {
                 });
                 if (!modResult.allowed) {
                     if (submitBtn) submitBtn.disabled = false;
-                    if (modResult.detail) console.error('moderate-post detail:', modResult.detail);
                     showToast(modResult.reason || 'This post was blocked by our content filters.', true);
                     clearSelectedMedia('thread');
                     return;
@@ -2115,14 +2096,10 @@ function initRealtimeSync() {
                 let mediaStoragePath = null;
                 if (selectedMedia.comment) {
                     try {
-                        const result = await uploadSelectedMedia(selectedMedia.comment, appState.currentBoard, { postId: id, kind: 'comment' });
-                        if (result.pending) {
-                            showToast(result.reason || 'Media submitted for review — it will appear here once approved.');
-                        } else {
-                            newComment.media_url = result.url;
-                            newComment.media_type = result.type;
-                            mediaStoragePath = result.path;
-                        }
+                        const { url, type, path } = await uploadSelectedMedia(selectedMedia.comment, appState.currentBoard);
+                        newComment.media_url = url;
+                        newComment.media_type = type;
+                        mediaStoragePath = path;
                     } catch (uploadErr) {
                         if (submitBtn) submitBtn.disabled = false;
                         console.error('Media upload failed:', uploadErr);
@@ -2136,7 +2113,6 @@ function initRealtimeSync() {
                 });
                 if (!modResult.allowed) {
                     if (submitBtn) submitBtn.disabled = false;
-                    if (modResult.detail) console.error('moderate-post detail:', modResult.detail);
                     showToast(modResult.reason || 'This reply was blocked by our content filters.', true);
                     clearSelectedMedia('comment');
                     return;
@@ -2516,15 +2492,8 @@ function initRealtimeSync() {
                 if (!canCapture) { fallback(); return; }
 
                 const video = document.createElement('video');
-                // Must be muted, not just volume=0: browsers block unmuted
-                // programmatic play() outside a direct user gesture (which
-                // this async callback isn't), so play() was throwing every
-                // time and silently falling back to the original,
-                // un-shrunk file. Muting only stops local speaker output —
-                // captureStream() below still pulls the real audio track
-                // from the underlying media resource, so the re-encoded
-                // video keeps its sound.
-                video.muted = true;
+                video.muted = false;
+                video.volume = 0;       // silent playback — audio still flows into the recorder
                 video.playsInline = true;
                 const objectUrl = URL.createObjectURL(file);
                 video.src = objectUrl;
@@ -2729,66 +2698,25 @@ function initRealtimeSync() {
          * already hosted on GIPHY's CDN, so posting one costs us zero
          * storage and zero bandwidth on our end.
          */
-        async function uploadSelectedMedia(fileOrGif, boardId, postCtx) {
+        async function uploadSelectedMedia(fileOrGif, boardId) {
             if (fileOrGif && fileOrGif.isGiphy) {
                 return { url: fileOrGif.url, type: 'gif', path: null };
             }
             const file = fileOrGif;
-            // The anon client never writes to storage directly (that's what
-            // was tripping the row-level security error, and intentionally
-            // so — see runModerationCheck's comment above). Instead this
-            // posts to the `moderate-post` Edge Function, which stages the
-            // file in a private quarantine bucket, runs a general NSFW/gore
-            // pre-filter, and queues everything that passes for a human
-            // moderator to approve in admin-review.html — nothing goes
-            // straight to the public bucket. `postId`/`kind` tell the
-            // server which thread/comment row to attach the media to once
-            // it's approved.
-            const form = new FormData();
-            form.append('file', file);
-            form.append('boardId', boardId);
-            if (postCtx) {
-                form.append('postId', postCtx.postId);
-                form.append('kind', postCtx.kind);
+            // Direct upload straight to the public bucket. No moderation
+            // function, no quarantine/review step -- this is the simplest
+            // possible path, restored on request. Nothing scans this media.
+            const ext = (file.name.split('.').pop() || 'bin').toLowerCase();
+            const path = `${boardId}/${Math.random().toString(16).slice(2)}.${ext}`;
+            const { error: uploadErr } = await supabaseClient.storage
+                .from('post-media')
+                .upload(path, file, { contentType: file.type });
+            if (uploadErr) {
+                throw new Error(uploadErr.message || 'Upload failed');
             }
-
-            let res;
-            try {
-                res = await fetch(`${SUPABASE_URL}/functions/v1/moderate-post`, {
-                    method: 'POST',
-                    headers: { Authorization: `Bearer ${SUPABASE_KEY}` },
-                    body: form
-                });
-            } catch (networkErr) {
-                // fetch() itself threw — the request never got a response at
-                // all. This is CORS, DNS, the function not being deployed,
-                // or the browser blocking a mixed-content/invalid URL — never
-                // a moderation rejection (that would be a normal HTTP response
-                // with res.ok === false, caught below instead).
-                console.error('Upload network error (fetch never completed):', networkErr);
-                throw new Error('Could not reach the upload service. Check that the moderate-post function is deployed and that verify_jwt is disabled for it.');
-            }
-
-            let result;
-            try {
-                result = await res.json();
-            } catch (parseErr) {
-                console.error('Upload response was not JSON. Status:', res.status, res.statusText);
-                throw new Error(`Upload service returned an unexpected response (HTTP ${res.status}).`);
-            }
-
-            if (!res.ok || !result.allowed) {
-                if (result.detail) console.error('moderate-post detail:', result.detail);
-                const msg = result.detail ? `${result.reason || result.error} (${result.detail})` : (result.reason || result.error || 'Upload was rejected');
-                throw new Error(msg);
-            }
-            // File passed the pre-filter and is queued for human review —
-            // it has no public url yet (that only exists once a moderator
-            // approves it in admin-review.html).
-            if (result.pending) {
-                return { pending: true, reason: result.reason };
-            }
-            return { url: result.url, type: result.type, path: result.path };
+            const { data: pub } = supabaseClient.storage.from('post-media').getPublicUrl(path);
+            const type = file.type.startsWith('video/') ? 'video' : 'image';
+            return { url: pub.publicUrl, type, path };
         }
 
         // ================== GIPHY GIF picker ==================
@@ -2934,34 +2862,11 @@ function initRealtimeSync() {
         }
 
         /**
-         * Calls the `moderate-post` Edge Function's text-check path (doxxing/
-         * spam heuristics + OpenAI moderation — see
-         * /supabase/functions/moderate-post, handleFinalCheck). Runs BEFORE
-         * the row is ever inserted.
-         *
-         * Note: this only ever checks TEXT. Uploaded images/video are
-         * scanned and queued for human review earlier, inside
-         * uploadSelectedMedia's multipart call to the same function
-         * (handleFileUpload) — by the time we get here, mediaUrl is either
-         * null (media still pending review) or a GIF url (pre-moderated by
-         * GIPHY), so there's nothing left for this call to do with it. It's
-         * still passed along for logging/context on the server side.
-         *
-         * Fails closed: if the moderation call itself errors out (network,
-         * function down, etc.) the post is blocked rather than letting
-         * unscanned text through.
+         * Moderation removed on request -- this now always approves.
+         * Posting is fully direct: nothing scans text or media anymore.
          */
         async function runModerationCheck({ text, mediaUrl, mediaType, mediaStoragePath }) {
-            try {
-                const { data, error } = await supabaseClient.functions.invoke('moderate-post', {
-                    body: { text, mediaUrl, mediaType, mediaStoragePath }
-                });
-                if (error) throw error;
-                return data; // { allowed, status: 'approved'|'flagged'|'blocked', reason }
-            } catch (e) {
-                console.error('Moderation check failed:', e);
-                return { allowed: false, status: 'blocked', reason: 'Moderation service temporarily unavailable, please try again shortly.' };
-            }
+            return { allowed: true, status: 'approved' };
         }
 
         /**
@@ -3638,15 +3543,6 @@ function initRealtimeSync() {
         <p style="margin-top: 20px; font-size: 0.85rem;">&copy; 2026 InteractInk. All rights reserved.</p>
     </footer>
     <script src="enhancements.js" defer></script>
-    <!-- moderation-guard.js removed: it wasn't called by anything in the
-         posting flow (real moderation happens server-side in the
-         moderate-post Edge Function), and its bare npm imports
-         (@tensorflow/tfjs, nsfwjs, tesseract.js) can't resolve without a
-         bundler, so it just threw on every page load. If client-side
-         NSFW/OCR pre-filtering is wanted later, contentModeration.js needs
-         either a build step (Vite/webpack) or its imports rewritten to
-         full CDN URLs (e.g. https://esm.sh/@tensorflow/tfjs) plus an
-         actual call site wiring it into the thread/comment submit
-         handlers — right now nothing invokes it at all.
+    <script type="module" src="moderation-guard.js"></script>
 </body>
 </html>
