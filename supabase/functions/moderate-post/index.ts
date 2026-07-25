@@ -134,9 +134,20 @@ async function handleFileUpload(req: Request): Promise<Response> {
     return json({ allowed: false, reason: "Could not queue file for review" }, 500);
   }
 
+  // Return the eventual public URL now, even though the file isn't
+  // there yet -- getPublicUrl just builds a URL string, it doesn't
+  // require the object to exist. The frontend sets this as media_url
+  // right away; once a moderator approves (review-media function),
+  // the file lands at this exact path and the image starts resolving
+  // with zero extra wiring back to the original post.
+  const { data: futurePub } = admin.storage.from("post-media").getPublicUrl(quarantinePath);
+
   return json({
     allowed: true,
     pending: true,
+    url: futurePub.publicUrl,
+    type: isVideo ? "video" : "image",
+    path: quarantinePath,
     reason: "Submitted for review — this may take a little while before it's visible to others.",
   });
 }

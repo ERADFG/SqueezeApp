@@ -27,6 +27,7 @@
 
     <div class="flex gap-2 mb-4 border-b border-neutral-800">
         <button id="tabFlaggedBtn" onclick="switchTab('flagged')" class="px-4 py-2 text-sm font-bold border-b-2 border-white">All Posts</button>
+        <button id="tabPendingMediaBtn" onclick="switchTab('pendingMedia')" class="px-4 py-2 text-sm font-bold border-b-2 border-transparent text-neutral-500">Pending Media</button>
         <button id="tabCommentsBtn" onclick="switchTab('comments')" class="px-4 py-2 text-sm font-bold border-b-2 border-transparent text-neutral-500">Comments</button>
         <button id="tabReportsBtn" onclick="switchTab('reports')" class="px-4 py-2 text-sm font-bold border-b-2 border-transparent text-neutral-500">Reports</button>
         <button id="tabIncidentsBtn" onclick="switchTab('incidents')" class="px-4 py-2 text-sm font-bold border-b-2 border-transparent text-neutral-500">Incident Log</button>
@@ -40,6 +41,9 @@
             <button id="deleteSelectedBtn" onclick="removeSelected()" disabled class="px-3 py-1.5 bg-red-800 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed rounded text-xs font-bold">Delete selected</button>
         </div>
         <div id="flaggedList" class="space-y-4"></div>
+    </div>
+    <div id="pendingMediaPane" class="hidden">
+        <div id="pendingMediaList" class="space-y-4"></div>
     </div>
     <div id="commentsPane" class="hidden">
         <div class="flex items-center gap-3 mb-3 text-xs">
@@ -57,6 +61,12 @@
     const SUPABASE_URL = "https://xdshsodkuyawljzuirqt.supabase.co";
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
     const MEDIA_BUCKET = "post-media";
+    const REVIEW_MEDIA_URL = "https://xdshsodkuyawljzuirqt.supabase.co/functions/v1/review-media";
+    // Same value as your `supabase secrets set ADMIN_SECRET=...`. This page
+    // is already gated behind Supabase Auth login above, so it's reasonable
+    // to keep it here -- just don't share this file publicly with the
+    // secret filled in.
+    const ADMIN_SECRET = "kX9#mP2$vL8!qZ4";
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     window.addEventListener('load', async () => {
@@ -97,9 +107,9 @@
         location.reload();
     }
 
-    const TAB_PANES = { flagged: 'flaggedPane', comments: 'commentsPane', reports: 'reportsList', incidents: 'incidentsList' };
+    const TAB_PANES = { flagged: 'flaggedPane', pendingMedia: 'pendingMediaPane', comments: 'commentsPane', reports: 'reportsList', incidents: 'incidentsList' };
     function switchTab(tab) {
-        for (const t of ['flagged', 'comments', 'reports', 'incidents']) {
+        for (const t of ['flagged', 'pendingMedia', 'comments', 'reports', 'incidents']) {
             document.getElementById(`tab${cap(t)}Btn`).className = `px-4 py-2 text-sm font-bold border-b-2 ${t === tab ? 'border-white' : 'border-transparent text-neutral-500'}`;
             document.getElementById(TAB_PANES[t]).classList.toggle('hidden', t !== tab);
         }
@@ -107,8 +117,50 @@
     function cap(s) { return s[0].toUpperCase() + s.slice(1); }
 
     async function loadAll() {
-        await Promise.all([loadAllPosts(), loadComments(), loadReports(), loadIncidents()]);
+        await Promise.all([loadAllPosts(), loadPendingMedia(), loadComments(), loadReports(), loadIncidents()]);
     }
+
+    async function loadPendingMedia() {
+        const list = document.getElementById('pendingMediaList');
+        list.innerHTML = '<p class="text-neutral-600 text-sm">Loading…</p>';
+        try {
+            const res = await fetch(REVIEW_MEDIA_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-admin-secret': ADMIN_SECRET },
+                body: JSON.stringify({ action: 'list' }),
+            });
+            const data = await res.json();
+            if (!res.ok) { list.innerHTML = `<p class="text-red-400 text-sm">${escapeHTML(data.error || 'Failed to load')}</p>`; return; }
+            if (!data.items || data.items.length === 0) { list.innerHTML = '<p class="text-neutral-600 text-sm">No pending media.</p>'; return; }
+            list.innerHTML = data.items.map(item => `
+                <div class="border border-neutral-800 rounded-lg p-4" id="pending-${item.id}">
+                    <div class="text-xs text-neutral-500 mb-2">board /${escapeHTML(item.board_id)}/ · ${new Date(item.created_at).toLocaleString()}</div>
+                    ${item.media_type === 'video'
+                        ? `<video src="${item.previewUrl}" controls class="max-w-xs max-h-64 rounded"></video>`
+                        : `<img src="${item.previewUrl}" class="max-w-xs max-h-64 rounded" alt="pending upload">`}
+                    <div class="flex gap-2 mt-3">
+                        <button onclick="approveMedia('${item.id}')" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-xs font-bold">Approve</button>
+                        <button onclick="rejectMedia('${item.id}')" class="px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded text-xs font-bold">Reject</button>
+                    </div>
+                </div>`).join('');
+        } catch (e) {
+            list.innerHTML = `<p class="text-red-400 text-sm">${escapeHTML(e.message)}</p>`;
+        }
+    }
+
+    async function reviewMediaAction(action, id) {
+        const res = await fetch(REVIEW_MEDIA_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-admin-secret': ADMIN_SECRET },
+            body: JSON.stringify({ action, id }),
+        });
+        const data = await res.json();
+        if (!res.ok) { alert(data.error || 'Action failed'); return; }
+        const el = document.getElementById(`pending-${id}`);
+        if (el) el.remove();
+    }
+    function approveMedia(id) { reviewMediaAction('approve', id); }
+    function rejectMedia(id) { reviewMediaAction('reject', id); }
 
     let selectedItems = new Map(); // key `${kind}:${id}` -> { kind, id, mediaPath }
     let selectedComments = new Map(); // key `${id}` -> { id, mediaPath }
