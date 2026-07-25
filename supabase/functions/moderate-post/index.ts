@@ -31,14 +31,6 @@ const ALLOWED_TYPES = new Set([
   "video/mp4", "video/webm", "video/quicktime",
 ]);
 
-// Which table a pending upload belongs to, keyed by the `kind` field the
-// client sends. Used so review-media's approve step knows which row to
-// write the published media_url back onto.
-const TARGET_TABLE_BY_KIND: Record<string, string> = {
-  thread: "threads",
-  comment: "comments",
-};
-
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -83,13 +75,6 @@ async function handleFileUpload(req: Request): Promise<Response> {
   const form = await req.formData();
   const file = form.get("file");
   const boardId = String(form.get("boardId") || "misc");
-  // Identifies the thread/comment row this upload belongs to, so approval
-  // later knows where to attach the published media_url. Optional for
-  // backward compatibility, but without it an approved file has nothing
-  // to attach to and will silently stay invisible on the site.
-  const postId = String(form.get("postId") || "").trim() || null;
-  const kind = String(form.get("kind") || "").trim();
-  const targetTable = TARGET_TABLE_BY_KIND[kind] ?? null;
 
   if (!(file instanceof File)) {
     return json({ allowed: false, error: "No file provided" }, 400);
@@ -142,8 +127,6 @@ async function handleFileUpload(req: Request): Promise<Response> {
     board_id: boardId,
     media_type: isVideo ? "video" : "image",
     status: "pending",
-    target_table: targetTable,
-    target_id: postId,
   });
   if (insertErr) {
     console.error("pending_media insert failed:", insertErr);
@@ -176,6 +159,9 @@ async function handleFinalCheck(req: Request): Promise<Response> {
   if (doxx) {
     return json({ allowed: false, status: "blocked", reason: "Post appears to contain personal contact information and was blocked." });
   }
+  if (looksLikeDrugSale(text)) {
+    return json({ allowed: false, status: "blocked", reason: "This post was blocked." });
+  }
   if (looksLikeSpam(text)) {
     return json({ allowed: true, status: "flagged", reason: "Flagged as possible spam" });
   }
@@ -199,84 +185,60 @@ async function handleFinalCheck(req: Request): Promise<Response> {
 async function runTextModeration(text: string): Promise<{ allowed: boolean; status: string; reason?: string }> {
   const apiKey = Deno.env.get("OPENAI_API_KEY");
   if (!apiKey) {
-    // Fail closed, same philosophy as the image pipeline: no configured
-    // scanner means text isn't waved through unchecked.
-    console.error("Text moderation skipped: OPENAI_API_KEY is not set.");
-    return { allowed: false, status: "blocked", reason: "Text moderation is not yet configured" };
+    // No deeper semantic check configured -- spam/doxxing checks already
+    // ran before this point, so let it through rather than blocking
+    // everything on a feature that isn't set up yet.
+    return { allowed: true, status: "approved" };
   }
 
-  // One retry with a short timeout — covers transient network blips /
-  // OpenAI hiccups without leaving the request hanging. A real failure
-  // (bad key, quota, etc.) will fail the same way on both attempts, and
-  // the logged status/error tells you which.
-  let lastErr: unknown = null;
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000);
-      let res: Response;
-      try {
-        res = await fetch("https://api.openai.com/v1/moderations", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({ model: "omni-moderation-latest", input: text }),
-          signal: controller.signal,
-        });
-      } finally {
-        clearTimeout(timeout);
-      }
+  try {
+    const res = await fetch("https://api.openai.com/v1/moderations", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ model: "omni-moderation-latest", input: text }),
+    });
+    if (!res.ok) throw new Error(`Moderation API returned ${res.status}`);
+    const data = await res.json();
+    const result = data?.results?.[0];
+    if (!result) throw new Error("Unexpected moderation response shape");
 
-      if (!res.ok) {
-        const bodyText = await res.text().catch(() => "");
-        throw new Error(`Moderation API returned ${res.status} ${res.statusText}: ${bodyText.slice(0, 300)}`);
-      }
-      const data = await res.json();
-      const result = data?.results?.[0];
-      if (!result) throw new Error("Unexpected moderation response shape");
+    // Sexual content involving minors is always a hard block, regardless
+    // of the model's confidence threshold for other categories.
+    if (result.categories?.["sexual/minors"]) {
+      return { allowed: false, status: "blocked", reason: "This post was blocked." };
+    }
+    if (result.categories?.["self-harm/intent"] || result.categories?.["self-harm/instructions"]) {
+      return { allowed: false, status: "blocked", reason: "This post was blocked. If you're struggling, please reach out to a crisis line or someone you trust." };
+    }
+    // NSFW / sexual content (non-minor) is blocked outright per site policy.
+    const sexualScore = result.category_scores?.["sexual"] ?? 0;
+    if (result.categories?.["sexual"] || sexualScore > 0.5) {
+      return { allowed: false, status: "blocked", reason: "Sexual content isn't allowed here." };
+    }
 
-      // Sexual content involving minors is always a hard block, regardless
-      // of the model's confidence threshold for other categories.
-      if (result.categories?.["sexual/minors"]) {
-        return { allowed: false, status: "blocked", reason: "This post was blocked." };
-      }
-      if (result.categories?.["self-harm/intent"] || result.categories?.["self-harm/instructions"]) {
-        return { allowed: false, status: "blocked", reason: "This post was blocked. If you're struggling, please reach out to a crisis line or someone you trust." };
-      }
-      if (result.flagged) {
-        const hardBlockCategories = [
-          "hate", "hate/threatening",
-          "harassment", "harassment/threatening",
-          "violence/graphic",
-        ];
-        const isHardBlock = hardBlockCategories.some((c) => result.categories?.[c]);
-        if (isHardBlock) {
-          return { allowed: false, status: "blocked", reason: "This post violates our content guidelines." };
-        }
-        // Only genuinely borderline categories left (e.g. mild general
-        // "violence" discussion, non-graphic) go live flagged for review.
-        return { allowed: true, status: "flagged", reason: "Flagged for review" };
+    if (result.flagged) {
+      // Real threats and graphic violence are blocked. Ordinary profanity,
+      // insults, slurs used as insults, and non-threatening hate/harassment
+      // are allowed through per site policy -- this board permits crude
+      // language, it just doesn't allow targeted threats or graphic violence.
+      const hardBlockCategories = ["hate/threatening", "harassment/threatening", "violence/graphic"];
+      const isHardBlock = hardBlockCategories.some((c) => result.categories?.[c]);
+      if (isHardBlock) {
+        return { allowed: false, status: "blocked", reason: "This post violates our content guidelines." };
       }
       return { allowed: true, status: "approved" };
-    } catch (e) {
-      lastErr = e;
-      const isAbort = e instanceof Error && e.name === "AbortError";
-      console.error(`Text moderation call failed (attempt ${attempt + 1}/2)${isAbort ? " [timeout]" : ""}:`, e);
-      // Only retry on network/timeout-shaped failures, not on a clean
-      // HTTP error response (auth/quota issues won't fix themselves on
-      // a second try within the same second).
-      if (attempt === 0 && !(e instanceof Error && e.message.startsWith("Moderation API returned"))) {
-        continue;
-      }
-      break;
     }
+    return { allowed: true, status: "approved" };
+  } catch (e) {
+    console.error("Text moderation call failed (allowing post through, spam/doxxing checks already passed):", e);
+    // Fail OPEN here: this is a bonus check on top of the spam/doxxing
+    // checks that already ran. If OpenAI is misconfigured or having
+    // issues, don't take the whole site down over it.
+    return { allowed: true, status: "flagged", reason: "Unmoderated (semantic check unavailable)" };
   }
-
-  console.error("Text moderation failed after retry, blocking post. Root cause:", lastErr);
-  // Fail closed — same reasoning as the image pipeline.
-  return { allowed: false, status: "blocked", reason: "Moderation service temporarily unavailable, please try again shortly." };
 }
 
 /**
@@ -289,6 +251,21 @@ function detectDoxxing(text: string): boolean {
   const phonePattern = /(\+?\d{1,2}[-.\s]?)?\(?\d{3}\)?[-.\s]\d{3}[-.\s]\d{4}\b/;
   const streetAddressPattern = /\b\d{1,5}\s+([A-Za-z]+\s){1,4}(street|st|avenue|ave|road|rd|boulevard|blvd|lane|ln|drive|dr|court|ct|way|place|pl)\b/i;
   return phonePattern.test(text) || streetAddressPattern.test(text);
+}
+
+/**
+ * Flags posts that read as drug dealing/marketplace activity -- combining
+ * a substance reference with clear transactional language (price, contact,
+ * "for sale," etc). Deliberately requires BOTH a substance term and a
+ * transactional signal together, so ordinary discussion, news, or harm
+ * -reduction talk about drugs isn't swept up by this -- only posts that
+ * look like someone is actually trying to buy/sell.
+ */
+function looksLikeDrugSale(text: string): boolean {
+  const lower = text.toLowerCase();
+  const substanceTerms = /\b(weed|marijuana|cannabis|cocaine|coke|heroin|meth|molly|mdma|xanax|percs|percocet|oxy|oxycontin|fentanyl|lsd|shrooms|ketamine|adderall)\b/;
+  const transactionalTerms = /\b(for sale|selling|plug|dm me|hit me up|text me|\$\d+|per gram|per oz|delivery|shipped|discreet|prices?|dealer)\b/;
+  return substanceTerms.test(lower) && transactionalTerms.test(lower);
 }
 
 function looksLikeSpam(text: string): boolean {
