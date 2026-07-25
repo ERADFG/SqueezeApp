@@ -201,51 +201,82 @@ async function runTextModeration(text: string): Promise<{ allowed: boolean; stat
   if (!apiKey) {
     // Fail closed, same philosophy as the image pipeline: no configured
     // scanner means text isn't waved through unchecked.
+    console.error("Text moderation skipped: OPENAI_API_KEY is not set.");
     return { allowed: false, status: "blocked", reason: "Text moderation is not yet configured" };
   }
 
-  try {
-    const res = await fetch("https://api.openai.com/v1/moderations", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({ model: "omni-moderation-latest", input: text }),
-    });
-    if (!res.ok) throw new Error(`Moderation API returned ${res.status}`);
-    const data = await res.json();
-    const result = data?.results?.[0];
-    if (!result) throw new Error("Unexpected moderation response shape");
-
-    // Sexual content involving minors is always a hard block, regardless
-    // of the model's confidence threshold for other categories.
-    if (result.categories?.["sexual/minors"]) {
-      return { allowed: false, status: "blocked", reason: "This post was blocked." };
-    }
-    if (result.categories?.["self-harm/intent"] || result.categories?.["self-harm/instructions"]) {
-      return { allowed: false, status: "blocked", reason: "This post was blocked. If you're struggling, please reach out to a crisis line or someone you trust." };
-    }
-    if (result.flagged) {
-      const hardBlockCategories = [
-        "hate", "hate/threatening",
-        "harassment", "harassment/threatening",
-        "violence/graphic",
-      ];
-      const isHardBlock = hardBlockCategories.some((c) => result.categories?.[c]);
-      if (isHardBlock) {
-        return { allowed: false, status: "blocked", reason: "This post violates our content guidelines." };
+  // One retry with a short timeout — covers transient network blips /
+  // OpenAI hiccups without leaving the request hanging. A real failure
+  // (bad key, quota, etc.) will fail the same way on both attempts, and
+  // the logged status/error tells you which.
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      let res: Response;
+      try {
+        res = await fetch("https://api.openai.com/v1/moderations", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({ model: "omni-moderation-latest", input: text }),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeout);
       }
-      // Only genuinely borderline categories left (e.g. mild general
-      // "violence" discussion, non-graphic) go live flagged for review.
-      return { allowed: true, status: "flagged", reason: "Flagged for review" };
+
+      if (!res.ok) {
+        const bodyText = await res.text().catch(() => "");
+        throw new Error(`Moderation API returned ${res.status} ${res.statusText}: ${bodyText.slice(0, 300)}`);
+      }
+      const data = await res.json();
+      const result = data?.results?.[0];
+      if (!result) throw new Error("Unexpected moderation response shape");
+
+      // Sexual content involving minors is always a hard block, regardless
+      // of the model's confidence threshold for other categories.
+      if (result.categories?.["sexual/minors"]) {
+        return { allowed: false, status: "blocked", reason: "This post was blocked." };
+      }
+      if (result.categories?.["self-harm/intent"] || result.categories?.["self-harm/instructions"]) {
+        return { allowed: false, status: "blocked", reason: "This post was blocked. If you're struggling, please reach out to a crisis line or someone you trust." };
+      }
+      if (result.flagged) {
+        const hardBlockCategories = [
+          "hate", "hate/threatening",
+          "harassment", "harassment/threatening",
+          "violence/graphic",
+        ];
+        const isHardBlock = hardBlockCategories.some((c) => result.categories?.[c]);
+        if (isHardBlock) {
+          return { allowed: false, status: "blocked", reason: "This post violates our content guidelines." };
+        }
+        // Only genuinely borderline categories left (e.g. mild general
+        // "violence" discussion, non-graphic) go live flagged for review.
+        return { allowed: true, status: "flagged", reason: "Flagged for review" };
+      }
+      return { allowed: true, status: "approved" };
+    } catch (e) {
+      lastErr = e;
+      const isAbort = e instanceof Error && e.name === "AbortError";
+      console.error(`Text moderation call failed (attempt ${attempt + 1}/2)${isAbort ? " [timeout]" : ""}:`, e);
+      // Only retry on network/timeout-shaped failures, not on a clean
+      // HTTP error response (auth/quota issues won't fix themselves on
+      // a second try within the same second).
+      if (attempt === 0 && !(e instanceof Error && e.message.startsWith("Moderation API returned"))) {
+        continue;
+      }
+      break;
     }
-    return { allowed: true, status: "approved" };
-  } catch (e) {
-    console.error("Text moderation call failed:", e);
-    // Fail closed — same reasoning as the image pipeline.
-    return { allowed: false, status: "blocked", reason: "Moderation service temporarily unavailable, please try again shortly." };
   }
+
+  console.error("Text moderation failed after retry, blocking post. Root cause:", lastErr);
+  // Fail closed — same reasoning as the image pipeline.
+  return { allowed: false, status: "blocked", reason: "Moderation service temporarily unavailable, please try again shortly." };
 }
 
 /**
