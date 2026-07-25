@@ -1780,6 +1780,15 @@ function initRealtimeSync() {
                             appState.comments[c.thread_id][c.id] = c;
                             renderCommentTree();
                         }
+                    } else if (payload.eventType === 'UPDATE') {
+                        // Covers a comment's media_url/media_type being filled
+                        // in later by review-media once a moderator approves
+                        // media that was pending review at post time.
+                        const c = payload.new;
+                        if (appState.comments[c.thread_id] && appState.comments[c.thread_id][c.id]) {
+                            appState.comments[c.thread_id][c.id] = c;
+                            if (appState.activeThreadId === c.thread_id) renderCommentTree();
+                        }
                     }
                     renderThreads();
                 })
@@ -1989,10 +1998,19 @@ function initRealtimeSync() {
                 let mediaStoragePath = null;
                 if (selectedMedia.thread) {
                     try {
-                        const { url, type, path } = await uploadSelectedMedia(selectedMedia.thread, appState.currentBoard);
-                        newThread.media_url = url;
-                        newThread.media_type = type;
-                        mediaStoragePath = path;
+                        const result = await uploadSelectedMedia(selectedMedia.thread, appState.currentBoard, { postId: id, kind: 'thread' });
+                        if (result.pending) {
+                            // Real (non-GIF) media goes to human review before
+                            // it's public. The thread posts now without it;
+                            // review-media attaches media_url/media_type to
+                            // this row once a moderator approves it, and it
+                            // appears live via the realtime subscription.
+                            showToast(result.reason || 'Media submitted for review — it will appear here once approved.');
+                        } else {
+                            newThread.media_url = result.url;
+                            newThread.media_type = result.type;
+                            mediaStoragePath = result.path;
+                        }
                     } catch (uploadErr) {
                         if (submitBtn) submitBtn.disabled = false;
                         console.error('Media upload failed:', uploadErr);
@@ -2096,10 +2114,14 @@ function initRealtimeSync() {
                 let mediaStoragePath = null;
                 if (selectedMedia.comment) {
                     try {
-                        const { url, type, path } = await uploadSelectedMedia(selectedMedia.comment, appState.currentBoard);
-                        newComment.media_url = url;
-                        newComment.media_type = type;
-                        mediaStoragePath = path;
+                        const result = await uploadSelectedMedia(selectedMedia.comment, appState.currentBoard, { postId: id, kind: 'comment' });
+                        if (result.pending) {
+                            showToast(result.reason || 'Media submitted for review — it will appear here once approved.');
+                        } else {
+                            newComment.media_url = result.url;
+                            newComment.media_type = result.type;
+                            mediaStoragePath = result.path;
+                        }
                     } catch (uploadErr) {
                         if (submitBtn) submitBtn.disabled = false;
                         console.error('Media upload failed:', uploadErr);
@@ -2698,7 +2720,7 @@ function initRealtimeSync() {
          * already hosted on GIPHY's CDN, so posting one costs us zero
          * storage and zero bandwidth on our end.
          */
-        async function uploadSelectedMedia(fileOrGif, boardId) {
+        async function uploadSelectedMedia(fileOrGif, boardId, postCtx) {
             if (fileOrGif && fileOrGif.isGiphy) {
                 return { url: fileOrGif.url, type: 'gif', path: null };
             }
@@ -2707,12 +2729,19 @@ function initRealtimeSync() {
             // was tripping the row-level security error, and intentionally
             // so — see runModerationCheck's comment above). Instead this
             // posts to the `moderate-post` Edge Function, which stages the
-            // file in a private quarantine bucket, runs CSAM/NSFW scanning,
-            // and only then promotes it to the public bucket and hands back
-            // a URL. Nothing unscanned ever becomes publicly reachable.
+            // file in a private quarantine bucket, runs a general NSFW/gore
+            // pre-filter, and queues everything that passes for a human
+            // moderator to approve in admin-review.html — nothing goes
+            // straight to the public bucket. `postId`/`kind` tell the
+            // server which thread/comment row to attach the media to once
+            // it's approved.
             const form = new FormData();
             form.append('file', file);
             form.append('boardId', boardId);
+            if (postCtx) {
+                form.append('postId', postCtx.postId);
+                form.append('kind', postCtx.kind);
+            }
 
             let res;
             try {
@@ -2741,6 +2770,12 @@ function initRealtimeSync() {
 
             if (!res.ok || !result.allowed) {
                 throw new Error(result.reason || result.error || 'Upload was rejected');
+            }
+            // File passed the pre-filter and is queued for human review —
+            // it has no public url yet (that only exists once a moderator
+            // approves it in admin-review.html).
+            if (result.pending) {
+                return { pending: true, reason: result.reason };
             }
             return { url: result.url, type: result.type, path: result.path };
         }
@@ -2888,32 +2923,24 @@ function initRealtimeSync() {
         }
 
         /**
-         * Calls the `moderate-post` Edge Function (the automated moderation
-         * "bot" — spam heuristics + Sightengine NSFW/violence + Thorn Safer
-         * CSAM hash matching, see /supabase/functions/moderate-post).
-         * Runs BEFORE the row is ever inserted, so nothing unapproved is
-         * written to a publicly-readable table, even for an instant.
+         * Calls the `moderate-post` Edge Function's text-check path (doxxing/
+         * spam heuristics + OpenAI moderation — see
+         * /supabase/functions/moderate-post, handleFinalCheck). Runs BEFORE
+         * the row is ever inserted.
+         *
+         * Note: this only ever checks TEXT. Uploaded images/video are
+         * scanned and queued for human review earlier, inside
+         * uploadSelectedMedia's multipart call to the same function
+         * (handleFileUpload) — by the time we get here, mediaUrl is either
+         * null (media still pending review) or a GIF url (pre-moderated by
+         * GIPHY), so there's nothing left for this call to do with it. It's
+         * still passed along for logging/context on the server side.
+         *
          * Fails closed: if the moderation call itself errors out (network,
-         * function down, etc.) the post is held as 'flagged' rather than
-         * either silently blocked or silently let through.
+         * function down, etc.) the post is blocked rather than letting
+         * unscanned text through.
          */
         async function runModerationCheck({ text, mediaUrl, mediaType, mediaStoragePath }) {
-            // TEMP: the moderate-post Edge Function isn't deployed yet.
-            // Text-only posts are allowed through unscanned in the meantime,
-            // but media (images/video) is still hard-blocked below — that's
-            // the part that needs CSAM/NSFW scanning before it can safely
-            // go live, so it stays off until the function is built and this
-            // early-return is removed.
-            if (!mediaUrl) {
-                return { allowed: true, status: 'approved' };
-            }
-            // GIPHY GIFs never touch our storage and are already moderated
-            // by GIPHY itself (search is restricted to GIPHY_RATING), so
-            // they're exempt from the not-yet-built scanner below — unlike
-            // arbitrary user-uploaded images/video, which stay hard-blocked.
-            if (mediaType === 'gif') {
-                return { allowed: true, status: 'approved' };
-            }
             try {
                 const { data, error } = await supabaseClient.functions.invoke('moderate-post', {
                     body: { text, mediaUrl, mediaType, mediaStoragePath }
@@ -2922,10 +2949,7 @@ function initRealtimeSync() {
                 return data; // { allowed, status: 'approved'|'flagged'|'blocked', reason }
             } catch (e) {
                 console.error('Moderation check failed:', e);
-                // No manual-review queue to fall back on anymore, so a
-                // moderation-service outage must reject the post rather
-                // than letting unscanned media through.
-                return { allowed: false, status: 'blocked', reason: 'Media posting is temporarily disabled until moderation is set up. Text-only posts still work.' };
+                return { allowed: false, status: 'blocked', reason: 'Moderation service temporarily unavailable, please try again shortly.' };
             }
         }
 

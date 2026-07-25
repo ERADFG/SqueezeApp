@@ -27,6 +27,11 @@ const QUARANTINE_BUCKET = "post-media-quarantine";
 const PUBLIC_BUCKET = "post-media";
 const SIGNED_URL_TTL_SECONDS = 300; // 5 minutes, just enough to render the review queue
 
+// Tables a pending_media row is allowed to point back at. Keeps the
+// dynamic `.from(row.target_table)` call below from ever being handed
+// an arbitrary/unexpected table name.
+const ALLOWED_TARGET_TABLES = new Set(["threads", "comments"]);
+
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "content-type, x-admin-secret",
@@ -118,7 +123,10 @@ async function decide(id: string | undefined, action: "approve" | "reject"): Pro
 
   const { data: row, error: fetchErr } = await admin
     .from("pending_media")
-    .select("id, storage_path, board_id, media_type, status")
+    // target_table / target_id identify which threads/comments row this
+    // upload belongs to, so approval can attach the published URL to the
+    // post the user actually made instead of leaving it an orphaned file.
+    .select("id, storage_path, board_id, media_type, status, target_table, target_id")
     .eq("id", id)
     .single();
 
@@ -161,6 +169,30 @@ async function decide(id: string | undefined, action: "approve" | "reject"): Pro
 
   const { data: publicUrlData } = admin.storage.from(PUBLIC_BUCKET).getPublicUrl(row.storage_path);
 
+  // This is the step that was missing: publishing the file alone never
+  // made it show up anywhere, because nothing in `threads`/`comments`
+  // pointed at it. Write the public URL onto the post that originally
+  // uploaded it, so interactink.html (which just renders whatever is in
+  // those tables) picks it up — the realtime subscription there already
+  // handles UPDATE events on `threads`, so this shows up live.
+  let attachErr: string | null = null;
+  if (row.target_table && row.target_id && ALLOWED_TARGET_TABLES.has(row.target_table)) {
+    const { error: linkErr } = await admin
+      .from(row.target_table)
+      .update({ media_url: publicUrlData.publicUrl, media_type: row.media_type })
+      .eq("id", row.target_id);
+    if (linkErr) {
+      // Don't fail the whole approval for this — the file is already
+      // public and pending_media below records the URL, so it's
+      // recoverable. But surface it loudly since the post won't show
+      // the media until this is fixed.
+      console.error(`Failed to attach approved media to ${row.target_table}/${row.target_id}:`, linkErr);
+      attachErr = linkErr.message;
+    }
+  } else {
+    console.warn(`pending_media row ${row.id} has no target_table/target_id — approved file has no post to attach to.`);
+  }
+
   const { error: updateErr } = await admin
     .from("pending_media")
     .update({ status: "approved", public_url: publicUrlData.publicUrl })
@@ -172,5 +204,11 @@ async function decide(id: string | undefined, action: "approve" | "reject"): Pro
 
   await admin.storage.from(QUARANTINE_BUCKET).remove([row.storage_path]);
 
-  return json({ ok: true, status: "approved", url: publicUrlData.publicUrl });
+  return json({
+    ok: true,
+    status: "approved",
+    url: publicUrlData.publicUrl,
+    attached: !attachErr && !!row.target_table,
+    attachError: attachErr,
+  });
 }

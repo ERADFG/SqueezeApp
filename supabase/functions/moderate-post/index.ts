@@ -31,6 +31,14 @@ const ALLOWED_TYPES = new Set([
   "video/mp4", "video/webm", "video/quicktime",
 ]);
 
+// Which table a pending upload belongs to, keyed by the `kind` field the
+// client sends. Used so review-media's approve step knows which row to
+// write the published media_url back onto.
+const TARGET_TABLE_BY_KIND: Record<string, string> = {
+  thread: "threads",
+  comment: "comments",
+};
+
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -75,6 +83,13 @@ async function handleFileUpload(req: Request): Promise<Response> {
   const form = await req.formData();
   const file = form.get("file");
   const boardId = String(form.get("boardId") || "misc");
+  // Identifies the thread/comment row this upload belongs to, so approval
+  // later knows where to attach the published media_url. Optional for
+  // backward compatibility, but without it an approved file has nothing
+  // to attach to and will silently stay invisible on the site.
+  const postId = String(form.get("postId") || "").trim() || null;
+  const kind = String(form.get("kind") || "").trim();
+  const targetTable = TARGET_TABLE_BY_KIND[kind] ?? null;
 
   if (!(file instanceof File)) {
     return json({ allowed: false, error: "No file provided" }, 400);
@@ -127,6 +142,8 @@ async function handleFileUpload(req: Request): Promise<Response> {
     board_id: boardId,
     media_type: isVideo ? "video" : "image",
     status: "pending",
+    target_table: targetTable,
+    target_id: postId,
   });
   if (insertErr) {
     console.error("pending_media insert failed:", insertErr);
