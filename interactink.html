@@ -2771,17 +2771,16 @@ function initRealtimeSync() {
             const truncated = text.slice(0, TEXT_PREVIEW_LIMIT).trimEnd();
             const previewHTML = parseRichTextContent(escapeHTML(truncated));
             const fullHTML = parseRichTextContent(escapeHTML(text));
-            return `<span data-preview-body="${uid}">${previewHTML}<span class="text-neutral-600">&hellip; </span><button type="button" class="view-more-btn text-emerald-500 hover:text-emerald-400 font-bold cursor-pointer" data-expand-target="${uid}">View more</button></span><template data-full-body="${uid}">${fullHTML}</template>`;
+            // The card/comment this sits inside is itself clickable (it
+            // navigates to the thread on click), so the button needs its
+            // own stopPropagation/preventDefault right in the handler —
+            // same pattern as the share/bookmark/report buttons below —
+            // otherwise the card's click handler fires first and navigates
+            // away instead of expanding in place.
+            return `<span data-preview-body="${uid}">${previewHTML}<span class="text-neutral-600">&hellip; </span><button type="button" class="view-more-btn text-emerald-500 hover:text-emerald-400 font-bold cursor-pointer" onclick="event.preventDefault(); event.stopPropagation(); expandPostContent('${uid}');">View more</button></span><template data-full-body="${uid}">${fullHTML}</template>`;
         }
 
-        // Delegated so it works for content rendered at any point (feed
-        // cards, thread page, comments) without wiring up per-card handlers.
-        document.addEventListener('click', (e) => {
-            const btn = e.target.closest('.view-more-btn');
-            if (!btn) return;
-            e.preventDefault();
-            e.stopPropagation();
-            const uid = btn.getAttribute('data-expand-target');
+        function expandPostContent(uid) {
             const preview = document.querySelector(`[data-preview-body="${CSS.escape(uid)}"]`);
             const full = document.querySelector(`template[data-full-body="${CSS.escape(uid)}"]`);
             if (preview && full) {
@@ -2792,7 +2791,7 @@ function initRealtimeSync() {
                     setupCrossLinkHoverPreviews();
                 }
             }
-        });
+        }
 
         // Safely embed a JSON value inside a double-quoted HTML attribute
         // (e.g. onclick="fn(${attrJSON(value)})"). JSON.stringify emits raw
