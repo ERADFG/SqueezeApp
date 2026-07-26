@@ -819,6 +819,57 @@
     /* Media player */
     .lightbox-zoomed { transform: scale(1.6); cursor: zoom-out; transition: transform .15s ease; }
     #mediaLightboxContent img { transition: transform .15s ease; }
+
+    /* --- Custom media player (X/Twitter-style) --- */
+    .xv-wrap { position: relative; background: #000; }
+    .xv-wrap video { display: block; width: 100%; height: 100%; object-fit: contain; background: #000; }
+    .xv-controls {
+        position: absolute; left: 0; right: 0; bottom: 0;
+        display: flex; align-items: center; gap: 8px;
+        padding: 6px 8px 8px;
+        background: linear-gradient(to top, rgba(0,0,0,.75), rgba(0,0,0,0));
+        opacity: 0; transition: opacity .15s ease;
+        pointer-events: none;
+    }
+    .xv-wrap:hover .xv-controls, .xv-wrap.xv-controls-visible .xv-controls { opacity: 1; pointer-events: auto; }
+    .xv-btn {
+        display: flex; align-items: center; justify-content: center;
+        width: 28px; height: 28px; border-radius: 9999px;
+        color: #fff; background: transparent; border: none; cursor: pointer;
+        flex-shrink: 0;
+    }
+    .xv-btn:hover { background: rgba(255,255,255,.15); }
+    .xv-progress {
+        flex: 1; position: relative; height: 14px; display: flex; align-items: center; cursor: pointer;
+        touch-action: none;
+    }
+    .xv-progress-track { position: absolute; left: 0; right: 0; height: 3px; border-radius: 3px; background: rgba(255,255,255,.3); }
+    .xv-progress-fill { position: absolute; left: 0; height: 3px; border-radius: 3px; background: #1d9bf0; width: 0%; pointer-events: none; }
+    .xv-progress-buffer { position: absolute; left: 0; height: 3px; border-radius: 3px; background: rgba(255,255,255,.2); width: 0%; pointer-events: none; }
+    .xv-progress-thumb {
+        position: absolute; width: 12px; height: 12px; border-radius: 9999px; background: #1d9bf0;
+        top: 50%; transform: translate(-50%, -50%); left: 0%; box-shadow: 0 0 0 2px rgba(0,0,0,.4);
+        opacity: 0; transition: opacity .1s ease;
+    }
+    .xv-progress:hover .xv-progress-thumb, .xv-progress-thumb.xv-dragging { opacity: 1; }
+    .xv-time { color: #fff; font-size: 11px; font-variant-numeric: tabular-nums; flex-shrink: 0; user-select: none; }
+    .xv-center-btn {
+        position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+        pointer-events: none;
+    }
+    .xv-center-icon {
+        width: 52px; height: 52px; border-radius: 9999px; background: rgba(0,0,0,.55);
+        display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .15s ease, transform .15s ease;
+        transform: scale(.85);
+    }
+    .xv-center-icon.xv-show { opacity: 1; transform: scale(1); }
+    .xv-spinner-wrap { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; pointer-events: none; }
+    .xv-spinner-wrap.xv-show { display: flex; }
+
+    /* --- Custom image viewer (double-tap zoom + drag pan) --- */
+    .xi-lightbox-img { touch-action: none; cursor: zoom-in; user-select: none; -webkit-user-drag: none; }
+    .xi-lightbox-img.xi-zoomed { cursor: grab; }
+    .xi-lightbox-img.xi-panning { cursor: grabbing; }
     </style>
     <link rel="stylesheet" href="enhancements.css">
 </head>
@@ -3414,6 +3465,11 @@ function initRealtimeSync() {
          * default. This isn't a moderation system on its own, but it means
          * nothing graphic renders directly into the feed unprompted, and it
          * buys a beat before a viewer sees an image/video at full clarity.
+         *
+         * Video inline players are X/Twitter-style: custom controls (play,
+         * scrub bar, time, mute, expand), muted autoplay when scrolled
+         * into view, tap-to-toggle playback. Images get a matching
+         * lightbox with double-tap-to-zoom and drag-to-pan.
          */
         function renderPostMediaHTML(mediaUrl, mediaType) {
             if (!mediaUrl) return '';
@@ -3430,17 +3486,14 @@ function initRealtimeSync() {
                     </div>`;
             }
             const inner = mediaType === 'video'
-                ? `<video id="${uid}" src="${safeUrl}#t=0.1" class="w-full max-h-80 object-cover" muted playsinline preload="metadata"
-                        onloadedmetadata="handleMediaLoad(this); tagVideoDuration('${uid}')" onerror="handleMediaError(this)"></video>
-                   <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                       <div class="w-12 h-12 rounded-full bg-black/60 flex items-center justify-center">
-                           <i data-lucide="play" class="w-6 h-6 text-white ml-0.5"></i>
-                       </div>
+                ? `<div class="xv-wrap w-full h-full">
+                       <video id="${uid}" src="${safeUrl}#t=0.1" muted playsinline preload="metadata"
+                            onloadedmetadata="handleMediaLoad(this); tagVideoDuration('${uid}')" onerror="handleMediaError(this)"></video>
                    </div>
-                   <span class="media-duration absolute bottom-1.5 left-1.5 bg-black/70 text-[10px] px-1.5 py-0.5 rounded text-neutral-200 tabular-nums"></span>`
+                   <span class="media-duration absolute bottom-1.5 left-1.5 bg-black/70 text-[10px] px-1.5 py-0.5 rounded text-neutral-200 tabular-nums z-10"></span>`
                 : `<img src="${safeUrl}" loading="lazy" class="w-full max-h-80 object-cover" onload="handleMediaLoad(this)" onerror="handleMediaError(this)">`;
             return `
-                <div class="post-media-wrap relative mt-2 mb-2 rounded-lg overflow-hidden border border-neutral-800 cursor-pointer max-w-sm bg-neutral-900" data-revealed="false" data-media-type="${mediaType}"
+                <div class="post-media-wrap relative mt-2 mb-2 rounded-lg overflow-hidden border border-neutral-800 cursor-pointer max-w-sm bg-neutral-900" data-revealed="false" data-media-type="${mediaType}" data-media-url="${safeUrl}"
                      onclick="event.preventDefault(); event.stopPropagation(); handleMediaTap(event, '${safeUrl}', '${mediaType}');">
                     <div class="media-skeleton absolute inset-0 animate-pulse bg-neutral-800 flex items-center justify-center">
                         <i data-lucide="${mediaType === 'video' ? 'video' : 'image'}" class="w-6 h-6 text-neutral-600"></i>
@@ -3480,9 +3533,14 @@ function initRealtimeSync() {
             const wrap = vid && vid.closest('.post-media-wrap');
             const badge = wrap && wrap.querySelector('.media-duration');
             if (!vid || !badge || !isFinite(vid.duration)) return;
-            const m = Math.floor(vid.duration / 60);
-            const s = Math.floor(vid.duration % 60).toString().padStart(2, '0');
-            badge.textContent = `${m}:${s}`;
+            badge.textContent = formatTime(vid.duration);
+        }
+
+        function formatTime(seconds) {
+            if (!isFinite(seconds) || seconds < 0) return '0:00';
+            const m = Math.floor(seconds / 60);
+            const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
         }
 
         function handleMediaTap(evt, url, mediaType) {
@@ -3492,34 +3550,271 @@ function initRealtimeSync() {
                 const veil = wrap.querySelector('.post-media-veil');
                 if (veil) veil.remove();
                 if (mediaType === 'video') {
-                    // First tap just reveals — second tap (on the now-visible
-                    // player) opens the full lightbox instead of autoplaying
-                    // inline, so a tap-to-view video doesn't blast sound/motion
-                    // the instant it's uncovered.
-                    const playIcon = wrap.querySelector('.pointer-events-none');
-                    const vid = wrap.querySelector('video');
-                    if (vid) vid.controls = false;
-                    if (playIcon) playIcon.classList.remove('hidden');
+                    initInlineVideoPlayer(wrap);
                 }
+                return;
+            }
+            if (mediaType === 'video') {
+                // Once revealed, tapping the body of the video toggles
+                // play/pause (X-style) rather than reopening anything —
+                // the expand button (in the controls bar) opens the
+                // fullscreen lightbox instead. Ignore taps that landed on
+                // a control element (handled by their own listeners).
+                if (evt.target.closest('.xv-controls')) return;
+                const vid = wrap.querySelector('video');
+                if (vid) toggleInlinePlay(vid);
                 return;
             }
             openLightbox(url, mediaType);
         }
 
-        function openLightbox(url, mediaType) {
+        // ---------------- Custom inline video player (X-style) ----------------
+
+        const xvObserver = ('IntersectionObserver' in window) ? new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                const vid = entry.target;
+                if (vid.dataset.userPaused === 'true') return; // respect an explicit manual pause
+                if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
+                    vid.play().catch(() => {});
+                } else {
+                    vid.pause();
+                }
+            });
+        }, { threshold: [0, 0.6, 1] }) : null;
+
+        function initInlineVideoPlayer(wrap) {
+            const vid = wrap.querySelector('video');
+            if (!vid || wrap.dataset.playerInit === 'true') return;
+            wrap.dataset.playerInit = 'true';
+            vid.controls = false;
+
+            const xvWrap = wrap.querySelector('.xv-wrap');
+            xvWrap.insertAdjacentHTML('beforeend', buildVideoControlsHTML() + `
+                <div class="xv-center-btn"><div class="xv-center-icon"><i data-lucide="play" class="w-6 h-6 text-white ml-0.5"></i></div></div>
+                <div class="xv-spinner-wrap"><i data-lucide="loader-2" class="w-7 h-7 text-white animate-spin"></i></div>`);
+            if (window.lucide) lucide.createIcons();
+
+            wireVideoControls(xvWrap, vid, { onExpand: () => {
+                vid.pause();
+                openLightbox(wrap.getAttribute('data-media-url'), 'video', vid.currentTime);
+            }});
+
+            if (xvObserver) xvObserver.observe(vid);
+        }
+
+        function toggleInlinePlay(vid) {
+            if (vid.paused) {
+                vid.dataset.userPaused = 'false';
+                vid.play().catch(() => {});
+            } else {
+                vid.dataset.userPaused = 'true';
+                vid.pause();
+            }
+        }
+
+        // Shared controls-bar markup for both the inline player and the
+        // lightbox player. `expandBtn` is omitted inside the lightbox
+        // since it's already fullscreen there.
+        function buildVideoControlsHTML(expandBtn = true) {
+            return `
+                <div class="xv-controls" onclick="event.stopPropagation()">
+                    <button type="button" class="xv-btn xv-play-btn" aria-label="Play/Pause">
+                        <i data-lucide="play" class="w-4 h-4"></i>
+                    </button>
+                    <div class="xv-progress">
+                        <div class="xv-progress-track"></div>
+                        <div class="xv-progress-buffer"></div>
+                        <div class="xv-progress-fill"></div>
+                        <div class="xv-progress-thumb"></div>
+                    </div>
+                    <span class="xv-time">0:00</span>
+                    <button type="button" class="xv-btn xv-mute-btn" aria-label="Mute/Unmute">
+                        <i data-lucide="volume-2" class="w-4 h-4"></i>
+                    </button>
+                    ${expandBtn ? `<button type="button" class="xv-btn xv-expand-btn" aria-label="Expand"><i data-lucide="maximize-2" class="w-3.5 h-3.5"></i></button>` : ''}
+                </div>`;
+        }
+
+        // Wires play/pause, scrub bar (click + drag), mute, time display,
+        // and buffering spinner for a given (xv-wrap container, video)
+        // pair. Works identically for the inline player and the lightbox.
+        function wireVideoControls(xvWrap, vid, { onExpand } = {}) {
+            const playBtn = xvWrap.querySelector('.xv-play-btn');
+            const muteBtn = xvWrap.querySelector('.xv-mute-btn');
+            const expandBtn = xvWrap.querySelector('.xv-expand-btn');
+            const progress = xvWrap.querySelector('.xv-progress');
+            const fill = xvWrap.querySelector('.xv-progress-fill');
+            const buffer = xvWrap.querySelector('.xv-progress-buffer');
+            const thumb = xvWrap.querySelector('.xv-progress-thumb');
+            const timeEl = xvWrap.querySelector('.xv-time');
+            const centerIcon = xvWrap.querySelector('.xv-center-icon');
+            const spinnerWrap = xvWrap.querySelector('.xv-spinner-wrap');
+
+            function setPlayIcon(isPlaying) {
+                playBtn.innerHTML = isPlaying
+                    ? '<i data-lucide="pause" class="w-4 h-4"></i>'
+                    : '<i data-lucide="play" class="w-4 h-4"></i>';
+                if (window.lucide) lucide.createIcons();
+            }
+            function flashCenterIcon(isPlaying) {
+                if (!centerIcon) return;
+                centerIcon.innerHTML = isPlaying
+                    ? '<i data-lucide="play" class="w-6 h-6 text-white ml-0.5"></i>'
+                    : '<i data-lucide="pause" class="w-6 h-6 text-white"></i>';
+                if (window.lucide) lucide.createIcons();
+                centerIcon.classList.add('xv-show');
+                clearTimeout(xvWrap._flashTimer);
+                xvWrap._flashTimer = setTimeout(() => centerIcon.classList.remove('xv-show'), 420);
+            }
+            function updateProgress() {
+                if (!isFinite(vid.duration) || vid.duration <= 0) return;
+                const pct = (vid.currentTime / vid.duration) * 100;
+                fill.style.width = pct + '%';
+                thumb.style.left = pct + '%';
+                timeEl.textContent = `${formatTime(vid.currentTime)} / ${formatTime(vid.duration)}`;
+            }
+            function updateBuffered() {
+                if (!vid.buffered.length || !isFinite(vid.duration) || vid.duration <= 0) return;
+                const end = vid.buffered.end(vid.buffered.length - 1);
+                buffer.style.width = Math.min(100, (end / vid.duration) * 100) + '%';
+            }
+            function seekToClientX(clientX) {
+                const rect = progress.getBoundingClientRect();
+                const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+                if (isFinite(vid.duration)) vid.currentTime = ratio * vid.duration;
+                updateProgress();
+            }
+
+            playBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleInlinePlay(vid); });
+            muteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                vid.muted = !vid.muted;
+                muteBtn.innerHTML = vid.muted
+                    ? '<i data-lucide="volume-x" class="w-4 h-4"></i>'
+                    : '<i data-lucide="volume-2" class="w-4 h-4"></i>';
+                if (window.lucide) lucide.createIcons();
+            });
+            if (expandBtn && onExpand) {
+                expandBtn.addEventListener('click', (e) => { e.stopPropagation(); onExpand(); });
+            }
+
+            let dragging = false;
+            progress.addEventListener('pointerdown', (e) => {
+                dragging = true;
+                thumb.classList.add('xv-dragging');
+                progress.setPointerCapture(e.pointerId);
+                seekToClientX(e.clientX);
+            });
+            progress.addEventListener('pointermove', (e) => { if (dragging) seekToClientX(e.clientX); });
+            progress.addEventListener('pointerup', (e) => {
+                dragging = false;
+                thumb.classList.remove('xv-dragging');
+                try { progress.releasePointerCapture(e.pointerId); } catch (_) {}
+            });
+            progress.addEventListener('click', (e) => e.stopPropagation());
+
+            vid.addEventListener('play', () => { setPlayIcon(true); flashCenterIcon(true); vid.dataset.userPaused = 'false'; });
+            vid.addEventListener('pause', () => { setPlayIcon(false); flashCenterIcon(false); });
+            vid.addEventListener('timeupdate', updateProgress);
+            vid.addEventListener('progress', updateBuffered);
+            vid.addEventListener('waiting', () => spinnerWrap && spinnerWrap.classList.add('xv-show'));
+            vid.addEventListener('playing', () => spinnerWrap && spinnerWrap.classList.remove('xv-show'));
+            vid.addEventListener('loadedmetadata', updateProgress);
+
+            setPlayIcon(!vid.paused);
+            muteBtn.innerHTML = vid.muted
+                ? '<i data-lucide="volume-x" class="w-4 h-4"></i>'
+                : '<i data-lucide="volume-2" class="w-4 h-4"></i>';
+            if (window.lucide) lucide.createIcons();
+        }
+
+        // ---------------- Lightbox (images + video) ----------------
+
+        function openLightbox(url, mediaType, startTime = 0) {
             const content = document.getElementById('mediaLightboxContent');
             content.innerHTML = `<div class="lightbox-spinner flex items-center justify-center w-16 h-16">
                     <i data-lucide="loader-2" class="w-8 h-8 text-neutral-400 animate-spin"></i>
-                </div>` + (mediaType === 'video'
-                ? `<video src="${url}" class="hidden max-w-full max-h-[85vh] rounded" controls autoplay playsinline
-                        oncanplay="this.classList.remove('hidden'); this.previousElementSibling.remove();"
-                        onerror="lightboxMediaError()"></video>`
-                : `<img src="${url}" class="hidden max-w-full max-h-[85vh] rounded cursor-zoom-in" onclick="event.stopPropagation(); this.classList.toggle('lightbox-zoomed');"
-                        onload="this.classList.remove('hidden'); this.previousElementSibling.remove();"
-                        onerror="lightboxMediaError()">`);
+                </div>`;
+            if (mediaType === 'video') {
+                content.insertAdjacentHTML('beforeend', `
+                    <div class="xv-wrap hidden max-w-full max-h-[85vh] rounded" onclick="event.stopPropagation()">
+                        <video src="${url}" playsinline
+                               oncanplay="this.closest('.xv-wrap').classList.remove('hidden'); this.closest('.xv-wrap').previousElementSibling.remove(); lightboxVideoReady(this, ${startTime});"
+                               onerror="lightboxMediaError()"></video>
+                    </div>`);
+            } else {
+                content.insertAdjacentHTML('beforeend', `
+                    <img src="${url}" class="hidden max-w-full max-h-[85vh] rounded xi-lightbox-img"
+                         onload="this.classList.remove('hidden'); this.previousElementSibling.remove(); wireImageZoomPan(this);"
+                         onerror="lightboxMediaError()">`);
+            }
             document.getElementById('mediaLightbox').classList.remove('hidden');
             document.addEventListener('keydown', handleLightboxKeydown);
             if (window.lucide) lucide.createIcons();
+        }
+
+        function lightboxVideoReady(vid, startTime) {
+            const xvWrap = vid.closest('.xv-wrap');
+            xvWrap.insertAdjacentHTML('beforeend', buildVideoControlsHTML(false) + `
+                <div class="xv-spinner-wrap"><i data-lucide="loader-2" class="w-8 h-8 text-white animate-spin"></i></div>`);
+            xvWrap.classList.add('xv-controls-visible');
+            if (window.lucide) lucide.createIcons();
+            wireVideoControls(xvWrap, vid);
+            if (startTime > 0 && isFinite(vid.duration)) vid.currentTime = startTime;
+            vid.muted = false;
+            vid.play().catch(() => {});
+            // Tap the video body (outside the controls bar) to toggle play/pause.
+            vid.addEventListener('click', () => toggleInlinePlay(vid));
+        }
+
+        // Double-tap/double-click to zoom in on the tapped point, then
+        // drag to pan while zoomed. Single tap elsewhere in the lightbox
+        // still closes it (handled by the lightbox's own click handler).
+        function wireImageZoomPan(img) {
+            let scale = 1, panX = 0, panY = 0;
+            let lastTap = 0, dragging = false, startX = 0, startY = 0, startPanX = 0, startPanY = 0;
+
+            function applyTransform() {
+                img.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+                img.classList.toggle('xi-zoomed', scale > 1);
+            }
+            function toggleZoom(clientX, clientY) {
+                if (scale > 1) {
+                    scale = 1; panX = 0; panY = 0;
+                } else {
+                    scale = 2.5;
+                    const rect = img.getBoundingClientRect();
+                    panX = (rect.width / 2 - (clientX - rect.left)) * (scale - 1) / scale;
+                    panY = (rect.height / 2 - (clientY - rect.top)) * (scale - 1) / scale;
+                }
+                applyTransform();
+            }
+
+            img.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const now = Date.now();
+                if (now - lastTap < 300) toggleZoom(e.clientX, e.clientY);
+                lastTap = now;
+            });
+            img.addEventListener('pointerdown', (e) => {
+                if (scale <= 1) return;
+                dragging = true;
+                img.classList.add('xi-panning');
+                startX = e.clientX; startY = e.clientY;
+                startPanX = panX; startPanY = panY;
+                img.setPointerCapture(e.pointerId);
+            });
+            img.addEventListener('pointermove', (e) => {
+                if (!dragging) return;
+                panX = startPanX + (e.clientX - startX);
+                panY = startPanY + (e.clientY - startY);
+                applyTransform();
+            });
+            img.addEventListener('pointerup', (e) => {
+                dragging = false;
+                img.classList.remove('xi-panning');
+                try { img.releasePointerCapture(e.pointerId); } catch (_) {}
+            });
         }
 
         function lightboxMediaError() {
@@ -3536,6 +3831,8 @@ function initRealtimeSync() {
 
         function closeLightbox(evt) {
             if (evt && evt.target.closest('#mediaLightboxContent') && evt.target.tagName !== 'DIV') return;
+            const vid = document.querySelector('#mediaLightboxContent video');
+            if (vid) vid.pause();
             document.getElementById('mediaLightbox').classList.add('hidden');
             document.getElementById('mediaLightboxContent').innerHTML = '';
             document.removeEventListener('keydown', handleLightboxKeydown);
