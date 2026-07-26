@@ -1637,7 +1637,7 @@
         function updateThreadPageOpContent(threadId) {
             const thread = appState.threads[threadId];
             if (!thread) return;
-            document.getElementById('threadPageOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content));
+            document.getElementById('threadPageOpBody').innerHTML = renderExpandableContent(thread.content, `op-${threadId}`);
             const extra = document.getElementById('threadPageOpExtra');
             if (extra) extra.innerHTML = renderPostMediaHTML(thread.media_url, thread.media_type) + renderPollHTML(threadId);
         }
@@ -2089,7 +2089,7 @@
                 openSearchResultThread(thread);
             });
 
-            const processedContent = parseRichTextContent(escapeHTML(thread.content));
+            const processedContent = renderExpandableContent(thread.content, `search-${thread.id}`);
 
             card.innerHTML = `
                 <div class="flex items-center gap-2 text-[11px] text-neutral-500 mb-1.5">
@@ -2633,7 +2633,7 @@ function initRealtimeSync() {
                 openThreadPage(thread.id);
             });
             
-            const processedContent = parseRichTextContent(escapeHTML(thread.content));
+            const processedContent = renderExpandableContent(thread.content, `feed-${thread.id}`);
             
             card.innerHTML = `
                 ${thread.pinned ? `<div class="flex items-center gap-1 text-[11px] font-bold text-emerald-500 uppercase tracking-wide mb-1"><i data-lucide="pin" class="w-3 h-3"></i> Pinned</div>` : ''}
@@ -2752,6 +2752,47 @@ function initRealtimeSync() {
                 tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
             );
         }
+
+        // Long text posts (threads and comments can run up to 1000 chars) get
+        // clipped to a short preview with a "View more" toggle, rather than
+        // dumping the whole wall of text into the feed/comment list. The
+        // truncation happens on the *raw* text, before escaping/rich-text
+        // processing, so we never cut a post mid-HTML-entity or mid-link.
+        // The full version is stashed in a <template> (parsed but inert)
+        // right next to the preview so expanding it is just an innerHTML
+        // swap — no re-fetching, no re-escaping.
+        const TEXT_PREVIEW_LIMIT = 300;
+
+        function renderExpandableContent(rawText, uid) {
+            const text = rawText || '';
+            if (text.length <= TEXT_PREVIEW_LIMIT) {
+                return parseRichTextContent(escapeHTML(text));
+            }
+            const truncated = text.slice(0, TEXT_PREVIEW_LIMIT).trimEnd();
+            const previewHTML = parseRichTextContent(escapeHTML(truncated));
+            const fullHTML = parseRichTextContent(escapeHTML(text));
+            return `<span data-preview-body="${uid}">${previewHTML}<span class="text-neutral-600">&hellip; </span><button type="button" class="view-more-btn text-emerald-500 hover:text-emerald-400 font-bold cursor-pointer" data-expand-target="${uid}">View more</button></span><template data-full-body="${uid}">${fullHTML}</template>`;
+        }
+
+        // Delegated so it works for content rendered at any point (feed
+        // cards, thread page, comments) without wiring up per-card handlers.
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('.view-more-btn');
+            if (!btn) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const uid = btn.getAttribute('data-expand-target');
+            const preview = document.querySelector(`[data-preview-body="${CSS.escape(uid)}"]`);
+            const full = document.querySelector(`template[data-full-body="${CSS.escape(uid)}"]`);
+            if (preview && full) {
+                preview.innerHTML = full.innerHTML;
+                // Newly-revealed >>ID links need their hover-preview
+                // listeners (re)wired, same as after any comment render.
+                if (typeof setupCrossLinkHoverPreviews === 'function') {
+                    setupCrossLinkHoverPreviews();
+                }
+            }
+        });
 
         // Safely embed a JSON value inside a double-quoted HTML attribute
         // (e.g. onclick="fn(${attrJSON(value)})"). JSON.stringify emits raw
@@ -3569,7 +3610,7 @@ function initRealtimeSync() {
         const meta = InkRouting.getBoardMeta(appState.currentBoard);
         document.getElementById('threadPageMeta').innerText = `${meta.label} · Thread >>${thread.id}`;
         document.getElementById('threadPageTitle').innerHTML = renderTripcodeLabel(thread.title);
-        document.getElementById('threadPageOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content));
+        document.getElementById('threadPageOpBody').innerHTML = renderExpandableContent(thread.content, `op-${tId}`);
         document.getElementById('threadPageOpExtra').innerHTML = renderPostMediaHTML(thread.media_url, thread.media_type) + renderPollHTML(thread.id);
         fetchPollForThread(tId).then(() => {
             // Only re-render if the user hasn't already navigated away from
@@ -3702,7 +3743,7 @@ function initRealtimeSync() {
             item.setAttribute('tabindex', '0');
  
             const dateStr = new Date(node.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            const structuralLinkedProcessedText = parseRichTextContent(escapeHTML(node.text));
+            const structuralLinkedProcessedText = renderExpandableContent(node.text, `ccard-${node.id}`);
             const replyCount = node.children ? node.children.length : 0;
  
             item.innerHTML = `
@@ -3736,7 +3777,7 @@ function initRealtimeSync() {
         // exactly like the thread page renders the OP plus its comments.
         function renderCommentFocusView(container, node) {
             const dateStr = new Date(node.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            const structuralLinkedProcessedText = parseRichTextContent(escapeHTML(node.text));
+            const structuralLinkedProcessedText = renderExpandableContent(node.text, `cfocus-${node.id}`);
             const replyCount = node.children ? node.children.length : 0;
  
             const focusBlock = document.createElement('div');
