@@ -623,8 +623,40 @@
         /* ==================================================================
            THREAD PAGE (full-page comment view, replaces the old modal)
         ================================================================== */
-        #threadPage { display: none; flex-direction: column; min-height: 100%; }
+        #threadPage {
+            display: none;
+            flex-direction: column;
+            min-height: 100%;
+            opacity: 0;
+            transform: translateY(14px) scale(0.99);
+            transition: opacity 260ms cubic-bezier(.22,1,.36,1), transform 320ms cubic-bezier(.22,1,.36,1);
+        }
         #threadPage.active { display: flex; }
+        #threadPage.active.entered { opacity: 1; transform: translateY(0) scale(1); }
+
+        /* ==================================================================
+           POLLS
+        ================================================================== */
+        .poll-block { animation: pollBlockIn 280ms cubic-bezier(.22,1,.36,1); }
+        @keyframes pollBlockIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .poll-option-row {
+            transition: border-color 150ms ease, background-color 150ms ease, transform 150ms cubic-bezier(.34,1.56,.64,1);
+            will-change: transform;
+        }
+        .poll-option-row.poll-clickable { cursor: pointer; }
+        .poll-option-row.poll-clickable:hover { border-color: #059669; }
+        .poll-option-row.poll-clickable:active { transform: scale(0.97); }
+        .poll-bar-fill { transition: width 600ms cubic-bezier(.22,1,.36,1); }
+        .poll-option-row.poll-just-voted { animation: pollVotedPulse 480ms cubic-bezier(.34,1.56,.64,1); }
+        @keyframes pollVotedPulse {
+            0% { transform: scale(1); }
+            40% { transform: scale(1.035); border-color: #10b981; }
+            100% { transform: scale(1); }
+        }
+        .poll-pct { transition: color 200ms ease; }
         .thread-page-header {
             position: sticky;
             top: 0;
@@ -903,6 +935,7 @@
                         <span id="threadPageTitle" class="font-bold text-white text-base truncate uppercase tracking-wide border-b border-neutral-900 pb-1 w-full">Subject Target</span>
                     </div>
                     <p id="threadPageOpBody" class="text-neutral-200 text-sm leading-relaxed break-words whitespace-pre-wrap pt-1"></p>
+                    <div id="threadPageOpExtra"></div>
                     <div id="threadPageOpActions" class="flex items-center gap-6 text-xs text-neutral-500 pt-3"></div>
                 </div>
 
@@ -1088,6 +1121,7 @@
         comments: {}, 
         commentCounts: {}, 
         polls: {}, 
+        pollJustVoted: null,
         activeThreadId: null, 
         commentFocusStack: [],
         userSeed: null, 
@@ -1551,20 +1585,31 @@
             if (!poll || !poll.options || !poll.options.length) return '';
             const votedOptionId = getPollVoteMap()[poll.pollId] || null;
             const totalVotes = poll.options.reduce((sum, o) => sum + (o.vote_count || 0), 0);
+            // One-shot: if this exact poll+option was just voted on, play a
+            // little pulse on it, then clear the flag so a later re-render
+            // (e.g. a realtime update) doesn't replay the animation.
+            const justVotedOptionId = (appState.pollJustVoted && appState.pollJustVoted.threadId === threadId)
+                ? appState.pollJustVoted.optionId : null;
+            if (justVotedOptionId) appState.pollJustVoted = null;
             const optionsHTML = poll.options.map(o => {
                 const pct = totalVotes > 0 ? Math.round(((o.vote_count || 0) / totalVotes) * 100) : 0;
                 const isVoted = votedOptionId === o.id;
                 const canVote = !votedOptionId;
                 const barColor = isVoted ? 'bg-emerald-900/40' : 'bg-neutral-800/70';
+                const rowClasses = [
+                    'poll-option-row', 'relative', 'border', 'border-neutral-800', 'rounded-lg', 'overflow-hidden', 'mb-1.5',
+                    canVote ? 'poll-clickable' : '',
+                    (justVotedOptionId === o.id) ? 'poll-just-voted' : ''
+                ].filter(Boolean).join(' ');
                 const clickAttrs = canVote
                     ? `role="button" tabindex="0" onclick="event.preventDefault(); event.stopPropagation(); castPollVote('${threadId}', '${o.id}');" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); castPollVote('${threadId}', '${o.id}');}"`
                     : '';
                 return `
-                    <div class="relative border border-neutral-800 rounded-lg overflow-hidden mb-1.5${canVote ? ' cursor-pointer hover:border-emerald-600' : ''}" ${clickAttrs}>
-                        <div class="absolute inset-y-0 left-0 ${barColor}" style="width:${pct}%"></div>
+                    <div class="${rowClasses}" ${clickAttrs}>
+                        <div class="poll-bar-fill absolute inset-y-0 left-0 ${barColor}" style="width:${pct}%"></div>
                         <div class="relative flex justify-between items-center gap-2 px-3 py-2 text-sm ${isVoted ? 'text-emerald-400 font-bold' : 'text-neutral-300'}">
                             <span class="break-words">${escapeHTML(o.label)}${isVoted ? ' ✓' : ''}</span>
-                            <span class="text-xs font-mono shrink-0">${pct}% <span class="text-neutral-600">(${o.vote_count || 0})</span></span>
+                            <span class="poll-pct text-xs font-mono shrink-0">${pct}% <span class="text-neutral-600">(${o.vote_count || 0})</span></span>
                         </div>
                     </div>`;
             }).join('');
@@ -1573,6 +1618,23 @@
                     ${optionsHTML}
                     <div class="text-[11px] text-neutral-600 mt-1">${totalVotes} vote${totalVotes === 1 ? '' : 's'}</div>
                 </div>`;
+        }
+
+        // Keeps the OP's text (in the <p>, which whitespace-pre-wrap relies
+        // on to preserve line breaks) separate from its media/poll (in a
+        // plain <div>). A <p> can't validly contain block elements like a
+        // poll's <div>s or an image wrapper — browsers "fix" this by
+        // silently breaking the paragraph apart, and because the <p> has
+        // whitespace-pre-wrap, the stray whitespace between templated poll
+        // rows would then render as visible gaps. Every place that needs to
+        // (re)draw the OP's body should call this instead of touching
+        // threadPageOpBody directly.
+        function updateThreadPageOpContent(threadId) {
+            const thread = appState.threads[threadId];
+            if (!thread) return;
+            document.getElementById('threadPageOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content));
+            const extra = document.getElementById('threadPageOpExtra');
+            if (extra) extra.innerHTML = renderPostMediaHTML(thread.media_url, thread.media_type) + renderPollHTML(threadId);
         }
 
         async function castPollVote(threadId, optionId) {
@@ -1610,11 +1672,11 @@
                 }
                 voteMap[poll.pollId] = optionId;
                 savePollVoteMap(voteMap);
-                renderThreads();
+                appState.pollJustVoted = { threadId, optionId };
                 if (appState.activeThreadId === threadId) {
-                    const thread = appState.threads[threadId];
-                    document.getElementById('threadPageOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content)) + renderPostMediaHTML(thread.media_url, thread.media_type) + renderPollHTML(threadId);
+                    updateThreadPageOpContent(threadId);
                 }
+                renderThreads();
             } catch (err) {
                 console.error('Vote failed:', err);
                 showToast('Vote failed.', true);
@@ -1795,6 +1857,7 @@
             const threadPageEl = document.getElementById('threadPage');
             threadPageEl.classList.add('hidden');
             threadPageEl.classList.remove('active');
+            threadPageEl.classList.remove('entered');
             appState.activeThreadId = null;
 
             const searchViewEl = document.getElementById('searchView');
@@ -3329,6 +3392,7 @@ function initRealtimeSync() {
 
             document.getElementById('threadPage').classList.add('hidden');
             document.getElementById('threadPage').classList.remove('active');
+            document.getElementById('threadPage').classList.remove('entered');
             document.getElementById('feedView').classList.remove('hidden');
             appState.activeThreadId = null;
             appState.commentFocusStack = [];
@@ -3390,12 +3454,13 @@ function initRealtimeSync() {
         const meta = InkRouting.getBoardMeta(appState.currentBoard);
         document.getElementById('threadPageMeta').innerText = `${meta.label} · Thread >>${thread.id}`;
         document.getElementById('threadPageTitle').innerHTML = renderTripcodeLabel(thread.title);
-        document.getElementById('threadPageOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content)) + renderPostMediaHTML(thread.media_url, thread.media_type) + renderPollHTML(thread.id);
+        document.getElementById('threadPageOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content));
+        document.getElementById('threadPageOpExtra').innerHTML = renderPostMediaHTML(thread.media_url, thread.media_type) + renderPollHTML(thread.id);
         fetchPollForThread(tId).then(() => {
             // Only re-render if the user hasn't already navigated away from
             // this thread while the fetch was in flight.
             if (appState.activeThreadId === tId) {
-                document.getElementById('threadPageOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content)) + renderPostMediaHTML(thread.media_url, thread.media_type) + renderPollHTML(tId);
+                updateThreadPageOpContent(tId);
             }
         });
         document.getElementById('threadPageOpActions').innerHTML = `
@@ -3406,8 +3471,15 @@ function initRealtimeSync() {
 
         document.getElementById('feedView').classList.add('hidden');
         const threadPageEl = document.getElementById('threadPage');
+        threadPageEl.classList.remove('entered');
         threadPageEl.classList.remove('hidden');
         threadPageEl.classList.add('active');
+        // Force a reflow so the browser registers the pre-transition state
+        // (opacity: 0, translateY) before flipping to "entered" — without
+        // this the transition is skipped entirely since both class changes
+        // would otherwise land in the same paint.
+        void threadPageEl.offsetHeight;
+        requestAnimationFrame(() => threadPageEl.classList.add('entered'));
         const fab = document.getElementById('mobileComposeFab');
         if (fab) fab.style.display = 'none';
         window.scrollTo({ top: 0, behavior: 'auto' });
