@@ -824,6 +824,24 @@
                 <div id="threadMediaPreviewWrap" class="hidden mt-3"></div>
                 <div id="threadMediaError" class="hidden mt-2 text-xs text-red-400"></div>
 
+                <!-- Poll builder: hidden until the user taps the poll icon below.
+                     Options are capped client-side at POLL_MAX_OPTIONS (5); the
+                     database also enforces this cap independently (see SQL). -->
+                <div id="threadPollBuilder" class="hidden mt-3 border border-neutral-800 rounded-lg p-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold text-neutral-300 uppercase tracking-wide flex items-center gap-1.5">
+                            <i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i> Poll
+                        </span>
+                        <button type="button" onclick="removePollBuilder()" class="text-neutral-500 hover:text-red-400 cursor-pointer" aria-label="Remove poll">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    <div id="threadPollOptionsWrap" class="space-y-1.5"></div>
+                    <button type="button" id="threadPollAddOptionBtn" onclick="addPollOptionInput()" class="mt-1.5 text-xs text-emerald-500 hover:text-emerald-400 flex items-center gap-1 cursor-pointer">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add option
+                    </button>
+                </div>
+
                 <div class="flex items-center gap-2 mt-3 pt-3 border-t border-neutral-950">
                     <label id="threadCaptchaBox" class="ink-captcha-box">
                         <input type="checkbox" id="threadCaptchaCheckbox" class="ink-captcha-checkbox" onclick="return handleCaptchaClick(event, 'thread')">
@@ -839,6 +857,9 @@
                         </label>
                         <input type="file" id="threadMediaInput" accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm" class="hidden">
                         <button type="button" data-gif-trigger class="cursor-pointer hover:text-neutral-300 transition flex items-center border border-neutral-700 rounded px-1 leading-none text-[10px] font-black tracking-tight" title="Attach a GIF from GIPHY" onclick="openGifPicker('thread', this)">GIF</button>
+                        <button type="button" id="threadPollToggleBtn" class="cursor-pointer hover:text-neutral-300 transition flex items-center" title="Add a poll" onclick="togglePollBuilder()">
+                            <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
+                        </button>
                         <i data-lucide="shield-check" class="w-4 h-4 text-neutral-500" title="You'll get an automatic anonymous ID for this thread"></i>
                         <span class="text-xs text-neutral-500 hidden sm:inline">Anonymous Posting</span>
                     </div>
@@ -1066,6 +1087,7 @@
         threads: {}, 
         comments: {}, 
         commentCounts: {}, 
+        polls: {}, 
         activeThreadId: null, 
         commentFocusStack: [],
         userSeed: null, 
@@ -1445,6 +1467,161 @@
             return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
+        // ================== Polls ==================
+        // A thread can optionally carry a poll with between POLL_MIN_OPTIONS
+        // and POLL_MAX_OPTIONS options. The cap is enforced here for UX and
+        // independently in the database (option_index check constraint +
+        // a unique(poll_id, option_index) index), so it holds even if
+        // someone bypasses the UI and calls the API directly.
+        const POLL_MIN_OPTIONS = 2;
+        const POLL_MAX_OPTIONS = 5;
+        let pollBuilderActive = false;
+
+        function togglePollBuilder() {
+            const wrap = document.getElementById('threadPollBuilder');
+            pollBuilderActive = !pollBuilderActive;
+            if (pollBuilderActive) {
+                wrap.classList.remove('hidden');
+                if (document.getElementById('threadPollOptionsWrap').children.length === 0) {
+                    addPollOptionInput();
+                    addPollOptionInput();
+                }
+            } else {
+                wrap.classList.add('hidden');
+            }
+        }
+
+        function removePollBuilder() {
+            pollBuilderActive = false;
+            document.getElementById('threadPollBuilder').classList.add('hidden');
+            document.getElementById('threadPollOptionsWrap').innerHTML = '';
+        }
+
+        function addPollOptionInput() {
+            const wrap = document.getElementById('threadPollOptionsWrap');
+            if (wrap.children.length >= POLL_MAX_OPTIONS) {
+                showToast(`A poll can have at most ${POLL_MAX_OPTIONS} options.`, true);
+                return;
+            }
+            const row = document.createElement('div');
+            row.className = 'flex items-center gap-2';
+            row.innerHTML = `
+                <input type="text" class="poll-option-input flex-1 bg-neutral-900 border border-neutral-800 rounded px-2 py-1.5 text-sm text-white focus:outline-none placeholder:text-neutral-600" placeholder="Option" maxlength="80">
+                <button type="button" class="poll-option-remove-btn text-neutral-600 hover:text-red-400 shrink-0 cursor-pointer" aria-label="Remove option"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+            `;
+            row.querySelector('.poll-option-remove-btn').addEventListener('click', () => {
+                row.remove();
+                updatePollAddButtonState();
+            });
+            wrap.appendChild(row);
+            updatePollAddButtonState();
+            lucide.createIcons();
+        }
+
+        function updatePollAddButtonState() {
+            const wrap = document.getElementById('threadPollOptionsWrap');
+            const btn = document.getElementById('threadPollAddOptionBtn');
+            if (!wrap || !btn) return;
+            btn.style.display = wrap.children.length >= POLL_MAX_OPTIONS ? 'none' : '';
+        }
+
+        function getPollOptionsFromBuilder() {
+            return Array.from(document.querySelectorAll('#threadPollOptionsWrap .poll-option-input'))
+                .map(i => i.value.trim())
+                .filter(Boolean)
+                .slice(0, POLL_MAX_OPTIONS);
+        }
+
+        // Which option (if any) this browser has already voted for, keyed by
+        // poll_id. Stored in localStorage (like bookmarks/reports) so a vote
+        // sticks across refreshes; the database's unique(poll_id, voter_hash)
+        // constraint is the real source of truth if this ever gets cleared.
+        const POLL_VOTES_STORAGE_KEY = 'ink_poll_votes';
+
+        function getPollVoteMap() {
+            try { return JSON.parse(localStorage.getItem(POLL_VOTES_STORAGE_KEY)) || {}; } catch (e) { return {}; }
+        }
+
+        function savePollVoteMap(map) {
+            try { localStorage.setItem(POLL_VOTES_STORAGE_KEY, JSON.stringify(map)); } catch (e) {}
+        }
+
+        function renderPollHTML(threadId) {
+            const poll = appState.polls[threadId];
+            if (!poll || !poll.options || !poll.options.length) return '';
+            const votedOptionId = getPollVoteMap()[poll.pollId] || null;
+            const totalVotes = poll.options.reduce((sum, o) => sum + (o.vote_count || 0), 0);
+            const optionsHTML = poll.options.map(o => {
+                const pct = totalVotes > 0 ? Math.round(((o.vote_count || 0) / totalVotes) * 100) : 0;
+                const isVoted = votedOptionId === o.id;
+                if (votedOptionId) {
+                    return `
+                        <div class="relative border border-neutral-800 rounded-lg overflow-hidden mb-1.5">
+                            <div class="absolute inset-y-0 left-0 bg-emerald-900/40" style="width:${pct}%"></div>
+                            <div class="relative flex justify-between items-center gap-2 px-3 py-2 text-sm ${isVoted ? 'text-emerald-400 font-bold' : 'text-neutral-300'}">
+                                <span class="break-words">${escapeHTML(o.label)}${isVoted ? ' ✓' : ''}</span>
+                                <span class="text-xs font-mono shrink-0">${pct}%</span>
+                            </div>
+                        </div>`;
+                }
+                return `
+                    <button type="button" onclick="event.preventDefault(); event.stopPropagation(); castPollVote('${threadId}', '${o.id}');" class="poll-option-btn w-full text-left border border-neutral-800 rounded-lg px-3 py-2 text-sm text-neutral-300 hover:border-emerald-600 hover:text-white transition mb-1.5 cursor-pointer">
+                        ${escapeHTML(o.label)}
+                    </button>`;
+            }).join('');
+            return `
+                <div class="poll-block mt-3 mb-1" onclick="event.stopPropagation();">
+                    ${optionsHTML}
+                    <div class="text-[11px] text-neutral-600 mt-1">${totalVotes} vote${totalVotes === 1 ? '' : 's'}</div>
+                </div>`;
+        }
+
+        async function castPollVote(threadId, optionId) {
+            const poll = appState.polls[threadId];
+            if (!poll) return;
+            const voteMap = getPollVoteMap();
+            if (voteMap[poll.pollId]) {
+                showToast('You already voted in this poll.');
+                return;
+            }
+            try {
+                const voterHash = await sha256Hex(poll.pollId + ':' + appState.userSeed);
+                const { data, error } = await supabaseClient.rpc('cast_poll_vote', {
+                    p_poll_id: poll.pollId,
+                    p_option_id: optionId,
+                    p_voter_hash: voterHash
+                });
+                if (error) {
+                    if ((error.message || '').toLowerCase().includes('duplicate')) {
+                        showToast('You already voted in this poll.', true);
+                        voteMap[poll.pollId] = optionId;
+                        savePollVoteMap(voteMap);
+                        renderThreads();
+                    } else {
+                        console.error('Vote failed:', error);
+                        showToast(`Vote failed: ${error.message || 'unknown error'}`, true);
+                    }
+                    return;
+                }
+                if (data) {
+                    data.forEach(row => {
+                        const opt = poll.options.find(o => o.id === row.option_id);
+                        if (opt) opt.vote_count = row.vote_count;
+                    });
+                }
+                voteMap[poll.pollId] = optionId;
+                savePollVoteMap(voteMap);
+                renderThreads();
+                if (appState.activeThreadId === threadId) {
+                    const thread = appState.threads[threadId];
+                    document.getElementById('threadPageOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content)) + renderPostMediaHTML(thread.media_url, thread.media_type) + renderPollHTML(threadId);
+                }
+            } catch (err) {
+                console.error('Vote failed:', err);
+                showToast('Vote failed.', true);
+            }
+        }
+
         // Given whatever the user typed into the optional name field for a
         // post, resolve what should actually be stored/shown:
         //  - the secret passcode -> the verified display name
@@ -1550,6 +1727,27 @@
                     if (foreignCommentIds) {
                         foreignCommentIds.forEach(c => {
                             appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
+                        });
+                    }
+                }
+
+                // Polls: one batched query for every thread currently loaded
+                // (own board + globally-pinned), joined to its options via
+                // the poll_options -> polls foreign key.
+                const allThreadIds = Object.keys(appState.threads);
+                if (allThreadIds.length) {
+                    const { data: pollRows, error: pollsError } = await supabaseClient
+                        .from('polls')
+                        .select('id, thread_id, poll_options(id, option_index, label, vote_count)')
+                        .in('thread_id', allThreadIds);
+                    if (pollsError) {
+                        console.error('Poll fetch failed:', pollsError);
+                    } else if (pollRows) {
+                        pollRows.forEach(p => {
+                            appState.polls[p.thread_id] = {
+                                pollId: p.id,
+                                options: (p.poll_options || []).slice().sort((a, b) => a.option_index - b.option_index)
+                            };
                         });
                     }
                 }
@@ -2032,6 +2230,32 @@ function initRealtimeSync() {
                 markPosted('thread');
                 resetCaptcha('thread');
 
+                // If a poll was attached, create it now that we have the
+                // thread's id. This is a best-effort second step: if it
+                // fails, the text post itself still stands.
+                if (pollBuilderActive) {
+                    const optionLabels = getPollOptionsFromBuilder();
+                    if (optionLabels.length >= POLL_MIN_OPTIONS) {
+                        try {
+                            const { data: pollRow, error: pollErr } = await supabaseClient
+                                .from('polls').insert([{ thread_id: id }]).select().single();
+                            if (pollErr) throw pollErr;
+                            const optionRows = optionLabels.map((label, idx) => ({ poll_id: pollRow.id, option_index: idx, label }));
+                            const { data: optionData, error: optErr } = await supabaseClient
+                                .from('poll_options').insert(optionRows).select();
+                            if (optErr) throw optErr;
+                            appState.polls[id] = {
+                                pollId: pollRow.id,
+                                options: optionData.slice().sort((a, b) => a.option_index - b.option_index)
+                            };
+                        } catch (pollCreateErr) {
+                            console.error('Poll creation failed:', pollCreateErr);
+                            showToast('Post was created, but the poll could not be saved.', true);
+                        }
+                    }
+                }
+                removePollBuilder();
+
                 // Don't wait on the realtime channel to reflect our own post back to us -
                 // add it locally right away so it always appears instantly.
                 appState.threads[id] = newThread;
@@ -2242,6 +2466,7 @@ function initRealtimeSync() {
                 </div>
                 <div class="post-card-body text-neutral-300 text-sm leading-relaxed mb-3 break-words whitespace-pre-wrap">${processedContent}</div>
                 ${renderPostMediaHTML(thread.media_url, thread.media_type)}
+                ${renderPollHTML(thread.id)}
                 <div class="flex items-center gap-6 text-xs text-neutral-500">
                     <span class="flex items-center gap-1.5 hover:text-neutral-300 transition"><i data-lucide="message-circle" class="w-4 h-4"></i> ${dynamicCommentCount} Comments</span>
                     <button type="button" class="flex items-center gap-1.5 hover:text-neutral-300 transition cursor-pointer" onclick="event.preventDefault(); event.stopPropagation(); shareThread('${thread.id}', event.currentTarget);"><i data-lucide="share" class="w-4 h-4"></i> Share</button>
@@ -3125,6 +3350,27 @@ function initRealtimeSync() {
          * own back arrow) rather than an overlay on top of the feed. The
          * feed is hidden rather than destroyed so returning to it is instant.
          */
+        async function fetchPollForThread(threadId) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('polls')
+                    .select('id, thread_id, poll_options(id, option_index, label, vote_count)')
+                    .eq('thread_id', threadId)
+                    .maybeSingle();
+                if (error) throw error;
+                if (data) {
+                    appState.polls[threadId] = {
+                        pollId: data.id,
+                        options: (data.poll_options || []).slice().sort((a, b) => a.option_index - b.option_index)
+                    };
+                } else {
+                    delete appState.polls[threadId];
+                }
+            } catch (err) {
+                console.error('Poll fetch failed:', err);
+            }
+        }
+
         async function openThreadPage(tId, opts) {
         opts = opts || {};
         const pushHistory = opts.pushHistory !== false;
@@ -3145,7 +3391,14 @@ function initRealtimeSync() {
         const meta = InkRouting.getBoardMeta(appState.currentBoard);
         document.getElementById('threadPageMeta').innerText = `${meta.label} · Thread >>${thread.id}`;
         document.getElementById('threadPageTitle').innerHTML = renderTripcodeLabel(thread.title);
-        document.getElementById('threadPageOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content)) + renderPostMediaHTML(thread.media_url, thread.media_type);
+        document.getElementById('threadPageOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content)) + renderPostMediaHTML(thread.media_url, thread.media_type) + renderPollHTML(thread.id);
+        fetchPollForThread(tId).then(() => {
+            // Only re-render if the user hasn't already navigated away from
+            // this thread while the fetch was in flight.
+            if (appState.activeThreadId === tId) {
+                document.getElementById('threadPageOpBody').innerHTML = parseRichTextContent(escapeHTML(thread.content)) + renderPostMediaHTML(thread.media_url, thread.media_type) + renderPollHTML(tId);
+            }
+        });
         document.getElementById('threadPageOpActions').innerHTML = `
             <button type="button" class="flex items-center gap-1.5 hover:text-neutral-300 transition cursor-pointer" onclick="shareThread('${thread.id}', event.currentTarget);"><i data-lucide="share" class="w-4 h-4"></i> Share</button>
             <button type="button" data-bookmark-key="thread:${thread.id}" class="bookmark-btn flex items-center gap-1.5 hover:text-yellow-400 transition cursor-pointer${isBookmarked('thread:' + thread.id) ? ' bookmark-active' : ''}" onclick="toggleThreadBookmark('${thread.id}');"><i data-lucide="bookmark" class="w-4 h-4"></i> <span class="bookmark-label">${isBookmarked('thread:' + thread.id) ? 'Saved' : 'Save'}</span></button>
