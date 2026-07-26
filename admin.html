@@ -62,11 +62,6 @@
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
     const MEDIA_BUCKET = "post-media";
     const REVIEW_MEDIA_URL = "https://xdshsodkuyawljzuirqt.supabase.co/functions/v1/review-media";
-    // Same value as your `supabase secrets set ADMIN_SECRET=...`. This page
-    // is already gated behind Supabase Auth login above, so it's reasonable
-    // to keep it here -- just don't share this file publicly with the
-    // secret filled in.
-    const ADMIN_SECRET = "kX9#mP2$vL8!qZ4";
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     window.addEventListener('load', async () => {
@@ -120,13 +115,19 @@
         await Promise.all([loadAllPosts(), loadPendingMedia(), loadComments(), loadReports(), loadIncidents()]);
     }
 
+    async function reviewMediaAuthHeaders() {
+        const { data: { session } } = await sb.auth.getSession();
+        if (!session) throw new Error('Not logged in');
+        return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` };
+    }
+
     async function loadPendingMedia() {
         const list = document.getElementById('pendingMediaList');
         list.innerHTML = '<p class="text-neutral-600 text-sm">Loading…</p>';
         try {
             const res = await fetch(REVIEW_MEDIA_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-admin-secret': ADMIN_SECRET },
+                headers: await reviewMediaAuthHeaders(),
                 body: JSON.stringify({ action: 'list' }),
             });
             const data = await res.json();
@@ -153,7 +154,7 @@
         try {
             const res = await fetch(REVIEW_MEDIA_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-admin-secret': ADMIN_SECRET },
+                headers: await reviewMediaAuthHeaders(),
                 body: JSON.stringify({ action, id }),
             });
             let data;

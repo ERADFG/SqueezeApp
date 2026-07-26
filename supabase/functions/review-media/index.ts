@@ -1,9 +1,9 @@
 // supabase/functions/review-media/index.ts
 //
 // Lets a human moderator list pending uploads and approve/reject them.
-// Protected by a shared secret (ADMIN_SECRET) since this app has no user
-// accounts — anyone with the secret can moderate, so treat it like a
-// password and don't share it or commit it anywhere.
+// Protected by real Supabase Auth: the caller must send the access token
+// from an actual logged-in session (same login as the rest of admin.html).
+// No secret lives in any client-side file.
 //
 // Deploy with verify_jwt disabled, same as moderate-post:
 //   supabase functions deploy review-media --no-verify-jwt
@@ -12,11 +12,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const ADMIN_SECRET = Deno.env.get("ADMIN_SECRET")!;
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-admin-secret",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -32,8 +31,16 @@ const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
 
-  const providedSecret = req.headers.get("x-admin-secret");
-  if (!ADMIN_SECRET || providedSecret !== ADMIN_SECRET) {
+  // Real auth check: the caller must be someone who actually logged in via
+  // Supabase Auth (the same login admin.html already uses) -- not just
+  // anyone holding a string. The public anon key alone will NOT pass this,
+  // since it has no logged-in user attached to it.
+  const authHeader = req.headers.get("authorization") || "";
+  const token = authHeader.replace(/^Bearer\s+/i, "");
+  if (!token) return json({ error: "Unauthorized" }, 401);
+
+  const { data: userData, error: userErr } = await admin.auth.getUser(token);
+  if (userErr || !userData?.user) {
     return json({ error: "Unauthorized" }, 401);
   }
 
