@@ -649,7 +649,7 @@
         .poll-option-row.poll-clickable { cursor: pointer; }
         .poll-option-row.poll-clickable:hover { border-color: #059669; }
         .poll-option-row.poll-clickable:active { transform: scale(0.97); }
-        .poll-bar-fill { transition: width 600ms cubic-bezier(.22,1,.36,1); }
+        .poll-bar-fill { transition: width 600ms cubic-bezier(.22,1,.36,1), background-color 400ms ease; }
         .poll-option-row.poll-just-voted { animation: pollVotedPulse 480ms cubic-bezier(.34,1.56,.64,1); }
         @keyframes pollVotedPulse {
             0% { transform: scale(1); }
@@ -1605,18 +1605,18 @@
                     ? `role="button" tabindex="0" onclick="event.preventDefault(); event.stopPropagation(); castPollVote('${threadId}', '${o.id}');" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); castPollVote('${threadId}', '${o.id}');}"`
                     : '';
                 return `
-                    <div class="${rowClasses}" ${clickAttrs}>
+                    <div class="${rowClasses}" data-option-id="${o.id}" ${clickAttrs}>
                         <div class="poll-bar-fill absolute inset-y-0 left-0 ${barColor}" style="width:${pct}%"></div>
-                        <div class="relative flex justify-between items-center gap-2 px-3 py-2 text-sm ${isVoted ? 'text-emerald-400 font-bold' : 'text-neutral-300'}">
-                            <span class="break-words">${escapeHTML(o.label)}${isVoted ? ' ✓' : ''}</span>
-                            <span class="poll-pct text-xs font-mono shrink-0">${pct}% <span class="text-neutral-600">(${o.vote_count || 0})</span></span>
+                        <div class="relative flex justify-between items-center gap-2 px-3 py-2 text-sm ${isVoted ? 'text-emerald-400 font-bold' : 'text-neutral-300'}" data-poll-label-wrap>
+                            <span class="break-words" data-poll-label>${escapeHTML(o.label)}${isVoted ? ' ✓' : ''}</span>
+                            <span class="poll-pct text-xs font-mono shrink-0" data-poll-pct>${pct}% <span class="text-neutral-600">(${o.vote_count || 0})</span></span>
                         </div>
                     </div>`;
             }).join('');
             return `
-                <div class="poll-block mt-3 mb-1" onclick="event.stopPropagation();">
+                <div class="poll-block mt-3 mb-1" data-thread-id="${threadId}" onclick="event.stopPropagation();">
                     ${optionsHTML}
-                    <div class="text-[11px] text-neutral-600 mt-1">${totalVotes} vote${totalVotes === 1 ? '' : 's'}</div>
+                    <div class="text-[11px] text-neutral-600 mt-1" data-poll-total>${totalVotes} vote${totalVotes === 1 ? '' : 's'}</div>
                 </div>`;
         }
 
@@ -1637,6 +1637,78 @@
             if (extra) extra.innerHTML = renderPostMediaHTML(thread.media_url, thread.media_type) + renderPollHTML(threadId);
         }
 
+        // Updates any already-rendered poll blocks for this thread (the feed
+        // card and/or the open thread page) in place, instead of re-rendering
+        // their innerHTML from scratch. This matters because the fill bars
+        // rely on a CSS width transition (.poll-bar-fill) to animate — if we
+        // tear down and recreate the elements (like a full re-render does),
+        // the browser has no "previous width" to animate from and the bar
+        // just snaps straight to its final size. Mutating the existing nodes
+        // instead lets the transition actually play.
+        // Returns true if it found and updated at least one poll block,
+        // false if none are currently on screen (caller should fall back to
+        // a full re-render in that case).
+        function updatePollBlocksInDOM(threadId) {
+            const poll = appState.polls[threadId];
+            if (!poll) return false;
+            const blocks = document.querySelectorAll(`.poll-block[data-thread-id="${threadId}"]`);
+            if (!blocks.length) return false;
+
+            const votedOptionId = getPollVoteMap()[poll.pollId] || null;
+            const totalVotes = poll.options.reduce((sum, o) => sum + (o.vote_count || 0), 0);
+            // One-shot pulse flag, same semantics as renderPollHTML: consume
+            // it here so it doesn't replay on a later reconciliation render.
+            const justVotedOptionId = (appState.pollJustVoted && appState.pollJustVoted.threadId === threadId)
+                ? appState.pollJustVoted.optionId : null;
+            if (justVotedOptionId) appState.pollJustVoted = null;
+
+            blocks.forEach(block => {
+                poll.options.forEach(o => {
+                    const row = block.querySelector(`.poll-option-row[data-option-id="${o.id}"]`);
+                    if (!row) return;
+                    const pct = totalVotes > 0 ? Math.round(((o.vote_count || 0) / totalVotes) * 100) : 0;
+                    const isVoted = votedOptionId === o.id;
+                    const canVote = !votedOptionId;
+
+                    const fill = row.querySelector('.poll-bar-fill');
+                    if (fill) {
+                        fill.style.width = pct + '%';
+                        fill.classList.toggle('bg-emerald-900/40', isVoted);
+                        fill.classList.toggle('bg-neutral-800/70', !isVoted);
+                    }
+
+                    const pctEl = row.querySelector('[data-poll-pct]');
+                    if (pctEl) pctEl.innerHTML = `${pct}% <span class="text-neutral-600">(${o.vote_count || 0})</span>`;
+
+                    const labelWrap = row.querySelector('[data-poll-label-wrap]');
+                    if (labelWrap) {
+                        labelWrap.classList.toggle('text-emerald-400', isVoted);
+                        labelWrap.classList.toggle('font-bold', isVoted);
+                        labelWrap.classList.toggle('text-neutral-300', !isVoted);
+                    }
+                    const labelSpan = row.querySelector('[data-poll-label]');
+                    if (labelSpan) labelSpan.textContent = o.label + (isVoted ? ' ✓' : '');
+
+                    row.classList.toggle('poll-clickable', canVote);
+                    if (!canVote) {
+                        row.removeAttribute('role');
+                        row.removeAttribute('tabindex');
+                        row.removeAttribute('onclick');
+                        row.removeAttribute('onkeydown');
+                    }
+
+                    if (justVotedOptionId === o.id) {
+                        row.classList.remove('poll-just-voted');
+                        void row.offsetWidth; // restart the pulse animation
+                        row.classList.add('poll-just-voted');
+                    }
+                });
+                const totalEl = block.querySelector('[data-poll-total]');
+                if (totalEl) totalEl.textContent = `${totalVotes} vote${totalVotes === 1 ? '' : 's'}`;
+            });
+            return true;
+        }
+
         async function castPollVote(threadId, optionId) {
             const poll = appState.polls[threadId];
             if (!poll) return;
@@ -1645,6 +1717,31 @@
                 showToast('You already voted in this poll.');
                 return;
             }
+
+            // Reflow helper: try to update the poll's existing DOM nodes
+            // (smooth) and only fall back to a full re-render (instant, no
+            // transition) if the poll isn't actually on screen right now.
+            const reflowPoll = () => {
+                if (!updatePollBlocksInDOM(threadId)) {
+                    // Poll isn't actually rendered anywhere on screen right
+                    // now (edge case) — fall back to a full re-render.
+                    if (appState.activeThreadId === threadId) updateThreadPageOpContent(threadId);
+                    renderThreads();
+                }
+            };
+
+            // Optimistic update: lock the vote in and bump the local count
+            // immediately, before the network round-trip, so the fill starts
+            // animating the moment the option is clicked. Reconciled with
+            // the server's real counts below.
+            const chosenOpt = poll.options.find(o => o.id === optionId);
+            const optimisticBump = !!chosenOpt;
+            if (chosenOpt) chosenOpt.vote_count = (chosenOpt.vote_count || 0) + 1;
+            voteMap[poll.pollId] = optionId;
+            savePollVoteMap(voteMap);
+            appState.pollJustVoted = { threadId, optionId };
+            reflowPoll();
+
             try {
                 const voterHash = await sha256Hex(poll.pollId + ':' + appState.userSeed);
                 const { data, error } = await supabaseClient.rpc('cast_poll_vote', {
@@ -1654,13 +1751,20 @@
                 });
                 if (error) {
                     if ((error.message || '').toLowerCase().includes('duplicate')) {
+                        // Someone else's vote already landed under this hash.
+                        // Keep the local "voted" state as-is; just drop the
+                        // optimistic bump since it wasn't actually recorded.
                         showToast('You already voted in this poll.', true);
-                        voteMap[poll.pollId] = optionId;
-                        savePollVoteMap(voteMap);
-                        renderThreads();
+                        if (optimisticBump) chosenOpt.vote_count = Math.max(0, (chosenOpt.vote_count || 1) - 1);
+                        reflowPoll();
                     } else {
                         console.error('Vote failed:', error);
                         showToast(`Vote failed: ${error.message || 'unknown error'}`, true);
+                        // Roll back the optimistic vote entirely.
+                        if (optimisticBump) chosenOpt.vote_count = Math.max(0, (chosenOpt.vote_count || 1) - 1);
+                        delete voteMap[poll.pollId];
+                        savePollVoteMap(voteMap);
+                        reflowPoll();
                     }
                     return;
                 }
@@ -1670,16 +1774,17 @@
                         if (opt) opt.vote_count = row.vote_count;
                     });
                 }
-                voteMap[poll.pollId] = optionId;
-                savePollVoteMap(voteMap);
-                appState.pollJustVoted = { threadId, optionId };
-                if (appState.activeThreadId === threadId) {
-                    updateThreadPageOpContent(threadId);
-                }
-                renderThreads();
+                // Reconcile with the server's authoritative counts. Still
+                // smooth even if numbers shifted, since we're updating the
+                // same DOM nodes rather than replacing them.
+                reflowPoll();
             } catch (err) {
                 console.error('Vote failed:', err);
                 showToast('Vote failed.', true);
+                if (optimisticBump) chosenOpt.vote_count = Math.max(0, (chosenOpt.vote_count || 1) - 1);
+                delete voteMap[poll.pollId];
+                savePollVoteMap(voteMap);
+                reflowPoll();
             }
         }
 
