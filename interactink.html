@@ -628,11 +628,24 @@
             flex-direction: column;
             min-height: 100%;
             opacity: 0;
-            transform: translateY(14px) scale(0.99);
-            transition: opacity 260ms cubic-bezier(.22,1,.36,1), transform 320ms cubic-bezier(.22,1,.36,1);
+            transition: opacity 260ms cubic-bezier(.22,1,.36,1);
         }
         #threadPage.active { display: flex; }
-        #threadPage.active.entered { opacity: 1; transform: translateY(0) scale(1); }
+        #threadPage.active.entered { opacity: 1; }
+        /* The enter transform lives on this inner wrapper, not on #threadPage
+           itself. A `transform` on any ancestor of .thread-reply-bar turns
+           that ancestor into the containing block for position:fixed, which
+           un-sticks the reply bar from the viewport while scrolling. Keeping
+           #threadPage transform-free (and the reply bar a direct child of
+           it, outside this wrapper) is what makes the bar stay fixed. */
+        .thread-page-inner {
+            display: flex;
+            flex-direction: column;
+            min-height: 100%;
+            transform: translateY(14px) scale(0.99);
+            transition: transform 320ms cubic-bezier(.22,1,.36,1);
+        }
+        #threadPage.active.entered .thread-page-inner { transform: translateY(0) scale(1); }
 
         /* ==================================================================
            POLLS
@@ -1002,28 +1015,30 @@
              Tapping a post navigates here (URL + history updated) instead of
              opening an overlay, and the Back arrow returns to the feed. -->
         <div id="threadPage" class="hidden">
-            <div class="thread-page-header">
-                <button type="button" onclick="handleThreadBackButtonClick()" class="thread-back-btn" aria-label="Back">
-                    <i data-lucide="arrow-left"></i>
-                </button>
-                <div class="thread-page-headline min-w-0">
-                    <span id="threadPageMeta" class="thread-tag truncate">Thread</span>
-                </div>
-            </div>
-
-            <div class="flex-1 p-4 space-y-6" id="threadPageScrollBody">
-                <div class="min-w-0">
-                    <div class="flex items-baseline gap-2 mb-2">
-                        <span id="threadPageTitle" class="font-bold text-white text-base truncate uppercase tracking-wide border-b border-neutral-900 pb-1 w-full">Subject Target</span>
+            <div class="thread-page-inner">
+                <div class="thread-page-header">
+                    <button type="button" onclick="handleThreadBackButtonClick()" class="thread-back-btn" aria-label="Back">
+                        <i data-lucide="arrow-left"></i>
+                    </button>
+                    <div class="thread-page-headline min-w-0">
+                        <span id="threadPageMeta" class="thread-tag truncate">Thread</span>
                     </div>
-                    <p id="threadPageOpBody" class="text-neutral-200 text-sm leading-relaxed break-words whitespace-pre-wrap pt-1"></p>
-                    <div id="threadPageOpExtra"></div>
-                    <div id="threadPageOpActions" class="flex items-center gap-6 text-xs text-neutral-500 pt-3"></div>
                 </div>
 
-                <div class="border-b border-neutral-800"></div>
+                <div class="flex-1 p-4 space-y-6" id="threadPageScrollBody">
+                    <div class="min-w-0">
+                        <div class="flex items-baseline gap-2 mb-2">
+                            <span id="threadPageTitle" class="font-bold text-white text-base truncate uppercase tracking-wide border-b border-neutral-900 pb-1 w-full">Subject Target</span>
+                        </div>
+                        <p id="threadPageOpBody" class="text-neutral-200 text-sm leading-relaxed break-words whitespace-pre-wrap pt-1"></p>
+                        <div id="threadPageOpExtra"></div>
+                        <div id="threadPageOpActions" class="flex items-center gap-6 text-xs text-neutral-500 pt-3"></div>
+                    </div>
 
-                <div id="commentTreeContainer" class="space-y-4"></div>
+                    <div class="border-b border-neutral-800"></div>
+
+                    <div id="commentTreeContainer" class="space-y-4"></div>
+                </div>
             </div>
 
             <div class="thread-reply-bar">
