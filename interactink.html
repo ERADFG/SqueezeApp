@@ -1554,20 +1554,19 @@
             const optionsHTML = poll.options.map(o => {
                 const pct = totalVotes > 0 ? Math.round(((o.vote_count || 0) / totalVotes) * 100) : 0;
                 const isVoted = votedOptionId === o.id;
-                if (votedOptionId) {
-                    return `
-                        <div class="relative border border-neutral-800 rounded-lg overflow-hidden mb-1.5">
-                            <div class="absolute inset-y-0 left-0 bg-emerald-900/40" style="width:${pct}%"></div>
-                            <div class="relative flex justify-between items-center gap-2 px-3 py-2 text-sm ${isVoted ? 'text-emerald-400 font-bold' : 'text-neutral-300'}">
-                                <span class="break-words">${escapeHTML(o.label)}${isVoted ? ' ✓' : ''}</span>
-                                <span class="text-xs font-mono shrink-0">${pct}%</span>
-                            </div>
-                        </div>`;
-                }
+                const canVote = !votedOptionId;
+                const barColor = isVoted ? 'bg-emerald-900/40' : 'bg-neutral-800/70';
+                const clickAttrs = canVote
+                    ? `role="button" tabindex="0" onclick="event.preventDefault(); event.stopPropagation(); castPollVote('${threadId}', '${o.id}');" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); castPollVote('${threadId}', '${o.id}');}"`
+                    : '';
                 return `
-                    <button type="button" onclick="event.preventDefault(); event.stopPropagation(); castPollVote('${threadId}', '${o.id}');" class="poll-option-btn w-full text-left border border-neutral-800 rounded-lg px-3 py-2 text-sm text-neutral-300 hover:border-emerald-600 hover:text-white transition mb-1.5 cursor-pointer">
-                        ${escapeHTML(o.label)}
-                    </button>`;
+                    <div class="relative border border-neutral-800 rounded-lg overflow-hidden mb-1.5${canVote ? ' cursor-pointer hover:border-emerald-600' : ''}" ${clickAttrs}>
+                        <div class="absolute inset-y-0 left-0 ${barColor}" style="width:${pct}%"></div>
+                        <div class="relative flex justify-between items-center gap-2 px-3 py-2 text-sm ${isVoted ? 'text-emerald-400 font-bold' : 'text-neutral-300'}">
+                            <span class="break-words">${escapeHTML(o.label)}${isVoted ? ' ✓' : ''}</span>
+                            <span class="text-xs font-mono shrink-0">${pct}% <span class="text-neutral-600">(${o.vote_count || 0})</span></span>
+                        </div>
+                    </div>`;
             }).join('');
             return `
                 <div class="poll-block mt-3 mb-1" onclick="event.stopPropagation();">
