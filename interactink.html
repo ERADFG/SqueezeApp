@@ -1132,10 +1132,15 @@
     };
  
        // Initialize core engine
-    window.addEventListener('load', async () => {
+    // DOMContentLoaded (not 'load') deliberately: 'load' doesn't fire until
+    // every image, ad script, and ad iframe on the page has finished
+    // downloading, which can take seconds longer than the DOM itself being
+    // ready. None of the init work below touches images or ad content, so
+    // there's no reason to sit around waiting for them before fetching posts.
+    document.addEventListener('DOMContentLoaded', async () => {
         // The Supabase CDN script can occasionally still be attaching itself
-        // to `window` right as the 'load' event fires (slow network, ad
-        // blocker, etc). Instead of silently giving up, wait briefly for it.
+        // to `window` right as this fires (slow network, ad blocker, etc).
+        // Instead of silently giving up, wait briefly for it.
         if (!window.supabase) {
             let attempts = 0;
             while (!window.supabase && attempts < 20) {
@@ -1828,6 +1833,10 @@
                 if (error) throw error;
                 if (!data || data.length === 0) break;
                 all = all.concat(data);
+                // A page shorter than what we asked for is necessarily the
+                // last one — no need to burn an extra round-trip confirming
+                // that with a follow-up request that'll just come back empty.
+                if (data.length < REQUEST_SIZE) break;
                 from += data.length;
             }
             return all;
@@ -1840,66 +1849,67 @@
                 // never shows up in another.
                 const board = appState.currentBoard;
 
-                // Fetch every thread ever posted in this board — Supabase
-                // caps a single request at its own row limit, so page through
-                // with .range() until a batch comes back short, meaning
-                // there's nothing left to fetch.
-                const threads = await fetchAllRows(
+                // Threads, globally-pinned threads, and this board's comment
+                // counts don't depend on each other at all, so fire them off
+                // together instead of waiting on each one in turn — this
+                // turns what used to be 3-4 sequential round trips into
+                // effectively one.
+                const threadsPromise = fetchAllRows(
                     (from, to) => supabaseClient.from('threads')
                         .select('*')
                         .eq('board_id', board)
                         .order('timestamp', { ascending: false })
                         .range(from, to)
                 );
-                threads.forEach(t => appState.threads[t.id] = t);
 
-                // Globally-pinned threads (posted with the verified name) show
-                // up at the top of every board, not just the one they were
-                // posted in. This is a separate, unfiltered query so it isn't
-                // limited by the current board's board_id. Also unbounded, so
-                // every pinned thread ever made shows up, not just the most
-                // recent 20.
-                const globalPinned = await fetchAllRows(
+                // Globally-pinned threads show up at the top of every board,
+                // not just the one they were posted in. Separate, unbounded
+                // query so it isn't limited by the current board's board_id.
+                const globalPinnedPromise = fetchAllRows(
                     (from, to) => supabaseClient.from('threads')
                         .select('*')
                         .eq('pinned', true)
                         .order('timestamp', { ascending: false })
                         .range(from, to)
                 );
-                globalPinned.forEach(t => appState.threads[t.id] = t);
 
-                const { data: commentIds, error: commentsError } = await supabaseClient.from('comments')
+                const boardCommentsPromise = supabaseClient.from('comments')
                     .select('thread_id')
                     .eq('board_id', board);
-                if (commentsError) throw commentsError;
-                if (commentIds) {
-                    commentIds.forEach(c => {
-                        appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
-                    });
-                }
 
                 // Comment counts for globally-pinned threads that live on a
-                // different board than the one currently being viewed, since
-                // the query above is scoped to `board` and would otherwise
-                // miss them.
-                const foreignPinnedIds = (globalPinned || [])
-                    .filter(t => t.board_id !== board)
-                    .map(t => t.id);
-                if (foreignPinnedIds.length) {
-                    const { data: foreignCommentIds, error: foreignCommentsError } = await supabaseClient.from('comments')
-                        .select('thread_id')
-                        .in('thread_id', foreignPinnedIds);
-                    if (foreignCommentsError) throw foreignCommentsError;
-                    if (foreignCommentIds) {
-                        foreignCommentIds.forEach(c => {
-                            appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
-                        });
-                    }
-                }
+                // different board than the one currently being viewed (the
+                // query above is scoped to `board` and would otherwise miss
+                // them). This does depend on globalPinned, but only on that
+                // — so it's chained off just that one promise rather than
+                // waiting for everything else too.
+                const foreignCommentsPromise = globalPinnedPromise.then(globalPinned => {
+                    const foreignPinnedIds = globalPinned.filter(t => t.board_id !== board).map(t => t.id);
+                    if (!foreignPinnedIds.length) return { data: [] };
+                    return supabaseClient.from('comments').select('thread_id').in('thread_id', foreignPinnedIds);
+                });
+
+                const [threads, globalPinned, boardCommentsRes, foreignCommentsRes] = await Promise.all([
+                    threadsPromise, globalPinnedPromise, boardCommentsPromise, foreignCommentsPromise
+                ]);
+
+                threads.forEach(t => appState.threads[t.id] = t);
+                globalPinned.forEach(t => appState.threads[t.id] = t);
+
+                if (boardCommentsRes.error) throw boardCommentsRes.error;
+                (boardCommentsRes.data || []).forEach(c => {
+                    appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
+                });
+
+                if (foreignCommentsRes.error) throw foreignCommentsRes.error;
+                (foreignCommentsRes.data || []).forEach(c => {
+                    appState.commentCounts[c.thread_id] = (appState.commentCounts[c.thread_id] || 0) + 1;
+                });
 
                 // Polls: one batched query for every thread currently loaded
                 // (own board + globally-pinned), joined to its options via
-                // the poll_options -> polls foreign key.
+                // the poll_options -> polls foreign key. Has to come after
+                // the above since it needs the merged thread id list.
                 const allThreadIds = Object.keys(appState.threads);
                 if (allThreadIds.length) {
                     const { data: pollRows, error: pollsError } = await supabaseClient
