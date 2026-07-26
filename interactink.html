@@ -691,36 +691,118 @@
         .thread-page-headline .thread-tag { font-size: 12px; color: #71767b; font-family: ui-monospace, Menlo, monospace; }
         .thread-reply-bar {
             position: fixed;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            left: 14px;
+            right: 14px;
+            bottom: 14px;
             z-index: 45;
-            background: rgba(0, 0, 0, 0.96);
-            backdrop-filter: blur(10px);
-            border-top: 1px solid #1c1f23;
-            padding: 12px 14px;
-            box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.35);
+            background: rgba(20, 22, 26, 0.97);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 26px;
+            padding: 12px 16px 10px;
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55), 0 2px 10px rgba(0, 0, 0, 0.35);
+            transition: box-shadow 0.15s ease, border-color 0.15s ease;
+        }
+        .thread-reply-bar:focus-within {
+            border-color: rgba(255, 255, 255, 0.18);
+            box-shadow: 0 16px 44px rgba(0, 0, 0, 0.6), 0 2px 10px rgba(0, 0, 0, 0.4);
         }
         @media (max-width: 768px) {
-            /* Clear the mobile bottom tab bar so the two don't overlap. */
-            .thread-reply-bar { bottom: 60px; }
+            /* Clear the mobile bottom tab bar so the two don't overlap,
+               and keep the island off the screen edges. */
+            .thread-reply-bar { bottom: 76px; left: 10px; right: 10px; border-radius: 24px; }
         }
         @media (min-width: 1024px) {
             /* Align with the center feed column instead of spanning the
                full viewport (which would overlap the sidebars). The feed
                column is a fixed 640px centered between two equal 1fr
-               edges, so centering a fixed-width bar the same way lines it
-               up exactly. */
+               edges, so centering a fixed-width floating island the same
+               way lines it up exactly while still reading as inset. */
             .thread-reply-bar {
                 left: 50%;
                 right: auto;
                 width: 640px;
+                max-width: calc(100% - 32px);
                 transform: translateX(-50%);
             }
         }
         /* Reserve room at the bottom of the scrollable thread body so the
            last comment never ends up hidden behind the floating reply bar. */
-        #threadPageScrollBody { padding-bottom: 180px; }
+        #threadPageScrollBody { padding-bottom: 200px; }
+
+        /* Twitter/X-style pill composer: borderless input, circular icon
+           buttons that light up blue on hover, thin divider before the
+           icon row, solid pill submit button on the right. */
+        .reply-bar-input-row { display: flex; align-items: center; gap: 10px; }
+        .reply-bar-namefield {
+            width: 96px;
+            flex-shrink: 0;
+            background: transparent;
+            font-size: 12px;
+            color: #a7abb0;
+            border: none;
+            border-right: 1px solid #2a2d31;
+            padding-right: 10px;
+        }
+        .reply-bar-namefield:focus { outline: none; }
+        .reply-bar-namefield::placeholder { color: #5b6167; }
+        .reply-bar-textfield {
+            flex: 1;
+            min-width: 0;
+            background: transparent;
+            border: none;
+            color: #e7e9ea;
+            font-size: 15px;
+            padding: 6px 0;
+        }
+        .reply-bar-textfield:focus { outline: none; }
+        .reply-bar-textfield::placeholder { color: #71767b; }
+        .reply-bar-footer-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .reply-bar-icons { display: flex; align-items: center; gap: 2px; }
+        .reply-icon-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 9999px;
+            color: #71767b;
+            background: none;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            transition: background-color 0.15s ease, color 0.15s ease;
+        }
+        .reply-icon-btn:hover { background: rgba(29, 155, 240, 0.12); color: #1d9bf0; }
+        .reply-icon-btn i { width: 17px; height: 17px; }
+        .reply-gif-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 26px;
+            padding: 0 6px;
+            margin: 0 2px;
+            border-radius: 7px;
+            border: 1.5px solid #71767b;
+            color: #71767b;
+            background: none;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.3px;
+            cursor: pointer;
+            transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+        }
+        .reply-gif-btn:hover { background: rgba(29, 155, 240, 0.12); color: #1d9bf0; border-color: #1d9bf0; }
+        .reply-bar-submit-group { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
     /* Media player */
     .lightbox-zoomed { transform: scale(1.6); cursor: zoom-out; transition: transform .15s ease; }
     #mediaLightboxContent img { transition: transform .15s ease; }
@@ -945,34 +1027,35 @@
             </div>
 
             <div class="thread-reply-bar">
-                <form id="commentForm" class="flex flex-col gap-2">
-                    <div class="flex gap-3 items-center">
-                        <div class="text-neutral-500 shrink-0">
-                            <i data-lucide="corner-down-right" class="w-4 h-4"></i>
-                        </div>
+                <form id="commentForm" class="flex flex-col">
+                    <div class="reply-bar-input-row">
                         <input type="text" id="commentNameInput" placeholder="Name (optional)" autocomplete="off" maxlength="14"
-                               class="w-28 shrink-0 bg-transparent text-xs text-neutral-400 focus:outline-none placeholder:text-neutral-600 border-r border-neutral-800 pr-2">
-                        <input type="text" id="commentInput" placeholder="Post a comment... (use >>ID to link to a specific post)" autocomplete="off" required maxlength="300"
-                               class="flex-1 bg-transparent text-sm text-white focus:outline-none placeholder:text-neutral-600">
-                        <span id="commentCharCounter" class="text-[11px] font-mono text-neutral-600 shrink-0 select-none">0/300</span>
-                        <button type="submit" id="commentSubmitBtn" class="bg-white text-black hover:bg-neutral-200 font-bold px-4 py-1.5 rounded-full text-xs transition duration-200 cursor-pointer shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
-                            Comment
-                        </button>
+                               class="reply-bar-namefield">
+                        <input type="text" id="commentInput" placeholder="Post your reply... (use >>ID to link to a specific post)" autocomplete="off" required maxlength="300"
+                               class="reply-bar-textfield">
                     </div>
-                    <div class="flex items-center gap-2 pl-7">
-                        <label for="commentMediaInput" class="cursor-pointer text-neutral-500 hover:text-neutral-300 transition flex items-center" title="Attach image or video">
-                            <i data-lucide="image-plus" class="w-3.5 h-3.5"></i>
-                        </label>
-                        <input type="file" id="commentMediaInput" accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm" class="hidden">
-                        <button type="button" data-gif-trigger class="cursor-pointer text-neutral-500 hover:text-neutral-300 transition flex items-center border border-neutral-700 rounded px-1 leading-none text-[9px] font-black tracking-tight" title="Attach a GIF from GIPHY" onclick="openGifPicker('comment', this)">GIF</button>
-                        <label id="commentCaptchaBox" class="ink-captcha-box ink-captcha-box-sm">
-                            <input type="checkbox" id="commentCaptchaCheckbox" class="ink-captcha-checkbox" onclick="return handleCaptchaClick(event, 'comment')">
-                            <span class="text-[11px] text-neutral-300">I'm not a robot</span>
-                            <i data-lucide="shield-check" class="w-3 h-3 text-neutral-600"></i>
-                        </label>
+                    <div class="reply-bar-footer-row">
+                        <div class="reply-bar-icons">
+                            <label for="commentMediaInput" class="reply-icon-btn" title="Attach image or video">
+                                <i data-lucide="image"></i>
+                            </label>
+                            <input type="file" id="commentMediaInput" accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm" class="hidden">
+                            <button type="button" data-gif-trigger class="reply-gif-btn" title="Attach a GIF from GIPHY" onclick="openGifPicker('comment', this)">GIF</button>
+                            <label id="commentCaptchaBox" class="ink-captcha-box ink-captcha-box-sm">
+                                <input type="checkbox" id="commentCaptchaCheckbox" class="ink-captcha-checkbox" onclick="return handleCaptchaClick(event, 'comment')">
+                                <span class="text-[11px] text-neutral-300">I'm not a robot</span>
+                                <i data-lucide="shield-check" class="w-3 h-3 text-neutral-600"></i>
+                            </label>
+                        </div>
+                        <div class="reply-bar-submit-group">
+                            <span id="commentCharCounter" class="text-[11px] font-mono text-neutral-600 shrink-0 select-none">0/300</span>
+                            <button type="submit" id="commentSubmitBtn" class="bg-white text-black hover:bg-neutral-200 font-bold px-4 py-1.5 rounded-full text-xs transition duration-200 cursor-pointer shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
+                                Reply
+                            </button>
+                        </div>
                     </div>
-                    <div id="commentMediaPreviewWrap" class="hidden pl-7"></div>
-                    <div id="commentMediaError" class="hidden pl-7 text-xs text-red-400"></div>
+                    <div id="commentMediaPreviewWrap" class="hidden mt-2"></div>
+                    <div id="commentMediaError" class="hidden mt-2 text-xs text-red-400"></div>
                     <!-- Honeypot field: invisible to real users, bots often auto-fill it -->
                     <input type="text" id="commentHoneypot" name="website" tabindex="-1" autocomplete="off"
                            class="ink-honeypot" aria-hidden="true">
