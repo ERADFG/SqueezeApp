@@ -1,0 +1,132 @@
+/* =========================================================================
+   InteractInk — Light / Dark theme system
+   Dark is the site's native look and needs no overrides. Everything below
+   only fires when <html data-theme="light">, which theme.js sets based on
+   the saved preference (or the phone's system setting, falling back to
+   dark if that can't be detected).
+   ========================================================================= */
+
+:root { color-scheme: dark; }
+html[data-theme="light"] { color-scheme: light; }
+
+/* ---------- Base page ---------- */
+html[data-theme="light"] body {
+    background-color: #ffffff !important;
+    color: #0f1419 !important;
+}
+html[data-theme="light"] ::-webkit-scrollbar-track { background: #ffffff !important; }
+html[data-theme="light"] ::-webkit-scrollbar-thumb { background: #d6d9db !important; }
+
+/* ---------- Layout shell ---------- */
+html[data-theme="light"] .app-container { background-color: #ffffff !important; }
+html[data-theme="light"] .x-sidebar,
+html[data-theme="light"] .x-feed,
+html[data-theme="light"] .x-widgets,
+html[data-theme="light"] .border-neutral-800,
+html[data-theme="light"] .border-neutral-900,
+html[data-theme="light"] .border-r,
+html[data-theme="light"] .border-b,
+html[data-theme="light"] .border-t,
+html[data-theme="light"] .border-x { border-color: #eff3f4 !important; }
+html[data-theme="light"] .divide-\[\#1c1c1c\] > :not([hidden]) ~ :not([hidden]) { border-color: #eff3f4 !important; }
+
+/* ---------- Backgrounds that were black / near-black ---------- */
+html[data-theme="light"] .bg-black,
+html[data-theme="light"] .bg-black\/90,
+html[data-theme="light"] .bg-black\/95,
+html[data-theme="light"] .bg-black\/97 { background-color: #ffffff !important; }
+html[data-theme="light"] .bg-\[\#16181c\],
+html[data-theme="light"] .bg-\[\#0a0a0a\],
+html[data-theme="light"] .bg-neutral-900,
+html[data-theme="light"] .bg-neutral-950 { background-color: #f7f8f9 !important; }
+html[data-theme="light"] [style*="rgba(0,0,0,0.97)"] { background: rgba(255,255,255,0.97) !important; }
+
+/* ---------- Text colors ---------- */
+html[data-theme="light"] .text-white { color: #0f1419 !important; }
+html[data-theme="light"] .text-neutral-200,
+html[data-theme="light"] .text-neutral-300,
+html[data-theme="light"] .text-neutral-400 { color: #536471 !important; }
+html[data-theme="light"] .text-neutral-500,
+html[data-theme="light"] .text-neutral-600 { color: #6b7580 !important; }
+html[data-theme="light"] .text-neutral-700,
+html[data-theme="light"] .text-neutral-800,
+html[data-theme="light"] .text-neutral-900 { color: #0f1419 !important; }
+
+/* ---------- Shared component classes (nav, cards, links) ---------- */
+html[data-theme="light"] .nav-item { color: #0f1419 !important; }
+html[data-theme="light"] .nav-item svg { stroke: #0f1419 !important; }
+html[data-theme="light"] .nav-item:hover { background-color: #f0f0f0 !important; }
+
+html[data-theme="light"] .widget-card,
+html[data-theme="light"] aside .bg-\[\#16181c\] { background-color: #f7f8f9 !important; border-color: #eff3f4 !important; }
+html[data-theme="light"] .widget-link { color: #536471 !important; }
+html[data-theme="light"] .widget-link:hover { color: #0f1419 !important; }
+
+html[data-theme="light"] .footer-link { color: #0f1419 !important; }
+html[data-theme="light"] .inline-link { color: #1d6feb !important; }
+html[data-theme="light"] .inline-link:hover { color: #1558b8 !important; }
+
+html[data-theme="light"] .post-button,
+html[data-theme="light"] a.bg-white.text-black,
+html[data-theme="light"] .bg-white.text-black { background-color: #0f1419 !important; color: #ffffff !important; }
+html[data-theme="light"] .post-button:hover,
+html[data-theme="light"] a.bg-white.text-black:hover,
+html[data-theme="light"] .bg-white.text-black:hover { background-color: #272c30 !important; }
+
+html[data-theme="light"] .settings-link { color: #0f1419 !important; border-color: #eff3f4 !important; }
+html[data-theme="light"] .settings-link:hover { background-color: #f7f8f9 !important; }
+html[data-theme="light"] .settings-icon { background: #f0f0f0 !important; border-color: #eff3f4 !important; }
+html[data-theme="light"] .settings-sub { color: #536471 !important; }
+html[data-theme="light"] .chevron { color: #9aa3ab !important; }
+
+html[data-theme="light"] .bottom-tab-bar { background: rgba(255,255,255,0.97) !important; border-color: #eff3f4 !important; }
+html[data-theme="light"] .bottom-tab { color: #536471 !important; }
+html[data-theme="light"] .bottom-tab.active { color: #0f1419 !important; }
+
+html[data-theme="light"] code,
+html[data-theme="light"] .font-mono.bg-neutral-900 { background-color: #f0f0f0 !important; border-color: #eff3f4 !important; color: #0f1419 !important; }
+
+html[data-theme="light"] .not-found-glyph {
+    background: linear-gradient(135deg, #0f1419, #536471) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+}
+
+/* Bookmarks / misc InteractInk widgets */
+html[data-theme="light"] .bookmark-item,
+html[data-theme="light"] .settings-link { border-color: #eff3f4 !important; }
+html[data-theme="light"] .bookmark-item:hover,
+html[data-theme="light"] .bookmarks-back:hover { background-color: #f7f8f9 !important; }
+html[data-theme="light"] .bookmarks-back { color: #536471 !important; }
+html[data-theme="light"] .bookmarks-empty { color: #536471 !important; }
+
+/* ---------- Appearance toggle (Settings page) ---------- */
+.theme-toggle-group {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    background: #0a0a0a;
+    border: 1px solid #262626;
+    border-radius: 9999px;
+}
+html[data-theme="light"] .theme-toggle-group { background: #f0f0f0; border-color: #eff3f4; }
+.theme-toggle-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 9px 10px;
+    border-radius: 9999px;
+    border: none;
+    background: transparent;
+    color: #71767b;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+.theme-toggle-btn svg { width: 15px; height: 15px; }
+.theme-toggle-btn.active { background: #1c1c1c; color: #ffffff; }
+html[data-theme="light"] .theme-toggle-btn { color: #536471; }
+html[data-theme="light"] .theme-toggle-btn.active { background: #ffffff; color: #0f1419; box-shadow: 0 1px 2px rgba(0,0,0,0.12); }

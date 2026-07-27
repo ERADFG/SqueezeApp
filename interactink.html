@@ -3,6 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+    (function(){
+      try {
+        var p = localStorage.getItem('ink-theme-preference') || 'system';
+        var t = p;
+        if (p === 'system') {
+          var mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)');
+          t = (mq && mq.matches) ? 'light' : 'dark';
+        }
+        document.documentElement.setAttribute('data-theme', t);
+      } catch(e) {}
+    })();
+    </script>
+    <link rel="stylesheet" href="theme.css">
     <link rel="preconnect" href="https://pagead2.googlesyndication.com" crossorigin>
     <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin>
     <link rel="preconnect" href="https://www.highperformanceformat.com" crossorigin>
@@ -4459,6 +4473,7 @@ function initRealtimeSync() {
         <p style="margin-top: 20px; font-size: 0.85rem;">&copy; 2026 InteractInk. All rights reserved.</p>
     </footer>
     <script src="enhancements.js" defer></script>
+    <script src="theme.js" defer></script>
     <script type="module" src="moderation-guard.js"></script>
 </body>
 </html>

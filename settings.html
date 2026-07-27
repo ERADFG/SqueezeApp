@@ -3,6 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+    (function(){
+      try {
+        var p = localStorage.getItem('ink-theme-preference') || 'system';
+        var t = p;
+        if (p === 'system') {
+          var mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)');
+          t = (mq && mq.matches) ? 'light' : 'dark';
+        }
+        document.documentElement.setAttribute('data-theme', t);
+      } catch(e) {}
+    })();
+    </script>
+    <link rel="stylesheet" href="theme.css">
     <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin>
     <link rel="preconnect" href="https://pagead2.googlesyndication.com" crossorigin>
     <link rel="preconnect" href="https://www.highperformanceformat.com" crossorigin>
@@ -229,6 +243,22 @@
                 </p>
             </section>
 
+            <section class="p-4 border-b border-neutral-800">
+                <h2 class="text-white font-bold text-sm mb-3">Appearance</h2>
+                <div class="theme-toggle-group" role="group" aria-label="Appearance">
+                    <button type="button" class="theme-toggle-btn" data-theme-option="system" onclick="InkTheme.setPreference('system')">
+                        <i data-lucide="smartphone" class="w-4 h-4"></i> System
+                    </button>
+                    <button type="button" class="theme-toggle-btn" data-theme-option="dark" onclick="InkTheme.setPreference('dark')">
+                        <i data-lucide="moon" class="w-4 h-4"></i> Dark
+                    </button>
+                    <button type="button" class="theme-toggle-btn" data-theme-option="light" onclick="InkTheme.setPreference('light')">
+                        <i data-lucide="sun" class="w-4 h-4"></i> Light
+                    </button>
+                </div>
+                <p class="settings-sub" style="margin-top:10px;">System follows your phone's setting. Dark is used by default.</p>
+            </section>
+
             <section class="divide-y divide-[#1c1c1c]" id="settingsMainList">
                 <a href="#" id="bookmarksToggleLink" class="settings-link bookmarks-toggle">
                     <span class="settings-icon"><i data-lucide="bookmark" class="w-4 h-4"></i></span>
@@ -427,5 +457,6 @@
         document.getElementById('bookmarksBackBtn').addEventListener('click', closeBookmarksPanel);
     </script>
     <script src="enhancements.js" defer></script>
+    <script src="theme.js" defer></script>
 </body>
 </html>

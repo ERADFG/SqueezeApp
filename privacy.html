@@ -3,6 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+    (function(){
+      try {
+        var p = localStorage.getItem('ink-theme-preference') || 'system';
+        var t = p;
+        if (p === 'system') {
+          var mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)');
+          t = (mq && mq.matches) ? 'light' : 'dark';
+        }
+        document.documentElement.setAttribute('data-theme', t);
+      } catch(e) {}
+    })();
+    </script>
+    <link rel="stylesheet" href="theme.css">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="preconnect" href="https://www.highperformanceformat.com" crossorigin>
     <title>Privacy Policy - InteractInk</title>
@@ -298,5 +312,6 @@
         if (window.lucide) lucide.createIcons();
     </script>
     <script src="enhancements.js" defer></script>
+    <script src="theme.js" defer></script>
 </body>
 </html>
