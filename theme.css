@@ -152,6 +152,17 @@ html[data-theme="light"] .ink-captcha-box.ink-captcha-verified {
     background: rgba(16, 185, 129, 0.08) !important;
 }
 
+html[data-theme="light"] .search-trigger-btn {
+    background-color: #f7f8f9 !important;
+    border-color: #eff3f4 !important;
+    color: #536471 !important;
+}
+html[data-theme="light"] .search-trigger-btn:hover {
+    background-color: #eff3f4 !important;
+    border-color: #d6d9db !important;
+    color: #0f1419 !important;
+}
+
 /* ---------- Appearance toggle (Settings page) ---------- */
 .theme-toggle-group {
     display: flex;
