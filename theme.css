@@ -133,6 +133,25 @@ html[data-theme="light"] .board-grid-icon {
 html[data-theme="light"] .board-grid-label { color: #0f1419 !important; }
 html[data-theme="light"] .board-grid-name { color: #536471 !important; }
 
+/* ---------- Composer inputs (name field, post textarea) ---------- */
+/* interactink.html forces input/textarea to #000 with !important as its
+   dark-mode default; override for light so the fields aren't black boxes. */
+html[data-theme="light"] input,
+html[data-theme="light"] textarea { background-color: #ffffff !important; }
+html[data-theme="light"] input::placeholder,
+html[data-theme="light"] textarea::placeholder { color: #71767b !important; }
+
+/* ---------- "I'm not a robot" captcha pill ---------- */
+html[data-theme="light"] .ink-captcha-box {
+    background: #f7f8f9 !important;
+    border-color: #eff3f4 !important;
+}
+html[data-theme="light"] .ink-captcha-box:hover { border-color: #d6d9db !important; }
+html[data-theme="light"] .ink-captcha-box.ink-captcha-verified {
+    border-color: #10b981 !important;
+    background: rgba(16, 185, 129, 0.08) !important;
+}
+
 /* ---------- Appearance toggle (Settings page) ---------- */
 .theme-toggle-group {
     display: flex;
