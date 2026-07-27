@@ -1287,6 +1287,105 @@
         margin: 0;
       }
     }
+
+    /* ==================================================================
+       LIGHT MODE
+       ichat has its own local dark palette (the --bg-black/--card-bg/etc
+       variables above, plus a handful of one-off hex colors that don't
+       route through those variables) that theme.css doesn't know about.
+       Re-pointing the variables handles most of the page; the rest are
+       the specific hardcoded colors used for bubbles, borders, and the
+       shared nav chrome, which also needs a bump in specificity here
+       since ichat.html's own .nav-item/.bottom-tab rules (declared after
+       theme.css in the cascade) otherwise win over theme.css's light
+       overrides.
+       ================================================================== */
+    html[data-theme="light"] {
+      --bg-black: #ffffff;
+      --card-bg: #f7f8f9;
+      --card-border: #eff3f4;
+      --text-white: #0f1419;
+      --text-muted: #6b7580;
+      --secure-gray: #f0f0f0;
+      --avatar-border: #d6d9db;
+    }
+
+    html[data-theme="light"] .site-shell { background-color: #ffffff; }
+    html[data-theme="light"] .app-container {
+      background-color: #ffffff;
+      border-color: #eff3f4;
+      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.08);
+    }
+    html[data-theme="light"] .telemetry-pill { background-color: rgba(0, 0, 0, 0.03); }
+    html[data-theme="light"] .sidebar { background-color: #ffffff; }
+    html[data-theme="light"] .chat-item:hover {
+      background-color: #f7f8f9;
+      border-color: #eff3f4;
+    }
+    html[data-theme="light"] .chat-item.active {
+      background-color: #f0f0f0 !important;
+      border-color: #d6d9db !important;
+    }
+    html[data-theme="light"] .avatar-indicator {
+      background: #f0f0f0;
+      border-color: #d6d9db;
+    }
+    html[data-theme="light"] .avatar-indicator svg { fill: #6b7580; }
+    html[data-theme="light"] .chat-item:hover .avatar-indicator { border-color: #b8bec4; }
+    html[data-theme="light"] .chat-item.active .avatar-indicator {
+      border-color: #9aa3ab;
+      background: #e5e8ea;
+    }
+    html[data-theme="light"] .status-dot { border-color: #ffffff; }
+    html[data-theme="light"] .connect-card { background-color: rgba(0, 0, 0, 0.02); }
+    html[data-theme="light"] .connect-input:focus { border-color: #b8bec4; }
+    html[data-theme="light"] .action-btn { color: #9aa3ab; }
+    html[data-theme="light"] .action-btn:hover {
+      background-color: #f0f0f0;
+      color: #0f1419;
+    }
+    html[data-theme="light"] .view-tabs { background-color: #f0f0f0; }
+    html[data-theme="light"] .view-btn.active { background-color: #ffffff; }
+    html[data-theme="light"] .msg-bubble.sent {
+      background-color: #d1fae5;
+      color: #05714b;
+      border-color: #a7f0d1;
+    }
+    html[data-theme="light"] .msg-bubble.received {
+      background-color: #f0f0f0;
+      border-color: #eff3f4;
+    }
+    html[data-theme="light"] .meta-tag { color: rgba(15, 20, 25, 0.35); }
+    html[data-theme="light"] .delivery-status { color: #9aa3ab; }
+    html[data-theme="light"] .typing-indicator-bubble { background-color: #f0f0f0; }
+    html[data-theme="light"] .typing-dot { background-color: #9aa3ab; }
+    html[data-theme="light"] .modal-card { background-color: #ffffff; }
+    html[data-theme="light"] .modal-body p,
+    html[data-theme="light"] .modal-body ol { color: #536471; }
+    html[data-theme="light"] .btn-secondary {
+      color: #536471;
+      border-color: rgba(15, 20, 25, 0.12);
+    }
+    html[data-theme="light"] .btn-secondary:hover {
+      background-color: #f0f0f0;
+      color: #0f1419;
+      border-color: rgba(15, 20, 25, 0.2);
+    }
+    html[data-theme="light"] .bg-\[\#0b0f12\] { background-color: #f7f8f9; }
+    html[data-theme="light"] .border-\[\#1b2a24\] { border-color: #d6ece1; }
+
+    /* Shared nav chrome: these ichat-local rules are declared after
+       theme.css, so the light override needs the [data-theme] prefix
+       to win the cascade. */
+    html[data-theme="light"] .nav-item { color: #0f1419 !important; }
+    html[data-theme="light"] .nav-item:hover { background-color: #f0f0f0; }
+    html[data-theme="light"] .nav-item svg { stroke: #0f1419 !important; }
+    html[data-theme="light"] .footer-link:hover { color: #0f1419; }
+    html[data-theme="light"] .bottom-tab.active { color: #0f1419; }
+    html[data-theme="light"] .bottom-tab-bar {
+      background: rgba(255, 255, 255, 0.97);
+      border-top-color: #eff3f4;
+    }
   </style>
 </head>
 <body class="min-h-screen font-sans antialiased selection:bg-neutral-800 selection:text-white">
