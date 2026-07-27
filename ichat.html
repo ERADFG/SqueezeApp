@@ -2,15 +2,33 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ichat - Anonymous Messenger</title>
+
+  <meta name="description" content="ichat: peer-to-peer anonymous messaging on InteractInk, with no accounts and no sign-up.">
+  <link rel="canonical" href="https://interactink.vercel.app/ichat.html" />
+  <meta name="robots" content="index, follow">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="InteractInk">
+  <meta property="og:title" content="ichat - Anonymous Messenger">
+  <meta property="og:description" content="Peer-to-peer anonymous messaging on InteractInk, with no accounts and no sign-up.">
+  <meta property="og:url" content="https://interactink.vercel.app/ichat.html">
+  <meta property="og:image" content="https://interactink.vercel.app/favicon2.png">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="ichat - Anonymous Messenger">
+  <meta name="twitter:description" content="Peer-to-peer anonymous messaging on InteractInk, with no accounts and no sign-up.">
+  <meta name="twitter:image" content="https://interactink.vercel.app/favicon2.png">
 
   <link rel="preconnect" href="https://pagead2.googlesyndication.com" crossorigin>
   <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin>
   <link rel="preconnect" href="https://www.highperformanceformat.com" crossorigin>
 
-  <!-- Favicon utilizing logo.png -->
-  <link rel="icon" type="image/png" href="logo.png">
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon2.png">
 
   <meta name="google-adsense-account" content="ca-pub-9357677827244243">
 
@@ -1727,7 +1745,7 @@
 
     function linkify(text) {
       const urlPattern = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
-      return text.replace(urlPattern, '<a href="$1" target="_blank" class="msg-link">$1</a>');
+      return text.replace(urlPattern, '<a href="$1" target="_blank" rel="noopener noreferrer" class="msg-link">$1</a>');
     }
 
     async function generateECDHKeys() {
