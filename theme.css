@@ -41,6 +41,19 @@ html[data-theme="light"] .bg-neutral-900,
 html[data-theme="light"] .bg-neutral-950 { background-color: #f7f8f9 !important; }
 html[data-theme="light"] [style*="rgba(0,0,0,0.97)"] { background: rgba(255,255,255,0.97) !important; }
 
+/* Tailwind opacity-suffixed variants (e.g. bg-neutral-950/40) are separate
+   generated classes and weren't caught by the plain bg-neutral-900/950
+   rules above — these are the translucent card backgrounds used for the
+   info box, popular-posts cards, comment cards, etc. */
+html[data-theme="light"] .bg-neutral-950\/30,
+html[data-theme="light"] .bg-neutral-950\/40,
+html[data-theme="light"] .bg-neutral-950\/60,
+html[data-theme="light"] .bg-neutral-900\/40,
+html[data-theme="light"] .bg-neutral-800\/70 { background-color: #f7f8f9 !important; }
+html[data-theme="light"] .hover\:bg-neutral-900\/40:hover { background-color: #eff3f4 !important; }
+html[data-theme="light"] .divide-neutral-800 > :not([hidden]) ~ :not([hidden]),
+html[data-theme="light"] .divide-neutral-900 > :not([hidden]) ~ :not([hidden]) { border-color: #eff3f4 !important; }
+
 /* ---------- Text colors ---------- */
 html[data-theme="light"] .text-white { color: #0f1419 !important; }
 html[data-theme="light"] .text-neutral-200,
@@ -99,6 +112,26 @@ html[data-theme="light"] .bookmark-item:hover,
 html[data-theme="light"] .bookmarks-back:hover { background-color: #f7f8f9 !important; }
 html[data-theme="light"] .bookmarks-back { color: #536471 !important; }
 html[data-theme="light"] .bookmarks-empty { color: #536471 !important; }
+
+/* ---------- Board picker tiles (landing page 20-board grid) ---------- */
+html[data-theme="light"] .board-grid-card {
+    background: #f7f8f9 !important;
+    border-color: #eff3f4 !important;
+}
+html[data-theme="light"] .board-grid-card:hover {
+    background: rgba(16, 185, 129, 0.08) !important;
+    border-color: #10b981 !important;
+}
+html[data-theme="light"] .board-grid-card.active {
+    background: rgba(16, 185, 129, 0.12) !important;
+    border-color: #10b981 !important;
+}
+html[data-theme="light"] .board-grid-icon {
+    background: #ffffff !important;
+    border-color: #eff3f4 !important;
+}
+html[data-theme="light"] .board-grid-label { color: #0f1419 !important; }
+html[data-theme="light"] .board-grid-name { color: #536471 !important; }
 
 /* ---------- Appearance toggle (Settings page) ---------- */
 .theme-toggle-group {
