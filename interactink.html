@@ -729,11 +729,12 @@
         @media (min-width: 1024px) {
             /* Align with the center feed column instead of spanning the
                full viewport (which would overlap the sidebars). The feed
-               column is a fixed 640px centered between two equal 1fr
-               edges, so centering a fixed-width floating island the same
-               way lines it up exactly while still reading as inset. */
+               column is a fixed 640px column sitting between a 275px
+               sidebar and a 350px widgets column, so its true center sits
+               37.5px left of 50vw (half the 275/350 width difference) —
+               centering on 50% alone (as before) drifted the bar right. */
             .thread-reply-bar {
-                left: 50%;
+                left: calc(50% - 37.5px);
                 right: auto;
                 width: 640px;
                 max-width: calc(100% - 32px);
@@ -3200,7 +3201,7 @@ function initRealtimeSync() {
                 <div class="relative inline-block">
                     ${isVideo
                         ? `<video src="${url}" class="max-h-40 rounded-lg border border-neutral-800" muted></video>`
-                        : `<img src="${url}" class="max-h-40 rounded-lg border border-neutral-800">`}
+                        : `<img src="${url}" alt="Selected image preview" class="max-h-40 rounded-lg border border-neutral-800">`}
                     ${isGiphy ? `<span class="absolute bottom-1 left-1 bg-black/70 text-[9px] px-1.5 py-0.5 rounded text-neutral-300 tracking-wide">GIPHY</span>` : ''}
                     <button type="button" onclick="clearSelectedMedia('${kind}')" class="absolute -top-2 -right-2 bg-neutral-900 border border-neutral-700 rounded-full w-6 h-6 flex items-center justify-center text-neutral-300 hover:text-white cursor-pointer">
                         <i data-lucide="x" class="w-3.5 h-3.5"></i>
@@ -3449,7 +3450,7 @@ function initRealtimeSync() {
                 const thumb = item.images.fixed_width_small || item.images.fixed_width;
                 if (!thumb) return '';
                 return `<button type="button" class="block w-full aspect-square overflow-hidden rounded bg-neutral-800 hover:ring-2 hover:ring-emerald-500" onclick='selectGiphyResult(${attrJSON(item)})'>
-                    <img src="${escapeHTML(thumb.url)}" class="w-full h-full object-cover" loading="lazy">
+                    <img src="${escapeHTML(thumb.url)}" alt="GIF option" class="w-full h-full object-cover" loading="lazy">
                 </button>`;
             }).join('');
         }
@@ -3525,7 +3526,7 @@ function initRealtimeSync() {
                             onloadedmetadata="handleMediaLoad(this); tagVideoDuration('${uid}')" onerror="handleMediaError(this)"></video>
                    </div>
                    <span class="media-duration absolute bottom-1.5 left-1.5 bg-black/70 text-[10px] px-1.5 py-0.5 rounded text-neutral-200 tabular-nums z-10"></span>`
-                : `<img src="${safeUrl}" loading="lazy" class="w-full max-h-80 object-cover" onload="handleMediaLoad(this)" onerror="handleMediaError(this)">`;
+                : `<img src="${safeUrl}" alt="Image attached to this post" loading="lazy" class="w-full max-h-80 object-cover" onload="handleMediaLoad(this)" onerror="handleMediaError(this)">`;
             return `
                 <div class="post-media-wrap relative mt-2 mb-2 rounded-lg overflow-hidden border border-neutral-800 cursor-pointer max-w-sm bg-neutral-900" data-revealed="false" data-media-type="${mediaType}" data-media-url="${safeUrl}"
                      onclick="event.preventDefault(); event.stopPropagation(); handleMediaTap(event, '${safeUrl}', '${mediaType}');">
