@@ -10,14 +10,17 @@
    ========================================================================= */
 (function () {
     var STORAGE_KEY = 'ink-theme-preference';
-    var DARK_LOGO = 'favicon2.png';
+    // Every dark-mode logo filename in use across the site, each swapped
+    // to LIGHT_LOGO when light mode is active (and back when it isn't).
+    var DARK_LOGOS = ['favicon2.png', 'logo.png'];
     var LIGHT_LOGO = 'logo2.png';
 
     function getPreference() {
         try {
-            return localStorage.getItem(STORAGE_KEY) || 'system';
+            // No saved choice yet -> dark by default (not system).
+            return localStorage.getItem(STORAGE_KEY) || 'dark';
         } catch (e) {
-            return 'system';
+            return 'dark';
         }
     }
 
@@ -38,13 +41,30 @@
     }
 
     function swapLogos(theme) {
-        var target = theme === 'light' ? LIGHT_LOGO : DARK_LOGO;
-        var other = theme === 'light' ? DARK_LOGO : LIGHT_LOGO;
-        var imgs = document.querySelectorAll('img[src="' + DARK_LOGO + '"], img[src="' + LIGHT_LOGO + '"], img[src$="/' + DARK_LOGO + '"], img[src$="/' + LIGHT_LOGO + '"]');
+        var selectors = [];
+        DARK_LOGOS.concat([LIGHT_LOGO]).forEach(function (name) {
+            selectors.push('img[src="' + name + '"]', 'img[src$="/' + name + '"]');
+        });
+        var imgs = document.querySelectorAll(selectors.join(', '));
         imgs.forEach(function (img) {
             var src = img.getAttribute('src');
-            if (src.indexOf(other) !== -1) {
-                img.setAttribute('src', src.replace(other, target));
+            if (theme === 'light') {
+                DARK_LOGOS.forEach(function (dark) {
+                    if (src.indexOf(dark) !== -1) src = src.replace(dark, LIGHT_LOGO);
+                });
+            } else {
+                // Restore whichever dark logo this image originally pointed to,
+                // remembered on the element the first time we swap it.
+                if (src.indexOf(LIGHT_LOGO) !== -1) {
+                    var original = img.getAttribute('data-dark-src') || DARK_LOGOS[0];
+                    src = src.replace(LIGHT_LOGO, original);
+                }
+            }
+            if (src !== img.getAttribute('src')) {
+                if (theme === 'light') {
+                    img.setAttribute('data-dark-src', img.getAttribute('src').match(/[^/]+$/)[0]);
+                }
+                img.setAttribute('src', src);
             }
         });
     }

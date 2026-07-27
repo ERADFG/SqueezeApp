@@ -6,7 +6,7 @@
     <script>
     (function(){
       try {
-        var p = localStorage.getItem('ink-theme-preference') || 'system';
+        var p = localStorage.getItem('ink-theme-preference') || 'dark';
         var t = p;
         if (p === 'system') {
           var mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)');
