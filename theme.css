@@ -163,6 +163,54 @@ html[data-theme="light"] .search-trigger-btn:hover {
     color: #0f1419 !important;
 }
 
+/* ---------- Board navigator (dropdown panel + search) ---------- */
+html[data-theme="light"] .board-picker {
+    background: #ffffff !important;
+    border-color: #eff3f4 !important;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.12) !important;
+}
+html[data-theme="light"] #boardPickerSearch {
+    background: #f7f8f9 !important;
+    border-color: #eff3f4 !important;
+    color: #0f1419 !important;
+}
+html[data-theme="light"] #boardPickerSearch::placeholder { color: #71767b !important; }
+html[data-theme="light"] .board-picker-item:hover { background: #f7f8f9 !important; }
+html[data-theme="light"] .board-picker-item.active { background: rgba(16, 185, 129, 0.08) !important; }
+html[data-theme="light"] .board-picker-item-icon {
+    background: #f0f0f0 !important;
+    color: #536471 !important;
+}
+html[data-theme="light"] .board-picker-item.active .board-picker-item-icon {
+    background: rgba(16, 185, 129, 0.12) !important;
+    color: #10b981 !important;
+}
+html[data-theme="light"] .board-picker-item-name { color: #536471 !important; }
+html[data-theme="light"] .board-picker-item.active .board-picker-item-name { color: #0f1419 !important; }
+
+/* ---------- Board scroller (horizontal board strip) ---------- */
+html[data-theme="light"] .board-scroller-wrap {
+    background: rgba(255, 255, 255, 0.85) !important;
+    border-color: #eff3f4 !important;
+}
+html[data-theme="light"] .board-scroller-chip {
+    background: #f7f8f9 !important;
+    border-color: #eff3f4 !important;
+    color: #536471 !important;
+}
+html[data-theme="light"] .board-scroller-chip:hover {
+    border-color: #d6d9db !important;
+    color: #0f1419 !important;
+}
+html[data-theme="light"] .board-scroller-chip.active {
+    background: rgba(16, 185, 129, 0.1) !important;
+    border-color: rgba(16, 185, 129, 0.55) !important;
+    color: #10b981 !important;
+}
+html[data-theme="light"] .board-scroller-chip .board-scroller-chip-name { color: #71767b !important; }
+html[data-theme="light"] .board-scroller-edge.left { background: linear-gradient(to right, #ffffff, transparent) !important; }
+html[data-theme="light"] .board-scroller-edge.right { background: linear-gradient(to left, #ffffff, transparent) !important; }
+
 /* ---------- Appearance toggle (Settings page) ---------- */
 .theme-toggle-group {
     display: flex;
