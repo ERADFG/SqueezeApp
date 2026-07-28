@@ -1077,10 +1077,10 @@
 
                 <div class="flex justify-between items-center border-t border-neutral-950 pt-3 mt-2">
                     <div class="text-neutral-600 flex gap-4 items-center text-sm">
-                        <label for="threadMediaInput" class="cursor-pointer hover:text-neutral-300 transition flex items-center" title="Attach image or video">
-                            <i data-lucide="image-plus" class="w-4 h-4"></i>
+                        <label for="threadMediaInput" class="cursor-pointer hover:text-neutral-300 transition flex items-center" title="Attach a file (image, video, audio, PDF, or any other file)">
+                            <i data-lucide="paperclip" class="w-4 h-4"></i>
                         </label>
-                        <input type="file" id="threadMediaInput" accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm" class="hidden">
+                        <input type="file" id="threadMediaInput" class="hidden">
                         <button type="button" data-gif-trigger class="cursor-pointer hover:text-neutral-300 transition flex items-center border border-neutral-700 rounded px-1 leading-none text-[10px] font-black tracking-tight" title="Attach a GIF from GIPHY" onclick="openGifPicker('thread', this)">GIF</button>
                         <button type="button" id="threadPollToggleBtn" class="cursor-pointer hover:text-neutral-300 transition flex items-center" title="Add a poll" onclick="togglePollBuilder()">
                             <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
@@ -1149,10 +1149,10 @@
                     </div>
                     <div class="reply-bar-footer-row">
                         <div class="reply-bar-icons">
-                            <label for="commentMediaInput" class="reply-icon-btn" title="Attach image or video">
-                                <i data-lucide="image"></i>
+                            <label for="commentMediaInput" class="reply-icon-btn" title="Attach a file (image, video, audio, PDF, or any other file)">
+                                <i data-lucide="paperclip"></i>
                             </label>
-                            <input type="file" id="commentMediaInput" accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm" class="hidden">
+                            <input type="file" id="commentMediaInput" class="hidden">
                             <button type="button" data-gif-trigger class="reply-gif-btn" title="Attach a GIF from GIPHY" onclick="openGifPicker('comment', this)">GIF</button>
                             <label id="commentCaptchaBox" class="ink-captcha-box ink-captcha-box-sm">
                                 <input type="checkbox" id="commentCaptchaCheckbox" class="ink-captcha-checkbox" onclick="return handleCaptchaClick(event, 'comment')">
@@ -1296,11 +1296,23 @@
     const MEDIA_BUCKET = 'post-media';
     const MAX_IMAGE_BYTES = 50 * 1024 * 1024;  // 50 MB
     const MAX_VIDEO_BYTES = 50 * 1024 * 1024;  // 50 MB
+    const MAX_AUDIO_BYTES = 30 * 1024 * 1024;  // 30 MB
+    const MAX_OTHER_FILE_BYTES = 25 * 1024 * 1024; // 25 MB — PDFs, docs, zips, anything else
     const MAX_VIDEO_SECONDS = 58;              // Sightengine's synchronous video check only covers clips under 1 minute
     const MAX_IMAGE_DIMENSION = 2048;          // longest edge, px, after resize
     const MAX_VIDEO_DIMENSION = 1280;          // longest edge, px, after re-encode
     const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
     const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm'];
+    const ALLOWED_AUDIO_TYPES = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/ogg', 'audio/webm', 'audio/mp4', 'audio/x-m4a', 'audio/aac', 'audio/flac'];
+    // Any file that isn't image/video/audio falls back to a generic
+    // "attachment" card (icon + extension + open/download link) — this is
+    // what lets literally any file type be attached, not just media.
+    const FILE_ICON_BY_EXT = {
+        pdf: 'file-text', doc: 'file-text', docx: 'file-text', txt: 'file-text', rtf: 'file-text', odt: 'file-text',
+        xls: 'file-spreadsheet', xlsx: 'file-spreadsheet', csv: 'file-spreadsheet',
+        zip: 'file-archive', rar: 'file-archive', '7z': 'file-archive', tar: 'file-archive', gz: 'file-archive',
+        json: 'file-json', js: 'file-code', ts: 'file-code', py: 'file-code', html: 'file-code', css: 'file-code'
+    };
     // Selected-but-not-yet-posted file for each composer, keyed by composer id.
     // Holds either a File (local upload) or a { isGiphy: true, url, previewUrl }
     // reference (GIF picked from GIPHY — never touches our own storage).
@@ -3222,17 +3234,40 @@ function initRealtimeSync() {
             });
         }
 
+        // Classifies any selected file into 'image' | 'video' | 'audio' | 'other'.
+        // Falls back to the file extension when the browser doesn't supply a
+        // MIME type (common for some document/archive formats).
+        function classifyFile(file) {
+            if (ALLOWED_IMAGE_TYPES.includes(file.type)) return 'image';
+            if (ALLOWED_VIDEO_TYPES.includes(file.type)) return 'video';
+            if (ALLOWED_AUDIO_TYPES.includes(file.type) || file.type.startsWith('audio/')) return 'audio';
+            if (file.type.startsWith('image/')) return 'image';
+            if (file.type.startsWith('video/')) return 'video';
+            return 'other';
+        }
+
+        function getFileExt(file) {
+            const fromName = (file.name.split('.').pop() || '').toLowerCase();
+            return fromName && fromName !== file.name.toLowerCase() ? fromName : '';
+        }
+
+        // Any file type is allowed to attach — images/video/audio get
+        // dedicated players, everything else becomes a downloadable
+        // attachment card. Only the size cap (which varies by kind) can
+        // reject a file.
         function validateMediaFile(file) {
-            const isImage = ALLOWED_IMAGE_TYPES.includes(file.type);
-            const isVideo = ALLOWED_VIDEO_TYPES.includes(file.type);
-            if (!isImage && !isVideo) {
-                return 'Unsupported file type. Use JPG, PNG, WEBP, GIF, MP4 or WEBM.';
-            }
-            if (isImage && file.size > MAX_IMAGE_BYTES) {
+            const kind = classifyFile(file);
+            if (kind === 'image' && file.size > MAX_IMAGE_BYTES) {
                 return `Image too large (max ${formatBytes(MAX_IMAGE_BYTES)}).`;
             }
-            if (isVideo && file.size > MAX_VIDEO_BYTES) {
+            if (kind === 'video' && file.size > MAX_VIDEO_BYTES) {
                 return `Video too large (max ${formatBytes(MAX_VIDEO_BYTES)}).`;
+            }
+            if (kind === 'audio' && file.size > MAX_AUDIO_BYTES) {
+                return `Audio too large (max ${formatBytes(MAX_AUDIO_BYTES)}).`;
+            }
+            if (kind === 'other' && file.size > MAX_OTHER_FILE_BYTES) {
+                return `File too large (max ${formatBytes(MAX_OTHER_FILE_BYTES)}).`;
             }
             return null;
         }
@@ -3241,18 +3276,43 @@ function initRealtimeSync() {
             const wrap = document.getElementById(`${kind}MediaPreviewWrap`);
             wrap.classList.remove('hidden');
             const isGiphy = !!(fileOrGif && fileOrGif.isGiphy);
+            const fileKind = isGiphy ? 'gif' : classifyFile(fileOrGif);
             const url = isGiphy ? fileOrGif.previewUrl : URL.createObjectURL(fileOrGif);
-            const isVideo = !isGiphy && fileOrGif.type.startsWith('video/');
-            wrap.innerHTML = `
-                <div class="relative inline-block">
-                    ${isVideo
-                        ? `<video src="${url}" class="max-h-40 rounded-lg border border-neutral-800" muted></video>`
-                        : `<img src="${url}" alt="Selected image preview" class="max-h-40 rounded-lg border border-neutral-800">`}
-                    ${isGiphy ? `<span class="absolute bottom-1 left-1 bg-black/70 text-[9px] px-1.5 py-0.5 rounded text-neutral-300 tracking-wide">GIPHY</span>` : ''}
-                    <button type="button" onclick="clearSelectedMedia('${kind}')" class="absolute -top-2 -right-2 bg-neutral-900 border border-neutral-700 rounded-full w-6 h-6 flex items-center justify-center text-neutral-300 hover:text-white cursor-pointer">
-                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                    </button>
-                </div>`;
+
+            const removeBtn = `
+                <button type="button" onclick="clearSelectedMedia('${kind}')" class="absolute -top-2 -right-2 bg-neutral-900 border border-neutral-700 rounded-full w-6 h-6 flex items-center justify-center text-neutral-300 hover:text-white cursor-pointer">
+                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                </button>`;
+
+            if (fileKind === 'video' || fileKind === 'image') {
+                wrap.innerHTML = `
+                    <div class="relative inline-block">
+                        ${fileKind === 'video'
+                            ? `<video src="${url}" class="max-h-40 rounded-lg border border-neutral-800" muted></video>`
+                            : `<img src="${url}" alt="Selected image preview" class="max-h-40 rounded-lg border border-neutral-800">`}
+                        ${isGiphy ? `<span class="absolute bottom-1 left-1 bg-black/70 text-[9px] px-1.5 py-0.5 rounded text-neutral-300 tracking-wide">GIPHY</span>` : ''}
+                        ${removeBtn}
+                    </div>`;
+            } else if (fileKind === 'audio') {
+                wrap.innerHTML = `
+                    <div class="relative inline-flex items-center gap-2 bg-neutral-900 border border-neutral-800 rounded-lg p-2 pr-8 max-w-xs">
+                        <i data-lucide="music" class="w-4 h-4 text-neutral-400 shrink-0"></i>
+                        <audio src="${url}" controls class="h-9 max-w-[220px]"></audio>
+                        ${removeBtn}
+                    </div>`;
+            } else {
+                const ext = getFileExt(fileOrGif);
+                const icon = FILE_ICON_BY_EXT[ext] || 'file';
+                wrap.innerHTML = `
+                    <div class="relative inline-flex items-center gap-2 bg-neutral-900 border border-neutral-800 rounded-lg p-2.5 pr-8 max-w-xs">
+                        <i data-lucide="${icon}" class="w-5 h-5 text-neutral-400 shrink-0"></i>
+                        <div class="min-w-0">
+                            <div class="text-xs text-neutral-200 truncate">${escapeHTML(fileOrGif.name)}</div>
+                            <div class="text-[10px] text-neutral-500">${formatBytes(fileOrGif.size)}</div>
+                        </div>
+                        ${removeBtn}
+                    </div>`;
+            }
             if (window.lucide) lucide.createIcons();
         }
 
@@ -3289,7 +3349,9 @@ function initRealtimeSync() {
                 return;
             }
 
-            if (file.type.startsWith('video/')) {
+            const fileKind = classifyFile(file);
+
+            if (fileKind === 'video') {
                 try {
                     const duration = await getVideoDuration(file);
                     if (duration > MAX_VIDEO_SECONDS) {
@@ -3305,7 +3367,7 @@ function initRealtimeSync() {
             }
 
             let finalFile = file;
-            if (file.type.startsWith('image/')) {
+            if (fileKind === 'image') {
                 try {
                     finalFile = await prepareImageForUpload(file);
                 } catch (e) {
@@ -3313,11 +3375,14 @@ function initRealtimeSync() {
                     fileInput.value = '';
                     return;
                 }
-            } else if (file.type.startsWith('video/')) {
+            } else if (fileKind === 'video') {
                 // Best-effort — prepareVideoForUpload always resolves, falling
                 // back to the original file rather than rejecting.
                 finalFile = await prepareVideoForUpload(file);
             }
+            // Audio and other file types (PDFs, docs, zips, etc.) are
+            // attached as-is — no re-encoding, since there isn't a reliable
+            // lossless way to shrink them from plain browser JS.
 
             selectedMedia[kind] = finalFile;
             renderMediaPreview(kind, finalFile);
@@ -3378,17 +3443,18 @@ function initRealtimeSync() {
             // function, no quarantine/review step -- this is the simplest
             // possible path, restored on request. Nothing scans this media.
             const extMap = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' };
-            const ext = extMap[file.type] || (file.name.split('.').pop() || 'bin').toLowerCase();
+            const ext = extMap[file.type] || getFileExt(file) || 'bin';
             const path = `${boardId}/${Math.random().toString(16).slice(2)}.${ext}`;
             const { error: uploadErr } = await supabaseClient.storage
                 .from('post-media')
-                .upload(path, file, { contentType: file.type });
+                .upload(path, file, { contentType: file.type || 'application/octet-stream' });
             if (uploadErr) {
                 throw new Error(uploadErr.message || 'Upload failed');
             }
             const { data: pub } = supabaseClient.storage.from('post-media').getPublicUrl(path);
-            const type = file.type.startsWith('video/') ? 'video' : 'image';
-            return { url: pub.publicUrl, type, path };
+            const kind = classifyFile(file);
+            const type = kind === 'other' ? 'file' : kind;
+            return { url: pub.publicUrl, type, path, name: file.name };
         }
 
         // ================== GIPHY GIF picker ==================
@@ -3565,6 +3631,30 @@ function initRealtimeSync() {
                              onload="this.previousElementSibling.remove()" onerror="handleMediaError(this)">
                         <span class="absolute bottom-1.5 right-1.5 bg-black/70 text-[9px] px-1.5 py-0.5 rounded text-neutral-300 tracking-wide">GIPHY</span>
                     </div>`;
+            }
+            // Audio isn't visually graphic the way an image/video can be, so
+            // it skips the "tap to reveal" veil and just renders a player
+            // directly — same treatment as GIFs above.
+            if (mediaType === 'audio') {
+                return `
+                    <div class="post-media-wrap flex items-center gap-2 mt-2 mb-2 rounded-lg border border-neutral-800 bg-neutral-900 p-2.5 max-w-sm">
+                        <i data-lucide="music" class="w-5 h-5 text-neutral-400 shrink-0"></i>
+                        <audio src="${safeUrl}" controls preload="metadata" class="w-full h-9" onerror="handleMediaError(this)"></audio>
+                    </div>`;
+            }
+            // Any non-image/video/audio/gif attachment (PDF, doc, zip, etc.)
+            // becomes a simple open/download card — the browser handles
+            // in-tab preview for types it knows (like PDFs) and downloads
+            // anything else.
+            if (mediaType === 'file') {
+                const ext = (safeUrl.split('.').pop() || '').split(/[?#]/)[0].toLowerCase();
+                const icon = FILE_ICON_BY_EXT[ext] || 'file';
+                return `
+                    <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="post-media-wrap flex items-center gap-2.5 mt-2 mb-2 rounded-lg border border-neutral-800 bg-neutral-900 p-3 max-w-sm hover:bg-neutral-800 transition">
+                        <i data-lucide="${icon}" class="w-5 h-5 text-neutral-400 shrink-0"></i>
+                        <span class="text-sm text-neutral-200 truncate">Attached ${ext ? '.' + ext : ''} file</span>
+                        <i data-lucide="external-link" class="w-3.5 h-3.5 text-neutral-500 shrink-0 ml-auto"></i>
+                    </a>`;
             }
             const inner = mediaType === 'video'
                 ? `<div class="xv-wrap w-full h-full">
