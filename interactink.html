@@ -3953,6 +3953,7 @@ function initRealtimeSync() {
             }
 
             playBtn.addEventListener('click', (e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 if (audioEl.paused) {
                     // Only one thing plays at a time across the page —
@@ -3967,6 +3968,7 @@ function initRealtimeSync() {
 
             let dragging = false;
             progress.addEventListener('pointerdown', (e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 dragging = true;
                 thumb.classList.add('xv-dragging');
@@ -3979,7 +3981,7 @@ function initRealtimeSync() {
                 thumb.classList.remove('xv-dragging');
                 try { progress.releasePointerCapture(e.pointerId); } catch (_) {}
             });
-            progress.addEventListener('click', (e) => e.stopPropagation());
+            progress.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); });
 
             audioEl.addEventListener('play', () => setIcon(true));
             audioEl.addEventListener('pause', () => setIcon(false));
