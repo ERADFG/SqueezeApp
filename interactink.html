@@ -2487,7 +2487,79 @@ function initRealtimeSync() {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
  
-        // ---------- Posting cooldown ----------
+        // ---------- Device fingerprint (for admin bans) ----------
+        // Generates a semi-stable ID from device/browser characteristics
+        // (not perfectly unique, not meant to be — it's a practical
+        // deterrent, same honesty as the cooldown system below). Persisted
+        // the same way as the cooldown timer: localStorage + cookie +
+        // IndexedDB, so clearing just one doesn't generate a fresh ID.
+        // Ceiling: incognito, a different browser, or a fresh device still
+        // produces a new fingerprint — this stops casual repeat offenders,
+        // not a determined one. Pair with the IP-ban Edge Function (see
+        // admin notes) for stronger enforcement.
+        const FINGERPRINT_STORAGE_KEY = 'ink_device_fp';
+        let cachedFingerprint = null;
+
+        function computeFingerprint() {
+            try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                ctx.textBaseline = 'top';
+                ctx.font = '14px Arial';
+                ctx.fillText('ink-fp', 2, 2);
+                const canvasData = canvas.toDataURL();
+
+                const raw = [
+                    navigator.userAgent,
+                    navigator.language,
+                    screen.width + 'x' + screen.height,
+                    screen.colorDepth,
+                    Intl.DateTimeFormat().resolvedOptions().timeZone,
+                    navigator.hardwareConcurrency || '',
+                    canvasData.slice(-50),
+                ].join('|');
+
+                // Simple, fast string hash (not cryptographic — doesn't
+                // need to be, this is a deterrent, not a security boundary).
+                let hash = 0;
+                for (let i = 0; i < raw.length; i++) {
+                    hash = ((hash << 5) - hash + raw.charCodeAt(i)) | 0;
+                }
+                return 'fp_' + Math.abs(hash).toString(36);
+            } catch (e) {
+                return 'fp_unknown';
+            }
+        }
+
+        function getOrCreateFingerprint() {
+            if (cachedFingerprint) return cachedFingerprint;
+            let fp = null;
+            try { fp = localStorage.getItem(FINGERPRINT_STORAGE_KEY); } catch (e) {}
+            if (!fp) { try { fp = getCookie(FINGERPRINT_STORAGE_KEY); } catch (e) {} }
+            if (!fp) fp = computeFingerprint();
+
+            try { localStorage.setItem(FINGERPRINT_STORAGE_KEY, fp); } catch (e) {}
+            setCookie(FINGERPRINT_STORAGE_KEY, fp, 60 * 60 * 24 * 365); // 1 year
+            idbSetTimestamp(FINGERPRINT_STORAGE_KEY, fp); // reuses the same IDB helper; value is a string here, not a timestamp, that's fine — it's a generic key/value store
+            cachedFingerprint = fp;
+            return fp;
+        }
+
+        async function isFingerprintBanned(fingerprint) {
+            try {
+                const { data, error } = await withTimeout(
+                    supabaseClient.from('banned_fingerprints').select('fingerprint').eq('fingerprint', fingerprint).maybeSingle(),
+                    5000, { data: null, error: null }
+                );
+                if (error) { console.error('Ban check failed, allowing by default:', error); return false; }
+                return !!data;
+            } catch (e) {
+                console.error('Ban check failed, allowing by default:', e);
+                return false;
+            }
+        }
+
+
         // Anonymous posters get one new thread every 100s and one new comment
         // every 100s. Hardened to write the timestamp to THREE independent
         // storage mechanisms (localStorage, a cookie, and IndexedDB) and
@@ -2717,7 +2789,7 @@ function initRealtimeSync() {
                 // to the top of whichever board they're posted in. Replies/
                 // comments never get this treatment, only top-level threads.
                 const isVerifiedPost = resolvedThreadName === VERIFIED_DISPLAY_NAME;
-                const newThread = { id, board_id: appState.currentBoard, title: parsedTitle, content: contentVal, timestamp: Date.now(), upvotes: 1, media_url: null, media_type: null, moderation_status: 'approved', pinned: isVerifiedPost };
+                const newThread = { id, board_id: appState.currentBoard, title: parsedTitle, content: contentVal, timestamp: Date.now(), upvotes: 1, media_url: null, media_type: null, moderation_status: 'approved', pinned: isVerifiedPost, poster_fingerprint: getOrCreateFingerprint() };
 
                 const submitBtn = e.target.querySelector('button[type="submit"]');
                 if (submitBtn) submitBtn.disabled = true;
@@ -2850,7 +2922,7 @@ function initRealtimeSync() {
                 const hasExplicitPointer = /^>>([A-Fa-f0-9]{8})/.test(textVal);
                 const focusedCommentId = appState.commentFocusStack[appState.commentFocusStack.length - 1] || null;
                 const finalText = (!hasExplicitPointer && focusedCommentId) ? `>>${focusedCommentId} ${textVal}` : textVal;
-                const newComment = { id, thread_id: appState.activeThreadId, board_id: appState.currentBoard, tripcode, text: finalText, timestamp: Date.now(), media_url: null, media_type: null, moderation_status: 'approved' };
+                const newComment = { id, thread_id: appState.activeThreadId, board_id: appState.currentBoard, tripcode, text: finalText, timestamp: Date.now(), media_url: null, media_type: null, moderation_status: 'approved', poster_fingerprint: getOrCreateFingerprint() };
 
                 const submitBtn = e.target.querySelector('button[type="submit"]');
                 if (submitBtn) submitBtn.disabled = true;
@@ -4156,6 +4228,10 @@ function initRealtimeSync() {
         }
 
         async function runModerationCheck({ text, mediaUrl, mediaType, mediaStoragePath }) {
+            const fingerprint = getOrCreateFingerprint();
+            if (await isFingerprintBanned(fingerprint)) {
+                return { allowed: false, reason: 'You have been banned from posting on this site.' };
+            }
             if (containsPossibleDoxxing(text)) {
                 return { allowed: false, reason: 'This post appears to contain personal information (phone number, address, card, or IP) and cannot be posted.' };
             }

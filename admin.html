@@ -31,6 +31,7 @@
         <button id="tabCommentsBtn" onclick="switchTab('comments')" class="px-4 py-2 text-sm font-bold border-b-2 border-transparent text-neutral-500">Comments</button>
         <button id="tabReportsBtn" onclick="switchTab('reports')" class="px-4 py-2 text-sm font-bold border-b-2 border-transparent text-neutral-500">Reports</button>
         <button id="tabIncidentsBtn" onclick="switchTab('incidents')" class="px-4 py-2 text-sm font-bold border-b-2 border-transparent text-neutral-500">Incident Log</button>
+        <button id="tabBansBtn" onclick="switchTab('bans')" class="px-4 py-2 text-sm font-bold border-b-2 border-transparent text-neutral-500">Banned Users</button>
         <button onclick="loadAll()" class="ml-auto px-3 py-2 text-xs text-neutral-500 hover:text-white">Refresh</button>
     </div>
 
@@ -55,6 +56,17 @@
     </div>
     <div id="reportsList" class="space-y-4 hidden"></div>
     <div id="incidentsList" class="space-y-4 hidden"></div>
+    <div id="bansPane" class="hidden">
+        <div class="mb-4 p-4 border border-neutral-800 rounded-lg">
+            <p class="text-xs text-neutral-500 mb-2">Ban a fingerprint directly by ID (or use the "Ban" button next to a post in All Posts):</p>
+            <div class="flex gap-2">
+                <input id="manualBanFingerprint" type="text" placeholder="fp_xxxxxxx" class="flex-1 bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-sm">
+                <input id="manualBanReason" type="text" placeholder="Reason (optional)" class="flex-1 bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-sm">
+                <button onclick="banFingerprintManual()" class="px-4 py-2 bg-red-800 hover:bg-red-700 rounded text-sm font-bold">Ban</button>
+            </div>
+        </div>
+        <div id="bansList" class="space-y-2"></div>
+    </div>
 </div>
 
 <script>
@@ -102,12 +114,13 @@
         location.reload();
     }
 
-    const TAB_PANES = { flagged: 'flaggedPane', pendingMedia: 'pendingMediaPane', comments: 'commentsPane', reports: 'reportsList', incidents: 'incidentsList' };
+    const TAB_PANES = { flagged: 'flaggedPane', pendingMedia: 'pendingMediaPane', comments: 'commentsPane', reports: 'reportsList', incidents: 'incidentsList', bans: 'bansPane' };
     function switchTab(tab) {
-        for (const t of ['flagged', 'pendingMedia', 'comments', 'reports', 'incidents']) {
+        for (const t of ['flagged', 'pendingMedia', 'comments', 'reports', 'incidents', 'bans']) {
             document.getElementById(`tab${cap(t)}Btn`).className = `px-4 py-2 text-sm font-bold border-b-2 ${t === tab ? 'border-white' : 'border-transparent text-neutral-500'}`;
             document.getElementById(TAB_PANES[t]).classList.toggle('hidden', t !== tab);
         }
+        if (tab === 'bans') loadBans();
     }
     function cap(s) { return s[0].toUpperCase() + s.slice(1); }
 
@@ -377,6 +390,7 @@
                         <div class="flex gap-2 mt-3">
                             ${status !== 'approved' ? `<button onclick="approveItem(${attrJSON(item._kind)}, ${attrJSON(item.id)})" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-xs font-bold">Approve</button>` : ''}
                             <button onclick="removeItem(${attrJSON(item._kind)}, ${attrJSON(item.id)}, ${attrJSON(item.media_url ? item.media_url.split('/').slice(-2).join('/') : null)})" class="px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded text-xs font-bold">Delete</button>
+                            ${item.poster_fingerprint ? `<button onclick="banFingerprint(${attrJSON(item.poster_fingerprint)})" class="px-3 py-1.5 bg-neutral-800 hover:bg-red-900 border border-red-900 rounded text-xs font-bold">Ban poster</button>` : ''}
                         </div>
                     </div>
                 </div>
@@ -475,6 +489,48 @@
     async function markReportReviewed(reportId) {
         const { error } = await sb.from('reports').update({ reviewed: true }).eq('id', reportId);
         if (error) alert(error.message); else loadReports();
+    }
+
+    // ---------- Bans ----------
+    async function banFingerprint(fingerprint, reason) {
+        if (!fingerprint) { alert('This post has no device fingerprint on record (posted before the ban system was added).'); return; }
+        if (!confirm(`Ban this device? (${fingerprint})\n\nThey won't be able to post again from this browser/device unless they clear all site data or switch devices.`)) return;
+        const { error } = await sb.from('banned_fingerprints').insert([{ fingerprint, reason: reason || 'Banned via admin panel' }]);
+        if (error) { alert(error.message); return; }
+        alert('Fingerprint banned.');
+        loadBans();
+    }
+
+    function banFingerprintManual() {
+        const fp = document.getElementById('manualBanFingerprint').value.trim();
+        const reason = document.getElementById('manualBanReason').value.trim();
+        if (!fp) { alert('Enter a fingerprint ID to ban.'); return; }
+        banFingerprint(fp, reason);
+        document.getElementById('manualBanFingerprint').value = '';
+        document.getElementById('manualBanReason').value = '';
+    }
+
+    async function unbanFingerprint(fingerprint) {
+        if (!confirm('Remove this ban?')) return;
+        const { error } = await sb.from('banned_fingerprints').delete().eq('fingerprint', fingerprint);
+        if (error) { alert(error.message); return; }
+        loadBans();
+    }
+
+    async function loadBans() {
+        const list = document.getElementById('bansList');
+        list.innerHTML = '<p class="text-neutral-600 text-sm">Loading…</p>';
+        const { data, error } = await sb.from('banned_fingerprints').select('*').order('banned_at', { ascending: false });
+        if (error) { list.innerHTML = `<p class="text-red-400 text-sm">${escapeHTML(error.message)}</p>`; return; }
+        if (!data || data.length === 0) { list.innerHTML = '<p class="text-neutral-600 text-sm">No banned devices.</p>'; return; }
+        list.innerHTML = data.map(b => `
+            <div class="border border-neutral-800 rounded-lg p-3 flex items-center justify-between">
+                <div>
+                    <div class="text-sm font-mono">${escapeHTML(b.fingerprint)}</div>
+                    <div class="text-xs text-neutral-500">${escapeHTML(b.reason || '')} · banned ${new Date(b.banned_at).toLocaleString()}</div>
+                </div>
+                <button onclick="unbanFingerprint(${attrJSON(b.fingerprint)})" class="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 rounded text-xs font-bold">Unban</button>
+            </div>`).join('');
     }
 </script>
 </body>
