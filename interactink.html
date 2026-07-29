@@ -88,6 +88,9 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Client-side NSFW image scanning (nsfwjs + tensorflow.js) -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/nsfwjs@4.2.1/dist/nsfwjs.min.js"></script>
     <!-- Unified routing & state management (board resolution, sessionStorage persistence) -->
     <script>
     (function () {
@@ -3439,6 +3442,41 @@ function initRealtimeSync() {
             });
         }
 
+        // --- NSFW image scanning (client-side, nsfwjs + tensorflow.js) ---
+        let nsfwModel = null;
+        async function loadNsfwModel() {
+            if (!nsfwModel) nsfwModel = await nsfw.load();
+            return nsfwModel;
+        }
+
+        /**
+         * Returns true if the image should be blocked. Fails open (returns
+         * false / allows upload) if the model can't load or classify, so a
+         * scanning hiccup never blocks a legitimate post entirely — pair
+         * this with a report button + admin review as a backstop.
+         */
+        async function isImageNSFW(file) {
+            try {
+                const model = await loadNsfwModel();
+                const bitmap = await createImageBitmap(file);
+                const canvas = document.createElement('canvas');
+                canvas.width = bitmap.width;
+                canvas.height = bitmap.height;
+                canvas.getContext('2d').drawImage(bitmap, 0, 0);
+
+                const predictions = await model.classify(canvas);
+                const score = (name) => predictions.find(p => p.className === name)?.probability || 0;
+                const porn = score('Porn');
+                const hentai = score('Hentai');
+                const sexy = score('Sexy');
+
+                return (porn > 0.8 || hentai > 0.8 || sexy > 0.9);
+            } catch (e) {
+                console.error('NSFW scan failed, allowing upload:', e);
+                return false;
+            }
+        }
+
         async function onMediaFileSelected(kind, fileInput) {
             const file = fileInput.files && fileInput.files[0];
             if (!file) return;
@@ -3477,6 +3515,15 @@ function initRealtimeSync() {
                     fileInput.value = '';
                     return;
                 }
+
+                setMediaError(kind, 'Scanning image…');
+                const flagged = await isImageNSFW(finalFile);
+                if (flagged) {
+                    setMediaError(kind, 'This image violates community guidelines and cannot be uploaded.');
+                    fileInput.value = '';
+                    return;
+                }
+                setMediaError(kind, null);
             } else if (fileKind === 'video') {
                 // Best-effort — prepareVideoForUpload always resolves, falling
                 // back to the original file rather than rejecting.
