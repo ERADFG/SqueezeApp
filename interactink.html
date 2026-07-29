@@ -3347,12 +3347,34 @@ function initRealtimeSync() {
             return fromName && fromName !== file.name.toLowerCase() ? fromName : '';
         }
 
+        // File types that should never be attachable — executables and
+        // scripts disguised as regular attachments (a classic malware
+        // delivery trick: "photo.jpg.exe" or a renamed .scr file).
+        const DANGEROUS_EXTENSIONS = [
+            'exe', 'scr', 'bat', 'cmd', 'com', 'msi', 'vbs', 'js', 'jse', 'wsf',
+            'ps1', 'jar', 'apk', 'app', 'dmg', 'pkg', 'sh', 'reg', 'lnk',
+        ];
+
         // Any file type is allowed to attach — images/video/audio get
         // dedicated players, everything else becomes a downloadable
         // attachment card. Only the size cap (which varies by kind) can
         // reject a file.
         function validateMediaFile(file) {
             const kind = classifyFile(file);
+            const ext = getFileExt(file);
+
+            if (ext && DANGEROUS_EXTENSIONS.includes(ext)) {
+                return 'This file type is not allowed for security reasons.';
+            }
+            // Filename itself is checked with the same evasion-resistant
+            // matching as post text — catches suggestively/illegally named
+            // files even before their content is inspected.
+            if (containsKeywordFrom(file.name, DRUG_KEYWORDS) ||
+                containsKeywordFrom(file.name, SEXUAL_KEYWORDS) ||
+                containsKeywordFrom(file.name, SCAM_KEYWORDS)) {
+                return 'This file name violates community guidelines.';
+            }
+
             if (kind === 'image' && file.size > MAX_IMAGE_BYTES) {
                 return `Image too large (max ${formatBytes(MAX_IMAGE_BYTES)}).`;
             }
@@ -3455,6 +3477,36 @@ function initRealtimeSync() {
          * scanning hiccup never blocks a legitimate post entirely — pair
          * this with a report button + admin review as a backstop.
          */
+        function scoreCanvasNSFW(model, predictions) {
+            const score = (name) => predictions.find(p => p.className === name)?.probability || 0;
+            const porn = score('Porn');
+            const hentai = score('Hentai');
+            const sexy = score('Sexy');
+            return (porn > 0.8 || hentai > 0.8 || sexy > 0.9);
+        }
+
+        // Classifies a canvas both as a whole and as a center-crop.
+        // A full-frame average can dilute a small explicit region in a
+        // corner of an otherwise plain image — the crop catches that.
+        async function classifyCanvasThoroughly(model, canvas) {
+            const fullPredictions = await model.classify(canvas);
+            if (scoreCanvasNSFW(model, fullPredictions)) return true;
+
+            const w = canvas.width, h = canvas.height;
+            if (w >= 100 && h >= 100) {
+                const cropCanvas = document.createElement('canvas');
+                const cw = Math.floor(w * 0.6), ch = Math.floor(h * 0.6);
+                cropCanvas.width = cw;
+                cropCanvas.height = ch;
+                cropCanvas.getContext('2d').drawImage(
+                    canvas, Math.floor((w - cw) / 2), Math.floor((h - ch) / 2), cw, ch, 0, 0, cw, ch
+                );
+                const cropPredictions = await model.classify(cropCanvas);
+                if (scoreCanvasNSFW(model, cropPredictions)) return true;
+            }
+            return false;
+        }
+
         async function isImageNSFW(file) {
             try {
                 const model = await loadNsfwModel();
@@ -3463,16 +3515,51 @@ function initRealtimeSync() {
                 canvas.width = bitmap.width;
                 canvas.height = bitmap.height;
                 canvas.getContext('2d').drawImage(bitmap, 0, 0);
-
-                const predictions = await model.classify(canvas);
-                const score = (name) => predictions.find(p => p.className === name)?.probability || 0;
-                const porn = score('Porn');
-                const hentai = score('Hentai');
-                const sexy = score('Sexy');
-
-                return (porn > 0.8 || hentai > 0.8 || sexy > 0.9);
+                return await classifyCanvasThoroughly(model, canvas);
             } catch (e) {
                 console.error('NSFW scan failed, allowing upload:', e);
+                return false;
+            }
+        }
+
+        // Samples several frames across a video's duration (not just the
+        // first frame) and NSFW-scans each — catches explicit content that
+        // only appears partway through a clip.
+        async function isVideoNSFW(file, sampleCount = 4) {
+            try {
+                const model = await loadNsfwModel();
+                const videoUrl = URL.createObjectURL(file);
+                const video = document.createElement('video');
+                video.src = videoUrl;
+                video.muted = true;
+                await new Promise((resolve, reject) => {
+                    video.onloadedmetadata = resolve;
+                    video.onerror = reject;
+                });
+
+                const duration = video.duration || 0;
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+
+                for (let i = 1; i <= sampleCount; i++) {
+                    const t = (duration * i) / (sampleCount + 1);
+                    await new Promise((resolve) => {
+                        video.currentTime = t;
+                        video.onseeked = resolve;
+                    });
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const predictions = await model.classify(canvas);
+                    if (scoreCanvasNSFW(model, predictions)) {
+                        URL.revokeObjectURL(videoUrl);
+                        return true;
+                    }
+                }
+                URL.revokeObjectURL(videoUrl);
+                return false;
+            } catch (e) {
+                console.error('Video NSFW scan failed, allowing upload:', e);
                 return false;
             }
         }
@@ -3504,6 +3591,15 @@ function initRealtimeSync() {
                     fileInput.value = '';
                     return;
                 }
+
+                setMediaError(kind, 'Scanning video…');
+                const videoFlagged = await isVideoNSFW(file);
+                if (videoFlagged) {
+                    setMediaError(kind, 'This video violates community guidelines and cannot be uploaded.');
+                    fileInput.value = '';
+                    return;
+                }
+                setMediaError(kind, null);
             }
 
             let finalFile = file;
@@ -3758,7 +3854,74 @@ function initRealtimeSync() {
          * integration notes) -- no keyword list can meaningfully catch it,
          * and image hash-matching is the only real solution.
          */
-        const DRUG_KEYWORDS = [
+        // --- Text normalization to defeat common evasion tricks ---
+        // Handles: l33tspeak, spaced-out letters, repeated chars, common
+        // abbreviations, unicode lookalikes/homoglyphs, and stray
+        // punctuation — so "u  w0n a priiize!!" still matches "you won a prize".
+        const LEET_MAP = { '0':'o','1':'i','3':'e','4':'a','5':'s','7':'t','8':'b','@':'a','$':'s','!':'i' };
+        // Cyrillic/Greek/other unicode lookalikes mapped back to plain Latin letters
+        const HOMOGLYPH_MAP = {
+            'а':'a','е':'e','о':'o','р':'p','с':'c','у':'y','х':'x','і':'i','ѕ':'s','ԁ':'d','ⅼ':'l',
+            'α':'a','ο':'o','ρ':'p','υ':'u','ι':'i','ѵ':'v',
+        };
+        const ABBREV_MAP = {
+            '\\bu\\b': 'you', '\\bur\\b': 'your', '\\br\\b': 'are', '\\bpls\\b': 'please',
+            '\\bplz\\b': 'please', '\\bthx\\b': 'thanks', '\\bw8\\b': 'wait', '\\by\\b': 'why',
+            '\\bb4\\b': 'before', '\\b2\\b': 'to', '\\b4\\b': 'for',
+        };
+
+        function normalizeText(text) {
+            if (!text) return '';
+            let t = text.toLowerCase();
+            t = t.normalize('NFKD').replace(/[\u0300-\u036f]/g, ''); // strip accents/diacritics
+            t = t.replace(/[\u200B-\u200D\uFEFF]/g, ''); // strip zero-width chars
+            t = t.replace(/[а-яА-Яα-ωΑ-Ωіѕԁⅼѵ]/g, ch => HOMOGLYPH_MAP[ch] || ch); // homoglyphs
+            for (const [k, v] of Object.entries(ABBREV_MAP)) {
+                t = t.replace(new RegExp(k, 'g'), v);
+            }
+            t = t.replace(/[01345789@$!]/g, ch => LEET_MAP[ch] || ch); // leetspeak
+            t = t.replace(/(.)\1{2,}/g, '$1$1'); // collapse 3+ repeated chars ("priiize" -> "priize")
+            return t;
+        }
+
+        // Space-insensitive version, to catch "p r i z e" or "p.r.i.z.e"
+        function collapseSpacing(text) {
+            return text.replace(/[\s._\-*]+/g, '');
+        }
+
+        function textContainsPhrase(rawText, phrase) {
+            const normalized = normalizeText(rawText);
+            const normalizedPhrase = normalizeText(phrase);
+            if (normalized.includes(normalizedPhrase)) return true;
+            return collapseSpacing(normalized).includes(collapseSpacing(normalizedPhrase));
+        }
+
+        // Simple edit-distance check — catches near-misses like "druggz",
+        // "scaam", "druugs" for single-word terms without over-matching
+        // unrelated words. Only used for words 5+ letters to avoid false
+        // positives on short common words.
+        function levenshtein(a, b) {
+            const dp = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+            for (let j = 0; j <= b.length; j++) dp[0][j] = j;
+            for (let i = 1; i <= a.length; i++) {
+                for (let j = 1; j <= b.length; j++) {
+                    dp[i][j] = a[i - 1] === b[j - 1]
+                        ? dp[i - 1][j - 1]
+                        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+                }
+            }
+            return dp[a.length][b.length];
+        }
+
+        function containsFuzzyWord(rawText, word) {
+            if (word.length < 5) return false; // skip short words, too many false positives
+            const tokens = collapseSpacing(normalizeText(rawText)) === normalizeText(rawText)
+                ? normalizeText(rawText).split(/\s+/)
+                : normalizeText(rawText).split(/\s+/);
+            return tokens.some(tok => tok.length >= 4 && levenshtein(tok, word) <= 1);
+        }
+
+
             'buy weed', 'sell weed', 'weed for sale', 'buy coke', 'sell coke',
             'buy meth', 'sell meth', 'buy heroin', 'sell heroin', 'buy fentanyl',
             'sell fentanyl', 'buy xanax', 'sell xanax', 'buy percocet', 'sell percocet',
@@ -3776,7 +3939,7 @@ function initRealtimeSync() {
         ];
         const SCAM_KEYWORDS = [
             'send bitcoin', 'wire transfer now', 'guaranteed profit', 'click here to claim',
-            'you won a prize', 'verify your account now', 'urgent action required',
+            'you won a prize', 'u won a prize', 'verify your account now', 'urgent action required',
             'claim your reward', 'double your money', 'investment opportunity guaranteed',
             'crypto giveaway', 'free gift card', 'act now limited time', 'confirm your password',
             'suspended account click', 'irs owes you', 'inheritance claim', 'lottery winner notification',
@@ -3785,17 +3948,28 @@ function initRealtimeSync() {
 
         function containsKeywordFrom(text, list) {
             if (!text) return false;
-            const lower = text.toLowerCase();
-            return list.some(word => word && lower.includes(word));
+            return list.some(phrase => phrase && textContainsPhrase(text, phrase));
+        }
+
+        // Core single-word triggers checked with fuzzy matching, to catch
+        // misspellings/evasions of the most important words per category.
+        const DRUG_CORE_WORDS = ['fentanyl', 'heroin', 'cocaine', 'xanax', 'oxycodone', 'adderall', 'methamphetamine'];
+        const SEXUAL_CORE_WORDS = ['onlyfans', 'nudes'];
+        const SCAM_CORE_WORDS = ['bitcoin', 'giveaway', 'inheritance'];
+
+        function containsFuzzyFrom(text, words) {
+            return words.some(w => containsFuzzyWord(text, w));
         }
 
         function containsPossibleDoxxing(text) {
             if (!text) return false;
             const patterns = [
-                /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/,                    // phone numbers
+                /\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b/,                 // phone numbers
                 /\b\d{3}-\d{2}-\d{4}\b/,                             // SSN format
-                /\b\d{1,5}\s\w+\s(street|st|ave|avenue|road|rd|blvd|lane|ln)\b/i, // street address
+                /\b\d{4}[-.\s]?\d{4}[-.\s]?\d{4}[-.\s]?\d{4}\b/,     // credit card format
+                /\b\d{1,5}\s\w+\s(street|st|ave|avenue|road|rd|blvd|lane|ln|drive|dr|court|ct|way)\b/i, // street address
                 /\b(?:\d{1,3}\.){3}\d{1,3}\b/,                       // IPv4 address
+                /\bmy (address|phone number|ssn|social security|home is) (is|:)/i, // self-doxxing intent phrasing
             ];
             return patterns.some(p => p.test(text));
         }
@@ -3828,15 +4002,15 @@ function initRealtimeSync() {
 
         async function runModerationCheck({ text, mediaUrl, mediaType, mediaStoragePath }) {
             if (containsPossibleDoxxing(text)) {
-                return { allowed: false, reason: 'This post appears to contain personal information (phone number, address, or IP) and cannot be posted.' };
+                return { allowed: false, reason: 'This post appears to contain personal information (phone number, address, card, or IP) and cannot be posted.' };
             }
-            if (containsKeywordFrom(text, DRUG_KEYWORDS)) {
+            if (containsKeywordFrom(text, DRUG_KEYWORDS) || containsFuzzyFrom(text, DRUG_CORE_WORDS)) {
                 return { allowed: false, reason: 'This post appears to reference drug sales and cannot be posted.' };
             }
-            if (containsKeywordFrom(text, SEXUAL_KEYWORDS)) {
+            if (containsKeywordFrom(text, SEXUAL_KEYWORDS) || containsFuzzyFrom(text, SEXUAL_CORE_WORDS)) {
                 return { allowed: false, reason: 'This post appears to contain sexual content and cannot be posted.' };
             }
-            if (containsKeywordFrom(text, SCAM_KEYWORDS)) {
+            if (containsKeywordFrom(text, SCAM_KEYWORDS) || containsFuzzyFrom(text, SCAM_CORE_WORDS)) {
                 return { allowed: false, reason: 'This post appears to be a scam and cannot be posted.' };
             }
             if (await checkDangerousLinks(text)) {
