@@ -91,6 +91,7 @@
     <!-- Client-side NSFW image scanning (nsfwjs + tensorflow.js) -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/nsfwjs@4.2.1/dist/nsfwjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/toxicity@1.2.2/dist/toxicity.min.js"></script>
     <!-- Unified routing & state management (board resolution, sessionStorage persistence) -->
     <script>
     (function () {
@@ -4001,6 +4002,28 @@ function initRealtimeSync() {
             return false;
         }
 
+        // --- Toxicity/harassment/sexual-explicit text detection ---
+        // A real ML model (TensorFlow.js "toxicity"), not keyword matching —
+        // catches paraphrasing, context, and harassment that wordlists miss.
+        // Runs 100% client-side: no API key, no rate limit, no cost.
+        let toxicityModel;
+        async function loadToxicityModel() {
+            if (!toxicityModel) toxicityModel = await toxicity.load(0.85); // 0.85 = confidence threshold
+            return toxicityModel;
+        }
+
+        async function isTextToxic(text) {
+            if (!text || !text.trim()) return false;
+            try {
+                const model = await loadToxicityModel();
+                const predictions = await model.classify([text]);
+                return predictions.some(p => p.results[0].match === true);
+            } catch (e) {
+                console.error('Toxicity check failed, allowing by default:', e);
+                return false; // fail open — never block a post because the model itself errored
+            }
+        }
+
         async function runModerationCheck({ text, mediaUrl, mediaType, mediaStoragePath }) {
             if (containsPossibleDoxxing(text)) {
                 return { allowed: false, reason: 'This post appears to contain personal information (phone number, address, card, or IP) and cannot be posted.' };
@@ -4016,6 +4039,9 @@ function initRealtimeSync() {
             }
             if (await checkDangerousLinks(text)) {
                 return { allowed: false, reason: 'This post contains a link flagged as dangerous.' };
+            }
+            if (await isTextToxic(text)) {
+                return { allowed: false, reason: 'This post was flagged as harassing, hateful, or sexually explicit and cannot be posted.' };
             }
             return { allowed: true, status: 'approved' };
         }
