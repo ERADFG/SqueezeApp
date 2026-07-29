@@ -2489,34 +2489,89 @@ function initRealtimeSync() {
  
         // ---------- Posting cooldown ----------
         // Anonymous posters get one new thread every 100s and one new comment
-        // every 100s. The timestamp is written to localStorage (NOT
-        // sessionStorage), so it survives a page refresh, a closed tab, or
-        // navigating away and back — the whole point being that refreshing
-        // the page must not reset the timer. This is still a client-side
-        // guard (someone could clear their localStorage or use a private
-        // window to reset it), so for airtight abuse prevention it should be
-        // paired with a server-side check too — e.g. a Supabase Edge
-        // Function or RLS policy that rejects inserts from the same
-        // IP/fingerprint within the last 100s. Wiring that up requires
-        // access to the Supabase project's server-side config, which isn't
-        // available here.
+        // every 100s. Hardened to write the timestamp to THREE independent
+        // storage mechanisms (localStorage, a cookie, and IndexedDB) and
+        // take the MAX remaining cooldown across all of them. This means
+        // clearing just one (e.g. "Clear site data" only hitting
+        // localStorage in some browser flows) doesn't reset the timer —
+        // all three would need to be cleared together.
+        //
+        // Ceiling, to be upfront: this is still entirely client-side.
+        // Anyone using a private/incognito window, a different browser, or
+        // a fresh device resets all of it instantly, no matter how many
+        // storage mechanisms are combined. Real, unbeatable rate limiting
+        // has to happen server-side (Supabase Edge Function or RLS policy
+        // keyed on IP) — see the note further down for what that requires.
         const POST_COOLDOWN_MS = 100 * 1000;
         const COOLDOWN_STORAGE_KEYS = { thread: 'ink_last_thread_post_ts', comment: 'ink_last_comment_post_ts' };
         const cooldownTimers = { thread: null, comment: null };
 
-        function getRemainingCooldownMs(kind) {
+        function setCookie(name, value, maxAgeSeconds) {
+            try { document.cookie = `${name}=${value}; max-age=${maxAgeSeconds}; path=/; SameSite=Lax`; } catch (e) {}
+        }
+        function getCookie(name) {
             try {
-                const last = parseInt(localStorage.getItem(COOLDOWN_STORAGE_KEYS[kind]) || '0', 10);
-                if (!last) return 0;
-                const remaining = POST_COOLDOWN_MS - (Date.now() - last);
-                return remaining > 0 ? remaining : 0;
-            } catch (e) { return 0; }
+                const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+                return match ? match[1] : null;
+            } catch (e) { return null; }
+        }
+
+        function idbSetTimestamp(key, ts) {
+            try {
+                const req = indexedDB.open('ink_cooldown_db', 1);
+                req.onupgradeneeded = () => req.result.createObjectStore('ts');
+                req.onsuccess = () => {
+                    const db = req.result;
+                    const tx = db.transaction('ts', 'readwrite');
+                    tx.objectStore('ts').put(ts, key);
+                };
+            } catch (e) {}
+        }
+
+        // IndexedDB reads are async, so cooldown checks are cached in a
+        // module-level object once read, and refreshed on each write.
+        const idbCache = {};
+        function idbGetTimestamp(key, cb) {
+            try {
+                const req = indexedDB.open('ink_cooldown_db', 1);
+                req.onupgradeneeded = () => req.result.createObjectStore('ts');
+                req.onsuccess = () => {
+                    const db = req.result;
+                    const tx = db.transaction('ts', 'readonly');
+                    const getReq = tx.objectStore('ts').get(key);
+                    getReq.onsuccess = () => { idbCache[key] = getReq.result || 0; cb(getReq.result || 0); };
+                    getReq.onerror = () => cb(0);
+                };
+                req.onerror = () => cb(0);
+            } catch (e) { cb(0); }
+        }
+
+        function getRemainingCooldownMs(kind) {
+            const key = COOLDOWN_STORAGE_KEYS[kind];
+            let last = 0;
+            try { last = Math.max(last, parseInt(localStorage.getItem(key) || '0', 10)); } catch (e) {}
+            try { last = Math.max(last, parseInt(getCookie(key) || '0', 10)); } catch (e) {}
+            if (idbCache[key]) last = Math.max(last, idbCache[key]);
+            if (!last) return 0;
+            const remaining = POST_COOLDOWN_MS - (Date.now() - last);
+            return remaining > 0 ? remaining : 0;
         }
 
         function markPosted(kind) {
-            try { localStorage.setItem(COOLDOWN_STORAGE_KEYS[kind], String(Date.now())); } catch (e) {}
+            const key = COOLDOWN_STORAGE_KEYS[kind];
+            const now = Date.now();
+            try { localStorage.setItem(key, String(now)); } catch (e) {}
+            setCookie(key, String(now), POST_COOLDOWN_MS / 1000 + 5);
+            idbSetTimestamp(key, now);
+            idbCache[key] = now;
             updateCooldownUI(kind);
         }
+
+        // Refresh IndexedDB-backed cooldown state on load, in case it's
+        // ahead of what localStorage/cookies currently show.
+        Object.values(COOLDOWN_STORAGE_KEYS).forEach(key => {
+            idbGetTimestamp(key, () => { updateCooldownUI(key === COOLDOWN_STORAGE_KEYS.thread ? 'thread' : 'comment'); });
+        });
 
         function updateCooldownUI(kind) {
             const btn = document.getElementById(kind === 'thread' ? 'threadSubmitBtn' : 'commentSubmitBtn');
@@ -2537,6 +2592,7 @@ function initRealtimeSync() {
                 cooldownTimers[kind] = setInterval(() => updateCooldownUI(kind), 1000);
             }
         }
+
 
         // ---------- "I'm not a robot" captcha (client-side bot deterrent) ----------
         // Combined with the honeypot fields on each form. A real reCAPTCHA/hCaptcha
