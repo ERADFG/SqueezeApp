@@ -3566,13 +3566,15 @@ function initRealtimeSync() {
 
         async function isImageNSFW(file) {
             try {
-                const model = await loadNsfwModel();
-                const bitmap = await createImageBitmap(file);
-                const canvas = document.createElement('canvas');
-                canvas.width = bitmap.width;
-                canvas.height = bitmap.height;
-                canvas.getContext('2d').drawImage(bitmap, 0, 0);
-                return await classifyCanvasThoroughly(model, canvas);
+                return await withTimeout((async () => {
+                    const model = await loadNsfwModel();
+                    const bitmap = await createImageBitmap(file);
+                    const canvas = document.createElement('canvas');
+                    canvas.width = bitmap.width;
+                    canvas.height = bitmap.height;
+                    canvas.getContext('2d').drawImage(bitmap, 0, 0);
+                    return await classifyCanvasThoroughly(model, canvas);
+                })(), 15000, false); // 15s cap — fails open (allows upload) if exceeded
             } catch (e) {
                 console.error('NSFW scan failed, allowing upload:', e);
                 return false;
@@ -3584,37 +3586,39 @@ function initRealtimeSync() {
         // only appears partway through a clip.
         async function isVideoNSFW(file, sampleCount = 4) {
             try {
-                const model = await loadNsfwModel();
-                const videoUrl = URL.createObjectURL(file);
-                const video = document.createElement('video');
-                video.src = videoUrl;
-                video.muted = true;
-                await new Promise((resolve, reject) => {
-                    video.onloadedmetadata = resolve;
-                    video.onerror = reject;
-                });
-
-                const duration = video.duration || 0;
-                const canvas = document.createElement('canvas');
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                const ctx = canvas.getContext('2d');
-
-                for (let i = 1; i <= sampleCount; i++) {
-                    const t = (duration * i) / (sampleCount + 1);
-                    await new Promise((resolve) => {
-                        video.currentTime = t;
-                        video.onseeked = resolve;
+                return await withTimeout((async () => {
+                    const model = await loadNsfwModel();
+                    const videoUrl = URL.createObjectURL(file);
+                    const video = document.createElement('video');
+                    video.src = videoUrl;
+                    video.muted = true;
+                    await new Promise((resolve, reject) => {
+                        video.onloadedmetadata = resolve;
+                        video.onerror = reject;
                     });
-                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    const predictions = await model.classify(canvas);
-                    if (scoreCanvasNSFW(model, predictions)) {
-                        URL.revokeObjectURL(videoUrl);
-                        return true;
+
+                    const duration = video.duration || 0;
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const ctx = canvas.getContext('2d');
+
+                    for (let i = 1; i <= sampleCount; i++) {
+                        const t = (duration * i) / (sampleCount + 1);
+                        await new Promise((resolve) => {
+                            video.currentTime = t;
+                            video.onseeked = resolve;
+                        });
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        const predictions = await model.classify(canvas);
+                        if (scoreCanvasNSFW(model, predictions)) {
+                            URL.revokeObjectURL(videoUrl);
+                            return true;
+                        }
                     }
-                }
-                URL.revokeObjectURL(videoUrl);
-                return false;
+                    URL.revokeObjectURL(videoUrl);
+                    return false;
+                })(), 20000, false); // 20s cap — fails open (allows upload) if exceeded
             } catch (e) {
                 console.error('Video NSFW scan failed, allowing upload:', e);
                 return false;
@@ -4063,6 +4067,17 @@ function initRealtimeSync() {
         // catches paraphrasing, context, and harassment that wordlists miss.
         // Runs 100% client-side: no API key, no rate limit, no cost.
         let toxicityModel;
+        // Races any promise against a timeout, resolving to a fallback
+        // value if it takes too long. Protects posting from ever hanging
+        // forever if an ML model is slow to load, stuck, or the CDN it's
+        // fetched from has an issue on the live site.
+        function withTimeout(promise, ms, fallbackValue) {
+            return Promise.race([
+                promise,
+                new Promise(resolve => setTimeout(() => resolve(fallbackValue), ms)),
+            ]);
+        }
+
         async function loadToxicityModel() {
             if (!toxicityModel) toxicityModel = await toxicity.load(0.85); // 0.85 = confidence threshold
             return toxicityModel;
@@ -4071,13 +4086,73 @@ function initRealtimeSync() {
         async function isTextToxic(text) {
             if (!text || !text.trim()) return false;
             try {
-                const model = await loadToxicityModel();
-                const predictions = await model.classify([text]);
-                return predictions.some(p => p.results[0].match === true);
+                return await withTimeout((async () => {
+                    const model = await loadToxicityModel();
+                    const predictions = await model.classify([text]);
+                    return predictions.some(p => p.results[0].match === true);
+                })(), 8000, false); // 8s cap — fails open (allows the post) if exceeded
             } catch (e) {
                 console.error('Toxicity check failed, allowing by default:', e);
                 return false; // fail open — never block a post because the model itself errored
             }
+        }
+
+        // --- Repeated link / spam detection ---
+        // If the same link (or tweet) has already appeared MAX_LINK_REPEATS
+        // times across all threads + comments, block it from being posted
+        // again. Blocking a 3rd occurrence before it goes live has the same
+        // practical effect as "delete after 2 posts," without needing a
+        // separate deletion job — the spam link simply never appears again.
+        const MAX_LINK_REPEATS = 2;
+
+        // Normalizes a URL so trivial variations (trailing slash, tracking
+        // params, http vs https, www. vs not, mobile vs desktop twitter/x
+        // domains) all count as "the same link" for spam purposes.
+        function normalizeUrlForSpamCheck(rawUrl) {
+            try {
+                const u = new URL(rawUrl);
+                let host = u.hostname.toLowerCase().replace(/^www\./, '');
+                if (host === 'x.com') host = 'twitter.com'; // treat x.com and twitter.com as the same
+                if (host === 'mobile.twitter.com') host = 'twitter.com';
+                let path = u.pathname.replace(/\/+$/, ''); // strip trailing slash(es)
+                return `${host}${path}`.toLowerCase();
+            } catch (e) {
+                return rawUrl.toLowerCase().trim().replace(/\/+$/, '');
+            }
+        }
+
+        // Counts how many existing threads/comments already contain this
+        // normalized URL. A DB-level scan (ilike over `content`) so it
+        // catches posts from anyone, not just the current browser/session.
+        async function countExistingLinkOccurrences(normalizedUrl) {
+            // ilike needs a raw substring — use the path/host chunk, safe
+            // since normalizeUrlForSpamCheck already stripped protocol.
+            const pattern = `%${normalizedUrl}%`;
+            const [threadsRes, commentsRes] = await Promise.all([
+                supabaseClient.from('threads').select('id', { count: 'exact', head: true }).ilike('content', pattern),
+                supabaseClient.from('comments').select('id', { count: 'exact', head: true }).ilike('content', pattern),
+            ]);
+            const threadCount = threadsRes.count || 0;
+            const commentCount = commentsRes.count || 0;
+            return threadCount + commentCount;
+        }
+
+        async function checkRepeatedLinkSpam(text) {
+            const urls = extractUrls(text);
+            if (urls.length === 0) return { flagged: false };
+            try {
+                for (const url of urls) {
+                    const normalized = normalizeUrlForSpamCheck(url);
+                    if (!normalized) continue;
+                    const count = await withTimeout(countExistingLinkOccurrences(normalized), 6000, 0);
+                    if (count >= MAX_LINK_REPEATS) {
+                        return { flagged: true, url };
+                    }
+                }
+            } catch (e) {
+                console.error('Repeated-link check failed, allowing by default:', e);
+            }
+            return { flagged: false };
         }
 
         async function runModerationCheck({ text, mediaUrl, mediaType, mediaStoragePath }) {
@@ -4095,6 +4170,10 @@ function initRealtimeSync() {
             }
             if (await checkDangerousLinks(text)) {
                 return { allowed: false, reason: 'This post contains a link flagged as dangerous.' };
+            }
+            const linkSpamResult = await checkRepeatedLinkSpam(text);
+            if (linkSpamResult.flagged) {
+                return { allowed: false, reason: 'This link has already been posted too many times and cannot be posted again.' };
             }
             if (await isTextToxic(text)) {
                 return { allowed: false, reason: 'This post was flagged as harassing, hateful, or sexually explicit and cannot be posted.' };
