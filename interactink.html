@@ -1458,6 +1458,19 @@
             return;
         }
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // Warm up the toxicity-detection and NSFW-image ML models in the
+        // background right away, instead of waiting for someone to hit
+        // "Post" (or attach an image) and paying the multi-second
+        // download/init cost right then. Fire-and-forget: doesn't block
+        // the feed from loading, and each function caches its model on
+        // success, so runModerationCheck() / the media pipeline below
+        // just reuse whatever's already warm by the time they're needed.
+        // If a model fails to preload (slow connection, blocked CDN),
+        // the on-demand load in runModerationCheck still covers it —
+        // this is purely a head start, not a dependency.
+        loadToxicityModel().catch(e => console.warn('Toxicity model preload failed (will retry on first post):', e));
+        loadNsfwModel().catch(e => console.warn('NSFW model preload failed (will retry on first image post):', e));
  
         // ---- Task 1: resolve active board from URL (?board=), with a
         // sessionStorage-backed fallback when no param is present at all,
@@ -4228,10 +4241,8 @@ function initRealtimeSync() {
         }
 
         async function runModerationCheck({ text, mediaUrl, mediaType, mediaStoragePath }) {
-            const fingerprint = getOrCreateFingerprint();
-            if (await isFingerprintBanned(fingerprint)) {
-                return { allowed: false, reason: 'You have been banned from posting on this site.' };
-            }
+            // Cheap, synchronous checks first — free to run, so no reason
+            // not to fail fast on these before touching the network at all.
             if (containsPossibleDoxxing(text)) {
                 return { allowed: false, reason: 'This post appears to contain personal information (phone number, address, card, or IP) and cannot be posted.' };
             }
@@ -4244,14 +4255,31 @@ function initRealtimeSync() {
             if (containsKeywordFrom(text, SCAM_KEYWORDS) || containsFuzzyFrom(text, SCAM_CORE_WORDS)) {
                 return { allowed: false, reason: 'This post appears to be a scam and cannot be posted.' };
             }
-            if (await checkDangerousLinks(text)) {
+
+            // Everything left needs a network round trip and/or the ML
+            // model — none of these depend on each other's result, so run
+            // them concurrently instead of one after another. This is the
+            // main lever on perceived "Post" latency: four sequential
+            // round trips easily add up to several seconds, but run
+            // together the wait is only as long as the single slowest one.
+            const fingerprint = getOrCreateFingerprint();
+            const [banned, dangerousLink, linkSpamResult, toxic] = await Promise.all([
+                isFingerprintBanned(fingerprint),
+                checkDangerousLinks(text),
+                checkRepeatedLinkSpam(text),
+                isTextToxic(text),
+            ]);
+
+            if (banned) {
+                return { allowed: false, reason: 'You have been banned from posting on this site.' };
+            }
+            if (dangerousLink) {
                 return { allowed: false, reason: 'This post contains a link flagged as dangerous.' };
             }
-            const linkSpamResult = await checkRepeatedLinkSpam(text);
             if (linkSpamResult.flagged) {
                 return { allowed: false, reason: 'This link has already been posted too many times and cannot be posted again.' };
             }
-            if (await isTextToxic(text)) {
+            if (toxic) {
                 return { allowed: false, reason: 'This post was flagged as harassing, hateful, or sexually explicit and cannot be posted.' };
             }
             return { allowed: true, status: 'approved' };
