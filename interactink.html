@@ -17,6 +17,7 @@
     })();
     </script>
     <link rel="stylesheet" href="theme.css">
+    <link rel="preconnect" href="https://pagead2.googlesyndication.com" crossorigin>
     <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin>
     <link rel="preconnect" href="https://www.highperformanceformat.com" crossorigin>
     <title>InteractInk - Post Anonymously, No Sign-Up Required | Anonymous Text Board</title>
@@ -44,6 +45,7 @@
     <link rel="icon" type="image/png" href="https://interactink.vercel.app/favicon2.png">
     <link rel="shortcut icon" href="https://interactink.vercel.app/favicon2.png">
  
+    <meta name="google-adsense-account" content="ca-pub-9357677827244243">
     <meta name="google-site-verification" content="DOvTKyh77YUQreg4Dg6SaL1wEM33Da783l6lqsLek7Q" />
  
     <script type="application/ld+json">
@@ -67,6 +69,7 @@
     }
     </script>
     
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9357677827244243" crossorigin="anonymous"></script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-527BWKF63G"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
@@ -83,18 +86,13 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
-    <script src="https://unpkg.com/lucide@0.383.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Client-side NSFW image scanning (nsfwjs + tensorflow.js) -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/nsfwjs@4.2.1/dist/nsfwjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/toxicity@1.2.2/dist/toxicity.min.js"></script>
-    <!-- Metadata stripping for non-image/video uploads (PDFs, Office docs, MP3s) -->
-    <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-    <script src="metadata-strip.js"></script>
     <!-- Unified routing & state management (board resolution, sessionStorage persistence) -->
-
     <script>
     (function () {
         const BOARDS = [
@@ -1053,13 +1051,6 @@
  
         <!-- CENTER MAIN CONTENT FEED -->
         <div class="x-feed border-r border-neutral-800">
-            <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
-                <script type="text/javascript">
-                  atOptions = { 'key' : 'c2beae2a3c4b115088146fa8ef56a186', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
-                </script>
-                <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js" async></script>
-            </div>
- 
             <header class="sticky top-0 bg-black/90 backdrop-blur-md border-b border-neutral-800 z-50 p-4 flex justify-between items-center gap-2">
                 <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2 min-w-0">
                     <img src="favicon2.png" alt="InteractInk logo" class="w-6 h-6 shrink-0">
@@ -3759,19 +3750,10 @@ function initRealtimeSync() {
                 // Best-effort — prepareVideoForUpload always resolves, falling
                 // back to the original file rather than rejecting.
                 finalFile = await prepareVideoForUpload(file);
-            } else {
-                // Audio and other file types (PDFs, docs, zips, etc.) aren't
-                // re-encoded for size — no reliable lossless way to shrink
-                // them from plain browser JS — but they still go through
-                // stripFileMetadata() (see metadata-strip.js) to remove
-                // embedded author/device info and randomize the filename
-                // before anything is uploaded.
-                try {
-                    finalFile = await window.stripFileMetadata(file);
-                } catch (e) {
-                    finalFile = file; // never block a post over this
-                }
             }
+            // Audio and other file types (PDFs, docs, zips, etc.) are
+            // attached as-is — no re-encoding, since there isn't a reliable
+            // lossless way to shrink them from plain browser JS.
 
             selectedMedia[kind] = finalFile;
             renderMediaPreview(kind, finalFile);
@@ -3933,11 +3915,7 @@ function initRealtimeSync() {
             document.getElementById('gifPickerResults').innerHTML = '';
             try {
                 const res = await fetch(url);
-                if (!res.ok) {
-                    let detail = '';
-                    try { detail = (await res.json()).meta?.msg || ''; } catch (_) {}
-                    throw new Error(`GIPHY request failed (${res.status})${detail ? ': ' + detail : ''}`);
-                }
+                if (!res.ok) throw new Error('GIPHY request failed');
                 const data = await res.json();
                 if (seq !== gifPickerState.requestSeq) return; // superseded by a newer search
                 const items = data.data || [];
@@ -3945,11 +3923,6 @@ function initRealtimeSync() {
                 renderGifResults(items);
             } catch (e) {
                 if (seq !== gifPickerState.requestSeq) return;
-                // Log the real reason to the console -- a blocked-by-CSP fetch,
-                // an invalid/revoked API key, and a rate limit all throw here,
-                // but they need different fixes, so don't collapse them into
-                // one opaque message.
-                console.error('GIPHY request error:', e);
                 setGifPickerStatus('Could not reach GIPHY. Try again.');
             }
         }

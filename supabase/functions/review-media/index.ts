@@ -2,7 +2,7 @@
 //
 // Lets a human moderator list pending uploads and approve/reject them.
 // Protected by real Supabase Auth: the caller must send the access token
-// from an actual logged-in session (same login as the rest of manage-89dbc2f16c3c.html).
+// from an actual logged-in session (same login as the rest of admin.html).
 // No secret lives in any client-side file.
 //
 // Deploy with verify_jwt disabled, same as moderate-post:
@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
 
   // Real auth check: the caller must be someone who actually logged in via
-  // Supabase Auth (the same login manage-89dbc2f16c3c.html already uses) -- not just
+  // Supabase Auth (the same login admin.html already uses) -- not just
   // anyone holding a string. The public anon key alone will NOT pass this,
   // since it has no logged-in user attached to it.
   const authHeader = req.headers.get("authorization") || "";
@@ -41,16 +41,6 @@ Deno.serve(async (req) => {
 
   const { data: userData, error: userErr } = await admin.auth.getUser(token);
   if (userErr || !userData?.user) {
-    return json({ error: "Unauthorized" }, 401);
-  }
-
-  // Being logged in isn't enough on its own — this must be one of your
-  // specific admin accounts, otherwise ANY account that can authenticate
-  // against this Supabase project (e.g. if public sign-up is left enabled)
-  // could reach the moderation queue. Replace with your real admin email(s).
-  const ADMIN_EMAILS = new Set(["you@example.com"]);
-  const callerEmail = (userData.user.email || "").toLowerCase();
-  if (!ADMIN_EMAILS.has(callerEmail)) {
     return json({ error: "Unauthorized" }, 401);
   }
 

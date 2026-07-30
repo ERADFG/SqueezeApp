@@ -2,7 +2,7 @@
 //
 // Handles two call shapes from interactink.html:
 //   1. multipart/form-data (file upload) -> stages media, queues for human
-//      review via the Pending Media tab in manage-89dbc2f16c3c.html.
+//      review via the Pending Media tab in admin.html.
 //   2. application/json ({ text }) -> checks text against a few fast,
 //      dependency-free rules. No external API calls for text at all --
 //      this cannot go down, get misconfigured, or need billing.
@@ -125,7 +125,7 @@ function looksLikeSpam(text: string): boolean {
 
 // ---------------------------------------------------------------------
 // MEDIA — stage privately, queue for human review. Unchanged approach:
-// nothing publishes without a moderator clicking Approve in manage-89dbc2f16c3c.html.
+// nothing publishes without a moderator clicking Approve in admin.html.
 // ---------------------------------------------------------------------
 async function handleFileUpload(req: Request): Promise<Response> {
   const form = await req.formData();
