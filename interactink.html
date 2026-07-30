@@ -2161,7 +2161,7 @@
                 // effectively one.
                 const threadsPromise = fetchAllRows(
                     (from, to) => supabaseClient.from('threads')
-                        .select('*')
+                        .select('id, board_id, title, content, timestamp, upvotes, media_url, media_type, moderation_status, pinned')
                         .eq('board_id', board)
                         .order('timestamp', { ascending: false })
                         .range(from, to)
@@ -2172,7 +2172,7 @@
                 // query so it isn't limited by the current board's board_id.
                 const globalPinnedPromise = fetchAllRows(
                     (from, to) => supabaseClient.from('threads')
-                        .select('*')
+                        .select('id, board_id, title, content, timestamp, upvotes, media_url, media_type, moderation_status, pinned')
                         .eq('pinned', true)
                         .order('timestamp', { ascending: false })
                         .range(from, to)
@@ -2339,8 +2339,8 @@
             try {
                 const pattern = `%${escapeLikePattern(query)}%`;
                 const [titleRes, contentRes] = await Promise.all([
-                    supabaseClient.from('threads').select('*').ilike('title', pattern).order('timestamp', { ascending: false }).limit(SEARCH_RESULTS_LIMIT),
-                    supabaseClient.from('threads').select('*').ilike('content', pattern).order('timestamp', { ascending: false }).limit(SEARCH_RESULTS_LIMIT)
+                    supabaseClient.from('threads').select('id, board_id, title, content, timestamp, upvotes, media_url, media_type, moderation_status, pinned').ilike('title', pattern).order('timestamp', { ascending: false }).limit(SEARCH_RESULTS_LIMIT),
+                    supabaseClient.from('threads').select('id, board_id, title, content, timestamp, upvotes, media_url, media_type, moderation_status, pinned').ilike('content', pattern).order('timestamp', { ascending: false }).limit(SEARCH_RESULTS_LIMIT)
                 ]);
                 if (requestToken !== searchRequestToken) return; // superseded by a newer search
                 if (titleRes.error) throw titleRes.error;
@@ -4969,7 +4969,7 @@ function initRealtimeSync() {
         // Scoped by thread_id, which already uniquely identifies the thread —
         // no extra board_id filter, so comments on legacy threads still show up.
         const { data: comments } = await supabaseClient.from('comments')
-            .select('*')
+            .select('id, thread_id, board_id, tripcode, text, timestamp, media_url, media_type, moderation_status')
             .eq('thread_id', tId)
             .order('timestamp', { ascending: true });
         appState.comments[tId] = {};

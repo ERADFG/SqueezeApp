@@ -253,7 +253,7 @@
         async function fetchInitialData() {
             try {
                 // Fetch more limit to allow pagination to work visually
-                const { data: threads } = await supabaseClient.from('threads').select('*').order('timestamp', { ascending: false }).limit(100);
+                const { data: threads } = await supabaseClient.from('threads').select('id, board_id, title, content, timestamp, upvotes, media_url, media_type, moderation_status, pinned').order('timestamp', { ascending: false }).limit(100);
                 if (threads) threads.forEach(t => appState.threads[t.id] = t);
 
                 const { data: commentIds } = await supabaseClient.from('comments').select('thread_id');
@@ -637,4 +637,4 @@
         <p style="margin-top: 24px; font-size: 0.85rem;">&copy; 2026 InteractInk. All rights reserved.</p>
     </footer>
 </body>
-</html> 
+</html>

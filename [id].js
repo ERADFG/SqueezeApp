@@ -87,7 +87,7 @@ function renderThread(thread, comments) {
 <meta property="og:title" content="${title} - InteractInk">
 <meta property="og:description" content="${esc(description)}">
 <meta property="og:url" content="${url}">
-<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
+<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, "\\u003c")}</script>
 <style>
   body{background:#000;color:#e7e9ea;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:640px;margin:0 auto;padding:24px 16px;line-height:1.6}
   a{color:#3b82f6;text-decoration:underline}
