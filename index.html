@@ -282,6 +282,7 @@
             display: grid;
             grid-template-columns: 1fr;
             min-height: 100vh;
+            align-items: start;
             background-color: #000000;
         }
 
@@ -317,7 +318,6 @@
         /* Main Feed Column */
         .x-feed {
             grid-column: 1;
-            min-height: 100vh;
             padding-bottom: 80px;
         }
 
@@ -329,6 +329,7 @@
         @media (min-width: 1024px) {
             .x-feed {
                 grid-column: 3;
+                min-height: 100vh;
                 border-right: 1px solid #2f3336;
                 padding-bottom: 24px;
             }
