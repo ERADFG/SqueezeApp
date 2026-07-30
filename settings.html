@@ -225,6 +225,18 @@
                 <h1 class="text-xl font-bold tracking-tight text-white">Settings</h1>
             </header>
 
+            <!-- Top Banner Ad space (sandboxed in its own iframe so the ad
+                 network's document.write() can only affect its own tiny
+                 document, never this page's layout/zoom) -->
+            <div class="ad-slot">
+                <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
+                    <script type="text/javascript">
+                      atOptions = { 'key' : 'c2beae2a3c4b115088146fa8ef56a186', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+                    </script>
+                    <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
+                </div>
+            </div>
+
             <section class="p-4 border-b border-neutral-800">
                 <p class="text-neutral-400 text-sm leading-relaxed">
                     Everything about InteractInk that isn't the board itself lives here — help, updates, and the fine print.

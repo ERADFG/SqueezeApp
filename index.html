@@ -461,6 +461,18 @@
 
         <!-- CENTER MAIN CONTENT FEED -->
         <main class="x-feed">
+            <!-- Top Banner Ad space (sandboxed in its own iframe so the ad
+                 network's document.write() can only affect its own tiny
+                 document, never this page's layout/zoom) -->
+            <div class="ad-slot">
+                <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
+                    <script type="text/javascript">
+                      atOptions = { 'key' : 'c2beae2a3c4b115088146fa8ef56a186', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+                    </script>
+                    <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
+                </div>
+            </div>
+
             <!-- Welcome page header -->
             <header class="relative overflow-hidden border-b border-neutral-800 px-6 py-12 text-center">
                 <div class="absolute inset-0 keyhole-watermark pointer-events-none"></div>
