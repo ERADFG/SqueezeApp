@@ -70,6 +70,12 @@
     </script>
     
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9357677827244243" crossorigin="anonymous"></script>
+    <script>
+      (adsbygoogle = window.adsbygoogle || []).push({
+        google_ad_client: "ca-pub-9357677827244243",
+        enable_page_level_ads: true
+      });
+    </script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-527BWKF63G"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
@@ -3936,7 +3942,11 @@ function initRealtimeSync() {
             document.getElementById('gifPickerResults').innerHTML = '';
             try {
                 const res = await fetch(url);
-                if (!res.ok) throw new Error('GIPHY request failed');
+                if (!res.ok) {
+                    let detail = '';
+                    try { detail = (await res.json()).meta?.msg || ''; } catch (_) {}
+                    throw new Error(`GIPHY request failed (${res.status})${detail ? ': ' + detail : ''}`);
+                }
                 const data = await res.json();
                 if (seq !== gifPickerState.requestSeq) return; // superseded by a newer search
                 const items = data.data || [];
@@ -3944,6 +3954,11 @@ function initRealtimeSync() {
                 renderGifResults(items);
             } catch (e) {
                 if (seq !== gifPickerState.requestSeq) return;
+                // Log the real reason to the console -- a blocked-by-CSP fetch,
+                // an invalid/revoked API key, and a rate limit all throw here,
+                // but they need different fixes, so don't collapse them into
+                // one opaque message.
+                console.error('GIPHY request error:', e);
                 setGifPickerStatus('Could not reach GIPHY. Try again.');
             }
         }
