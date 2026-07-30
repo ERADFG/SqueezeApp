@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InteractInk — Moderation</title>
+<meta name="robots" content="noindex, nofollow">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>body{background:#0a0a0a;color:#e5e5e5;font-family:system-ui,sans-serif;}</style>
+</head>
+<body class="min-h-screen">
+
+<div id="loginView" class="max-w-sm mx-auto mt-24 p-6 border border-neutral-800 rounded-xl">
+    <h1 class="text-lg font-bold mb-4">Moderator sign in</h1>
+    <input id="loginEmail" type="email" placeholder="Email" class="w-full bg-neutral-900 border border-neutral-800 rounded px-3 py-2 mb-2 text-sm">
+    <input id="loginPassword" type="password" placeholder="Password" class="w-full bg-neutral-900 border border-neutral-800 rounded px-3 py-2 mb-3 text-sm">
+    <button onclick="doLogin()" class="w-full bg-white text-black font-bold rounded py-2 text-sm">Sign in</button>
+    <p id="loginError" class="hidden text-red-400 text-xs mt-2"></p>
+</div>
+
+<div id="dashboardView" class="hidden max-w-4xl mx-auto p-6">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-lg font-bold">InteractInk Moderation</h1>
+        <button onclick="doLogout()" class="text-xs text-neutral-500 hover:text-white">Sign out</button>
+    </div>
+
+    <div class="flex gap-2 mb-4 border-b border-neutral-800">
+        <button id="tabFlaggedBtn" onclick="switchTab('flagged')" class="px-4 py-2 text-sm font-bold border-b-2 border-white">All Posts</button>
+        <button id="tabPendingMediaBtn" onclick="switchTab('pendingMedia')" class="px-4 py-2 text-sm font-bold border-b-2 border-transparent text-neutral-500">Pending Media</button>
+        <button id="tabCommentsBtn" onclick="switchTab('comments')" class="px-4 py-2 text-sm font-bold border-b-2 border-transparent text-neutral-500">Comments</button>
+        <button id="tabReportsBtn" onclick="switchTab('reports')" class="px-4 py-2 text-sm font-bold border-b-2 border-transparent text-neutral-500">Reports</button>
+        <button id="tabIncidentsBtn" onclick="switchTab('incidents')" class="px-4 py-2 text-sm font-bold border-b-2 border-transparent text-neutral-500">Incident Log</button>
+        <button id="tabBansBtn" onclick="switchTab('bans')" class="px-4 py-2 text-sm font-bold border-b-2 border-transparent text-neutral-500">Banned Users</button>
+        <button onclick="loadAll()" class="ml-auto px-3 py-2 text-xs text-neutral-500 hover:text-white">Refresh</button>
+    </div>
+
+    <div id="flaggedPane">
+        <div class="flex items-center gap-3 mb-3 text-xs">
+            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this.checked)"> Select all</label>
+            <span id="selectedCount" class="text-neutral-500"></span>
+            <button id="deleteSelectedBtn" onclick="removeSelected()" disabled class="px-3 py-1.5 bg-red-800 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed rounded text-xs font-bold">Delete selected</button>
+        </div>
+        <div id="flaggedList" class="space-y-4"></div>
+    </div>
+    <div id="pendingMediaPane" class="hidden">
+        <div id="pendingMediaList" class="space-y-4"></div>
+    </div>
+    <div id="commentsPane" class="hidden">
+        <div class="flex items-center gap-3 mb-3 text-xs">
+            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="selectAllCommentsCheckbox" onchange="toggleSelectAllComments(this.checked)"> Select all</label>
+            <span id="selectedCommentsCount" class="text-neutral-500"></span>
+            <button id="deleteSelectedCommentsBtn" onclick="removeSelectedComments()" disabled class="px-3 py-1.5 bg-red-800 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed rounded text-xs font-bold">Delete selected</button>
+        </div>
+        <div id="commentsList" class="space-y-4"></div>
+    </div>
+    <div id="reportsList" class="space-y-4 hidden"></div>
+    <div id="incidentsList" class="space-y-4 hidden"></div>
+    <div id="bansPane" class="hidden">
+        <div class="mb-4 p-4 border border-neutral-800 rounded-lg">
+            <p class="text-xs text-neutral-500 mb-2">Ban a fingerprint directly by ID (or use the "Ban" button next to a post in All Posts):</p>
+            <div class="flex gap-2">
+                <input id="manualBanFingerprint" type="text" placeholder="fp_xxxxxxx" class="flex-1 bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-sm">
+                <input id="manualBanReason" type="text" placeholder="Reason (optional)" class="flex-1 bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-sm">
+                <button onclick="banFingerprintManual()" class="px-4 py-2 bg-red-800 hover:bg-red-700 rounded text-sm font-bold">Ban</button>
+            </div>
+        </div>
+        <div id="bansList" class="space-y-2"></div>
+    </div>
+</div>
+
+<script>
+    const SUPABASE_URL = "https://xdshsodkuyawljzuirqt.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2hzb2RrdXlhd2xqenVpcnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMjkyMTEsImV4cCI6MjA5ODgwNTIxMX0.9ozQK1_Dc6_1hjP7HP-Z0dBcSOT-Ook8riBGabRW2Rs";
+    const MEDIA_BUCKET = "post-media";
+    const REVIEW_MEDIA_URL = "https://xdshsodkuyawljzuirqt.supabase.co/functions/v1/review-media";
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // ONLY these emails may access the dashboard, even if the login step
+    // succeeds — replace with your real admin email(s) before deploying.
+    // This is a client-side check (a determined attacker could bypass it by
+    // calling the Supabase API directly), so it's a second layer, not the
+    // real boundary — the real boundary must be Supabase Row Level Security
+    // policies on the tables/storage this dashboard reads and writes. See
+    // the chat notes for details.
+    const ADMIN_EMAILS = ['you@example.com'];
+
+    window.addEventListener('load', async () => {
+        const { data: { session } } = await sb.auth.getSession();
+        if (session) await enterDashboard();
+    });
+
+    async function doLogin() {
+        const email = document.getElementById('loginEmail').value.trim();
+        const password = document.getElementById('loginPassword').value;
+        const errEl = document.getElementById('loginError');
+        errEl.classList.add('hidden');
+
+        const { error } = await sb.auth.signInWithPassword({ email, password });
+        if (error) {
+            errEl.textContent = 'Invalid email or password.';
+            errEl.classList.remove('hidden');
+            return;
+        }
+
+        await enterDashboard();
+    }
+
+    async function enterDashboard() {
+        const { data: { session } } = await sb.auth.getSession();
+        if (!session) {
+            document.getElementById('loginError').textContent = 'Not authorized.';
+            document.getElementById('loginError').classList.remove('hidden');
+            return;
+        }
+        const email = (session.user && session.user.email || '').toLowerCase();
+        if (!ADMIN_EMAILS.map(e => e.toLowerCase()).includes(email)) {
+            await sb.auth.signOut();
+            document.getElementById('loginError').textContent = 'Not authorized.';
+            document.getElementById('loginError').classList.remove('hidden');
+            return;
+        }
+        document.getElementById('loginView').classList.add('hidden');
+        document.getElementById('dashboardView').classList.remove('hidden');
+        loadAll();
+    }
+
+    async function doLogout() {
+        await sb.auth.signOut();
+        location.reload();
+    }
+
+    const TAB_PANES = { flagged: 'flaggedPane', pendingMedia: 'pendingMediaPane', comments: 'commentsPane', reports: 'reportsList', incidents: 'incidentsList', bans: 'bansPane' };
+    function switchTab(tab) {
+        for (const t of ['flagged', 'pendingMedia', 'comments', 'reports', 'incidents', 'bans']) {
+            document.getElementById(`tab${cap(t)}Btn`).className = `px-4 py-2 text-sm font-bold border-b-2 ${t === tab ? 'border-white' : 'border-transparent text-neutral-500'}`;
+            document.getElementById(TAB_PANES[t]).classList.toggle('hidden', t !== tab);
+        }
+        if (tab === 'bans') loadBans();
+    }
+    function cap(s) { return s[0].toUpperCase() + s.slice(1); }
+
+    async function loadAll() {
+        await Promise.all([loadAllPosts(), loadPendingMedia(), loadComments(), loadReports(), loadIncidents()]);
+    }
+
+    async function reviewMediaAuthHeaders() {
+        const { data: { session } } = await sb.auth.getSession();
+        if (!session) throw new Error('Not logged in');
+        return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` };
+    }
+
+    async function loadPendingMedia() {
+        const list = document.getElementById('pendingMediaList');
+        list.innerHTML = '<p class="text-neutral-600 text-sm">Loading…</p>';
+        try {
+            const res = await fetch(REVIEW_MEDIA_URL, {
+                method: 'POST',
+                headers: await reviewMediaAuthHeaders(),
+                body: JSON.stringify({ action: 'list' }),
+            });
+            const data = await res.json();
+            if (!res.ok) { list.innerHTML = `<p class="text-red-400 text-sm">${escapeHTML(data.error || 'Failed to load')}</p>`; return; }
+            if (!data.items || data.items.length === 0) { list.innerHTML = '<p class="text-neutral-600 text-sm">No pending media.</p>'; return; }
+            list.innerHTML = data.items.map(item => `
+                <div class="border border-neutral-800 rounded-lg p-4" id="pending-${item.id}">
+                    <div class="text-xs text-neutral-500 mb-2">board /${escapeHTML(item.board_id)}/ · ${new Date(item.created_at).toLocaleString()}</div>
+                    ${item.media_type === 'video'
+                        ? `<video src="${item.previewUrl}" controls class="max-w-xs max-h-64 rounded"></video>`
+                        : `<img src="${item.previewUrl}" class="max-w-xs max-h-64 rounded" alt="pending upload">`}
+                    <div class="flex gap-2 mt-3">
+                        <button onclick="approveMedia('${item.id}')" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-xs font-bold">Approve</button>
+                        <button onclick="rejectMedia('${item.id}')" class="px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded text-xs font-bold">Reject</button>
+                    </div>
+                </div>`).join('');
+        } catch (e) {
+            list.innerHTML = `<p class="text-red-400 text-sm">${escapeHTML(e.message)}</p>`;
+        }
+    }
+
+    async function reviewMediaAction(action, id) {
+        const el = document.getElementById(`pending-${id}`);
+        try {
+            const res = await fetch(REVIEW_MEDIA_URL, {
+                method: 'POST',
+                headers: await reviewMediaAuthHeaders(),
+                body: JSON.stringify({ action, id }),
+            });
+            let data;
+            try {
+                data = await res.json();
+            } catch (parseErr) {
+                alert(`Server didn't return a valid response (status ${res.status}). Check the review-media function logs in Supabase.`);
+                console.error('review-media: bad response', res.status, await res.text().catch(() => '(no body)'));
+                return;
+            }
+            if (!res.ok) {
+                alert(`Action failed: ${data.error || 'unknown error'} (status ${res.status})`);
+                console.error('review-media error:', data);
+                return;
+            }
+            if (el) el.remove();
+        } catch (networkErr) {
+            alert(`Could not reach the review service: ${networkErr.message}`);
+            console.error('review-media network error:', networkErr);
+        }
+    }
+    function approveMedia(id) { reviewMediaAction('approve', id); }
+    function rejectMedia(id) { reviewMediaAction('reject', id); }
+
+    let selectedItems = new Map(); // key `${kind}:${id}` -> { kind, id, mediaPath }
+    let selectedComments = new Map(); // key `${id}` -> { id, mediaPath }
+
+    function onItemCheck(cb) {
+        const key = cb.dataset.key;
+        if (cb.checked) {
+            const [kind, id] = key.split(':');
+            selectedItems.set(key, { kind, id, mediaPath: cb.dataset.media || null });
+        } else {
+            selectedItems.delete(key);
+        }
+        updateBulkBar();
+    }
+
+    function toggleSelectAll(checked) {
+        document.querySelectorAll('.itemCheckbox').forEach(cb => {
+            cb.checked = checked;
+            onItemCheck(cb);
+        });
+    }
+
+    function updateBulkBar() {
+        const count = selectedItems.size;
+        document.getElementById('selectedCount').textContent = count ? `${count} selected` : '';
+        document.getElementById('deleteSelectedBtn').disabled = count === 0;
+        const allCbs = document.querySelectorAll('.itemCheckbox');
+        const selectAll = document.getElementById('selectAllCheckbox');
+        selectAll.checked = allCbs.length > 0 && count === allCbs.length;
+    }
+
+    async function removeSelected() {
+        const items = Array.from(selectedItems.values());
+        if (items.length === 0) return;
+        if (!confirm(`Permanently delete ${items.length} post${items.length > 1 ? 's' : ''}?`)) return;
+        const threadIds = items.filter(i => i.kind === 'thread').map(i => i.id);
+        const commentIds = items.filter(i => i.kind === 'comment').map(i => i.id);
+        const mediaPaths = items.filter(i => i.mediaPath).map(i => i.mediaPath);
+
+        // Any selected threads may still have child comments referencing them.
+        // Remove those first (and track their media) so the thread delete doesn't fail.
+        if (threadIds.length) {
+            const { data: childComments, error: childErr } = await sb
+                .from('comments').select('id, media_url').in('thread_id', threadIds);
+            if (childErr) { console.error(childErr); alert(childErr.message); return; }
+            if (childComments && childComments.length) {
+                childComments.forEach(c => {
+                    if (c.media_url) mediaPaths.push(c.media_url.split('/').slice(-2).join('/'));
+                });
+                const { error: delChildErr } = await sb.from('comments').delete().in('thread_id', threadIds);
+                if (delChildErr) { console.error(delChildErr); alert(delChildErr.message); return; }
+            }
+        }
+
+        const ops = [];
+        if (threadIds.length) ops.push(sb.from('threads').delete().in('id', threadIds).select('id'));
+        if (commentIds.length) ops.push(sb.from('comments').delete().in('id', commentIds).select('id'));
+        const results = await Promise.all(ops);
+        const failed = results.find(r => r.error);
+        if (failed) { console.error(failed.error); alert(failed.error.message); return; }
+        const deletedCount = results.reduce((n, r) => n + (r.data ? r.data.length : 0), 0);
+        if (deletedCount === 0) {
+            alertBlockedByRLS();
+            return;
+        }
+        if (mediaPaths.length) await sb.storage.from(MEDIA_BUCKET).remove(mediaPaths);
+        selectedItems.clear();
+        loadAllPosts();
+        loadComments();
+    }
+
+    // Supabase Row Level Security silently deletes 0 rows (no error) when the
+    // signed-in user isn't covered by a DELETE policy on the table. Without this
+    // check, the UI would just refresh and the post would still be there with
+    // no explanation of why.
+    function alertBlockedByRLS() {
+        alert('Nothing was deleted. Your moderator account likely does not have a Row Level Security (RLS) policy allowing DELETE on this table. Check Supabase → Authentication → Policies for "threads" and "comments".');
+    }
+
+    function onCommentCheck(cb) {
+        const id = cb.dataset.id;
+        if (cb.checked) {
+            selectedComments.set(id, { id, mediaPath: cb.dataset.media || null });
+        } else {
+            selectedComments.delete(id);
+        }
+        updateCommentsBulkBar();
+    }
+
+    function toggleSelectAllComments(checked) {
+        document.querySelectorAll('.commentCheckbox').forEach(cb => {
+            cb.checked = checked;
+            onCommentCheck(cb);
+        });
+    }
+
+    function updateCommentsBulkBar() {
+        const count = selectedComments.size;
+        document.getElementById('selectedCommentsCount').textContent = count ? `${count} selected` : '';
+        document.getElementById('deleteSelectedCommentsBtn').disabled = count === 0;
+        const allCbs = document.querySelectorAll('.commentCheckbox');
+        const selectAll = document.getElementById('selectAllCommentsCheckbox');
+        selectAll.checked = allCbs.length > 0 && count === allCbs.length;
+    }
+
+    async function removeSelectedComments() {
+        const items = Array.from(selectedComments.values());
+        if (items.length === 0) return;
+        if (!confirm(`Permanently delete ${items.length} comment${items.length > 1 ? 's' : ''}?`)) return;
+        const ids = items.map(i => i.id);
+        const mediaPaths = items.filter(i => i.mediaPath).map(i => i.mediaPath);
+        const { data: deleted, error } = await sb.from('comments').delete().in('id', ids).select('id');
+        if (error) { console.error(error); alert(error.message); return; }
+        if (!deleted || deleted.length === 0) { alertBlockedByRLS(); return; }
+        if (mediaPaths.length) await sb.storage.from(MEDIA_BUCKET).remove(mediaPaths);
+        selectedComments.clear();
+        loadComments();
+        loadAllPosts();
+    }
+
+    async function loadComments() {
+        const list = document.getElementById('commentsList');
+        list.innerHTML = '<p class="text-neutral-600 text-sm">Loading…</p>';
+        selectedComments.clear();
+        const { data: comments, error } = await sb.from('comments').select('*').order('timestamp', { ascending: false });
+        if (error) { list.innerHTML = `<p class="text-red-400 text-sm">${escapeHTML(error.message)}</p>`; return; }
+        if (!comments || comments.length === 0) { list.innerHTML = '<p class="text-neutral-600 text-sm">No comments yet.</p>'; updateCommentsBulkBar(); return; }
+        list.innerHTML = comments.map(c => {
+            const mediaPath = c.media_url ? c.media_url.split('/').slice(-2).join('/') : '';
+            const status = c.moderation_status || 'approved';
+            const statusColor = status === 'flagged' ? 'text-red-400' : status === 'approved' ? 'text-emerald-400' : 'text-neutral-400';
+            return `
+            <div class="border border-neutral-800 rounded-lg p-4">
+                <div class="flex items-start gap-3">
+                    <input type="checkbox" class="commentCheckbox mt-1" data-id="${c.id}" data-media="${escapeHTML(mediaPath)}" onchange="onCommentCheck(this)">
+                    <div class="flex-1 min-w-0">
+                        <div class="text-xs text-neutral-500 mb-1">COMMENT · board /${escapeHTML(c.board_id)}/ · thread ${escapeHTML(c.thread_id)} · <span class="${statusColor} font-bold">${escapeHTML(status)}</span> · ${new Date(c.timestamp).toLocaleString()}</div>
+                        <p class="text-sm whitespace-pre-wrap">${escapeHTML(c.text)}</p>
+                        ${mediaHTML(c.media_url, c.media_type)}
+                        <div class="flex gap-2 mt-3">
+                            <button onclick="removeItem('comment', ${attrJSON(c.id)}, ${attrJSON(c.media_url ? c.media_url.split('/').slice(-2).join('/') : null)})" class="px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded text-xs font-bold">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+        updateCommentsBulkBar();
+    }
+
+    // Safely embed a JSON value inside a double-quoted HTML attribute (e.g.
+    // onclick="...('${attrJSON(path)}')..."). JSON.stringify emits raw
+    // double quotes, which would otherwise terminate the attribute early
+    // and silently break the handler for any value that isn't null.
+    function attrJSON(value) {
+        return JSON.stringify(value).replace(/"/g, '&quot;');
+    }
+
+    function escapeHTML(str) {
+        if (!str) return '';
+        return str.replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]));
+    }
+
+    function mediaHTML(url, type) {
+        if (!url) return '';
+        return type === 'video'
+            ? `<video src="${url}" controls class="max-h-64 rounded mt-2"></video>`
+            : `<img src="${url}" class="max-h-64 rounded mt-2">`;
+    }
+
+    async function loadAllPosts() {
+        const list = document.getElementById('flaggedList');
+        list.innerHTML = '<p class="text-neutral-600 text-sm">Loading…</p>';
+        selectedItems.clear();
+        const [{ data: threads, error: tErr }, { data: comments, error: cErr }] = await Promise.all([
+            sb.from('threads').select('*').order('timestamp', { ascending: false }),
+            sb.from('comments').select('*').order('timestamp', { ascending: false }),
+        ]);
+        if (tErr || cErr) { list.innerHTML = `<p class="text-red-400 text-sm">${escapeHTML((tErr || cErr).message)}</p>`; return; }
+        const items = [
+            ...(threads || []).map(t => ({ ...t, _kind: 'thread' })),
+            ...(comments || []).map(c => ({ ...c, _kind: 'comment' })),
+        ].sort((a, b) => b.timestamp - a.timestamp);
+        if (items.length === 0) { list.innerHTML = '<p class="text-neutral-600 text-sm">No posts yet.</p>'; updateBulkBar(); return; }
+        list.innerHTML = items.map(item => {
+            const key = `${item._kind}:${item.id}`;
+            const mediaPath = item.media_url ? item.media_url.split('/').slice(-2).join('/') : '';
+            const status = item.moderation_status || 'approved';
+            const statusColor = status === 'approved' ? 'text-emerald-400' : status === 'flagged' ? 'text-red-400' : 'text-amber-400';
+            return `
+            <div class="border border-neutral-800 rounded-lg p-4">
+                <div class="flex items-start gap-3">
+                    <input type="checkbox" class="itemCheckbox mt-1" data-key="${key}" data-media="${escapeHTML(mediaPath)}" onchange="onItemCheck(this)">
+                    <div class="flex-1 min-w-0">
+                        <div class="text-xs text-neutral-500 mb-1">${item._kind.toUpperCase()} · board /${escapeHTML(item.board_id)}/ · <span class="${statusColor} font-bold">${escapeHTML(status)}</span> · ${new Date(item.timestamp).toLocaleString()}</div>
+                        <p class="text-sm whitespace-pre-wrap">${escapeHTML(item.content || item.text)}</p>
+                        ${mediaHTML(item.media_url, item.media_type)}
+                        <div class="flex gap-2 mt-3">
+                            ${status !== 'approved' ? `<button onclick="approveItem(${attrJSON(item._kind)}, ${attrJSON(item.id)})" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-xs font-bold">Approve</button>` : ''}
+                            <button onclick="removeItem(${attrJSON(item._kind)}, ${attrJSON(item.id)}, ${attrJSON(item.media_url ? item.media_url.split('/').slice(-2).join('/') : null)})" class="px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded text-xs font-bold">Delete</button>
+                            ${item.poster_fingerprint ? `<button onclick="banFingerprint(${attrJSON(item.poster_fingerprint)})" class="px-3 py-1.5 bg-neutral-800 hover:bg-red-900 border border-red-900 rounded text-xs font-bold">Ban poster</button>` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+        updateBulkBar();
+    }
+
+    async function loadReports() {
+        const list = document.getElementById('reportsList');
+        list.innerHTML = '<p class="text-neutral-600 text-sm">Loading…</p>';
+        const { data, error } = await sb.from('reports').select('*').eq('reviewed', false).order('timestamp', { ascending: false });
+        if (error) { list.innerHTML = `<p class="text-red-400 text-sm">${escapeHTML(error.message)}</p>`; return; }
+        if (!data || data.length === 0) { list.innerHTML = '<p class="text-neutral-600 text-sm">No open reports.</p>'; return; }
+
+        // Pull in the actual reported post (content + media) so it can be judged inline.
+        const threadIds = data.filter(r => r.content_type === 'thread').map(r => r.content_id);
+        const commentIds = data.filter(r => r.content_type === 'comment').map(r => r.content_id);
+        const [{ data: threads }, { data: comments }] = await Promise.all([
+            threadIds.length ? sb.from('threads').select('*').in('id', threadIds) : Promise.resolve({ data: [] }),
+            commentIds.length ? sb.from('comments').select('*').in('id', commentIds) : Promise.resolve({ data: [] }),
+        ]);
+        const contentMap = new Map();
+        (threads || []).forEach(t => contentMap.set(`thread:${t.id}`, t));
+        (comments || []).forEach(c => contentMap.set(`comment:${c.id}`, c));
+
+        list.innerHTML = data.map(r => {
+            const post = contentMap.get(`${r.content_type}:${r.content_id}`);
+            const mediaPath = post && post.media_url ? post.media_url.split('/').slice(-2).join('/') : null;
+            const postHTML = post
+                ? `<p class="text-sm whitespace-pre-wrap mt-2 pt-2 border-t border-neutral-800">${escapeHTML(post.content || post.text)}</p>${mediaHTML(post.media_url, post.media_type)}`
+                : `<p class="text-xs text-neutral-600 italic mt-2 pt-2 border-t border-neutral-800">Original post no longer exists.</p>`;
+            return `
+            <div class="border border-neutral-800 rounded-lg p-4">
+                <div class="text-xs text-neutral-500 mb-1">${r.content_type.toUpperCase()} ${escapeHTML(r.content_id)} · board /${escapeHTML(r.board_id || '')}/ · ${new Date(r.timestamp).toLocaleString()}</div>
+                <p class="text-sm">Reason: <span class="font-bold">${escapeHTML(r.reason)}</span></p>
+                ${postHTML}
+                <div class="flex gap-2 mt-3">
+                    <a href="interactink.html?board=${encodeURIComponent(r.board_id || '')}&thread=${encodeURIComponent(r.thread_id || r.content_id)}" target="_blank" class="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 rounded text-xs font-bold">View post</a>
+                    <button onclick="markReportReviewed(${r.id})" class="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 rounded text-xs font-bold">Dismiss (false report)</button>
+                    ${post ? `<button onclick="removeItem(${attrJSON(r.content_type)}, ${attrJSON(r.content_id)}, ${attrJSON(mediaPath)}); markReportReviewed(${r.id});" class="px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded text-xs font-bold">Delete post</button>` : ''}
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    async function loadIncidents() {
+        const list = document.getElementById('incidentsList');
+        list.innerHTML = '<p class="text-neutral-600 text-sm">Loading…</p>';
+        const { data, error } = await sb.from('moderation_incidents').select('*').order('timestamp', { ascending: false }).limit(200);
+        if (error) { list.innerHTML = `<p class="text-red-400 text-sm">${escapeHTML(error.message)}</p>`; return; }
+        if (!data || data.length === 0) { list.innerHTML = '<p class="text-neutral-600 text-sm">No incidents logged.</p>'; return; }
+        list.innerHTML = data.map(i => `
+            <div class="border border-neutral-800 rounded-lg p-3 text-xs text-neutral-400">
+                <span class="font-bold text-red-400">${escapeHTML(i.kind)}</span> · ${escapeHTML(i.media_type || '')} · board /${escapeHTML(i.board_id || '')}/ · ${new Date(i.timestamp).toLocaleString()}
+            </div>`).join('');
+    }
+
+    async function approveItem(kind, id) {
+        const table = kind === 'thread' ? 'threads' : 'comments';
+        const { error } = await sb.from(table).update({ moderation_status: 'approved' }).eq('id', id);
+        if (error) { alert(error.message); return; }
+        loadAllPosts();
+        if (kind === 'comment') loadComments();
+    }
+
+    async function removeItem(kind, id, mediaPath) {
+        if (!confirm('Remove this content permanently?')) return;
+        const mediaPaths = mediaPath ? [mediaPath] : [];
+
+        // Threads can have child comments referencing them (thread_id foreign key).
+        // Deleting a thread first would fail (or leave orphaned comments), so
+        // remove its comments first and clean up their media too.
+        if (kind === 'thread') {
+            const { data: childComments, error: childErr } = await sb
+                .from('comments').select('id, media_url').eq('thread_id', id);
+            if (childErr) { console.error(childErr); alert(childErr.message); return; }
+            if (childComments && childComments.length) {
+                (childComments || []).forEach(c => {
+                    if (c.media_url) mediaPaths.push(c.media_url.split('/').slice(-2).join('/'));
+                });
+                const { error: delChildErr } = await sb.from('comments').delete().eq('thread_id', id);
+                if (delChildErr) { console.error(delChildErr); alert(delChildErr.message); return; }
+            }
+        }
+
+        const table = kind === 'thread' ? 'threads' : 'comments';
+        const { data: deleted, error } = await sb.from(table).delete().eq('id', id).select('id');
+        if (error) { console.error(error); alert(error.message); return; }
+        if (!deleted || deleted.length === 0) { alertBlockedByRLS(); return; }
+        if (mediaPaths.length) await sb.storage.from(MEDIA_BUCKET).remove(mediaPaths);
+        loadAllPosts();
+        if (kind === 'comment' || kind === 'thread') loadComments();
+    }
+
+    async function markReportReviewed(reportId) {
+        const { error } = await sb.from('reports').update({ reviewed: true }).eq('id', reportId);
+        if (error) alert(error.message); else loadReports();
+    }
+
+    // ---------- Bans ----------
+    async function banFingerprint(fingerprint, reason) {
+        if (!fingerprint) { alert('This post has no device fingerprint on record (posted before the ban system was added).'); return; }
+        if (!confirm(`Ban this device? (${fingerprint})\n\nThey won't be able to post again from this browser/device unless they clear all site data or switch devices.`)) return;
+        const { error } = await sb.from('banned_fingerprints').insert([{ fingerprint, reason: reason || 'Banned via admin panel' }]);
+        if (error) { alert(error.message); return; }
+        alert('Fingerprint banned.');
+        loadBans();
+    }
+
+    function banFingerprintManual() {
+        const fp = document.getElementById('manualBanFingerprint').value.trim();
+        const reason = document.getElementById('manualBanReason').value.trim();
+        if (!fp) { alert('Enter a fingerprint ID to ban.'); return; }
+        banFingerprint(fp, reason);
+        document.getElementById('manualBanFingerprint').value = '';
+        document.getElementById('manualBanReason').value = '';
+    }
+
+    async function unbanFingerprint(fingerprint) {
+        if (!confirm('Remove this ban?')) return;
+        const { error } = await sb.from('banned_fingerprints').delete().eq('fingerprint', fingerprint);
+        if (error) { alert(error.message); return; }
+        loadBans();
+    }
+
+    async function loadBans() {
+        const list = document.getElementById('bansList');
+        list.innerHTML = '<p class="text-neutral-600 text-sm">Loading…</p>';
+        const { data, error } = await sb.from('banned_fingerprints').select('*').order('banned_at', { ascending: false });
+        if (error) { list.innerHTML = `<p class="text-red-400 text-sm">${escapeHTML(error.message)}</p>`; return; }
+        if (!data || data.length === 0) { list.innerHTML = '<p class="text-neutral-600 text-sm">No banned devices.</p>'; return; }
+        list.innerHTML = data.map(b => `
+            <div class="border border-neutral-800 rounded-lg p-3 flex items-center justify-between">
+                <div>
+                    <div class="text-sm font-mono">${escapeHTML(b.fingerprint)}</div>
+                    <div class="text-xs text-neutral-500">${escapeHTML(b.reason || '')} · banned ${new Date(b.banned_at).toLocaleString()}</div>
+                </div>
+                <button onclick="unbanFingerprint(${attrJSON(b.fingerprint)})" class="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 rounded text-xs font-bold">Unban</button>
+            </div>`).join('');
+    }
+</script>
+</body>
+</html>

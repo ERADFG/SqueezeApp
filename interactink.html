@@ -86,13 +86,18 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
+    <script src="https://unpkg.com/lucide@0.383.0"></script>
     <!-- Client-side NSFW image scanning (nsfwjs + tensorflow.js) -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/nsfwjs@4.2.1/dist/nsfwjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/toxicity@1.2.2/dist/toxicity.min.js"></script>
+    <!-- Metadata stripping for non-image/video uploads (PDFs, Office docs, MP3s) -->
+    <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="metadata-strip.js"></script>
     <!-- Unified routing & state management (board resolution, sessionStorage persistence) -->
+
     <script>
     (function () {
         const BOARDS = [
@@ -3757,10 +3762,19 @@ function initRealtimeSync() {
                 // Best-effort — prepareVideoForUpload always resolves, falling
                 // back to the original file rather than rejecting.
                 finalFile = await prepareVideoForUpload(file);
+            } else {
+                // Audio and other file types (PDFs, docs, zips, etc.) aren't
+                // re-encoded for size — no reliable lossless way to shrink
+                // them from plain browser JS — but they still go through
+                // stripFileMetadata() (see metadata-strip.js) to remove
+                // embedded author/device info and randomize the filename
+                // before anything is uploaded.
+                try {
+                    finalFile = await window.stripFileMetadata(file);
+                } catch (e) {
+                    finalFile = file; // never block a post over this
+                }
             }
-            // Audio and other file types (PDFs, docs, zips, etc.) are
-            // attached as-is — no re-encoding, since there isn't a reliable
-            // lossless way to shrink them from plain browser JS.
 
             selectedMedia[kind] = finalFile;
             renderMediaPreview(kind, finalFile);

@@ -1,7 +1,6 @@
 {
   "dependencies": {
-    "@tensorflow/tfjs": "^4.22.0",
-    "bad-words": "^4.1.5",
-    "nsfwjs": "^4.3.0"
+    "@tensorflow/tfjs": "4.10.0",
+    "nsfwjs": "4.2.1"
   }
 }
