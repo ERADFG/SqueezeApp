@@ -19,7 +19,6 @@
     <link rel="stylesheet" href="theme.css">
     <link rel="preconnect" href="https://pagead2.googlesyndication.com" crossorigin>
     <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin>
-    <link rel="preconnect" href="https://www.highperformanceformat.com" crossorigin>
     <title>InteractInk - Welcome | Anonymous Text Board</title>
 
     <meta name="description" content="Welcome to InteractInk, a free anonymous text board. No accounts, no sign-up. See what's trending right now and jump into the board.">
@@ -324,7 +323,6 @@
         /* Wraps the in-feed ad banners. Deliberately NOT using .x-feed here
            — that class carries min-height:100vh, which on a tiny ad block
            was forcing a full viewport of empty space beneath it. */
-        .ad-slot { width: 100%; }
 
         @media (min-width: 1024px) {
             .x-feed {
@@ -462,17 +460,6 @@
 
         <!-- CENTER MAIN CONTENT FEED -->
         <main class="x-feed">
-            <!-- Top Banner Ad space (sandboxed in its own iframe so the ad
-                 network's document.write() can only affect its own tiny
-                 document, never this page's layout/zoom) -->
-            <div class="ad-slot">
-                <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
-                    <script type="text/javascript">
-                      atOptions = { 'key' : 'c2beae2a3c4b115088146fa8ef56a186', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
-                    </script>
-                    <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
-                </div>
-            </div>
 
             <!-- Welcome page header -->
             <header class="relative overflow-hidden border-b border-neutral-800 px-6 py-12 text-center">
@@ -563,14 +550,6 @@
             </section>
 
             <!-- Bottom Ad Space inside Main Column (sandboxed, see note above) -->
-            <div class="ad-slot">
-                <div class="w-full flex justify-center py-3 bg-black border-b border-neutral-800">
-                    <script type="text/javascript">
-                      atOptions = { 'key' : 'c2beae2a3c4b115088146fa8ef56a186', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
-                    </script>
-                    <script type="text/javascript" src="https://www.highperformanceformat.com/c2beae2a3c4b115088146fa8ef56a186/invoke.js"></script>
-                </div>
-            </div>
 
             <footer style="width: 100%; text-align: center; padding: 24px 20px;">
                 <p style="font-size: 0.85rem; color: #71767b;">&copy; 2026 InteractInk. All rights reserved.</p>
