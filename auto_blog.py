@@ -2,7 +2,7 @@
 """
 InteractInk — Automatic Blog Generator
 ========================================
-Runs forever. Every INTERVAL_SECONDS (default 10 minutes) it:
+Runs forever. Every INTERVAL_SECONDS (default 1 minute) it:
 
   1. Asks Groq (free tier, no credit card, no region restriction) for a
      brand-new blog post (title + sections) on a topic
@@ -16,13 +16,16 @@ Runs forever. Every INTERVAL_SECONDS (default 10 minutes) it:
      cluttered) as blogs/<slug>.html.
   4. Regenerates blogs/index.html — a master list of every generated post,
      newest first, styled like your existing blog.html.
-  5. Adds a one-time "Full Archive" link into blog.html pointing at
-     blogs/index.html (only inserted once, safe to re-run).
+  5. Updates blog.html directly and automatically: a horizontally-sliding
+     "Recent Posts" strip right under the header (same drag/swipe/wheel
+     sliding mechanism as the board switcher in interactink.html), plus the
+     full vertical post list below it — both regenerated every cycle so
+     every new post shows up on blog.html itself, no manual step needed.
 
 USAGE
 -----
     export GROQ_API_KEY="your-key-here"       # get a free key: https://console.groq.com/keys
-    python3 auto_blog.py                      # run forever, every 10 min
+    python3 auto_blog.py                      # run forever, every 1 minute
     python3 auto_blog.py --once               # generate a single post and exit (good for testing)
     python3 auto_blog.py --interval 300       # every 5 minutes instead
     python3 auto_blog.py --site-dir /path/to/InteractInk_app
@@ -48,7 +51,7 @@ from datetime import datetime, timezone
 
 MODEL = "llama-3.3-70b-versatile"
 API_URL = "https://api.groq.com/openai/v1/chat/completions"
-DEFAULT_INTERVAL_SECONDS = 10 * 60  # 10 minutes
+DEFAULT_INTERVAL_SECONDS = 60  # 1 minute
 MAX_ATTEMPTS_PER_CYCLE = 3
 RETRY_BACKOFF_SECONDS = 30
 
@@ -592,25 +595,207 @@ def save_manifest(blogs_dir, manifest):
         json.dump(manifest, f, indent=2, ensure_ascii=False)
 
 
-def ensure_archive_link(site_dir):
-    """Idempotently add a 'Full Archive' link into blog.html pointing at blogs/index.html."""
+# --------------------------------------------------------------------------
+# BLOG.HTML SYNC — injects a horizontally-sliding "Recent Posts" strip
+# (same drag/swipe/wheel mechanism as the board switcher in interactink.html)
+# plus an always-up-to-date vertical post list, directly into blog.html.
+# --------------------------------------------------------------------------
+
+BLOG_SCROLLER_CSS = """
+        /* ==================================================================
+           BLOG POST SCROLLER — mirrors the board-scroller drag/swipe strip
+           used in interactink.html, adapted for blog posts.
+        ================================================================== */
+        .blog-scroller-wrap {
+            position: relative;
+            border-bottom: 1px solid #2f3336;
+            background: rgba(0, 0, 0, 0.6);
+        }
+        .blog-scroller {
+            display: flex;
+            align-items: stretch;
+            gap: 8px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            padding: 10px 14px;
+            cursor: grab;
+            touch-action: pan-x;
+        }
+        .blog-scroller:active { cursor: grabbing; }
+        .blog-scroller::-webkit-scrollbar { display: none; }
+        .blog-scroller-chip {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 2px;
+            flex-shrink: 0;
+            scroll-snap-align: start;
+            width: 190px;
+            padding: 9px 13px;
+            border-radius: 12px;
+            color: #a1a1aa;
+            background: #16181c;
+            border: 1px solid #2f3336;
+            text-decoration: none;
+            user-select: none;
+            transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+        }
+        .blog-scroller-chip:hover { border-color: #525252; color: #e7e9ea; }
+        .blog-scroller-chip-title {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: #e7e9ea;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .blog-scroller-chip-date {
+            font-family: ui-monospace, Menlo, monospace;
+            font-size: 10px;
+            color: #71767b;
+        }
+        .blog-scroller-edge {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 28px;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .blog-scroller-edge.left { left: 0; background: linear-gradient(to right, #000000, transparent); }
+        .blog-scroller-edge.right { right: 0; background: linear-gradient(to left, #000000, transparent); }
+"""
+
+BLOG_SCROLLER_JS = """
+    <script>
+    /* Desktop mouse-drag-to-scroll + vertical-wheel-to-horizontal-scroll for
+       the blog post strip — same mechanism as the board-scroller in
+       interactink.html. Touch devices get native swipe for free. */
+    (function setupBlogScrollerDrag() {
+        const scroller = document.getElementById('blogScroller');
+        if (!scroller) return;
+        let isDown = false, startX = 0, startScroll = 0, moved = false;
+        scroller.addEventListener('mousedown', (e) => {
+            isDown = true; moved = false;
+            scroller.dataset.dragged = 'false';
+            startX = e.pageX;
+            startScroll = scroller.scrollLeft;
+        });
+        window.addEventListener('mouseup', () => {
+            isDown = false;
+            if (moved) setTimeout(() => { scroller.dataset.dragged = 'false'; }, 0);
+        });
+        window.addEventListener('mousemove', (e) => {
+            if (!isDown) return;
+            const dx = e.pageX - startX;
+            if (Math.abs(dx) > 4) { moved = true; scroller.dataset.dragged = 'true'; }
+            scroller.scrollLeft = startScroll - dx;
+        });
+        scroller.addEventListener('click', (e) => {
+            if (scroller.dataset.dragged === 'true') e.preventDefault();
+        }, true);
+        scroller.addEventListener('wheel', (e) => {
+            if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+                scroller.scrollLeft += e.deltaY;
+                e.preventDefault();
+            }
+        }, { passive: false });
+    })();
+    </script>
+"""
+
+BLOG_HEADER_ANCHOR = (
+    '            <!-- Blog header -->\n'
+    '            <header class="blog-header p-4 flex items-center gap-2">\n'
+    '                <img src="favicon2.png" alt="InteractInk logo" width="24" height="24" class="w-6 h-6">\n'
+    '                <h1 class="text-lg font-bold tracking-tight text-white">Blog</h1>\n'
+    '            </header>\n'
+)
+
+
+def render_scroller_chips(manifest):
+    posts_sorted = sorted(manifest, key=lambda p: p["created_at"], reverse=True)
+    chips = []
+    for p in posts_sorted:
+        created = datetime.fromisoformat(p["created_at"])
+        date_short = created.strftime("%b %-d") if os.name != "nt" else created.strftime("%b %#d")
+        chips.append(
+            f'<a href="blogs/{p["slug"]}.html" class="blog-scroller-chip" data-slug="{p["slug"]}">'
+            f'<span class="blog-scroller-chip-title">{p["title"]}</span>'
+            f'<span class="blog-scroller-chip-date">{date_short}</span></a>'
+        )
+    return "".join(chips)
+
+
+def render_main_list_entries(manifest):
+    posts_sorted = sorted(manifest, key=lambda p: p["created_at"], reverse=True)
+    entries = []
+    for p in posts_sorted:
+        entries.append(
+            f'                    <a href="blogs/{p["slug"]}.html" class="block p-4 hover:bg-neutral-950/50 transition border-b border-neutral-800 last:border-b-0">\n'
+            f'                        <h3 class="text-white font-bold text-sm mb-1">{p["title"]}</h3>\n'
+            f'                        <p class="text-neutral-500 text-xs leading-relaxed">{p["meta_description"]}</p>\n'
+            f'                    </a>'
+        )
+    return "\n".join(entries)
+
+
+def sync_main_blog_page(site_dir, manifest):
+    """Keeps blog.html itself in sync with every generated post: injects (once)
+    a sliding 'Recent Posts' strip using the same drag/swipe/wheel mechanism
+    as interactink.html's board scroller, and regenerates both the strip's
+    contents and the full vertical post list on every cycle."""
     blog_path = os.path.join(site_dir, "blog.html")
     if not os.path.exists(blog_path):
+        log("blog.html not found — skipping sync")
         return
     with open(blog_path, "r", encoding="utf-8") as f:
         content = f.read()
-    if "blogs/index.html" in content:
-        return  # already linked
-    marker = '<p class="text-neutral-300 text-sm leading-relaxed mb-4">Notes on anonymity, privacy, and how InteractInk works.</p>'
-    if marker in content:
-        replacement = marker + (
-            '\n                <a href="blogs/index.html" class="inline-link text-xs">'
-            'View the full auto-generated archive &rarr;</a>'
+
+    # 1) Inject the scroller CSS once, right before the page's </style> tag.
+    if "BLOG POST SCROLLER" not in content:
+        content = content.replace("    </style>", BLOG_SCROLLER_CSS + "    </style>", 1)
+
+    # 2) Inject the scroller markup once, right after the blog header.
+    if 'id="blogScroller"' not in content and BLOG_HEADER_ANCHOR in content:
+        scroller_block = (
+            BLOG_HEADER_ANCHOR +
+            '\n            <div class="blog-scroller-wrap">\n'
+            '                <div id="blogScroller" class="blog-scroller" aria-label="Recent posts"><!-- BLOG_SCROLLER_CHIPS --></div>\n'
+            '                <div class="blog-scroller-edge left" aria-hidden="true"></div>\n'
+            '                <div class="blog-scroller-edge right" aria-hidden="true"></div>\n'
+            '            </div>\n'
         )
-        content = content.replace(marker, replacement, 1)
-        with open(blog_path, "w", encoding="utf-8") as f:
-            f.write(content)
-        log("Inserted 'Full Archive' link into blog.html")
+        content = content.replace(BLOG_HEADER_ANCHOR, scroller_block, 1)
+
+    # 3) Inject the drag-scroll JS once, right before </body>.
+    if "setupBlogScrollerDrag" not in content:
+        content = content.replace("</body>", BLOG_SCROLLER_JS + "</body>", 1)
+
+    # 4) Regenerate the scroller's chip contents every cycle.
+    content = re.sub(
+        r'(<div id="blogScroller" class="blog-scroller" aria-label="Recent posts">).*?(</div>)',
+        lambda m: m.group(1) + render_scroller_chips(manifest) + m.group(2),
+        content,
+        count=1,
+        flags=re.DOTALL,
+    )
+
+    # 5) Regenerate the vertical post list every cycle so every post shows here too.
+    content = re.sub(
+        r'(<div class="blog-list[^"]*"[^>]*>).*?(</div>)',
+        lambda m: m.group(1) + "\n" + render_main_list_entries(manifest) + "\n                " + m.group(2),
+        content,
+        count=1,
+        flags=re.DOTALL,
+    )
+
+    with open(blog_path, "w", encoding="utf-8") as f:
+        f.write(content)
 
 
 # --------------------------------------------------------------------------
@@ -677,10 +862,11 @@ def run_one_cycle(site_dir):
             with open(os.path.join(blogs_dir, "index.html"), "w", encoding="utf-8") as f:
                 f.write(index_html)
 
-            ensure_archive_link(site_dir)
+            sync_main_blog_page(site_dir, manifest)
 
             log(f"Published: blogs/{slug}.html  —  \"{post['title']}\"")
             log(f"Archive now has {len(manifest)} post(s): blogs/index.html")
+            log("blog.html updated (sliding strip + full list)")
             return True
 
         except Exception as e:
