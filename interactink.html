@@ -4076,6 +4076,7 @@ function initRealtimeSync() {
             'onlyfans link', 'free onlyfans', 'leaked nudes', 'cam show',
             'sex for sale', 'escort service', 'incall outcall', 'sugar daddy needed',
             'trade nudes', 'sexting only', 'nsfw dm me', 'send nudes',
+            'porn', 'watching porn', 'masturbating', 'masturbate',
         ];
         const SCAM_KEYWORDS = [
             'send bitcoin', 'wire transfer now', 'guaranteed profit', 'click here to claim',
@@ -4094,7 +4095,7 @@ function initRealtimeSync() {
         // Core single-word triggers checked with fuzzy matching, to catch
         // misspellings/evasions of the most important words per category.
         const DRUG_CORE_WORDS = ['fentanyl', 'heroin', 'cocaine', 'xanax', 'oxycodone', 'adderall', 'methamphetamine'];
-        const SEXUAL_CORE_WORDS = ['onlyfans', 'nudes'];
+        const SEXUAL_CORE_WORDS = ['onlyfans', 'nudes', 'masturbating', 'masturbate', 'masturbation'];
         const SCAM_CORE_WORDS = ['bitcoin', 'giveaway', 'inheritance'];
 
         function containsFuzzyFrom(text, words) {
@@ -4161,13 +4162,30 @@ function initRealtimeSync() {
             return toxicityModel;
         }
 
+        // Only these labels represent real safety/legal risk and should
+        // block a post. "insult" and generic "toxicity" are deliberately
+        // excluded — those fire on ordinary rude opinions and harsh takes
+        // ("the president is a liar", "that movie was garbage") which are
+        // not the kind of content this filter is meant to stop. Mild/weak
+        // language should be allowed through; only the genuinely severe
+        // categories below get blocked.
+        const BLOCKING_TOXICITY_LABELS = new Set([
+            'severe_toxicity',
+            'identity_attack',
+            'threat',
+            'obscene',
+            'sexual_explicit',
+        ]);
+
         async function isTextToxic(text) {
             if (!text || !text.trim()) return false;
             try {
                 return await withTimeout((async () => {
                     const model = await loadToxicityModel();
                     const predictions = await model.classify([text]);
-                    return predictions.some(p => p.results[0].match === true);
+                    return predictions.some(p =>
+                        BLOCKING_TOXICITY_LABELS.has(p.label) && p.results[0].match === true
+                    );
                 })(), 8000, false); // 8s cap — fails open (allows the post) if exceeded
             } catch (e) {
                 console.error('Toxicity check failed, allowing by default:', e);
