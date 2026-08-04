@@ -2,32 +2,41 @@
 """
 InteractInk — Automatic Blog Generator
 ========================================
-Runs forever. Every INTERVAL_SECONDS (default 1 minute) it:
+Runs forever, or once via --once. Every cycle it:
 
-  1. Asks Groq (free tier, no credit card, no region restriction) for a
-     brand-new blog post (title + sections) on a topic
-     related to anonymity / privacy / imageboards / internet culture that
-     hasn't been covered yet.
-  2. Renders it into an HTML page using the EXACT same UI shell as the rest
-     of the site (sidebar nav, right widgets, mobile tab bar, footer, theme
-     support, ads/analytics tags) — pulled straight from your existing
-     article template (history-of-anonymous-boards.html).
-  3. Saves it into a `blogs/` folder (so your site root doesn't get
-     cluttered) as blogs/<slug>.html.
-  4. Regenerates blogs/index.html — a master list of every generated post,
-     newest first, styled like your existing blog.html.
-  5. Updates blog.html directly and automatically: a horizontally-sliding
-     "Recent Posts" strip right under the header (same drag/swipe/wheel
-     sliding mechanism as the board switcher in interactink.html), plus the
-     full vertical post list below it — both regenerated every cycle so
-     every new post shows up on blog.html itself, no manual step needed.
+  1. Picks a topic angle from TOPIC_POOL, then asks the model for ONE
+     specific, realistic search query a reader would actually type
+     (a "target keyword") plus the search intent behind it (informational,
+     how-to, comparison, etc). This is a separate step from writing the
+     post, because it's what makes the post actually target search intent
+     instead of just riffing on a broad topic.
+  2. Asks the model to write a full, original post that directly answers
+     that query: an intro that gets to the point immediately, 5-7 solid
+     body sections, and a short FAQ block covering related questions a
+     reader (or Google's "People also ask") would have. The system prompt
+     bans the stock AI-blog phrases and structures that make posts read as
+     obviously machine-generated, and requires concrete specifics over
+     generic statements.
+  3. Looks up a real, commercially-reusable image for the post via the
+     Openverse API (openverse.org — a Creative-Commons image search run by
+     WordPress.org, no API key required) and embeds it as a hero image
+     with proper attribution, which is required by the CC licenses these
+     images are under.
+  4. Renders it into an HTML page using the EXACT same UI shell as the
+     rest of the site (sidebar nav, right widgets, mobile tab bar, footer,
+     theme support, ads/analytics tags) — pulled straight from your
+     existing article template. Adds Article + FAQPage JSON-LD structured
+     data for search engines.
+  5. Saves it into a `blogs/` folder as blogs/<slug>.html, regenerates
+     blogs/index.html (master list, newest first), and adds a one-time
+     "Full Archive" link into blog.html.
 
 USAGE
 -----
-    export GROQ_API_KEY="your-key-here"       # get a free key: https://console.groq.com/keys
-    python3 auto_blog.py                      # run forever, every 1 minute
+    export GROQ_API_KEY="gsk_...your key..."
+    python3 auto_blog.py                      # run forever, every INTERVAL_SECONDS
     python3 auto_blog.py --once               # generate a single post and exit (good for testing)
-    python3 auto_blog.py --interval 300       # every 5 minutes instead
+    python3 auto_blog.py --interval 21600      # every 6 hours instead
     python3 auto_blog.py --site-dir /path/to/InteractInk_app
 
 Requires only the Python standard library — nothing to pip install.
@@ -42,6 +51,7 @@ import sys
 import time
 import traceback
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
@@ -49,11 +59,36 @@ from datetime import datetime, timezone
 # CONFIG
 # --------------------------------------------------------------------------
 
+# Groq hosts several open-weight models behind an OpenAI-compatible API.
+# Check https://console.groq.com/docs/models for the current lineup and
+# swap this if the model is retired or you want a different quality/speed
+# tradeoff — the code below works with any chat-completions-style model.
 MODEL = "llama-3.3-70b-versatile"
 API_URL = "https://api.groq.com/openai/v1/chat/completions"
-DEFAULT_INTERVAL_SECONDS = 60  # 1 minute
+
+# Openverse (openverse.org) — free, no API key, aggregates openly-licensed
+# images from Flickr, Wikimedia Commons, museums, etc. We filter to
+# licenses that permit commercial use and modification, and we always
+# render attribution (required by CC licenses).
+IMAGE_API_URL = "https://api.openverse.org/v1/images/"
+
+# Quality > quantity. Posting every 5 minutes produces thin, repetitive,
+# low-value pages that both readers and search engines discount — and
+# with only ~20 topics in the pool you'd exhaust real angles in under two
+# hours. A few well-researched posts a day is far better for actual
+# search visibility. Override with --interval if you disagree.
+DEFAULT_INTERVAL_SECONDS = 5 * 60  # 5 minutes (only matters for local --forever loop;
+                                     # the GitHub Actions cron schedule below is what
+                                     # actually controls cadence when running unattended)
 MAX_ATTEMPTS_PER_CYCLE = 3
 RETRY_BACKOFF_SECONDS = 30
+
+# Hard rule: every published post must be 800-2,000+ words. MIN_WORD_COUNT
+# is enforced (too-short output is rejected and retried); MAX_WORD_COUNT is
+# just a soft target passed to the model so posts don't ramble past the
+# point of being useful — going over it is fine and not rejected.
+MIN_WORD_COUNT = 800
+TARGET_WORD_COUNT = 1300
 
 SITE_NAME = "InteractInk"
 SITE_URL = "https://interactink.vercel.app"
@@ -84,6 +119,20 @@ TOPIC_POOL = [
     "digital minimalism and stepping back from tracked platforms",
 ]
 
+# Phrases that instantly signal "generic AI blog post" — banned outright.
+BANNED_PHRASES = [
+    "in today's digital age", "in the digital age", "in an increasingly",
+    "navigate the landscape", "navigate the world of", "delve into",
+    "dive into", "tapestry", "unlock the", "unleash the", "game-changer",
+    "game changer", "it is important to note", "it's important to note",
+    "in conclusion", "in summary", "furthermore", "moreover", "additionally,",
+    "as we've explored", "as we've seen", "at the end of the day",
+    "when it comes to", "in the world of", "the world of online",
+    "whether you're a", "let's explore", "let's dive", "ever-evolving",
+    "in this day and age", "plays a crucial role", "plays a vital role",
+    "cannot be overstated", "a testament to", "underscores the importance",
+]
+
 # --------------------------------------------------------------------------
 # PATHS
 # --------------------------------------------------------------------------
@@ -96,24 +145,23 @@ def resolve_site_dir(cli_value: str) -> str:
 
 
 # --------------------------------------------------------------------------
-# GROQ API CALL — genuinely free tier, no credit card, no region restriction
+# GROQ (OPENAI-COMPATIBLE) API CALL
 # --------------------------------------------------------------------------
 
-def call_groq(system_prompt: str, user_prompt: str, max_tokens: int = 2200) -> str:
+def call_groq(system_prompt: str, user_prompt: str, max_tokens: int = 4000) -> str:
     api_key = os.environ.get("GROQ_API_KEY")
     if not api_key:
         raise RuntimeError(
             "GROQ_API_KEY environment variable is not set. "
-            "Get a free key (no credit card needed) from https://console.groq.com/keys and run:\n"
-            "  PowerShell:  $env:GROQ_API_KEY=\"your-key-here\"\n"
-            "  bash/macOS:  export GROQ_API_KEY=\"your-key-here\""
+            "Get a key from https://console.groq.com/keys and run:\n"
+            "  export GROQ_API_KEY=gsk_...\n"
+            "(on Windows: set GROQ_API_KEY=gsk_...)"
         )
 
     body = json.dumps({
         "model": MODEL,
         "max_tokens": max_tokens,
-        "temperature": 0.9,
-        "response_format": {"type": "json_object"},
+        "temperature": 0.85,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
@@ -127,8 +175,6 @@ def call_groq(system_prompt: str, user_prompt: str, max_tokens: int = 2200) -> s
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {api_key}",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) InteractInk-AutoBlog/1.0",
-            "Accept": "application/json",
         },
     )
 
@@ -146,7 +192,107 @@ def call_groq(system_prompt: str, user_prompt: str, max_tokens: int = 2200) -> s
 
 
 # --------------------------------------------------------------------------
-# POST GENERATION
+# IMAGE LOOKUP (Openverse — free, no key, CC-licensed images)
+# --------------------------------------------------------------------------
+
+def fetch_image_for_post(query: str):
+    """Find a real, commercially-reusable image for the post.
+
+    Returns a dict {url, alt, attribution_html} or None if nothing usable
+    was found (the post still publishes fine without a hero image).
+    """
+    try:
+        params = urllib.parse.urlencode({
+            "q": query,
+            "license_type": "commercial,modification",
+            "page_size": 12,
+            "mature": "false",
+        })
+        req = urllib.request.Request(
+            f"{IMAGE_API_URL}?{params}",
+            headers={"User-Agent": f"{SITE_NAME}-auto-blog/1.0 (+{SITE_URL})"},
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+
+        results = [r for r in data.get("results", []) if r.get("url")]
+        random.shuffle(results)
+
+        for r in results:
+            title = (r.get("title") or query).strip()[:120]
+            creator = (r.get("creator") or "Unknown").strip()
+            source = r.get("foreign_landing_url") or r.get("source")
+            license_name = (r.get("license") or "").upper()
+            license_version = r.get("license_version") or ""
+            license_str = f"{license_name} {license_version}".strip()
+
+            attribution_bits = [f'&#8220;{title}&#8221; by {creator}']
+            if license_str:
+                attribution_bits.append(f'({license_str})')
+            attribution = " ".join(attribution_bits)
+            if source:
+                attribution += f' &mdash; <a href="{source}" class="inline-link" rel="noopener nofollow" target="_blank">source</a>'
+
+            return {
+                "url": r["url"],
+                "alt": title,
+                "attribution": attribution,
+            }
+    except Exception as e:
+        log(f"Image lookup failed for '{query}' ({e}); publishing without a hero image.")
+    return None
+
+
+# --------------------------------------------------------------------------
+# STEP 1 — TARGET KEYWORD / SEARCH INTENT
+# --------------------------------------------------------------------------
+
+def strip_json_fences(text: str) -> str:
+    text = text.strip()
+    if text.startswith("```"):
+        text = re.sub(r"^```[a-zA-Z]*\n?", "", text)
+        text = re.sub(r"```$", "", text.strip())
+    return text.strip()
+
+
+def generate_target_keyword(recent_keywords):
+    """Pick one specific, realistic search query to target, distinct from
+    everything already covered. This is deliberately a separate call from
+    writing the post: it forces the model to commit to a concrete reader
+    intent before it starts writing, instead of writing something vague
+    enough to fit any topic."""
+    topic_hint = random.choice(TOPIC_POOL)
+    avoid_list = "\n".join(f"- {k}" for k in recent_keywords[-60:]) or "(none yet)"
+
+    system_prompt = (
+        f"You are an SEO/content strategist for {SITE_NAME}, an anonymous "
+        "imageboard/forum (no accounts, thread-based discussion). You pick "
+        "specific search queries real people type into Google — not broad "
+        "topics. Output ONLY valid JSON, no markdown fences, no commentary."
+    )
+    user_prompt = f"""Broad topic area to work within: "{topic_hint}"
+
+Already-targeted queries — pick something meaningfully different, not a rewording of any of these:
+{avoid_list}
+
+Return ONLY a JSON object:
+{{
+  "keyword": "a specific, realistic search query a person would type (4-8 words, lowercase, no quotes)",
+  "intent": "one of: informational, how-to, comparison, definitional, troubleshooting",
+  "angle": "one sentence describing the specific angle the article should take to genuinely satisfy that query, more specific than the broad topic",
+  "image_query": "2-4 word plain-English visual search term for a stock/CC photo that would suit this article as a hero image (e.g. 'person typing laptop dark room', 'padlock digital security') — concrete and photographable, not abstract"
+}}"""
+
+    raw = call_groq(system_prompt, user_prompt, max_tokens=500)
+    data = json.loads(strip_json_fences(raw))
+    for key in ("keyword", "intent", "angle", "image_query"):
+        if key not in data or not data[key]:
+            raise ValueError(f"Keyword-planning response missing field: {key}")
+    return data
+
+
+# --------------------------------------------------------------------------
+# STEP 2 — POST GENERATION
 # --------------------------------------------------------------------------
 
 def slugify(text: str) -> str:
@@ -165,62 +311,121 @@ def unique_slug(base_slug: str, existing_slugs: set) -> str:
     return f"{base_slug}-{n}"
 
 
-def strip_json_fences(text: str) -> str:
-    text = text.strip()
-    if text.startswith("```"):
-        text = re.sub(r"^```[a-zA-Z]*\n?", "", text)
-        text = re.sub(r"```$", "", text.strip())
-    return text.strip()
+def word_count(post) -> int:
+    parts = [post.get("intro", "")]
+    parts += [s.get("paragraph", "") for s in post.get("sections", [])]
+    parts += [f.get("answer", "") for f in post.get("faq", [])]
+    parts.append(post.get("closing", ""))
+    return len(" ".join(parts).split())
 
 
-def generate_post(recent_titles):
-    topic_hint = random.choice(TOPIC_POOL)
-    avoid_list = "\n".join(f"- {t}" for t in recent_titles[-25:]) or "(none yet)"
+def contains_banned_phrase(post):
+    haystack = " ".join([
+        post.get("intro", ""),
+        *[s.get("paragraph", "") for s in post.get("sections", [])],
+        post.get("closing", ""),
+    ]).lower()
+    for phrase in BANNED_PHRASES:
+        if phrase in haystack:
+            return phrase
+    return None
+
+
+def generate_post(keyword_data, recent_titles):
+    banned_list = ", ".join(f'"{p}"' for p in BANNED_PHRASES)
+    avoid_titles = "\n".join(f"- {t}" for t in recent_titles[-25:]) or "(none yet)"
 
     system_prompt = (
         f"You write blog posts for {SITE_NAME}, an anonymous imageboard/forum "
         "(no accounts required, thread-based discussion). The blog covers "
         "anonymity, online privacy, internet culture, moderation, and how "
-        "anonymous communities work. Tone: clear, direct, informative, "
-        "grounded — never hypey or clickbaity, no emojis. Write for a general "
-        "internet-literate reader. Output ONLY valid JSON, no markdown code "
-        "fences, no commentary before or after."
+        "anonymous communities work.\n\n"
+        "Write like a knowledgeable person explaining something to a smart "
+        "friend, not like a content-mill article. Every post must satisfy "
+        "three hard rules: (1) it must be 800-2,000+ words of substantive "
+        "content, never padded to hit a count; (2) it must be original — "
+        "your own explanation and analysis, not a paraphrase or summary of "
+        "existing articles you've seen on this subject; (3) it must be "
+        "genuinely helpful enough that a stranger arriving from a Google "
+        "search would get real value and not feel like they wasted a "
+        "click. Concretely:\n"
+        "- Open by directly answering or engaging with the query in the "
+        "first sentence — no throat-clearing, no restating the topic as a "
+        "question, no scene-setting.\n"
+        "- Use specific, concrete details, examples, and plausible "
+        "scenarios instead of vague generalities. Prefer 'a moderator "
+        "reviewing a flagged thread has to decide within seconds' over "
+        "'moderation can be challenging.'\n"
+        "- Every section should teach the reader something they could "
+        "actually use or apply — a distinction they didn't have before, a "
+        "concrete way to recognize or do something, a real tradeoff to "
+        "weigh — not a restatement of the section heading in longer form.\n"
+        "- Vary sentence length and structure. Short sentences are fine. "
+        "Do not open every paragraph or section the same way.\n"
+        "- Never use any of these words or phrases, in any form: "
+        f"{banned_list}.\n"
+        "- No markdown formatting inside any text field (no **, no #, no "
+        "bullet lists) — plain prose only, it gets inserted into HTML "
+        "paragraphs directly.\n"
+        "- Do not invent statistics, studies, named individuals, or "
+        "specific companies/products you can't verify. Stay general and "
+        "factual about how things work rather than citing fake sources.\n"
+        "- Output ONLY valid JSON, no markdown code fences, no commentary "
+        "before or after."
     )
 
-    user_prompt = f"""Write a new blog post. Suggested topic angle (you can adapt it): "{topic_hint}"
+    user_prompt = f"""Write a full blog post targeting this exact search query: "{keyword_data['keyword']}"
+Search intent: {keyword_data['intent']}
+Required angle: {keyword_data['angle']}
+
+Target length: {TARGET_WORD_COUNT} words total across intro + sections + faq + closing
+(hard floor: {MIN_WORD_COUNT} words — never submit less; fine to go well over
+{TARGET_WORD_COUNT} if the topic genuinely supports it, but never pad).
 
 Do NOT reuse or closely rewrite any of these already-published titles:
-{avoid_list}
+{avoid_titles}
 
 Return ONLY a JSON object with this exact shape:
 {{
-  "title": "string, <= 70 characters, no quotes inside",
-  "meta_description": "string, <= 155 characters, plain text summary for SEO",
-  "intro": "1 short paragraph (2-3 sentences) opening the post",
+  "title": "string, <= 70 characters, should closely match what someone searching '{keyword_data['keyword']}' wants to click, no quotes inside",
+  "meta_description": "string, <= 155 characters, plain text, written to earn the click from someone who searched that query",
+  "intro": "2-3 sentences that directly satisfy the query immediately, not a warm-up",
   "sections": [
-    {{"heading": "string", "paragraph": "3-5 sentence paragraph"}},
-    ... 4 to 6 of these total ...
+    {{"heading": "string, specific and non-generic, ideally phrased as something a reader would search or wonder", "paragraph": "6-9 sentences, concrete and specific, dense with actual information rather than restating the heading"}},
+    ... 5 to 7 of these total, each covering a genuinely distinct sub-question or angle, ordered so the most important point comes first ...
   ],
-  "closing": "1-2 sentence closing paragraph. It's fine to naturally reference InteractInk once here, but do not be promotional or salesy."
-}}
+  "faq": [
+    {{"question": "a related question a reader would plausibly search next", "answer": "2-4 sentence direct answer"}},
+    ... 3 to 5 of these ...
+  ],
+  "closing": "2-3 sentence closing paragraph, no restating of everything above. It's fine to naturally reference InteractInk once here if truly relevant, but do not be promotional or salesy."
+}}"""
 
-Rules:
-- No markdown formatting inside any text field (no **, no #, no bullet lists) — plain prose only, since it gets inserted directly into HTML paragraphs.
-- Do not invent statistics, studies, or named sources.
-- Keep it factual and general, not platform-specific claims you can't verify.
-"""
-
-    raw = call_groq(system_prompt, user_prompt)
+    # Generous headroom: posts can legitimately run past 2,000 words, plus
+    # JSON structure (headings, FAQ, escaping) adds overhead on top of the
+    # raw word count.
+    raw = call_groq(system_prompt, user_prompt, max_tokens=5500)
     raw = strip_json_fences(raw)
     post = json.loads(raw)
 
-    required = ["title", "meta_description", "intro", "sections", "closing"]
+    required = ["title", "meta_description", "intro", "sections", "faq", "closing"]
     for key in required:
         if key not in post or not post[key]:
             raise ValueError(f"Model response missing required field: {key}")
-    if not isinstance(post["sections"], list) or len(post["sections"]) < 3:
+    if not isinstance(post["sections"], list) or len(post["sections"]) < 4:
         raise ValueError("Model response did not include enough sections")
+    if not isinstance(post["faq"], list) or len(post["faq"]) < 2:
+        raise ValueError("Model response did not include enough FAQ entries")
 
+    wc = word_count(post)
+    if wc < MIN_WORD_COUNT:
+        raise ValueError(f"Post too short ({wc} words, need {MIN_WORD_COUNT}+) — retrying")
+
+    banned_hit = contains_banned_phrase(post)
+    if banned_hit:
+        raise ValueError(f"Post used banned generic phrase '{banned_hit}' — retrying")
+
+    post["keyword"] = keyword_data["keyword"]
     return post
 
 
@@ -264,7 +469,7 @@ POST_TEMPLATE = """<!DOCTYPE html>
     <meta property="og:title" content="{title}">
     <meta property="og:description" content="{meta_description}">
     <meta property="og:url" content="{canonical_url}">
-    <meta property="og:image" content="{site_url}/favicon2.png">
+    <meta property="og:image" content="{og_image_url}">
 
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={adsense_client}" crossorigin="anonymous"></script>
     <script async src="https://www.googletagmanager.com/gtag/js?id={ga_id}"></script>
@@ -277,6 +482,8 @@ POST_TEMPLATE = """<!DOCTYPE html>
 
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script type="application/ld+json">{schema_json_ld}</script>
 
     <style>
         body {{ background-color: #000000; color: #e7e9ea; }}
@@ -410,8 +617,10 @@ POST_TEMPLATE = """<!DOCTYPE html>
         <main class="px-5 py-6 flex-1">
 
 <div class="inline-block px-3 py-1 text-[10px] font-mono font-semibold text-neutral-400 bg-neutral-900 border border-neutral-800 rounded-full uppercase tracking-wider mb-6">Published {published_date}</div>
+{hero_image_html}
 <h2 class="text-white font-bold text-2xl mb-5 tracking-tight leading-tight">{title}</h2>
 <p class="text-neutral-300 text-sm leading-relaxed mb-4">{intro}</p>{sections_html}
+{faq_html}
 <div class="mt-8 pt-4 border-t border-neutral-900">
     <a href="../blog.html" class="inline-link">&larr; Back to Blog</a>
 </div>
@@ -539,23 +748,68 @@ def render_sections_html(sections):
     return "".join(parts)
 
 
-def render_post_html(post, slug, published_date_human):
-    return POST_TEMPLATE.format(
-        title=post["title"],
-        meta_description=post["meta_description"],
-        intro=post["intro"],
-        sections_html=render_sections_html(post["sections"]),
-        published_date=published_date_human,
-        canonical_url=f"{SITE_URL}/blogs/{slug}.html",
-        site_name=SITE_NAME,
-        site_url=SITE_URL,
-        adsense_client=ADSENSE_CLIENT,
-        site_verification=SITE_VERIFICATION,
-        ga_id=GA_ID,
-        year=datetime.now().year,
+def render_faq_html(faq):
+    if not faq:
+        return ""
+    items = []
+    for f in faq:
+        q = f["question"].strip()
+        a = f["answer"].strip()
+        items.append(
+            '<div class="mb-4">'
+            f'<p class="text-white font-semibold text-sm mb-1">{q}</p>'
+            f'<p class="text-neutral-300 text-sm leading-relaxed">{a}</p>'
+            '</div>'
+        )
+    return (
+        '<h2 class="text-white font-bold text-lg mt-8 mb-3 tracking-tight">Frequently Asked Questions</h2>'
+        '<div>' + "".join(items) + '</div>'
     )
-    # note: closing paragraph is appended by caller before this call normally;
-    # kept simple here since sections_html already covers the body.
+
+
+def render_hero_image_html(image):
+    if not image:
+        return ""
+    return (
+        '<figure class="mb-6">'
+        f'<img src="{image["url"]}" alt="{image["alt"]}" loading="lazy" '
+        'class="w-full rounded-xl border border-neutral-800 object-cover" '
+        'style="max-height:420px;">'
+        f'<figcaption class="text-neutral-600 text-[11px] mt-2">{image["attribution"]}</figcaption>'
+        '</figure>'
+    )
+
+
+def render_schema_json_ld(post, slug, canonical_url, published_iso, image_url):
+    schema = {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "Article",
+                "headline": post["title"],
+                "description": post["meta_description"],
+                "url": canonical_url,
+                "datePublished": published_iso,
+                "dateModified": published_iso,
+                "image": image_url,
+                "publisher": {"@type": "Organization", "name": SITE_NAME, "url": SITE_URL},
+                "author": {"@type": "Organization", "name": SITE_NAME},
+            },
+            {
+                "@type": "FAQPage",
+                "mainEntity": [
+                    {
+                        "@type": "Question",
+                        "name": f["question"],
+                        "acceptedAnswer": {"@type": "Answer", "text": f["answer"]},
+                    }
+                    for f in post.get("faq", [])
+                ],
+            },
+        ],
+    }
+    # separators without extra whitespace keep this compact inside <script>
+    return json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
 
 
 def render_index_html(manifest):
@@ -595,207 +849,88 @@ def save_manifest(blogs_dir, manifest):
         json.dump(manifest, f, indent=2, ensure_ascii=False)
 
 
-# --------------------------------------------------------------------------
-# BLOG.HTML SYNC — injects a horizontally-sliding "Recent Posts" strip
-# (same drag/swipe/wheel mechanism as the board switcher in interactink.html)
-# plus an always-up-to-date vertical post list, directly into blog.html.
-# --------------------------------------------------------------------------
-
-BLOG_SCROLLER_CSS = """
-        /* ==================================================================
-           BLOG POST SCROLLER — mirrors the board-scroller drag/swipe strip
-           used in interactink.html, adapted for blog posts.
-        ================================================================== */
-        .blog-scroller-wrap {
-            position: relative;
-            border-bottom: 1px solid #2f3336;
-            background: rgba(0, 0, 0, 0.6);
-        }
-        .blog-scroller {
-            display: flex;
-            align-items: stretch;
-            gap: 8px;
-            overflow-x: auto;
-            overflow-y: hidden;
-            scroll-behavior: smooth;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: none;
-            padding: 10px 14px;
-            cursor: grab;
-            touch-action: pan-x;
-        }
-        .blog-scroller:active { cursor: grabbing; }
-        .blog-scroller::-webkit-scrollbar { display: none; }
-        .blog-scroller-chip {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            gap: 2px;
-            flex-shrink: 0;
-            scroll-snap-align: start;
-            width: 190px;
-            padding: 9px 13px;
-            border-radius: 12px;
-            color: #a1a1aa;
-            background: #16181c;
-            border: 1px solid #2f3336;
-            text-decoration: none;
-            user-select: none;
-            transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
-        }
-        .blog-scroller-chip:hover { border-color: #525252; color: #e7e9ea; }
-        .blog-scroller-chip-title {
-            font-size: 12.5px;
-            font-weight: 700;
-            color: #e7e9ea;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-        .blog-scroller-chip-date {
-            font-family: ui-monospace, Menlo, monospace;
-            font-size: 10px;
-            color: #71767b;
-        }
-        .blog-scroller-edge {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 28px;
-            pointer-events: none;
-            z-index: 1;
-        }
-        .blog-scroller-edge.left { left: 0; background: linear-gradient(to right, #000000, transparent); }
-        .blog-scroller-edge.right { right: 0; background: linear-gradient(to left, #000000, transparent); }
-"""
-
-BLOG_SCROLLER_JS = """
-    <script>
-    /* Desktop mouse-drag-to-scroll + vertical-wheel-to-horizontal-scroll for
-       the blog post strip — same mechanism as the board-scroller in
-       interactink.html. Touch devices get native swipe for free. */
-    (function setupBlogScrollerDrag() {
-        const scroller = document.getElementById('blogScroller');
-        if (!scroller) return;
-        let isDown = false, startX = 0, startScroll = 0, moved = false;
-        scroller.addEventListener('mousedown', (e) => {
-            isDown = true; moved = false;
-            scroller.dataset.dragged = 'false';
-            startX = e.pageX;
-            startScroll = scroller.scrollLeft;
-        });
-        window.addEventListener('mouseup', () => {
-            isDown = false;
-            if (moved) setTimeout(() => { scroller.dataset.dragged = 'false'; }, 0);
-        });
-        window.addEventListener('mousemove', (e) => {
-            if (!isDown) return;
-            const dx = e.pageX - startX;
-            if (Math.abs(dx) > 4) { moved = true; scroller.dataset.dragged = 'true'; }
-            scroller.scrollLeft = startScroll - dx;
-        });
-        scroller.addEventListener('click', (e) => {
-            if (scroller.dataset.dragged === 'true') e.preventDefault();
-        }, true);
-        scroller.addEventListener('wheel', (e) => {
-            if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-                scroller.scrollLeft += e.deltaY;
-                e.preventDefault();
-            }
-        }, { passive: false });
-    })();
-    </script>
-"""
-
-BLOG_HEADER_ANCHOR = (
-    '            <!-- Blog header -->\n'
-    '            <header class="blog-header p-4 flex items-center gap-2">\n'
-    '                <img src="favicon2.png" alt="InteractInk logo" width="24" height="24" class="w-6 h-6">\n'
-    '                <h1 class="text-lg font-bold tracking-tight text-white">Blog</h1>\n'
-    '            </header>\n'
-)
+SCROLLER_OPEN_MARKER = '<div id="blogScroller" class="blog-scroller" aria-label="Recent posts">'
+LIST_OPEN_MARKER = '<div class="blog-list border border-neutral-800 rounded-xl overflow-hidden divide-y divide-neutral-800 mt-4">'
+ARCHIVE_LINK_HTML = '<a href="blogs/index.html" class="inline-link text-xs">View the full auto-generated archive &rarr;</a>'
 
 
-def render_scroller_chips(manifest):
-    posts_sorted = sorted(manifest, key=lambda p: p["created_at"], reverse=True)
-    chips = []
-    for p in posts_sorted:
-        created = datetime.fromisoformat(p["created_at"])
-        date_short = created.strftime("%b %-d") if os.name != "nt" else created.strftime("%b %#d")
-        chips.append(
-            f'<a href="blogs/{p["slug"]}.html" class="blog-scroller-chip" data-slug="{p["slug"]}">'
-            f'<span class="blog-scroller-chip-title">{p["title"]}</span>'
-            f'<span class="blog-scroller-chip-date">{date_short}</span></a>'
-        )
-    return "".join(chips)
+def update_blog_html_page(site_dir, slug, title, meta_description, short_date, total_count):
+    """Prepend the new post to blog.html itself — both the horizontal
+    'blog-scroller' strip (the same drag/swipe strip used for boards in
+    interactink.html) and the full vertical list below it — and refresh
+    the total-post counter. This runs on every single post, not just once,
+    so blog.html always shows every post that's ever been published,
+    newest first, without needing a separate archive click.
 
-
-def render_main_list_entries(manifest):
-    posts_sorted = sorted(manifest, key=lambda p: p["created_at"], reverse=True)
-    entries = []
-    for p in posts_sorted:
-        entries.append(
-            f'                    <a href="blogs/{p["slug"]}.html" class="block p-4 hover:bg-neutral-950/50 transition border-b border-neutral-800 last:border-b-0">\n'
-            f'                        <h3 class="text-white font-bold text-sm mb-1">{p["title"]}</h3>\n'
-            f'                        <p class="text-neutral-500 text-xs leading-relaxed">{p["meta_description"]}</p>\n'
-            f'                    </a>'
-        )
-    return "\n".join(entries)
-
-
-def sync_main_blog_page(site_dir, manifest):
-    """Keeps blog.html itself in sync with every generated post: injects (once)
-    a sliding 'Recent Posts' strip using the same drag/swipe/wheel mechanism
-    as interactink.html's board scroller, and regenerates both the strip's
-    contents and the full vertical post list on every cycle."""
+    Matches by exact marker strings already present in blog.html. If a
+    marker isn't found (e.g. blog.html's structure changed), this logs a
+    warning and skips that part rather than corrupting the file — the
+    post itself is still published fine under blogs/<slug>.html either way.
+    """
     blog_path = os.path.join(site_dir, "blog.html")
     if not os.path.exists(blog_path):
-        log("blog.html not found — skipping sync")
+        log("blog.html not found — skipping in-page update.")
+        return
+    with open(blog_path, "r", encoding="utf-8") as f:
+        html = f.read()
+
+    chip = (
+        f'<a href="blogs/{slug}.html" class="blog-scroller-chip" data-slug="{slug}">'
+        f'<span class="blog-scroller-chip-title">{title}</span>'
+        f'<span class="blog-scroller-chip-date">{short_date}</span></a>'
+    )
+    if SCROLLER_OPEN_MARKER in html:
+        html = html.replace(SCROLLER_OPEN_MARKER, SCROLLER_OPEN_MARKER + chip, 1)
+    else:
+        log("Could not find the blog scroller in blog.html — skipping chip insert.")
+
+    card = (
+        f'<a href="blogs/{slug}.html" class="block p-4 hover:bg-neutral-950/50 transition border-b border-neutral-800 last:border-b-0">'
+        f'<h3 class="text-white font-bold text-sm mb-1">{title}</h3>'
+        f'<p class="text-neutral-500 text-xs leading-relaxed">{meta_description}</p>'
+        f'</a>'
+    )
+    if LIST_OPEN_MARKER in html:
+        html = html.replace(LIST_OPEN_MARKER, LIST_OPEN_MARKER + card, 1)
+    else:
+        log("Could not find the blog list in blog.html — skipping card insert.")
+
+    html = ensure_and_update_counter(html, total_count)
+
+    with open(blog_path, "w", encoding="utf-8") as f:
+        f.write(html)
+
+
+def ensure_and_update_counter(html, total_count):
+    counter_span = f'<span id="blogPostCount">{total_count}</span>'
+    if 'id="blogPostCount"' in html:
+        return re.sub(r'<span id="blogPostCount">\d+</span>', counter_span, html)
+    counter_line = f'\n                <p class="text-neutral-500 text-xs mt-2">{counter_span} posts published so far</p>'
+    if ARCHIVE_LINK_HTML in html:
+        return html.replace(ARCHIVE_LINK_HTML, ARCHIVE_LINK_HTML + counter_line, 1)
+    log("Could not find a spot to attach the post counter in blog.html — skipping.")
+    return html
+
+
+def ensure_archive_link(site_dir):
+    """Idempotently add a 'Full Archive' link into blog.html pointing at blogs/index.html."""
+    blog_path = os.path.join(site_dir, "blog.html")
+    if not os.path.exists(blog_path):
         return
     with open(blog_path, "r", encoding="utf-8") as f:
         content = f.read()
-
-    # 1) Inject the scroller CSS once, right before the page's </style> tag.
-    if "BLOG POST SCROLLER" not in content:
-        content = content.replace("    </style>", BLOG_SCROLLER_CSS + "    </style>", 1)
-
-    # 2) Inject the scroller markup once, right after the blog header.
-    if 'id="blogScroller"' not in content and BLOG_HEADER_ANCHOR in content:
-        scroller_block = (
-            BLOG_HEADER_ANCHOR +
-            '\n            <div class="blog-scroller-wrap">\n'
-            '                <div id="blogScroller" class="blog-scroller" aria-label="Recent posts"><!-- BLOG_SCROLLER_CHIPS --></div>\n'
-            '                <div class="blog-scroller-edge left" aria-hidden="true"></div>\n'
-            '                <div class="blog-scroller-edge right" aria-hidden="true"></div>\n'
-            '            </div>\n'
+    if "blogs/index.html" in content:
+        return  # already linked
+    marker = '<p class="text-neutral-300 text-sm leading-relaxed mb-4">Notes on anonymity, privacy, and how InteractInk works.</p>'
+    if marker in content:
+        replacement = marker + (
+            '\n                <a href="blogs/index.html" class="inline-link text-xs">'
+            'View the full auto-generated archive &rarr;</a>'
         )
-        content = content.replace(BLOG_HEADER_ANCHOR, scroller_block, 1)
-
-    # 3) Inject the drag-scroll JS once, right before </body>.
-    if "setupBlogScrollerDrag" not in content:
-        content = content.replace("</body>", BLOG_SCROLLER_JS + "</body>", 1)
-
-    # 4) Regenerate the scroller's chip contents every cycle.
-    content = re.sub(
-        r'(<div id="blogScroller" class="blog-scroller" aria-label="Recent posts">).*?(</div>)',
-        lambda m: m.group(1) + render_scroller_chips(manifest) + m.group(2),
-        content,
-        count=1,
-        flags=re.DOTALL,
-    )
-
-    # 5) Regenerate the vertical post list every cycle so every post shows here too.
-    content = re.sub(
-        r'(<div class="blog-list[^"]*"[^>]*>).*?(</div>)',
-        lambda m: m.group(1) + "\n" + render_main_list_entries(manifest) + "\n                " + m.group(2),
-        content,
-        count=1,
-        flags=re.DOTALL,
-    )
-
-    with open(blog_path, "w", encoding="utf-8") as f:
-        f.write(content)
+        content = content.replace(marker, replacement, 1)
+        with open(blog_path, "w", encoding="utf-8") as f:
+            f.write(content)
+        log("Inserted 'Full Archive' link into blog.html")
 
 
 # --------------------------------------------------------------------------
@@ -814,30 +949,49 @@ def run_one_cycle(site_dir):
     manifest = load_manifest(blogs_dir)
     existing_slugs = {p["slug"] for p in manifest}
     recent_titles = [p["title"] for p in manifest]
+    recent_keywords = [p.get("keyword", p["title"]) for p in manifest]
 
     last_error = None
     for attempt in range(1, MAX_ATTEMPTS_PER_CYCLE + 1):
         try:
-            log(f"Generating new post (attempt {attempt}/{MAX_ATTEMPTS_PER_CYCLE})...")
-            post = generate_post(recent_titles)
+            log(f"Planning target keyword (attempt {attempt}/{MAX_ATTEMPTS_PER_CYCLE})...")
+            keyword_data = generate_target_keyword(recent_keywords)
+            log(f"Target query: \"{keyword_data['keyword']}\" (intent: {keyword_data['intent']})")
+
+            log("Writing post...")
+            post = generate_post(keyword_data, recent_titles)
+
+            log(f"Looking up a hero image for \"{keyword_data['image_query']}\"...")
+            image = fetch_image_for_post(keyword_data["image_query"])
 
             base_slug = slugify(post["title"])
             slug = unique_slug(base_slug, existing_slugs)
 
-            # fold the closing paragraph in as a final section-less paragraph
             now = datetime.now(timezone.utc)
             published_human = now.strftime("%B %-d, %Y") if os.name != "nt" else now.strftime("%B %#d, %Y")
+            short_date = now.strftime("%b %-d") if os.name != "nt" else now.strftime("%b %#d")
+            canonical_url = f"{SITE_URL}/blogs/{slug}.html"
+            og_image_url = image["url"] if image else f"{SITE_URL}/favicon2.png"
 
             sections_html = render_sections_html(post["sections"])
             sections_html += f'<p class="text-neutral-300 text-sm leading-relaxed mb-4">{post["closing"]}</p>'
+            faq_html = render_faq_html(post.get("faq"))
+            hero_image_html = render_hero_image_html(image)
+            schema_json_ld = render_schema_json_ld(
+                post, slug, canonical_url, now.isoformat(), og_image_url
+            )
 
             html = POST_TEMPLATE.format(
                 title=post["title"],
                 meta_description=post["meta_description"],
                 intro=post["intro"],
                 sections_html=sections_html,
+                faq_html=faq_html,
+                hero_image_html=hero_image_html,
+                og_image_url=og_image_url,
+                schema_json_ld=schema_json_ld,
                 published_date=published_human,
-                canonical_url=f"{SITE_URL}/blogs/{slug}.html",
+                canonical_url=canonical_url,
                 site_name=SITE_NAME,
                 site_url=SITE_URL,
                 adsense_client=ADSENSE_CLIENT,
@@ -854,6 +1008,7 @@ def run_one_cycle(site_dir):
                 "slug": slug,
                 "title": post["title"],
                 "meta_description": post["meta_description"],
+                "keyword": post["keyword"],
                 "created_at": now.isoformat(),
             })
             save_manifest(blogs_dir, manifest)
@@ -862,11 +1017,14 @@ def run_one_cycle(site_dir):
             with open(os.path.join(blogs_dir, "index.html"), "w", encoding="utf-8") as f:
                 f.write(index_html)
 
-            sync_main_blog_page(site_dir, manifest)
+            ensure_archive_link(site_dir)
+            update_blog_html_page(
+                site_dir, slug, post["title"], post["meta_description"],
+                short_date, total_count=len(manifest),
+            )
 
-            log(f"Published: blogs/{slug}.html  —  \"{post['title']}\"")
-            log(f"Archive now has {len(manifest)} post(s): blogs/index.html")
-            log("blog.html updated (sliding strip + full list)")
+            log(f"Published: blogs/{slug}.html  —  \"{post['title']}\"  ({word_count(post)} words)")
+            log(f"blog.html and blogs/index.html both updated. Total posts: {len(manifest)}")
             return True
 
         except Exception as e:
@@ -883,7 +1041,7 @@ def run_one_cycle(site_dir):
 def main():
     parser = argparse.ArgumentParser(description="InteractInk automatic blog generator")
     parser.add_argument("--site-dir", default=None, help="Path to your InteractInk site folder (default: this script's folder)")
-    parser.add_argument("--interval", type=int, default=DEFAULT_INTERVAL_SECONDS, help="Seconds between posts (default 600 = 10 minutes)")
+    parser.add_argument("--interval", type=int, default=DEFAULT_INTERVAL_SECONDS, help=f"Seconds between posts (default {DEFAULT_INTERVAL_SECONDS} = {DEFAULT_INTERVAL_SECONDS // 3600} hours)")
     parser.add_argument("--once", action="store_true", help="Generate a single post and exit (useful for testing)")
     args = parser.parse_args()
 

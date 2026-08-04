@@ -3,11 +3,13 @@ name: Auto Blog Generator
 # Runs on GitHub's servers on a schedule — completely independent of your
 # computer. Your PC can be off, VS Code can be closed, doesn't matter.
 #
-# GitHub Actions' scheduler has a 5-minute minimum interval (1-minute
-# schedules aren't supported), so this runs every 5 minutes instead of
-# every 1. Note: GitHub's cron scheduler is "best effort" — during busy
-# periods a run can be delayed by a few minutes, so treat "every 5 min"
-# as approximate, not exact.
+# CADENCE: every 5 minutes — GitHub's scheduler's minimum interval (1-minute
+# schedules aren't supported). Note it's "best effort": during busy periods
+# a run can slip by a few minutes, so treat "every 5 min" as approximate.
+# Each run costs one keyword-planning call + one writing call + one image
+# lookup against your Groq key, so at this cadence you'll burn through
+# quota fast — keep an eye on https://console.groq.com/settings/limits if
+# runs start failing.
 #
 # SETUP (one-time):
 #   1. Push this repo (including auto_blog.py and this .github/workflows
@@ -20,10 +22,11 @@ name: Auto Blog Generator
 #      You can also trigger it manually any time from the Actions tab
 #      ("Run workflow" button) to test it immediately.
 #
-# Every run: generates one post, commits blogs/*.html + blog.html +
-# blogs/manifest.json + blogs/index.html back into the repo. If your repo
-# is connected to Vercel, that push triggers an automatic deploy, so new
-# posts go live without you doing anything.
+# Every run: generates one post (with a hero image sourced from
+# Openverse — no extra key needed for that part) and commits
+# blogs/*.html + blog.html + blogs/manifest.json + blogs/index.html back
+# into the repo. If your repo is connected to Vercel, that push triggers
+# an automatic deploy, so new posts go live without you doing anything.
 
 on:
   schedule:
