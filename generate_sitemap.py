@@ -26,15 +26,6 @@ STATIC_PAGES = [
     ("/blog/index.html", "weekly",  "0.7"),
 ]
 
-# Category/tag archive hubs served by /api/topic/[topic].js (see TOPIC_SLUGS
-# there). Kept here in sync so a sitemap regen never drops them.
-TOPIC_SLUGS = [
-    "random", "questions", "tech", "gaming", "music", "movies-anime",
-    "sports", "fitness", "business", "science", "history", "politics",
-    "books", "travel", "advice", "relationships", "news", "confessions",
-    "lookism", "debate",
-]
-
 def extract_article_filenames(script_path="build_blog_v2.py"):
     with open(script_path, "r", encoding="utf-8") as f:
         src = f.read()
@@ -48,9 +39,6 @@ def build_sitemap():
 
     for fname in extract_article_filenames():
         urls.append((f"{DOMAIN}/blog/{fname}", TODAY, "monthly", "0.6"))
-
-    for slug in TOPIC_SLUGS:
-        urls.append((f"{DOMAIN}/topic/{slug}", TODAY, "daily", "0.7"))
 
     lines = ['<?xml version="1.0" encoding="UTF-8"?>',
              '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
@@ -68,5 +56,5 @@ if __name__ == "__main__":
     xml = build_sitemap()
     with open("sitemap.xml", "w", encoding="utf-8") as f:
         f.write(xml)
-    n = len(extract_article_filenames()) + len(STATIC_PAGES) + len(TOPIC_SLUGS)
+    n = len(extract_article_filenames()) + len(STATIC_PAGES)
     print(f"Wrote sitemap.xml with {n} URLs (all verified to exist in ARTICLES/STATIC_PAGES).")

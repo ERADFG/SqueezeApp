@@ -2,8 +2,10 @@
   "rewrites": [
     { "source": "/", "destination": "/interactink.html" },
     { "source": "/thread/:id", "destination": "/api/thread/:id" },
-    { "source": "/topic/:topic", "destination": "/api/topic/:topic" },
-    { "source": "/sitemap-threads.xml", "destination": "/api/sitemap-threads" }
+    { "source": "/board/:id", "destination": "/api/board/:id" },
+    { "source": "/board/:id/page/:page", "destination": "/api/board/:id?page=:page" },
+    { "source": "/sitemap-threads.xml", "destination": "/api/sitemap-threads" },
+    { "source": "/sitemap-boards.xml", "destination": "/api/sitemap-boards" }
   ],
   "headers": [
     {

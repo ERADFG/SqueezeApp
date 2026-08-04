@@ -4,3 +4,4 @@ Disallow: /admin-review.html
 
 Sitemap: https://interactink.vercel.app/sitemap.xml
 Sitemap: https://interactink.vercel.app/sitemap-threads.xml
+Sitemap: https://interactink.vercel.app/sitemap-boards.xml
