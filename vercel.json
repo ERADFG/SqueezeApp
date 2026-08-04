@@ -2,6 +2,7 @@
   "rewrites": [
     { "source": "/", "destination": "/interactink.html" },
     { "source": "/thread/:id", "destination": "/api/thread/:id" },
+    { "source": "/topic/:topic", "destination": "/api/topic/:topic" },
     { "source": "/sitemap-threads.xml", "destination": "/api/sitemap-threads" }
   ],
   "headers": [
