@@ -141,6 +141,32 @@
             page = page || 'interactink.html';
             return `${page}?board=${encodeURIComponent(boardId)}&thread=${encodeURIComponent(threadId)}`;
         }
+        // Slugging rules kept in sync with /api/thread/[id].js and
+        // /api/sitemap-threads.js so a link built here, one in the sitemap,
+        // and the canonical URL the server settles on always agree.
+        function slugify(str) {
+            return String(str || '')
+                .toLowerCase()
+                .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '')
+                .slice(0, 60)
+                .replace(/-+$/, '');
+        }
+        /**
+         * The real, unique, crawlable URL for a thread: /thread/<id>-<slug>.
+         * This is a distinct page per thread (server-rendered by
+         * /api/thread/[id].js), not a query param or hash fragment on
+         * interactink.html — that's what actually lets Google index each
+         * thread separately. Used for the feed card's href (so right-click
+         * "copy link", middle-click, and crawlers all see the real URL)
+         * and for share links; in-app clicks are still intercepted by JS
+         * for instant, no-reload navigation.
+         */
+        function buildThreadPermalink(threadId, title) {
+            const slug = slugify(title) || 'thread';
+            return `/thread/${encodeURIComponent(threadId)}-${slug}`;
+        }
         function renderBoardGrid(container, activeBoardId) {
             if (!container) return;
             container.innerHTML = BOARDS.map(b => `
@@ -176,7 +202,7 @@
  
         window.InkRouting = {
             BOARDS, DEFAULT_BOARD, isValidBoard, getBoardMeta, getBoardFromURL, resolveInitialBoard,
-            saveCurrentBoard, buildBoardUrl, buildThreadUrl, renderBoardGrid,
+            saveCurrentBoard, buildBoardUrl, buildThreadUrl, buildThreadPermalink, renderBoardGrid,
             captureStateBeforeNavigation, restoreScrollPosition, trackScrollPosition
         };
     })();
@@ -1751,9 +1777,14 @@
     // ?board= param (board switcher) and the ?thread= param (opening or
     // backing out of the full-page thread view), since both are pushed to
     // history as real "pages" a user can navigate between.
+    function getThreadIdFromPath() {
+        const m = location.pathname.match(/^\/thread\/([a-f0-9]{6,10})/i);
+        return m ? m[1] : null;
+    }
+
     window.addEventListener('popstate', () => {
         const urlBoard = InkRouting.getBoardFromURL();
-        const urlThread = new URLSearchParams(location.search).get('thread');
+        const urlThread = new URLSearchParams(location.search).get('thread') || getThreadIdFromPath();
 
         const finishThreadSync = () => {
             if (urlThread && appState.threads[urlThread]) {
@@ -2393,7 +2424,7 @@
             const dateStr = new Date(thread.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' });
             const meta = InkRouting.getBoardMeta(thread.board_id);
             const card = document.createElement('a');
-            card.href = InkRouting.buildThreadUrl(thread.board_id, thread.id, 'interactink.html');
+            card.href = InkRouting.buildThreadPermalink(thread.id, thread.title);
             card.className = "p-4 hover:bg-neutral-900/40 cursor-pointer transition duration-200 flex flex-col no-underline text-inherit";
             card.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -3065,7 +3096,7 @@ function initRealtimeSync() {
             const dateStr = new Date(thread.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const dynamicCommentCount = appState.commentCounts[thread.id] || 0;
             const card = document.createElement('a');
-            card.href = InkRouting.buildThreadUrl(appState.currentBoard, thread.id, 'interactink.html');
+            card.href = InkRouting.buildThreadPermalink(thread.id, thread.title);
             card.className = "p-4 hover:bg-neutral-900/40 cursor-pointer transition duration-200 flex flex-col no-underline text-inherit";
             card.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -4966,7 +4997,14 @@ function initRealtimeSync() {
         if (!thread) return;
 
         if (pushHistory) {
-            history.pushState({}, '', InkRouting.buildThreadUrl(appState.currentBoard, tId, 'interactink.html'));
+            // Push the real, unique /thread/id-slug URL rather than a query
+            // param — this is a same-document pushState (no reload), so the
+            // browser keeps rendering the app; it just makes the address bar
+            // and "copy link" match the real crawlable/shareable URL. If the
+            // user reloads on this URL it round-trips through
+            // /api/thread/[id].js, which immediately hands real visitors
+            // back into the app at ?board=&thread=.
+            history.pushState({}, '', InkRouting.buildThreadPermalink(tId, thread.title));
         }
 
         const meta = InkRouting.getBoardMeta(appState.currentBoard);
@@ -5270,8 +5308,8 @@ function initRealtimeSync() {
         }
  
         // ---------- Sharing (thread / comment) to any social platform ----------
-        function buildShareUrl(threadId) {
-            return `${location.origin}${location.pathname}?board=${appState.currentBoard}&thread=${threadId}`;
+        function buildShareUrl(threadId, title) {
+            return `${location.origin}${InkRouting.buildThreadPermalink(threadId, title)}`;
         }
  
         async function shareThread(threadId, anchorEl) {
@@ -5279,7 +5317,7 @@ function initRealtimeSync() {
             if (!thread) return;
             const shareText = (thread.content || '').slice(0, 200);
             await performShare({
-                url: buildShareUrl(threadId),
+                url: buildShareUrl(threadId, thread.title),
                 title: thread.title || 'Anonymous post on InteractInk',
                 text: shareText
             }, anchorEl);
@@ -5288,9 +5326,10 @@ function initRealtimeSync() {
         async function shareComment(threadId, commentId, anchorEl) {
             const comment = (appState.comments[threadId] || {})[commentId];
             if (!comment) return;
+            const thread = appState.threads[threadId];
             const shareText = (comment.text || '').slice(0, 200);
             await performShare({
-                url: `${buildShareUrl(threadId)}#comment-${commentId}`,
+                url: `${buildShareUrl(threadId, thread && thread.title)}#comment-${commentId}`,
                 title: 'Anonymous reply on InteractInk',
                 text: shareText
             }, anchorEl);
