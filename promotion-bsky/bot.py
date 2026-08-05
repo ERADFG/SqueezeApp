@@ -1,3 +1,4 @@
+@'
 #!/usr/bin/env python3
 """
 Bluesky Auto-Reply Bot
@@ -84,12 +85,12 @@ def load_templates():
             return templates
     # Fallback defaults if templates.json is missing/empty
     return [
-    "Got more to say? Drop it here: https://interactink.vercel.app",
-    "Come share your take: https://interactink.vercel.app",
-    "Add your voice to the thread: https://interactink.vercel.app",
-    "Post your thoughts over here: https://interactink.vercel.app",
-    "Join the conversation and post yours: https://interactink.vercel.app",
-]  # NOTE: items must be comma-separated or Python silently merges them into one string
+        "Got more to say? Drop it here: https://interactink.vercel.app",
+        "Come share your take: https://interactink.vercel.app",
+        "Add your voice to the thread: https://interactink.vercel.app",
+        "Post your thoughts over here: https://interactink.vercel.app",
+        "Join the conversation and post yours: https://interactink.vercel.app",
+    ]  # NOTE: items must be comma-separated or Python silently merges them into one string
 
 
 def load_state():
@@ -234,3 +235,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+'@ | Set-Content -Encoding utf8 bot.py
