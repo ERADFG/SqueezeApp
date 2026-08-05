@@ -16,14 +16,18 @@ TODAY = datetime.date.today().isoformat()
 
 # Static, hand-maintained pages. changefreq/priority reflect real update cadence.
 STATIC_PAGES = [
-    ("/index.html",      "daily",   "1.0"),
-    ("/about.html",      "monthly", "0.6"),
+    ("/",                 "daily",   "1.0"),
+    ("/interactink.html", "hourly",  "1.0"),
+    ("/index.html",       "monthly", "0.5"),
+    ("/ichat.html",       "weekly",  "0.8"),
+    ("/about.html",       "monthly", "0.6"),
     ("/faq.html",         "monthly", "0.6"),
-    ("/contact.html",    "yearly",  "0.3"),
-    ("/terms.html",      "yearly",  "0.3"),
-    ("/guidelines.html", "monthly", "0.4"),
-    ("/privacy.html",    "yearly",  "0.3"),
-    ("/blog/index.html", "weekly",  "0.7"),
+    ("/contact.html",     "yearly",  "0.3"),
+    ("/terms.html",       "yearly",  "0.3"),
+    ("/guidelines.html",  "monthly", "0.4"),
+    ("/privacy.html",     "yearly",  "0.3"),
+    ("/settings.html",    "monthly", "0.3"),
+    ("/blog.html",        "weekly",  "0.7"),
 ]
 
 def extract_article_filenames(script_path="build_blog_v2.py"):
@@ -38,7 +42,7 @@ def build_sitemap():
         urls.append((f"{DOMAIN}{path}", TODAY, freq, pri))
 
     for fname in extract_article_filenames():
-        urls.append((f"{DOMAIN}/blog/{fname}", TODAY, "monthly", "0.6"))
+        urls.append((f"{DOMAIN}/{fname}", TODAY, "monthly", "0.6"))
 
     lines = ['<?xml version="1.0" encoding="UTF-8"?>',
              '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
