@@ -21,11 +21,12 @@ import argparse
 import json
 import os
 import random
+import re
 import sys
 import time
 from pathlib import Path
 
-from atproto import Client, models
+from atproto import Client, client_utils, models
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -42,31 +43,63 @@ APP_PASSWORD = os.environ.get("BSKY_APP_PASSWORD")
 MIN_DELAY_BETWEEN_REPLIES = 63
 
 
+URL_PATTERN = re.compile(
+    r"(https?://[^\s]+|(?<![\w.])[\w-]+(?:\.[\w-]+)*\.[a-z]{2,}(?:/[^\s]*)?)",
+    re.IGNORECASE,
+)
+
+
+def build_rich_text(template):
+    """
+    Turn a template string into a Bluesky rich-text post, converting any
+    URL-looking substring into an actual clickable link facet. Bluesky does
+    NOT auto-linkify plain text -- without this, a URL is just inert text.
+    """
+    match = URL_PATTERN.search(template)
+    builder = client_utils.TextBuilder()
+
+    if not match:
+        builder.text(template)
+        return builder
+
+    before, url, after = template[:match.start()], match.group(0), template[match.end():]
+
+    href = url if url.startswith("http") else f"https://{url}"
+
+    if before:
+        builder.text(before)
+    builder.link(url, href)
+    if after:
+        builder.text(after)
+
+    return builder
+
+
 def load_templates():
     if TEMPLATES_FILE.exists():
-        with open(TEMPLATES_FILE, "r", encoding="utf-8") as f:
+        with open(TEMPLATES_FILE, "r", encoding="utf-8-sig") as f:
             templates = json.load(f)
         if isinstance(templates, list) and templates:
             return templates
     # Fallback defaults if templates.json is missing/empty
     return [
-  "There's more where that came from → interactink.vercel.app",
-  "You'll want to see this: interactink.vercel.app",
-  "Everyone's already there. You're not yet → interactink.vercel.app",
-  "Don't be the last one to find this: interactink.vercel.app",
-  "Join everyone else already there → interactink.vercel.app",
-  "This is where the real conversation happens: interactink.vercel.app",
-  "Not for everyone. But you should check → interactink.vercel.app",
-  "Only a few know about this one: interactink.vercel.app",
-  "Go now, thank yourself later → interactink.vercel.app",
-  "Don't wait on this one: interactink.vercel.app",
-  "I put in the work. You just click: interactink.vercel.app",
-  "Something's waiting for you → interactink.vercel.app",
-  "There's a lot more going on here: interactink.vercel.app",
-  "Bet you're too curious not to check → interactink.vercel.app",
-  "Stop here. Start there → interactink.vercel.app",
-  "This is the appetizer. Main course: interactink.vercel.app",
-] # NOTE: items must be comma-separated or Python silently merges them into one string
+    "There's more where that came from 👉 https://interactink.vercel.app",
+    "You'll want to see this: https://interactink.vercel.app",
+    "Everyone's already there. You're not yet 👉 https://interactink.vercel.app",
+    "Don't be the last one to find this: https://interactink.vercel.app",
+    "Join everyone else already there 👉 https://interactink.vercel.app",
+    "This is where the real conversation happens: https://interactink.vercel.app",
+    "Not for everyone. But you should check 👉 https://interactink.vercel.app",
+    "Only a few know about this one: https://interactink.vercel.app",
+    "Go now, thank yourself later 👉 https://interactink.vercel.app",
+    "Don't wait on this one: https://interactink.vercel.app",
+    "I put in the work. You just click: https://interactink.vercel.app",
+    "Something's waiting for you 👉 https://interactink.vercel.app",
+    "There's a lot more going on here: https://interactink.vercel.app",
+    "Bet you're too curious not to check 👉 https://interactink.vercel.app",
+    "Stop here. Start there 👉 https://interactink.vercel.app",
+    "This is the appetizer. Main course: https://interactink.vercel.app",
+]  # NOTE: items must be comma-separated or Python silently merges them into one string
 
 
 def load_state():
@@ -143,10 +176,11 @@ def run_once(client, templates, seen_uris, verbose=True):
         )
 
         message = random.choice(templates)
+        rich_text = build_rich_text(message)
 
         try:
             client.send_post(
-                text=message,
+                text=rich_text,
                 reply_to=models.AppBskyFeedPost.ReplyRef(
                     parent=parent_ref,
                     root=root_ref,

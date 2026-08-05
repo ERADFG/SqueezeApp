@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Bluesky Auto-Reply Bot
 -----------------------
@@ -44,13 +44,13 @@ MIN_DELAY_BETWEEN_REPLIES = 3
 
 def load_templates():
     if TEMPLATES_FILE.exists():
-        with open(TEMPLATES_FILE, "r", encoding="utf-8") as f:
+        with open(TEMPLATES_FILE, "r", encoding="utf-8-sig") as f:
             templates = json.load(f)
         if isinstance(templates, list) and templates:
             return templates
     # Fallback defaults if templates.json is missing/empty
     return [
-        "Thanks for the comment! 🙏",
+        "Thanks for the comment! ðŸ™",
         "Appreciate you stopping by!",
         "Thanks for reading and replying!",
     ]
@@ -58,13 +58,13 @@ def load_templates():
 
 def load_state():
     if STATE_FILE.exists():
-        with open(STATE_FILE, "r", encoding="utf-8") as f:
+        with open(STATE_FILE, "r", encoding="utf-8-sig") as f:
             return set(json.load(f))
     return set()
 
 
 def save_state(seen_uris):
-    with open(STATE_FILE, "w", encoding="utf-8") as f:
+    with open(STATE_FILE, "w", encoding="utf-8-sig") as f:
         json.dump(sorted(seen_uris), f, indent=2)
 
 
