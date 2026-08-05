@@ -34,8 +34,8 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 STATE_FILE = SCRIPT_DIR / "replied_uris.json"
 TEMPLATES_FILE = SCRIPT_DIR / "templates.json"
 
-HANDLE = os.environ.get("thelibbojack.bsky.social")
-APP_PASSWORD = os.environ.get("qrpq-7i6a-z2u4-ndk7")
+HANDLE = os.environ.get("BSKY_HANDLE")
+APP_PASSWORD = os.environ.get("BSKY_APP_PASSWORD")
 
 # Minimum seconds to wait between individual replies, to stay well clear of
 # any spam-like posting cadence.
@@ -50,23 +50,23 @@ def load_templates():
             return templates
     # Fallback defaults if templates.json is missing/empty
     return [
-  "There's more where that came from → interactink.vercel.app"
-  "You'll want to see this: interactink.vercel.app"
-  "Everyone's already there. You're not yet → interactink.vercel.app"
-  "Don't be the last one to find this: interactink.vercel.app"
-  "Join everyone else already there → interactink.vercel.app"
-  "This is where the real conversation happens: interactink.vercel.app"
-  "Not for everyone. But you should check → interactink.vercel.app"
-  "Only a few know about this one: interactink.vercel.app"
-  "Go now, thank yourself later → interactink.vercel.app"
-  "Don't wait on this one: interactink.vercel.app"
-  "I put in the work. You just click: interactink.vercel.app"
-  "Something's waiting for you → interactink.vercel.app"
-  "There's a lot more going on here: interactink.vercel.app"
-  "Bet you're too curious not to check → interactink.vercel.app"
-  "Stop here. Start there → interactink.vercel.app"
-  "This is the appetizer. Main course: interactink.vercel.app"
-]
+  "There's more where that came from → interactink.vercel.app",
+  "You'll want to see this: interactink.vercel.app",
+  "Everyone's already there. You're not yet → interactink.vercel.app",
+  "Don't be the last one to find this: interactink.vercel.app",
+  "Join everyone else already there → interactink.vercel.app",
+  "This is where the real conversation happens: interactink.vercel.app",
+  "Not for everyone. But you should check → interactink.vercel.app",
+  "Only a few know about this one: interactink.vercel.app",
+  "Go now, thank yourself later → interactink.vercel.app",
+  "Don't wait on this one: interactink.vercel.app",
+  "I put in the work. You just click: interactink.vercel.app",
+  "Something's waiting for you → interactink.vercel.app",
+  "There's a lot more going on here: interactink.vercel.app",
+  "Bet you're too curious not to check → interactink.vercel.app",
+  "Stop here. Start there → interactink.vercel.app",
+  "This is the appetizer. Main course: interactink.vercel.app",
+] # NOTE: items must be comma-separated or Python silently merges them into one string
 
 
 def load_state():
