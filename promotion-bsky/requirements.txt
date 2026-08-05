@@ -1,2 +1,0 @@
-atproto>=0.0.55
-python-dotenv>=1.0.0

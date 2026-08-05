@@ -1,6 +1,9 @@
 User-agent: *
 Allow: /
 Disallow: /admin-review.html
+Disallow: /admin.html
+Disallow: /manage-89dbc2f16c3c.html
+Disallow: /interactink2.html
 
 Sitemap: https://interactink.vercel.app/sitemap.xml
 Sitemap: https://interactink.vercel.app/sitemap-pages.xml

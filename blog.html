@@ -225,6 +225,112 @@
             border-bottom-color: #eff3f4;
         }
         html[data-theme="light"] .blog-header h1 { color: #0f1419 !important; }
+
+        /* ==================================================================
+           BLOG SCROLLER
+           Same horizontally-scrollable, drag/swipe/wheel strip mechanism as
+           interactink.html's board-scroller, reused here to page through
+           every blog post instead of the boards list.
+        ================================================================== */
+        .blog-count {
+            font-family: ui-monospace, Menlo, monospace;
+            font-size: 12px;
+            font-weight: 700;
+            color: #10b981;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            border-radius: 9999px;
+            padding: 3px 10px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+        .blog-scroller-section { margin-top: 18px; }
+        .blog-scroller-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #71767b;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 0 20px;
+            margin-bottom: 10px;
+        }
+        .blog-scroller-wrap { position: relative; }
+        .blog-scroller {
+            display: flex;
+            align-items: stretch;
+            gap: 12px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-behavior: smooth;
+            scroll-snap-type: x proximity;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            padding: 2px 20px 10px 20px;
+            cursor: grab;
+            touch-action: pan-x;
+        }
+        .blog-scroller:active { cursor: grabbing; }
+        .blog-scroller::-webkit-scrollbar { display: none; }
+        .blog-scroller-card {
+            flex-shrink: 0;
+            scroll-snap-align: start;
+            width: 240px;
+            border: 1px solid #2f3336;
+            border-radius: 14px;
+            background: #0a0a0a;
+            padding: 14px;
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            user-select: none;
+            transition: border-color 0.12s ease, background-color 0.12s ease;
+        }
+        .blog-scroller-card:hover { border-color: #525252; background: #0f0f0f; }
+        .blog-scroller-card-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 9px;
+            background: rgba(16, 185, 129, 0.12);
+            color: #10b981;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .blog-scroller-card-icon i { width: 14px; height: 14px; }
+        .blog-scroller-card-title {
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 13.5px;
+            line-height: 1.35;
+        }
+        .blog-scroller-card-desc {
+            color: #71767b;
+            font-size: 12px;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .blog-scroller-edge {
+            position: absolute;
+            top: 0;
+            bottom: 10px;
+            width: 28px;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .blog-scroller-edge.left { left: 0; background: linear-gradient(to right, #000000, transparent); }
+        .blog-scroller-edge.right { right: 0; background: linear-gradient(to left, #000000, transparent); }
+        html[data-theme="light"] .blog-scroller-card { background: #ffffff; border-color: #eff3f4; }
+        html[data-theme="light"] .blog-scroller-card:hover { background: #f7f7f7; border-color: #cfd9de; }
+        html[data-theme="light"] .blog-scroller-card-title { color: #0f1419 !important; }
+        html[data-theme="light"] .blog-scroller-edge.left { background: linear-gradient(to right, #ffffff, transparent); }
+        html[data-theme="light"] .blog-scroller-edge.right { background: linear-gradient(to left, #ffffff, transparent); }
     </style>
     <link rel="stylesheet" href="enhancements.css">
 </head>
@@ -287,6 +393,7 @@
             <header class="blog-header p-4 flex items-center gap-2">
                 <img src="favicon2.png" alt="InteractInk logo" width="24" height="24" class="w-6 h-6">
                 <h1 class="text-lg font-bold tracking-tight text-white">Blog</h1>
+                <span class="blog-count" id="blogCount"><i data-lucide="rss" style="width:12px;height:12px;"></i><span id="blogCountText">85 articles</span></span>
             </header>
 
             <div class="px-5 py-6">
@@ -313,6 +420,423 @@
                         <h3 class="text-white font-bold text-sm mb-1">How to Use InteractInk Safely</h3>
                         <p class="text-neutral-500 text-xs leading-relaxed">A practical guide to posting, replying, and reporting on the board.</p>
                     </a>
+                </div>
+
+                <!-- ALL ARTICLES — horizontal sliding strip, same drag/swipe/wheel
+                     mechanism as interactink.html's board-scroller. Every post
+                     in the archive is a real link here (not lazy-loaded), so
+                     the full library is reachable and crawlable in one place. -->
+                <div class="blog-scroller-section">
+                    <div class="blog-scroller-label">All Articles (<span id="archiveCount">80</span>) &middot; drag or swipe to browse</div>
+                    <div class="blog-scroller-wrap">
+                        <div class="blog-scroller-edge left" aria-hidden="true"></div>
+                        <div class="blog-scroller-edge right" aria-hidden="true"></div>
+                        <div id="blogScroller" class="blog-scroller" role="list" aria-label="All blog articles">
+                    <a href="blogs/anon-board-moderation.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Anon Board Moderation</span>
+                        <span class="blog-scroller-card-desc">Anonymous boards rely on various methods to handle spam and bad actors, ensuring a balanced community</span>
+                    </a>
+                    <a href="blogs/avoiding-online-scams-2.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Avoiding Online Scams</span>
+                        <span class="blog-scroller-card-desc">Learn how to spot and avoid online scams on anonymous platforms to protect your personal information and security</span>
+                    </a>
+                    <a href="blogs/tackling-spam-on-anon-boards.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Tackling Spam on Anon Boards</span>
+                        <span class="blog-scroller-card-desc">Anonymous boards face unique spam challenges, requiring distinct approaches to moderation and community management</span>
+                    </a>
+                    <a href="blogs/anon-board-spam-control.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Anon Board Spam Control</span>
+                        <span class="blog-scroller-card-desc">Anon boards handle spam through community reports and simple moderation tools, ensuring user experience</span>
+                    </a>
+                    <a href="blogs/online-anonymity-effects.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Online Anonymity Effects</span>
+                        <span class="blog-scroller-card-desc">The psychology of online anonymity and its effects on discussion and behavior</span>
+                    </a>
+                    <a href="blogs/anonymous-roots.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Anonymous Roots</span>
+                        <span class="blog-scroller-card-desc">The role of anonymous boards in shaping the early internet and online communities</span>
+                    </a>
+                    <a href="blogs/niche-communities-beyond-algorithms.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Niche Communities Beyond Algorithms</span>
+                        <span class="blog-scroller-card-desc">Exploring the benefits of niche communities outside algorithmic feeds</span>
+                    </a>
+                    <a href="blogs/anon-boards-in-internet-history.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Anon Boards in Internet History</span>
+                        <span class="blog-scroller-card-desc">The role of anonymous boards in shaping early internet culture and community</span>
+                    </a>
+                    <a href="blogs/beyond-algorithmic-feeds.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Beyond Algorithmic Feeds</span>
+                        <span class="blog-scroller-card-desc">Niche communities flourish outside algorithm-driven social media platforms, promoting authentic discussion and engagement</span>
+                    </a>
+                    <a href="blogs/niche-communities-thrive.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Niche Communities Thrive</span>
+                        <span class="blog-scroller-card-desc">Niche online communities find success outside algorithmic feeds, focusing on shared interests</span>
+                    </a>
+                    <a href="blogs/early-internet-anon-boards.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Early Internet Anon Boards</span>
+                        <span class="blog-scroller-card-desc">The role of anonymous boards in shaping early internet history and culture</span>
+                    </a>
+                    <a href="blogs/anonymity-and-privacy-defined.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Anonymity and Privacy Defined</span>
+                        <span class="blog-scroller-card-desc">Understanding the difference between anonymity and online privacy in digital interactions</span>
+                    </a>
+                    <a href="blogs/daily-digital-privacy.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Daily Digital Privacy</span>
+                        <span class="blog-scroller-card-desc">Practical habits for protecting your digital privacy while using the internet</span>
+                    </a>
+                    <a href="blogs/anonymity-effects.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Anonymity Effects</span>
+                        <span class="blog-scroller-card-desc">The psychology of anonymity in online discussion and its effects on behavior and interactions</span>
+                    </a>
+                    <a href="blogs/spam-control-on-anon-boards.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Spam Control on Anon Boards</span>
+                        <span class="blog-scroller-card-desc">Anonymous communities handle spam and bad actors in various ways, maintaining online discussion quality</span>
+                    </a>
+                    <a href="blogs/managing-anon-board-spam.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Managing Anon Board Spam</span>
+                        <span class="blog-scroller-card-desc">Anonymous imageboards handle spam and bad actors in various ways to maintain community integrity</span>
+                    </a>
+                    <a href="blogs/simple-online-life.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Simple Online Life</span>
+                        <span class="blog-scroller-card-desc">Reducing digital footprint by using anonymous platforms and minimizing tracked activity</span>
+                    </a>
+                    <a href="blogs/thread-based-discussion.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Thread Based Discussion</span>
+                        <span class="blog-scroller-card-desc">How thread-based discussion differs from comment sections in online communities</span>
+                    </a>
+                    <a href="blogs/pseudonymous-identity-2.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Pseudonymous Identity</span>
+                        <span class="blog-scroller-card-desc">Understanding pseudonymous identity online and its role in internet culture</span>
+                    </a>
+                    <a href="blogs/forums-through-time.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Forums Through Time</span>
+                        <span class="blog-scroller-card-desc">A brief history of internet forum culture and evolution</span>
+                    </a>
+                    <a href="blogs/reducing-digital-footprint.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Reducing Digital Footprint</span>
+                        <span class="blog-scroller-card-desc">Stepping back from tracked platforms for online privacy and security</span>
+                    </a>
+                    <a href="blogs/imageboards-vs-social-media-2.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Imageboards vs Social Media</span>
+                        <span class="blog-scroller-card-desc">How imageboards differ from social media feeds in terms of content and user interaction</span>
+                    </a>
+                    <a href="blogs/anonymity-in-online-discussion.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Anonymity in Online Discussion</span>
+                        <span class="blog-scroller-card-desc">Exploring the psychological effects of anonymity on online interactions and community dynamics</span>
+                    </a>
+                    <a href="blogs/anonymity-online-2.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Anonymity Online</span>
+                        <span class="blog-scroller-card-desc">Exploring the tradeoffs between online anonymity and accountability in digital communities</span>
+                    </a>
+                    <a href="blogs/anonymity-and-accountability.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Anonymity and Accountability</span>
+                        <span class="blog-scroller-card-desc">Exploring the tradeoffs between online anonymity and accountability in digital communities</span>
+                    </a>
+                    <a href="blogs/moderating-anon-communities-2.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Moderating Anon Communities</span>
+                        <span class="blog-scroller-card-desc">Effective moderation strategies for anonymous online forums and imageboards</span>
+                    </a>
+                    <a href="blogs/managing-spam-on-anon-boards.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Managing Spam on Anon Boards</span>
+                        <span class="blog-scroller-card-desc">Anonymous imageboards and forums rely on community moderation to handle spam and bad actors, ensuring discussion quality</span>
+                    </a>
+                    <a href="blogs/handling-spam-on-anon-boards.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Handling Spam on Anon Boards</span>
+                        <span class="blog-scroller-card-desc">Anonymous communities face unique challenges in managing spam and bad actors, requiring creative solutions to maintain user trust</span>
+                    </a>
+                    <a href="blogs/anonymous-conversations-2.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Anonymous Conversations</span>
+                        <span class="blog-scroller-card-desc">Anonymous communities foster unique conversations, differing from named communities in significant ways</span>
+                    </a>
+                    <a href="blogs/anonymous-online-expression.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Anonymous Online Expression</span>
+                        <span class="blog-scroller-card-desc">Exploring the relationship between anonymous posting and free speech online</span>
+                    </a>
+                    <a href="blogs/anonymity-vs-privacy-2.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Anonymity vs Privacy</span>
+                        <span class="blog-scroller-card-desc">Understanding the difference between anonymity and privacy in online interactions and communities</span>
+                    </a>
+                    <a href="blogs/forum-culture-evolution.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Forum Culture Evolution</span>
+                        <span class="blog-scroller-card-desc">A look at the history and development of online forum culture</span>
+                    </a>
+                    <a href="blogs/anonymity-vs-privacy.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Anonymity vs Privacy</span>
+                        <span class="blog-scroller-card-desc">Understanding the difference between online anonymity and privacy, and how they impact online interactions</span>
+                    </a>
+                    <a href="blogs/digital-minimalism-2.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Digital Minimalism</span>
+                        <span class="blog-scroller-card-desc">Reducing online presence for a simpler life</span>
+                    </a>
+                    <a href="blogs/pseudonyms-online.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Pseudonyms Online</span>
+                        <span class="blog-scroller-card-desc">Understanding tripcodes, handles and online pseudonyms in anonymous communities</span>
+                    </a>
+                    <a href="blogs/imageboards-and-social-media.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Imageboards and Social Media</span>
+                        <span class="blog-scroller-card-desc">Understanding the differences between imageboards and social media feeds in terms of user interaction and content sharing</span>
+                    </a>
+                    <a href="blogs/stepping-back-online.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Stepping Back Online</span>
+                        <span class="blog-scroller-card-desc">Rethinking online engagement with digital minimalism and anonymity</span>
+                    </a>
+                    <a href="blogs/balancing-anonymity.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Balancing Anonymity</span>
+                        <span class="blog-scroller-card-desc">The tradeoffs between anonymity and accountability online and how they shape internet interactions</span>
+                    </a>
+                    <a href="blogs/whistleblowing-anonymity.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Whistleblowing Anonymity</span>
+                        <span class="blog-scroller-card-desc">Examining the ethics of anonymous whistleblowing and disclosure online</span>
+                    </a>
+                    <a href="blogs/trust-in-no-account-communities.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Trust in No Account Communities</span>
+                        <span class="blog-scroller-card-desc">Building trust in online communities without user accounts requires effort and understanding from all members</span>
+                    </a>
+                    <a href="blogs/staying-private-online.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Staying Private Online</span>
+                        <span class="blog-scroller-card-desc">Practical tips for maintaining online privacy and security in day-to-day internet use</span>
+                    </a>
+                    <a href="blogs/anon-boards-in-history.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Anon Boards in History</span>
+                        <span class="blog-scroller-card-desc">Anonymous imageboards played a significant role in shaping early internet culture and community</span>
+                    </a>
+                    <a href="blogs/ethics-of-disclosure.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Ethics of Disclosure</span>
+                        <span class="blog-scroller-card-desc">Exploring the ethics of anonymous whistleblowing and disclosure online</span>
+                    </a>
+                    <a href="blogs/trust-in-anonymous-communities.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Trust in Anonymous Communities</span>
+                        <span class="blog-scroller-card-desc">Building trust in online communities without user accounts requires effort and engagement from all participants</span>
+                    </a>
+                    <a href="blogs/private-online-habits.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Private Online Habits</span>
+                        <span class="blog-scroller-card-desc">Basic digital privacy habits for everyday internet users to stay safe online</span>
+                    </a>
+                    <a href="blogs/internet-culture-origins.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Internet Culture Origins</span>
+                        <span class="blog-scroller-card-desc">The role of anonymous boards in shaping internet culture and memes</span>
+                    </a>
+                    <a href="blogs/whistleblowing-ethics.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Whistleblowing Ethics</span>
+                        <span class="blog-scroller-card-desc">Exploring the ethics of anonymous whistleblowing and disclosure online</span>
+                    </a>
+                    <a href="blogs/digital-detox.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Digital Detox</span>
+                        <span class="blog-scroller-card-desc">Stepping back from tracked online platforms for a simpler life</span>
+                    </a>
+                    <a href="blogs/pseudonymous-identity.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Pseudonymous Identity</span>
+                        <span class="blog-scroller-card-desc">Understanding tripcodes, handles and online pseudonyms</span>
+                    </a>
+                    <a href="blogs/early-internet-anonymity.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Early Internet Anonymity</span>
+                        <span class="blog-scroller-card-desc">The role of anonymous boards in early internet history and online culture</span>
+                    </a>
+                    <a href="blogs/anonymity-tradeoffs.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Anonymity Tradeoffs</span>
+                        <span class="blog-scroller-card-desc">Exploring the balance between online anonymity and accountability</span>
+                    </a>
+                    <a href="blogs/imageboards-vs-social-media.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Imageboards vs Social Media</span>
+                        <span class="blog-scroller-card-desc">Comparing imageboards and social media feeds in terms of interaction and content</span>
+                    </a>
+                    <a href="blogs/free-speech-and-anonymity.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Free Speech and Anonymity</span>
+                        <span class="blog-scroller-card-desc">How anonymous posting affects free speech online and the balance between openness and responsibility</span>
+                    </a>
+                    <a href="blogs/anonymity-s-psychological-effects.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Anonymity&#x27;s Psychological Effects</span>
+                        <span class="blog-scroller-card-desc">Examining the psychological impact of anonymity in online discussions and communities</span>
+                    </a>
+                    <a href="blogs/building-community-trust.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Building Community Trust</span>
+                        <span class="blog-scroller-card-desc">How anonymous communities establish trust among users without accounts</span>
+                    </a>
+                    <a href="blogs/private-online.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Private Online</span>
+                        <span class="blog-scroller-card-desc">Practical tips for maintaining online privacy and security in daily internet use</span>
+                    </a>
+                    <a href="blogs/online-identity-and-pseudonyms.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Online Identity and Pseudonyms</span>
+                        <span class="blog-scroller-card-desc">Understanding online pseudonyms and their role in shaping online interactions and communities</span>
+                    </a>
+                    <a href="blogs/digital-privacy.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Digital Privacy</span>
+                        <span class="blog-scroller-card-desc">Basic digital privacy habits for everyday internet users to protect their personal information online</span>
+                    </a>
+                    <a href="blogs/spotting-online-scams.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Spotting Online Scams</span>
+                        <span class="blog-scroller-card-desc">Learn to identify and avoid scams on anonymous online platforms</span>
+                    </a>
+                    <a href="blogs/online-anonymity-and-speech.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Online Anonymity and Speech</span>
+                        <span class="blog-scroller-card-desc">Exploring the relationship between anonymous posting and free speech on the internet</span>
+                    </a>
+                    <a href="blogs/anonymous-whistleblowing.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Anonymous Whistleblowing</span>
+                        <span class="blog-scroller-card-desc">The ethics of anonymous whistleblowing and disclosure online</span>
+                    </a>
+                    <a href="blogs/moderating-anon-communities.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Moderating Anon Communities</span>
+                        <span class="blog-scroller-card-desc">Strategies for managing online discussions in anonymous communities</span>
+                    </a>
+                    <a href="blogs/avoiding-online-scams.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Avoiding Online Scams</span>
+                        <span class="blog-scroller-card-desc">Learn how to identify and avoid common online scams on anonymous platforms and protect your personal information</span>
+                    </a>
+                    <a href="blogs/free-speech-online-2.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Free Speech Online</span>
+                        <span class="blog-scroller-card-desc">Exploring the relationship between anonymous posting and online free speech</span>
+                    </a>
+                    <a href="blogs/anon-conversations.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Anon Conversations</span>
+                        <span class="blog-scroller-card-desc">Why anonymous communities have different discussions</span>
+                    </a>
+                    <a href="blogs/free-speech-online.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Free Speech Online</span>
+                        <span class="blog-scroller-card-desc">Understanding anonymous posting and its impact on free speech</span>
+                    </a>
+                    <a href="blogs/discussion-formats.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Discussion Formats</span>
+                        <span class="blog-scroller-card-desc">Thread-based discussion versus comment sections online</span>
+                    </a>
+                    <a href="blogs/spam-control-on-anonymous-boards.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Spam Control on Anonymous Boards</span>
+                        <span class="blog-scroller-card-desc">How anonymous imageboards manage spam and bad actors to maintain user experience</span>
+                    </a>
+                    <a href="blogs/dealing-with-spam.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Dealing with Spam</span>
+                        <span class="blog-scroller-card-desc">How anonymous boards handle spam and bad actors to maintain user experience</span>
+                    </a>
+                    <a href="blogs/memes-from-the-depths.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Memes from the Depths</span>
+                        <span class="blog-scroller-card-desc">Exploring internet culture and meme origins from anonymous boards</span>
+                    </a>
+                    <a href="blogs/different-conversations.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Different Conversations</span>
+                        <span class="blog-scroller-card-desc">How anonymous communities change online discussions</span>
+                    </a>
+                    <a href="blogs/meme-origins-online.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Meme Origins Online</span>
+                        <span class="blog-scroller-card-desc">Exploring the roots of internet culture and memes from anonymous boards</span>
+                    </a>
+                    <a href="blogs/simplifying-online-life.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Simplifying Online Life</span>
+                        <span class="blog-scroller-card-desc">Reducing digital footprint by stepping back from tracked platforms and embracing online anonymity</span>
+                    </a>
+                    <a href="blogs/anonymous-conversations.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Anonymous Conversations</span>
+                        <span class="blog-scroller-card-desc">How anonymous communities shape online discussions differently</span>
+                    </a>
+                    <a href="blogs/anonymity-and-online-behavior.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Anonymity and Online Behavior</span>
+                        <span class="blog-scroller-card-desc">Understanding the psychological effects of anonymity in online discussions and communities</span>
+                    </a>
+                    <a href="blogs/anonymity-online.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Anonymity Online</span>
+                        <span class="blog-scroller-card-desc">Exploring the tradeoffs between online anonymity and accountability</span>
+                    </a>
+                    <a href="blogs/thread-based-discussions.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Thread-Based Discussions</span>
+                        <span class="blog-scroller-card-desc">A comparison of thread-based discussions and traditional comment sections</span>
+                    </a>
+                    <a href="blogs/digital-minimalism.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Digital Minimalism</span>
+                        <span class="blog-scroller-card-desc">Benefits of reducing online presence and digital clutter</span>
+                    </a>
+                    <a href="blogs/managing-spam-on-anonymous-boards.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Managing Spam on Anonymous Boards</span>
+                        <span class="blog-scroller-card-desc">A look at the strategies anonymous imageboards use to handle spam and bad actors</span>
+                    </a>
+                    <a href="blogs/internet-forum-culture.html" class="blog-scroller-card">
+                        <span class="blog-scroller-card-icon"><i data-lucide="file-text"></i></span>
+                        <span class="blog-scroller-card-title">Internet Forum Culture</span>
+                        <span class="blog-scroller-card-desc">History and evolution of online forums and their impact</span>
+                    </a>
+                        </div>
+                    </div>
+                    <p class="text-neutral-500 text-xs leading-relaxed px-5 mt-1">
+                        <a href="blogs/index.html" class="inline-link">View the full archive as a list</a>
+                    </p>
                 </div>
             </div>
 
@@ -364,6 +888,65 @@
         window.addEventListener('load', () => {
             if (window.lucide) lucide.createIcons();
         });
+
+        /**
+         * Desktop mouse-drag-to-scroll + vertical-wheel-to-horizontal-scroll
+         * for a horizontal strip. Touch devices already get native swipe for
+         * free via overflow-x:auto — this just covers mouse-only desktops.
+         * Identical mechanism to interactink.html's board scroller.
+         */
+        function setupHorizontalScrollerDrag(scroller) {
+            if (!scroller) return;
+            let isDown = false, startX = 0, startScroll = 0, moved = false;
+
+            scroller.addEventListener('mousedown', (e) => {
+                isDown = true;
+                moved = false;
+                scroller.dataset.dragged = 'false';
+                startX = e.pageX;
+                startScroll = scroller.scrollLeft;
+            });
+            window.addEventListener('mouseup', () => {
+                isDown = false;
+                if (moved) {
+                    setTimeout(() => { scroller.dataset.dragged = 'false'; }, 0);
+                }
+            });
+            window.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                const dx = e.pageX - startX;
+                if (Math.abs(dx) > 4) {
+                    moved = true;
+                    scroller.dataset.dragged = 'true';
+                }
+                scroller.scrollLeft = startScroll - dx;
+            });
+            scroller.addEventListener('click', (e) => {
+                if (scroller.dataset.dragged === 'true') { e.preventDefault(); e.stopPropagation(); }
+            }, true);
+            scroller.addEventListener('wheel', (e) => {
+                if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+                    scroller.scrollLeft += e.deltaY;
+                    e.preventDefault();
+                }
+            }, { passive: false });
+        }
+
+        setupHorizontalScrollerDrag(document.getElementById('blogScroller'));
+
+        // Total-article count: 5 featured (root-level) + every archived post
+        // actually rendered into the scroller, so the number can never drift
+        // out of sync with what's really on the page.
+        (function updateBlogCounts() {
+            const FEATURED_COUNT = 5;
+            const archiveCards = document.querySelectorAll('#blogScroller .blog-scroller-card');
+            const archiveCount = archiveCards.length;
+            const total = FEATURED_COUNT + archiveCount;
+            const countEl = document.getElementById('archiveCount');
+            const totalEl = document.getElementById('blogCountText');
+            if (countEl) countEl.textContent = archiveCount;
+            if (totalEl) totalEl.textContent = `${total} articles`;
+        })();
     </script>
     <script src="enhancements.js" defer></script>
     <script src="theme.js" defer></script>

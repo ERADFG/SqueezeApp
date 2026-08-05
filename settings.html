@@ -33,6 +33,12 @@
     <meta property="og:url" content="https://interactink.vercel.app/settings.html">
     <meta property="og:image" content="https://interactink.vercel.app/favicon2.png">
 
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Settings - InteractInk">
+    <meta name="twitter:description" content="About, FAQ, Blog, Contact, Terms, Guidelines, and Privacy Policy for InteractInk.">
+    <meta name="twitter:image" content="https://interactink.vercel.app/favicon2.png">
+
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="favicon2.png">
 
@@ -167,8 +173,11 @@
         .bottom-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #71767b; text-decoration: none; padding: 6px 10px; cursor: pointer; background: none; border: none; }
         .bottom-tab.active { color: #ffffff; }
         .bottom-tab i { width: 20px; height: 20px; }
-        @media (max-width: 768px) {
-            .desktop-nav { display: none !important; }
+        /* Matches .x-sidebar's min-width:1024px breakpoint everywhere else on
+           the site — was previously 768px here, which left tablet widths
+           (769–1023px) with no navigation at all: the sidebar hides below
+           1024px but the tab bar didn't show until below 768px. */
+        @media (max-width: 1023px) {
             .bottom-tab-bar {
                 display: flex; justify-content: space-around; align-items: center;
                 position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
@@ -204,6 +213,22 @@
                 <a href="ichat.html" class="nav-item">
                     <i data-lucide="message-circle-code"></i>
                     <span>iChat</span>
+                </a>
+                <a href="about.html" class="nav-item">
+                    <i data-lucide="info"></i>
+                    <span>About</span>
+                </a>
+                <a href="faq.html" class="nav-item">
+                    <i data-lucide="help-circle"></i>
+                    <span>FAQ</span>
+                </a>
+                <a href="blog.html" class="nav-item">
+                    <i data-lucide="rss"></i>
+                    <span>Blog</span>
+                </a>
+                <a href="contact.html" class="nav-item">
+                    <i data-lucide="mail"></i>
+                    <span>Contact</span>
                 </a>
                 <a href="settings.html" class="nav-item active">
                     <i data-lucide="settings"></i>
