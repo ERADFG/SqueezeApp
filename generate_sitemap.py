@@ -20,6 +20,7 @@ Run this any time you add/remove an article:
     python3 generate_sitemap.py
 """
 import json
+import os
 import re
 import datetime
 
@@ -50,6 +51,8 @@ def extract_article_filenames(script_path="build_blog_v2.py"):
     return re.findall(r'ARTICLES\.append\(\("([^"]+)"', src)
 
 def extract_archive_slugs(manifest_path="blogs/manifest.json"):
+    if not os.path.exists(manifest_path):
+        return []
     with open(manifest_path, "r", encoding="utf-8-sig") as f:
         data = json.load(f)
     return [entry["slug"] for entry in data]
