@@ -85,6 +85,7 @@ async function loadConversationList(session, root) {
   document.body.classList.remove('chat-thread-open'); // see .chat-thread-open note in style.css — list view, not a thread
   document.getElementById('chat-sec-bar').innerHTML = t('nav.chat');
   if (chatCryptoSupported()) ensureMyKeypair(session.user.id); // fire-and-forget: publishes my pubkey so others can start encrypting to me
+  subscribeConversationListRealtime(session, root);
 
   const { data, error } = await sb.from('messages')
     .select(`*, sender:profiles!messages_sender_id_fkey(id,username,display_name,avatar_url,verified,pubkey),
@@ -163,6 +164,26 @@ async function loadConversationList(session, root) {
   }));
 
   root.innerHTML = newMsgBox + rows.join('');
+}
+
+// Keeps the inbox list itself live, not just the sidebar badge.
+// subscribeChatBadge() (auth.js) already bumps the unread count from
+// anywhere in the app, but that's a counter, not the list underneath
+// it — sitting on /messages while a new message arrives (or replying
+// from another tab/device) left the rows on screen stale until a
+// manual reload, since nothing here was listening for it. A fresh
+// INSERT just re-runs the same load — the list is capped at 300 rows
+// and this is a low-frequency event, so a full re-fetch is simpler
+// and less error-prone than hand-patching one row/re-sorting in place.
+let convListChannel = null;
+function subscribeConversationListRealtime(session, root) {
+  if (convListChannel) { sb.removeChannel(convListChannel); convListChannel = null; }
+  convListChannel = sb.channel(`chat-list-${session.user.id}`)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `recipient_id=eq.${session.user.id}` },
+      () => loadConversationList(session, root))
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `sender_id=eq.${session.user.id}` },
+      () => loadConversationList(session, root))
+    .subscribe();
 }
 
 function toggleNewChat(open) {

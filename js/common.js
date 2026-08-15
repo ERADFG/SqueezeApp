@@ -1657,22 +1657,47 @@ async function submitQuote() {
   }
 }
 
-// Copies a thread's permalink to the clipboard — the reference design's
-// share icon, wired to something real instead of a decorative no-op.
+// Shares a thread's permalink via the OS share sheet (navigator.share)
+// on mobile/supporting browsers — the same picker you get sharing from
+// Photos or any native app, letting the person pick Messages/WhatsApp/
+// Mail/etc. directly instead of only ever landing on the clipboard.
+// Desktop Chrome/Firefox (and any browser without the Web Share API,
+// or a share the person cancels) falls back to the old copy-link
+// behavior, so the button still does *something* useful everywhere.
 function sharePost(id, btn) {
   const url = `${location.origin}${prettyPostUrlById(id, postCache?.[id]?.profile?.username)}`;
-  const done = () => {
-    if (!btn) return;
-    const label = btn.querySelector('.act-label');
-    const prev = label ? label.textContent : null;
-    btn.classList.add('copied');
-    if (label) label.textContent = 'Copied';
-    setTimeout(() => { btn.classList.remove('copied'); if (label && prev !== null) label.textContent = prev; }, 1500);
+  const post = postCache?.[id];
+  const title = post ? `${post.profile?.display_name || post.profile?.username || 'InteractInk'} on InteractInk` : 'InteractInk';
+  const text = post?.body ? post.body.slice(0, 100) : undefined;
+
+  const copyFallback = () => {
+    const done = () => {
+      if (!btn) return;
+      const label = btn.querySelector('.act-label');
+      const prev = label ? label.textContent : null;
+      btn.classList.add('copied');
+      if (label) label.textContent = 'Copied';
+      setTimeout(() => { btn.classList.remove('copied'); if (label && prev !== null) label.textContent = prev; }, 1500);
+    };
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(url).then(done).catch(() => prompt('Copy link:', url));
+    } else {
+      prompt('Copy link:', url);
+    }
   };
-  if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(url).then(done).catch(() => prompt('Copy link:', url));
+
+  if (navigator.share) {
+    navigator.share({ title, text, url }).catch(e => {
+      // AbortError just means the person closed the share sheet without
+      // picking anything — that's not a failure, don't fall back to
+      // clipboard behind their back or they'll see two different UIs
+      // for one tap. Any other error (unsupported data, etc.) does fall
+      // back so the tap isn't a dead end.
+      if (e && e.name === 'AbortError') return;
+      copyFallback();
+    });
   } else {
-    prompt('Copy link:', url);
+    copyFallback();
   }
 }
 
