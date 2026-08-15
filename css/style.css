@@ -1077,7 +1077,7 @@ select {
    (post cards, reply headers, profile header, who-to-follow, follower
    lists). Sits inline right after the name text — see vBadge() in
    js/common.js, which is the single place this <img> gets built. */
-.verified-badge { width:16px; height:16px; margin:0 5px 0 0; vertical-align:-3.2px; flex:none; display:inline-block; }
+.verified-badge { width:16px; height:16px; margin:0 5px 0 0; vertical-align:-3.2px; flex:none; display:inline-block; align-self:center; }
 .op-detail-names .verified-badge { width:18px; height:18px; margin-left:0; vertical-align:-3.5px; flex:none; }
 .uname-row .verified-badge { width:20px; height:20px; margin-left:3px; vertical-align:-3.8px; }
 .ph .nm:hover { text-decoration:underline; }
@@ -2090,8 +2090,8 @@ html[data-theme="dim"] .auth-ok, html[data-theme="dark"] .auth-ok { background:r
 }
 .profile-hdr::before { content:""; display:block; height:150px; margin:0 -16px 0; background:var(--banner-img, linear-gradient(135deg,#BEE3F8,#E6D9F7)) center/cover no-repeat; }
 .profile-id { flex:1; min-width:180px; padding-top:12px; }
-.uname-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-.profile-id .uname { font-family:inherit; font-size:20px; font-weight:800; color:var(--ink); overflow-wrap:anywhere; word-break:break-word; min-width:0; }
+.uname-row { display:flex; align-items:flex-start; gap:10px; flex-wrap:wrap; }
+.profile-id .uname { font-family:inherit; font-size:20px; font-weight:800; color:var(--ink); overflow-wrap:anywhere; word-break:break-word; min-width:0; flex:1 1 auto; }
 .profile-id .handle { font-size:14px; color:var(--muted); margin-bottom:6px; }
 .profile-id .bio { font-size:15px; margin-top:8px; white-space:pre-wrap; }
 .profile-meta { font-size:14px; color:var(--muted); margin-top:10px; }
@@ -2105,7 +2105,7 @@ html[data-theme="dim"] .auth-ok, html[data-theme="dark"] .auth-ok { background:r
 #pv-avatar { margin-top:-44px; position:relative; z-index:1; }
 
 /* ── header action row: message + "···" menu + follow/edit ── */
-.profile-hdr-actions { display:flex; align-items:center; gap:8px; margin-left:auto; }
+.profile-hdr-actions { display:flex; align-items:center; gap:8px; margin-left:auto; flex:none; }
 .profile-hdr-actions .follow-btn, .profile-hdr-actions .profile-edit-btn { margin-top:0; }
 .profile-icon-btn {
   width:36px; height:36px; border-radius:50%; border:1px solid var(--border-input);
