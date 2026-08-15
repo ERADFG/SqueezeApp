@@ -1,0 +1,7 @@
+# ads.txt for interactink.vercel.app
+#
+# Placeholder — no authorized sellers declared yet.
+# Once the AdSense publisher ID is confirmed, replace this file's
+# contents with the real entry, e.g.:
+#
+# google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0

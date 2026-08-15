@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Anmelden — InteractInk</title>
+<meta name="description" content="Melde dich bei deinem InteractInk-Konto an.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="InteractInk">
+<meta property="og:title" content="Anmelden — InteractInk">
+<meta property="og:description" content="Melde dich bei deinem InteractInk-Konto an.">
+<meta property="og:image" content="/img/logo-light.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Anmelden — InteractInk">
+<meta name="twitter:description" content="Melde dich bei deinem InteractInk-Konto an.">
+<meta name="twitter:image" content="/img/logo-light.png">
+<link rel="canonical" href="https://interactink.vercel.app/de/login">
+<meta property="og:url" content="https://interactink.vercel.app/de/login">
+<link rel="alternate" hreflang="en" href="https://interactink.vercel.app/login">
+<link rel="alternate" hreflang="es" href="https://interactink.vercel.app/es/login">
+<link rel="alternate" hreflang="fr" href="https://interactink.vercel.app/fr/login">
+<link rel="alternate" hreflang="de" href="https://interactink.vercel.app/de/login">
+<link rel="alternate" hreflang="pt" href="https://interactink.vercel.app/pt/login">
+<link rel="alternate" hreflang="ja" href="https://interactink.vercel.app/ja/login">
+<link rel="alternate" hreflang="x-default" href="https://interactink.vercel.app/login">
+<base href="/">
+<link rel="icon" type="image/png" href="/img/favicon-32.png" sizes="32x32" id="fav32">
+<link rel="icon" type="image/png" href="/img/favicon.png" sizes="512x512" id="fav512">
+<link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+<meta name="theme-color" content="#16A34A">
+<script>(function(){try{var t=localStorage.getItem('oc-theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}if(t&&t!=="light"){document.documentElement.setAttribute('data-theme',t);}var a=localStorage.getItem('oc-accent');if(a&&a!=="green")document.documentElement.setAttribute('data-accent',a);}catch(e){}})();</script>
+<link rel="preconnect" href="https://pyitivzoqleukuclajrf.supabase.co">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<div class="xshell">
+  <div id="hdr">
+    <div class="sb-top">
+      <a class="logo" href="/de">
+        <span class="badge">
+          <img class="logo-mark logo-mark-light" src="/img/logo-light.png" alt="InteractInk logo" width="36" height="36">
+          <img class="logo-mark logo-mark-dark" src="/img/logo-dark.png" alt="InteractInk logo" width="36" height="36">
+        </span>
+        <span class="wordmark">Interact<em>Ink</em></span>
+      </a>
+      <nav id="side-nav"></nav>
+    </div>
+    <span id="auth-area" class="auth-area"></span>
+  </div>
+  <div class="auth-wrap">
+  <div class="auth-shell">
+    <div class="auth-card">
+      <a class="auth-card-logo" href="/de">
+        <span class="badge">
+          <img class="logo-mark logo-mark-light" src="/img/logo-light.png" alt="InteractInk logo" width="28" height="28">
+          <img class="logo-mark logo-mark-dark" src="/img/logo-dark.png" alt="InteractInk logo" width="28" height="28">
+        </span>
+        <span class="wordmark">Interact<em>Ink</em></span>
+      </a>
+      <h1 data-i18n="auth.logIn">Anmelden</h1>
+      <p class="auth-sub" data-i18n="auth.logInSub">Schön, dich wiederzusehen.</p>
+      <div class="auth-body">
+        <div class="errmsg" id="li-err" style="display:none;"></div>
+        <form id="li-form" onsubmit="doLogIn(event)">
+          <div class="auth-field">
+            <label for="li-email" data-i18n="auth.email">E-Mail</label>
+            <div class="auth-input-wrap">
+              <span class="auth-fi"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/></svg></span>
+              <input type="email" id="li-email" required autocomplete="email" placeholder="du@beispiel.de">
+            </div>
+          </div>
+          <div class="auth-field">
+            <label for="li-password" data-i18n="auth.password">Passwort</label>
+            <div class="auth-input-wrap">
+              <span class="auth-fi"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+              <input type="password" id="li-password" required autocomplete="current-password" placeholder="••••••••">
+              <button type="button" class="pw-toggle" aria-label="Passwort anzeigen" onclick="togglePwVis('li-password', this)">
+                <svg class="eye-on" viewBox="0 0 24 24"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg class="eye-off" viewBox="0 0 24 24"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/><path d="M3 3l18 18"/></svg>
+              </button>
+            </div>
+          </div>
+          <div id="li-captcha" class="captcha-card" style="display:none;">
+            <div class="captcha-card-head">
+              <span class="captcha-card-icon">
+                <svg class="cci-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+                <svg class="cci-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 9.5 17 19 7"/></svg>
+              </span>
+              <span class="captcha-card-text">
+                <span class="captcha-card-title">Quick security check</span>
+                <span class="captcha-card-sub">Confirm you're human to continue</span>
+              </span>
+            </div>
+            <div class="captcha-card-body"><div class="captcha-skeleton"></div></div>
+          </div>
+          <input type="submit" id="li-btn" class="auth-submit" value="Anmelden" data-i18n-value="auth.logIn">
+        </form>
+        <div class="auth-switch"><span data-i18n="auth.noAccount">Noch kein Konto?</span> <a href="/de/signup" data-i18n="nav.signUp">Registrieren</a></div>
+        <div class="auth-legal" data-i18n="auth.legal">Mit der Fortsetzung akzeptierst du die <a href="/de/rules">Regeln</a> von InteractInk.</div>
+        <div class="auth-legal" style="margin-top:4px;"><a href="/login">English</a> &mdash; <a href="/es/login">Español</a> &mdash; <a href="/fr/login">Français</a> &mdash; <a href="/pt/login">Português</a></div>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/js/supabase-config.js"></script>
+<script src="/js/i18n.js"></script>
+<script src="/js/common.js"></script>
+<script src="/js/video-player.js"></script>
+<script src="/js/auth.js"></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=initAllCaptchas&render=explicit" async defer></script>
+</body>
+</html>

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Comunidades — InteractInk</title>
+<meta name="description" content="Explora y únete a comunidades en InteractInk.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="InteractInk">
+<meta property="og:title" content="Comunidades — InteractInk">
+<meta property="og:description" content="Explora y únete a comunidades en InteractInk.">
+<meta property="og:image" content="/img/logo-light.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Comunidades — InteractInk">
+<meta name="twitter:description" content="Explora y únete a comunidades en InteractInk.">
+<meta name="twitter:image" content="/img/logo-light.png">
+<link rel="canonical" href="https://interactink.vercel.app/es/communities">
+<meta property="og:url" content="https://interactink.vercel.app/es/communities">
+<link rel="alternate" hreflang="en" href="https://interactink.vercel.app/communities">
+<link rel="alternate" hreflang="es" href="https://interactink.vercel.app/es/communities">
+<link rel="alternate" hreflang="fr" href="https://interactink.vercel.app/fr/communities">
+<link rel="alternate" hreflang="de" href="https://interactink.vercel.app/de/communities">
+<link rel="alternate" hreflang="pt" href="https://interactink.vercel.app/pt/communities">
+<link rel="alternate" hreflang="ja" href="https://interactink.vercel.app/ja/communities">
+<link rel="alternate" hreflang="x-default" href="https://interactink.vercel.app/communities">
+<base href="/">
+<link rel="icon" type="image/png" href="/img/favicon-32.png" sizes="32x32" id="fav32">
+<link rel="icon" type="image/png" href="/img/favicon.png" sizes="512x512" id="fav512">
+<link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+<meta name="theme-color" content="#16A34A">
+<script>(function(){try{var t=localStorage.getItem('oc-theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}if(t&&t!=="light"){document.documentElement.setAttribute('data-theme',t);}var a=localStorage.getItem('oc-accent');if(a&&a!=="green")document.documentElement.setAttribute('data-accent',a);}catch(e){}})();</script>
+<link rel="preconnect" href="https://pyitivzoqleukuclajrf.supabase.co">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body data-page="communities">
+
+<div class="xshell">
+  <div id="hdr">
+    <div class="sb-top">
+      <a class="logo" href="/es">
+        <span class="badge">
+          <img class="logo-mark logo-mark-light" src="/img/logo-light.png" alt="InteractInk logo" width="36" height="36">
+          <img class="logo-mark logo-mark-dark" src="/img/logo-dark.png" alt="InteractInk logo" width="36" height="36">
+        </span>
+        <span class="wordmark">Interact<em>Ink</em></span>
+      </a>
+      <nav id="side-nav"></nav>
+    </div>
+    <span id="auth-area" class="auth-area"></span>
+  </div>
+
+  <div id="main">
+    <div id="feed">
+      <div class="sec-bar">
+        <h1>Comunidades</h1>
+        <a href="#" class="back" onclick="openCreateCommunityModal();return false;">+ Crear</a>
+      </div>
+
+      <div class="xsearch" id="comm-searchbox" style="margin:12px 16px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+        <input id="comm-search" placeholder="Buscar comunidades" autocomplete="off">
+      </div>
+
+      <div id="board-hdr">
+        <div class="xtabs" id="communities-tabs">
+          <button class="xtab active" id="ctab-all" onclick="switchCommunitiesTab('all');return false;">Todas</button>
+          <button class="xtab" id="ctab-mine" onclick="switchCommunitiesTab('mine');return false;">Unido</button>
+        </div>
+      </div>
+
+      <div id="communities-list"><span class="spinner">Cargando&hellip;</span></div>
+
+      <h2 class="comm-guide-title">Guía de comunidades</h2>
+      <div class="comm-about comm-guide">
+        <details class="comm-guide-item" name="comm-guide">
+          <summary>¿Qué son las comunidades?</summary>
+          <div class="comm-guide-body">
+            <p>Una comunidad es un tablón más pequeño dentro de InteractInk construido alrededor de un tema, fandom, pasatiempo o interés específico — un espacio enfocado en lugar del torrente general del feed principal. Cada comunidad tiene su propia línea de tiempo compuesta solo por publicaciones de sus miembros, así que si prefieres seguir de cerca un solo tema en lugar de desplazarte por todo lo demás, unirte a una comunidad es la forma de hacerlo. Cualquiera puede explorar las publicaciones de una comunidad; necesitarás una cuenta gratuita para unirte, publicar o responder en ella.</p>
+          </div>
+        </details>
+
+        <details class="comm-guide-item" name="comm-guide">
+          <summary>Unirse a una comunidad</summary>
+          <div class="comm-guide-body">
+            <p>Busca o desplázate por la lista de arriba para encontrar una que se ajuste a lo que te interesa, luego presiona <b>Unirme</b>. Una vez dentro, sus publicaciones aparecerán cuando visites la comunidad directamente, y podrás publicar y responder ahí como en cualquier otro lugar de InteractInk. ¿Ya no te interesa? Puedes salir con la misma facilidad — no hay período de espera ni penalización por unirte y salir de comunidades a medida que cambian tus intereses.</p>
+          </div>
+        </details>
+
+        <details class="comm-guide-item" name="comm-guide">
+          <summary>Crear la tuya propia</summary>
+          <div class="comm-guide-body">
+            <p>¿No ves una comunidad para lo que te interesa? Usa el botón <b>+ Crear</b> de arriba para iniciar una. Elegirás un nombre y una breve descripción explicando de qué trata — mientras más clara sea esa descripción, más fácil será que las personas correctas la encuentren después. Una vez que exista, cualquiera podrá encontrarla y unirse desde esta página, igual que cualquier otra comunidad. Crear una comunidad te hace responsable de en qué se convierte, así que vale la pena tomarse un minuto para pensar qué quieres que sea antes de publicar lo primero en ella.</p>
+          </div>
+        </details>
+
+        <details class="comm-guide-item" name="comm-guide">
+          <summary>Encontrar la adecuada</summary>
+          <div class="comm-guide-body">
+            <p>Usa el cuadro de búsqueda de arriba para buscar por nombre o descripción si ya sabes más o menos lo que quieres. Si no, la pestaña <b>Todas</b> enumera cada comunidad con las más concurridas primero, así que explorarla es una buena forma de ver qué existe ya antes de empezar algo nuevo. La pestaña <b>Unido</b> muestra solo las comunidades de las que tu cuenta es miembro, así que es una forma rápida de volver a las que realmente revisas.</p>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <div id="sidebar">
+      <div class="xsearch">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+        <input id="side-search" placeholder="Buscar en InteractInk">
+      </div>
+      <div class="who-box" id="who-to-follow"></div>
+      <div id="ftr" style="padding:0;">
+        [<a href="/es">&larr; Volver al inicio</a>] &nbsp;&mdash;&nbsp; <a href="/communities">English</a> &mdash; <a href="/fr/communities">Français</a> &mdash; <a href="/de/communities">Deutsch</a> &mdash; <a href="/pt/communities">Português</a>
+        <br><span style="font-size:10px;color:var(--muted);">&copy; 2026 InteractInk &mdash; <a href="/es/about">Acerca de</a> &mdash; <a href="/es/contact">Contacto</a> &mdash; <a href="/es/privacy">Privacidad</a> &mdash; <a href="/es/terms">Términos</a></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/js/supabase-config.js"></script>
+<script src="/js/i18n.js"></script>
+<script src="/js/common.js"></script>
+<script src="/js/video-player.js"></script>
+<script src="/js/crop-modal.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/communities.js"></script>
+</body>
+</html>

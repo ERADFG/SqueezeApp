@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Profile — InteractInk</title>
+<meta name="description" content="A user's profile on InteractInk — their posts, bio, and activity.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="InteractInk">
+<meta property="og:title" content="Profile — InteractInk">
+<meta property="og:description" content="A user's profile on InteractInk — their posts, bio, and activity.">
+<meta property="og:image" content="/img/logo-light.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Profile — InteractInk">
+<meta name="twitter:description" content="A user's profile on InteractInk — their posts, bio, and activity.">
+<meta name="twitter:image" content="/img/logo-light.png">
+<link rel="canonical">
+<meta property="og:url" content="">
+<base href="/">
+<link rel="icon" type="image/png" href="img/favicon-32.png" sizes="32x32" id="fav32">
+<link rel="icon" type="image/png" href="img/favicon.png" sizes="512x512" id="fav512">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<meta name="theme-color" content="#16A34A">
+<script>(function(){try{var t=localStorage.getItem('oc-theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}if(t&&t!=="light"){document.documentElement.setAttribute('data-theme',t);}var a=localStorage.getItem('oc-accent');if(a&&a!=="green")document.documentElement.setAttribute('data-accent',a);}catch(e){}})();</script>
+<link rel="preconnect" href="https://pyitivzoqleukuclajrf.supabase.co">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="xshell">
+  <div id="hdr">
+    <div class="sb-top">
+      <a class="logo" href="/">
+        <span class="badge">
+          <img class="logo-mark logo-mark-light" src="img/logo-light.png" alt="InteractInk logo" width="36" height="36">
+          <img class="logo-mark logo-mark-dark" src="img/logo-dark.png" alt="InteractInk logo" width="36" height="36">
+        </span>
+        <span class="wordmark">Interact<em>Ink</em></span>
+      </a>
+      <nav id="side-nav"></nav>
+    </div>
+    <span id="auth-area" class="auth-area"></span>
+  </div>
+
+  <div id="main">
+    <div id="feed" style="max-width:600px;">
+      <div class="sec-bar" style="position:static;background:none;backdrop-filter:none;">
+        <a class="back" href="index.html" style="margin-left:0;margin-right:auto;">&larr; Back to home</a>
+      </div>
+      <h1 id="page-h1" class="sr-only">Profile</h1>
+      <div id="profile-root"><span class="spinner">Loading profile&hellip;</span></div>
+    </div>
+
+    <div id="sidebar">
+      <div class="xsearch">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+        <input id="side-search" placeholder="Search InteractInk">
+      </div>
+      <div class="who-box" id="who-to-follow"></div>
+      <div id="ftr" style="padding:0;">
+        [<a href="index.html">&larr; Back to Home</a>]
+        <br><span style="font-size:10px;color:var(--muted);">&copy; 2026 InteractInk &mdash; <a href="about.html">About</a> &mdash; <a href="contact.html">Contact</a> &mdash; <a href="privacy.html">Privacy</a> &mdash; <a href="terms.html">Terms</a></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- REPORT MODAL -->
+<div class="modal-bg" id="modal-report">
+  <div class="modal">
+    <a class="modal-close" href="#" onclick="closeReport();return false;">&#10005;</a>
+    <h2>Report Post</h2>
+    <label>Reason</label>
+    <select id="report-reason">
+      <option value="illegal">Illegal content</option>
+      <option value="spam">Spam</option>
+      <option value="doxxing">Doxxing / personal info</option>
+      <option value="harassment">Harassment</option>
+      <option value="other">Other</option>
+    </select>
+    <label>Details (optional)</label>
+    <textarea id="report-details" rows="3" maxlength="500"></textarea>
+    <button class="modal-btn" onclick="submitReport()">Submit Report</button>
+  </div>
+</div>
+
+
+<!-- QUOTE POST MODAL -->
+<div class="modal-bg" id="modal-quote">
+  <div class="modal" style="width:420px;">
+    <a class="modal-close" href="#" onclick="closeQuoteModal();return false;">&#10005;</a>
+    <h2>Quote Post</h2>
+    <div class="errmsg" id="qm-err" style="display:none;margin:0 16px 8px;"></div>
+    <div class="qm-body">
+      <span class="pf-avatar" id="qm-avatar"></span>
+      <textarea id="qm-body" maxlength="500" placeholder="Add a comment"></textarea>
+    </div>
+    <div class="qm-preview-wrap" id="qm-preview"></div>
+    <div class="qm-foot"><span class="qm-count" id="qm-count">500</span></div>
+    <button class="modal-btn" id="qm-btn" onclick="submitQuote()">Post</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/common.js"></script>
+<script src="js/video-player.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/profile.js"></script>
+</body>
+</html>

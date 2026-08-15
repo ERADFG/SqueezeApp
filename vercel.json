@@ -1,0 +1,111 @@
+{
+  "functions": {
+    "api/prerender.js": {
+      "includeFiles": "*.html"
+    }
+  },
+  "routes": [
+    { "src": "^/(.+)/$", "status": 308, "headers": { "Location": "/$1" } },
+
+    { "src": "^/$", "dest": "/api/prerender?type=home" },
+
+    { "src": "^/admin$", "dest": "/admin.html", "headers": { "X-Robots-Tag": "noindex, nofollow, noarchive" } },
+    { "src": "^/admin\\.html$", "headers": { "X-Robots-Tag": "noindex, nofollow, noarchive" }, "continue": true },
+
+    { "src": "^/ads\\.txt$", "headers": { "Content-Type": "text/plain; charset=utf-8" }, "continue": true },
+
+    { "handle": "filesystem" },
+
+    { "src": "^/robots\\.txt$",  "dest": "/api/robots" },
+    { "src": "^/sitemap\\.xml$", "dest": "/api/sitemap" },
+
+    { "src": "^/home$",               "dest": "/api/prerender?type=home" },
+
+    { "src": "^/notifications$",      "dest": "/notifications.html" },
+    { "src": "^/bookmarks$",          "dest": "/bookmarks.html" },
+    { "src": "^/settings$",           "dest": "/settings.html" },
+    { "src": "^/search$",             "dest": "/search.html" },
+    { "src": "^/rules$",              "dest": "/rules.html" },
+    { "src": "^/about$",              "dest": "/about.html" },
+    { "src": "^/contact$",            "dest": "/contact.html" },
+    { "src": "^/privacy$",            "dest": "/privacy.html" },
+    { "src": "^/terms$",              "dest": "/terms.html" },
+    { "src": "^/login$",              "dest": "/login.html" },
+    { "src": "^/signup$",             "dest": "/signup.html" },
+    { "src": "^/communities$",        "dest": "/communities.html" },
+
+    { "src": "^/es$",                 "dest": "/es/index.html" },
+    { "src": "^/es/home$",            "dest": "/es/index.html" },
+    { "src": "^/es/rules$",           "dest": "/es/rules.html" },
+    { "src": "^/es/about$",           "dest": "/es/about.html" },
+    { "src": "^/es/contact$",         "dest": "/es/contact.html" },
+    { "src": "^/es/privacy$",         "dest": "/es/privacy.html" },
+    { "src": "^/es/terms$",           "dest": "/es/terms.html" },
+    { "src": "^/es/login$",           "dest": "/es/login.html" },
+    { "src": "^/es/signup$",          "dest": "/es/signup.html" },
+    { "src": "^/es/communities$",     "dest": "/es/communities.html" },
+
+    { "src": "^/fr$",                 "dest": "/fr/index.html" },
+    { "src": "^/fr/home$",            "dest": "/fr/index.html" },
+    { "src": "^/fr/rules$",           "dest": "/fr/rules.html" },
+    { "src": "^/fr/about$",           "dest": "/fr/about.html" },
+    { "src": "^/fr/contact$",         "dest": "/fr/contact.html" },
+    { "src": "^/fr/privacy$",         "dest": "/fr/privacy.html" },
+    { "src": "^/fr/terms$",           "dest": "/fr/terms.html" },
+    { "src": "^/fr/login$",           "dest": "/fr/login.html" },
+    { "src": "^/fr/signup$",          "dest": "/fr/signup.html" },
+    { "src": "^/fr/communities$",     "dest": "/fr/communities.html" },
+
+    { "src": "^/de$",                 "dest": "/de/index.html" },
+    { "src": "^/de/home$",            "dest": "/de/index.html" },
+    { "src": "^/de/rules$",           "dest": "/de/rules.html" },
+    { "src": "^/de/about$",           "dest": "/de/about.html" },
+    { "src": "^/de/contact$",         "dest": "/de/contact.html" },
+    { "src": "^/de/privacy$",         "dest": "/de/privacy.html" },
+    { "src": "^/de/terms$",           "dest": "/de/terms.html" },
+    { "src": "^/de/login$",           "dest": "/de/login.html" },
+    { "src": "^/de/signup$",          "dest": "/de/signup.html" },
+    { "src": "^/de/communities$",     "dest": "/de/communities.html" },
+
+    { "src": "^/pt$",                 "dest": "/pt/index.html" },
+    { "src": "^/pt/home$",            "dest": "/pt/index.html" },
+    { "src": "^/pt/rules$",           "dest": "/pt/rules.html" },
+    { "src": "^/pt/about$",           "dest": "/pt/about.html" },
+    { "src": "^/pt/contact$",         "dest": "/pt/contact.html" },
+    { "src": "^/pt/privacy$",         "dest": "/pt/privacy.html" },
+    { "src": "^/pt/terms$",           "dest": "/pt/terms.html" },
+    { "src": "^/pt/login$",           "dest": "/pt/login.html" },
+    { "src": "^/pt/signup$",          "dest": "/pt/signup.html" },
+    { "src": "^/pt/communities$",     "dest": "/pt/communities.html" },
+
+    { "src": "^/ja$",                 "dest": "/ja/index.html" },
+    { "src": "^/ja/home$",            "dest": "/ja/index.html" },
+    { "src": "^/ja/rules$",           "dest": "/ja/rules.html" },
+    { "src": "^/ja/about$",           "dest": "/ja/about.html" },
+    { "src": "^/ja/contact$",         "dest": "/ja/contact.html" },
+    { "src": "^/ja/privacy$",         "dest": "/ja/privacy.html" },
+    { "src": "^/ja/terms$",           "dest": "/ja/terms.html" },
+    { "src": "^/ja/login$",           "dest": "/ja/login.html" },
+    { "src": "^/ja/signup$",          "dest": "/ja/signup.html" },
+    { "src": "^/ja/communities$",     "dest": "/ja/communities.html" },
+    { "src": "^/communities/(?<slug>[^/]+)$", "dest": "/api/prerender?type=community&slug=$slug" },
+
+    { "src": "^/lists$",              "dest": "/lists.html" },
+    { "src": "^/i/lists/(?<id>[^/]+)$", "dest": "/api/prerender?type=list&id=$id" },
+    { "src": "^/(?<username>[^/]+)/lists$", "dest": "/profilelists.html" },
+
+    { "src": "^/articles$",           "dest": "/articles.html" },
+    { "src": "^/i/articles/(?<id>[^/]+)$", "dest": "/api/prerender?type=article&id=$id" },
+
+    { "src": "^/messages$",           "dest": "/chat.html" },
+    { "src": "^/messages/(?<username>[^/]+)$", "dest": "/chat.html" },
+
+    { "src": "^/(?<username>[^/]+)/followers$", "dest": "/followlist.html" },
+    { "src": "^/(?<username>[^/]+)/following$", "dest": "/followlist.html" },
+
+    { "src": "^/i/status/(?<id>[^/]+)$", "dest": "/api/prerender?type=thread&id=$id" },
+    { "src": "^/(?<username>[^/]+)/status/(?<id>[^/]+)$", "dest": "/api/prerender?type=thread&username=$username&id=$id" },
+
+    { "src": "^/(?<username>[^/]+)$", "dest": "/api/prerender?type=profile&username=$username" }
+  ]
+}

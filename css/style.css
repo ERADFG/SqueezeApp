@@ -1,0 +1,2790 @@
+/* ═══════════════════════════════════════════════════════════════
+   INTERACTINK — design tokens
+   Restyled to match the Twitter-clone reference: white app shell,
+   sticky icon/label sidebar, bordered center column, green
+   accent, rounded-full controls, rose "like" color.
+   Variable NAMES kept stable (lots of rules reference them) —
+   only the values changed, so nothing downstream breaks.
+   ═══════════════════════════════════════════════════════════════ */
+/* ── CROSS-PAGE VIEW TRANSITIONS — this app is plain multi-page HTML
+   (no SPA router), so every internal link is a real full navigation.
+   This one rule asks supporting browsers (Chrome/Edge 126+) to
+   cross-fade between the old and new page instead of the default
+   hard flash-to-white, which is most of what makes an MPA "feel" like
+   an SPA. Free progressive enhancement — browsers without support
+   just keep the normal instant navigation, nothing else changes. ── */
+@view-transition {
+  navigation: auto;
+}
+
+:root {
+  --bg:        #FFFFFF;   /* page background */
+  --ink:       #0F1419;   /* twitter gray-900 text */
+  /* --maroon/--mustard/--link are the app's one accent color (green
+     by default). Light-mode value is green-700 #15803D, which clears
+     4.5:1 on white (5.31:1); dark/dim mode override below uses the
+     brighter green-600 #16A34A, since against a near-black background
+     that reads at a strong 5.7–7.3:1 while staying visually lighter/
+     more legible than the green-700 shade would there. */
+  --maroon:    #15803D;   /* accent — green-700 (AA on white) */
+  --maroon-dk: #166534;   /* accent hover/active — green-800 */
+  --maroon-tint: rgba(21,128,61,.10); /* accent hover wash */
+  --mustard:   #15803D;   /* secondary accent, kept same as maroon for one accent color */
+  --mustard-dk:#166534;
+  --cream-card:#FFFFFF;   /* card background */
+  --line:      #EFF3F4;   /* hairline border — gray-100 */
+  --muted:     #536471;   /* secondary text — twitter gray-500 */
+  --green:     #00BA7C;   /* greentext */
+  --link:      #15803D;
+  --vis:       #7C3AED;
+  /* --like was rose-500 #F43F5E, 3.67:1 on white — also below AA.
+     Darkened to rose-600 (4.7:1); dark/dim mode restores the
+     brighter rose-500 below for the same reason as --maroon above. */
+  --like:      #E11D48;   /* rose-600 (AA on white) */
+  --like-tint: rgba(225,29,72,.10);
+  --hover-bg:  #F7F9F9;   /* row hover wash */
+  --div:       #EFF3F4;   /* used by a couple of inline hr styles */
+  --input-bg:  #FFFFFF;   /* form field / card-on-card background */
+  --border-input: #CFD9DE; /* form field / outline-button border */
+  --translucent-bg: rgba(255,255,255,.85); /* sticky/backdrop-blur headers */
+  --r-sm: 8px;
+  --r-md: 16px;
+  --r-lg: 20px;
+  --shadow-card: none;
+  --shadow-card-hov: none;
+  --shadow-pop:  0 12px 32px rgba(15,20,25,.18), 0 2px 8px rgba(15,20,25,.08);
+  color-scheme: light; /* tells the browser to render native form
+    controls (select dropdowns, date/time pickers, scrollbars) in a
+    light palette — overridden to `dark` below for Dim/Lights out,
+    otherwise those browser-native bits ignore our theme entirely
+    and can render with black-on-dark text. */
+}
+
+/* ── THEMES — "Default" (light) is the :root above; Dim and Lights out
+   (dark) are opted into via data-theme on <html>, set by settings.js
+   (chooseTheme()) and persisted to localStorage, applied pre-paint by
+   a tiny inline script in every page's <head> to avoid a flash. Accent
+   (--maroon/--link) and --like revert to their original, brighter
+   values here — against these near-black surfaces the brighter shades
+   read at 5.9–7.6:1, better than the light-mode-safe darker shades
+   would (which drop to ~2.8–4.5:1 on dark backgrounds). --green stays
+   constant across themes, same as X's greentext does. ── */
+html[data-theme="dim"] {
+  --bg:#15202B; --ink:#F7F9F9; --cream-card:#15202B; --line:#38444D;
+  --muted:#8B98A5; --hover-bg:#1E2732; --input-bg:#1E2732; --div:#38444D;
+  --border-input:#38444D; --translucent-bg:rgba(21,32,43,.85);
+  --maroon:#16A34A; --maroon-dk:#22C55E; --mustard:#16A34A; --mustard-dk:#22C55E; --link:#16A34A;
+  --like:#F43F5E;
+  --maroon-tint: rgba(22,163,74,.16); --like-tint: rgba(244,63,94,.16);
+  color-scheme: dark;
+}
+html[data-theme="dark"] {
+  --bg:#000000; --ink:#E7E9EA; --cream-card:#000000; --line:#2F3336;
+  --muted:#71767B; --hover-bg:#0B0B0B; --input-bg:#000000; --div:#2F3336;
+  --border-input:#2F3336; --translucent-bg:rgba(0,0,0,.85);
+  --maroon:#16A34A; --maroon-dk:#22C55E; --mustard:#16A34A; --mustard-dk:#22C55E; --link:#16A34A;
+  --like:#F43F5E;
+  --maroon-tint: rgba(22,163,74,.16); --like-tint: rgba(244,63,94,.16);
+  color-scheme: dark;
+}
+
+/* ── ACCENT COLOR — Settings → Appearance lets people swap the app's
+   one accent color (buttons, links, active states — everything that
+   reads var(--maroon)/var(--mustard)/var(--link)) between 5 options.
+   Applied via data-accent on <html>, set by settings.js (chooseAccent())
+   and persisted to localStorage, applied pre-paint by the same inline
+   <head> script that handles the theme, to avoid a flash. "Green" is
+   the default and needs no override — it's just the :root values above.
+   Light-mode values below are darkened from the original palette so
+   every accent clears 4.5:1 on a white background (green and orange
+   were previously 3.3:1 and 2.8:1 — both failed AA); the dark/dim
+   overrides beneath restore the original, brighter shades since those
+   already had strong contrast against near-black surfaces. */
+html[data-accent="red"] {
+  --maroon:#DC2626; --maroon-dk:#B91C1C; --maroon-tint:rgba(220,38,38,.10);
+  --mustard:#DC2626; --mustard-dk:#B91C1C; --link:#DC2626;
+}
+html[data-accent="blue"] {
+  --maroon:#0369A1; --maroon-dk:#075985; --maroon-tint:rgba(3,105,161,.10);
+  --mustard:#0369A1; --mustard-dk:#075985; --link:#0369A1;
+}
+html[data-accent="purple"] {
+  --maroon:#7C3AED; --maroon-dk:#6D28D9; --maroon-tint:rgba(124,58,237,.10);
+  --mustard:#7C3AED; --mustard-dk:#6D28D9; --link:#7C3AED;
+}
+html[data-accent="orange"] {
+  --maroon:#C2410C; --maroon-dk:#9A3412; --maroon-tint:rgba(194,65,12,.10);
+  --mustard:#C2410C; --mustard-dk:#9A3412; --link:#C2410C;
+}
+html[data-theme="dim"][data-accent="red"],   html[data-theme="dark"][data-accent="red"]   { --maroon-tint:rgba(220,38,38,.16); }
+html[data-theme="dim"][data-accent="blue"],  html[data-theme="dark"][data-accent="blue"]  { --maroon:#0EA5E9; --maroon-dk:#38BDF8; --mustard:#0EA5E9; --mustard-dk:#38BDF8; --link:#0EA5E9; --maroon-tint:rgba(14,165,233,.16); }
+html[data-theme="dim"][data-accent="purple"],html[data-theme="dark"][data-accent="purple"]{ --maroon-tint:rgba(124,58,237,.16); }
+html[data-theme="dim"][data-accent="orange"],html[data-theme="dark"][data-accent="orange"]{ --maroon:#F97316; --maroon-dk:#FB923C; --mustard:#F97316; --mustard-dk:#FB923C; --link:#F97316; --maroon-tint:rgba(249,115,22,.16); }
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+/* ── KILL THE MOBILE TAP-HIGHLIGHT FLASH — Safari/Chrome on mobile
+   paint their own translucent blue/gray rectangle over whatever you
+   tap (any <a>, <button>, or anything with a click handler) unless
+   this is explicitly turned off. Set on every element (not just
+   buttons/links) since taps can land on a span/div inside them too
+   and still trigger the browser's default. This is purely a "don't
+   paint the OS highlight" switch — it doesn't touch our own
+   :active/oc-bounce feedback below, which is what should show
+   instead. ── */
+html { -webkit-tap-highlight-color:transparent; }
+*, *::before, *::after { -webkit-tap-highlight-color:transparent; }
+
+/* ── SUBTLE MOTION — a couple of small, reusable keyframes used across
+   the app for "this just appeared" (feed rows/cards) and "this was
+   just toggled on" (like/bookmark/repost) feedback. Kept short and
+   low-amplitude on purpose so it reads as responsiveness, not as
+   decoration. Anyone with prefers-reduced-motion set gets none of
+   this (or the view-transitions/skeleton-pulse animations already
+   in this file) — every animation/transition collapses to effectively
+   instant below. ── */
+@keyframes oc-fade-in { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+@keyframes oc-pop { 0% { transform:scale(1); } 40% { transform:scale(1.22); } 100% { transform:scale(1); } }
+
+/* ── BUTTON PRESS BOUNCE — a tiny, deliberately understated "press"
+   animation applied to every button-like control on click (wired up
+   via a single delegated listener in common.js, so it also reaches
+   buttons that get inserted into the page later, like post actions).
+   The scale delta is small (4% down, 2% overshoot) and the whole
+   thing is over in ~200ms, so it reads as tactile feedback rather
+   than a flashy bounce. Folds into the prefers-reduced-motion rule
+   above like every other animation in this file. ── */
+@keyframes oc-btn-bounce { 0% { transform:scale(1); } 40% { transform:scale(.96); } 70% { transform:scale(1.02); } 100% { transform:scale(1); } }
+.oc-bounce { animation:oc-btn-bounce .22s ease-out; }
+
+/* ── INSTANT PRESS-DOWN — fires the moment a finger/cursor goes down,
+   before the click (and the oc-bounce release animation above) even
+   fires, so there's zero-latency feedback that a tap registered.
+   Selector intentionally matches the delegated bounce listener in
+   common.js (button/role=button/inputs/accent swatches/real links),
+   minus the inline @mention, #hashtag, and URL links inside post
+   bodies — those stay plain text links, not "buttons", so they don't
+   flex mid-sentence. touch-action:manipulation on the same set drops
+   the ~300ms tap delay/double-tap-zoom mobile browsers otherwise add,
+   so taps feel immediate. Any control with its own bespoke :active
+   rule elsewhere in this file (higher specificity, e.g. .act:active,
+   .sidebar-post-btn:active) keeps using that instead of this default. ── */
+button, [role="button"], input[type="submit"], input[type="button"], .accent-swatch,
+a[href]:not(.body-link):not(.body-mention):not(.body-hashtag) {
+  touch-action:manipulation;
+}
+button:not(:disabled):active, [role="button"]:active, input[type="submit"]:active, input[type="button"]:active, .accent-swatch:active,
+a[href]:not(.body-link):not(.body-mention):not(.body-hashtag):active {
+  transform:scale(.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration:.001ms !important; animation-iteration-count:1 !important;
+    transition-duration:.001ms !important; scroll-behavior:auto !important;
+  }
+}
+
+/* ── SMOOTH CROSS-PAGE NAVIGATION ──
+   This is a classic multi-page app (real <a href> navigations, full
+   document loads) rather than a client-side router, so the browser's
+   built-in Cross-Document View Transitions are the right tool for
+   "smooth navigation" here: same-origin link clicks crossfade instead
+   of hard-cutting to a blank white page while the next document loads.
+   Supported in Chromium-based browsers; everywhere else this rule is
+   simply ignored and navigation behaves exactly as before. */
+@view-transition {
+  navigation: auto;
+}
+::view-transition-old(root) { animation-duration:.16s; animation-timing-function:ease-out; }
+::view-transition-new(root) { animation-duration:.18s; animation-timing-function:ease-out; }
+
+html { scroll-behavior:auto; }
+
+body {
+  background:var(--bg);
+  font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size:15px;
+  color:var(--ink);
+  line-height:1.35;
+  min-height:100vh;
+}
+
+/* Safety net: nothing on the page should ever be wider than the
+   viewport, but a too-wide row (e.g. a cramped post action row on a
+   narrow phone) used to force the whole page into horizontal scroll,
+   which on mobile shows up as content sheared off the right edge on
+   first paint. This clips that instead of letting it drag the page
+   sideways — nested horizontal scrollers (board-scroller, tables,
+   the mobile repost sheet) keep scrolling normally since this only
+   affects the outermost box. */
+html, body { overflow-x:hidden; max-width:100vw; }
+
+a { color:var(--link); text-decoration:none; }
+a:hover { color:var(--maroon-dk); text-decoration:underline; }
+a:visited.pb-link { color:var(--vis); }
+
+::selection { background:var(--maroon-tint); color:var(--ink); }
+
+a:focus-visible, button:focus-visible, input:focus-visible,
+textarea:focus-visible, select:focus-visible, .bl:focus-visible, .br:focus-visible {
+  outline: 2px solid var(--maroon);
+  outline-offset: 1px;
+  border-radius:2px;
+}
+
+.onigiri { display:inline-block; flex:none; width:1em; height:1em; }
+/* ── LOGO MARK — img-based & logo, theme-swapped: a self-contained
+   light-mode mark (white squircle, black &) and a transparent
+   dark-mode mark (white silhouette) stacked in the same slot, toggled
+   purely with CSS so there's no flash/JS needed for the in-page logo
+   (the favicon, which can't be styled with CSS, is swapped by
+   updateFavicon() in common.js instead — see applyTheme()). ── */
+.logo-mark { display:none; width:100%; height:100%; object-fit:contain; }
+.logo-mark-light { display:block; }
+html[data-theme="dim"] .logo-mark-light, html[data-theme="dark"] .logo-mark-light { display:none; }
+html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark { display:block; }
+
+/* ═══════════════════════════════════════════════════════════════
+   APP SHELL — #hdr is the fixed left sidebar (Twitter nav column),
+   pinned to the viewport so it never moves while scrolling.
+   #main is the flex row of [center column, right column].
+   ═══════════════════════════════════════════════════════════════ */
+.xshell {
+  display:flex;
+  width:100%;
+  max-width:1265px;
+  margin:0 auto;
+  align-items:flex-start;
+}
+
+/* ── LEFT SIDEBAR ──
+   position:fixed (not sticky) — sticky still lets the sidebar drift
+   by a pixel or two in some browsers depending on how the sticky
+   containing block/ancestor stacking resolves; fixed pins it to the
+   viewport with zero ambiguity, so it truly never moves while the
+   page scrolls. Because fixed elements are pulled out of normal
+   flow, "left" is computed to land exactly where the in-flow sidebar
+   used to sit — .xshell centers itself at max-width:1265px via
+   margin:0 auto, so its own left edge is max(0, (viewport-1265)/2);
+   the sidebar mirrors that. #main picks up a matching margin-left
+   below so its content starts exactly where it used to. */
+#hdr {
+  width:275px;
+  flex:none;
+  position:fixed;
+  top:0;
+  left:max(0px, calc(50% - 632.5px));
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  padding:8px 12px;
+  border-right:1px solid var(--line);
+  box-shadow:none;
+  background:var(--bg);
+  color:var(--ink);
+  z-index:50;
+}
+#hdr .sb-top { display:flex; flex-direction:column; gap:2px; }
+
+.logo {
+  display:flex; align-items:center; gap:10px;
+  font-family:inherit; font-size:19px; font-weight:800; color:var(--ink);
+  text-decoration:none; padding:10px 8px; border-radius:999px; width:fit-content;
+}
+.logo:hover { background:var(--maroon-tint); text-decoration:none; color:var(--ink); }
+.logo .badge {
+  width:36px; height:36px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; flex:none;
+}
+.logo .badge .logo-mark { width:26px; height:26px; }
+.logo em { font-style:normal; color:var(--maroon); }
+.logo .wordmark { white-space:nowrap; }
+
+#hdr nav { display:flex; flex-direction:column; align-items:stretch; gap:2px; margin-top:6px; }
+#hdr nav a {
+  display:flex; align-items:center; gap:16px; color:var(--ink); text-decoration:none;
+  font-size:19px; font-weight:500; padding:10px 12px; border-radius:999px;
+  transition:background .12s ease; position:relative;
+}
+#hdr nav a:hover { background:var(--hover-bg); text-decoration:none; color:var(--ink); }
+#hdr nav a:visited { color:var(--ink); }
+#hdr nav a.cur { font-weight:800; }
+#hdr nav a .navicon { width:24px; height:24px; flex:none; position:relative; display:flex; }
+#hdr nav a .navicon svg { width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; transition:transform .18s cubic-bezier(.34,1.56,.64,1), fill .12s ease; }
+#hdr nav a.cur .navicon svg { fill:currentColor; transform:scale(1.08); }
+.navbadge { margin-left:auto; background:var(--like); color:#fff; font-size:11px; font-weight:800; line-height:1; border-radius:999px; padding:3px 6px; flex:none; }
+#hdr nav a .navicon .navbadge {
+  position:absolute; top:-6px; right:-9px; margin-left:0; padding:1px 5px; font-size:10px; line-height:1.3;
+  box-shadow:0 0 0 2px var(--bg);
+}
+
+/* "More" — flyout for Settings/Rules, styled like the other nav rows
+   but as a <button> (it opens .acct-menu rather than navigating). */
+.navmore-btn {
+  display:flex; align-items:center; gap:16px; width:100%; background:none; border:none; text-align:left;
+  color:var(--ink); font-family:inherit; font-size:19px; font-weight:500; padding:10px 12px; border-radius:999px;
+  cursor:pointer; transition:background .12s ease;
+}
+.navmore-btn:hover { background:var(--hover-bg); }
+.navmore-btn .navicon { width:24px; height:24px; flex:none; }
+.navmore-btn .navicon svg { width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.navmore-menu a { display:flex; align-items:center; gap:12px; }
+.navmore-menu a svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; flex:none; }
+
+/* Big rounded "Post" pill under the nav items, X-style */
+.sidebar-post-btn {
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  width:100%; margin-top:14px; border:none; border-radius:999px;
+  background:var(--maroon); color:#fff; font-family:inherit; font-weight:800; font-size:16px;
+  padding:13px; cursor:pointer; text-decoration:none;
+  box-shadow:0 1px 2px rgba(15,20,25,.12);
+  transition:background .12s ease, box-shadow .12s ease, transform .08s ease;
+}
+.sidebar-post-btn svg { width:18px; height:18px; flex:none; }
+.sidebar-post-btn:hover { background:var(--maroon-dk); text-decoration:none; color:#fff; box-shadow:0 4px 10px rgba(15,20,25,.16); }
+.sidebar-post-btn:active { transform:scale(.97); box-shadow:0 1px 2px rgba(15,20,25,.12); }
+
+/* auth-area sits at the bottom of the sidebar, Twitter-profile-button style */
+.auth-area { display:block; margin-top:auto; padding-top:8px; }
+.auth-area a { color:var(--maroon); text-decoration:none; font-size:15px; font-weight:700; }
+.auth-area a:hover { text-decoration:underline; }
+.auth-area .divider { display:none; }
+.auth-cta { display:flex; flex-direction:column; gap:8px; padding:4px; }
+.auth-cta a {
+  display:block; text-align:center; border-radius:999px; padding:9px 14px; font-size:15px; font-weight:700;
+}
+.auth-cta a.cta-primary { background:var(--maroon); color:#fff; }
+.auth-cta a.cta-primary:hover { background:var(--maroon-dk); text-decoration:none; }
+.auth-cta a.cta-ghost { border:1px solid var(--border-input); color:var(--ink); }
+.auth-cta a.cta-ghost:hover { background:var(--hover-bg); text-decoration:none; }
+
+.acct { position:relative; display:block; }
+.acct-btn {
+  display:flex; align-items:center; gap:10px; background:none; border:none; width:100%;
+  cursor:pointer; color:var(--ink); font-family:inherit;
+  font-size:15px; font-weight:700; padding:8px; border-radius:999px; text-align:left;
+}
+.acct-btn:hover { background:var(--hover-bg); }
+.acct-btn .acct-txt { display:flex; flex-direction:column; min-width:0; flex:1; }
+.acct-btn .acct-name { font-weight:800; font-size:14.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.acct-btn .acct-handle { font-weight:400; font-size:13.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.acct-btn .acct-dots { flex:none; width:18px; height:18px; color:var(--ink); }
+.acct-btn .acct-dots svg { width:100%; height:100%; }
+.acct-menu {
+  position:absolute; left:0; bottom:56px; z-index:50;
+  background:var(--cream-card); border:1px solid var(--line); border-radius:var(--r-sm); min-width:220px;
+  box-shadow:var(--shadow-pop); overflow:hidden;
+  opacity:0; visibility:hidden; pointer-events:none;
+  transform:translateY(6px) scale(.97); transform-origin:bottom left;
+  transition:opacity .13s ease, transform .13s cubic-bezier(.2,.8,.2,1), visibility 0s linear .13s;
+}
+.acct.open .acct-menu {
+  opacity:1; visibility:visible; pointer-events:auto; transform:translateY(0) scale(1);
+  transition:opacity .15s ease, transform .15s cubic-bezier(.2,.8,.2,1);
+}
+.acct-menu a, .acct-menu button {
+  display:block; width:100%; text-align:left; background:none; border:none;
+  font-family:inherit; font-size:14px; font-weight:700;
+  color:var(--ink); text-decoration:none; padding:12px 16px; cursor:pointer;
+  border-bottom:1px solid var(--line);
+}
+.acct-menu a:last-child, .acct-menu button:last-child { border-bottom:none; }
+.acct-menu a:hover, .acct-menu button:hover { background:var(--hover-bg); }
+
+/* ── TABS — sticky "For you / Following" header of the center column ── */
+#board-hdr {
+  position:sticky; top:0; z-index:5;
+  background:var(--translucent-bg); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);
+  display:flex; align-items:stretch;
+}
+.xtabs { display:flex; flex:1; min-width:0; }
+.xtab {
+  flex:1; background:none; border:none; cursor:pointer; font-family:inherit;
+  font-size:15px; font-weight:700; color:var(--muted); padding:16px 0; position:relative;
+  transition:background-color .12s ease, color .12s ease;
+}
+.xtab:hover { background:var(--hover-bg); color:var(--ink); }
+.xtab.active { color:var(--ink); }
+.xtab.active::after {
+  content:""; position:absolute; left:50%; bottom:0; transform:translateX(-50%);
+  width:56px; height:4px; border-radius:4px; background:var(--maroon);
+}
+.xtabs-plus {
+  flex:none; width:52px; display:flex; align-items:center; justify-content:center;
+  background:none; border:none; border-left:1px solid var(--line); color:var(--muted); cursor:pointer;
+}
+.xtabs-plus:hover { color:var(--maroon); }
+.xtabs-plus svg { width:18px; height:18px; }
+
+/* ── SHOW N NEW POSTS PILL — Twitter's "refresh" affordance ── */
+.show-new-pill {
+  display:block; text-align:center; padding:12px 16px; font-size:15px; font-weight:700;
+  color:var(--maroon); text-decoration:none; border-bottom:1px solid var(--line);
+  background:var(--cream-card); transition:background-color .12s ease;
+}
+.show-new-pill:hover { background:var(--maroon-tint); text-decoration:none; }
+
+/* Bottom-of-feed marker the infinite-scroll IntersectionObserver
+   watches to trigger the next page — invisible, just needs height so
+   it can scroll into view before the user hits the literal bottom. */
+.feed-sentinel { height:1px; }
+
+/* ── POST FORM (inline composer, Twitter-style) ── */
+#pf-wrap { max-width:none; margin:0; padding:0; border-bottom:8px solid var(--line); }
+#pf-box { background:var(--cream-card); border-bottom:1px solid var(--line); border-radius:0; box-shadow:none; overflow:visible; padding:12px 16px 8px; }
+.pf-row { display:flex; gap:12px; align-items:flex-start; }
+.pf-avatar { flex:none; width:40px; height:40px; border-radius:50%; overflow:hidden; display:block; background:var(--hover-bg); }
+.pf-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
+.pf-col { flex:1; min-width:0; }
+.pf-toolbar { display:flex; align-items:center; justify-content:space-between; margin-top:8px; padding-top:10px; border-top:1px solid var(--line); }
+.pf-icons { display:flex; align-items:center; gap:2px; }
+.pf-ic {
+  width:34px; height:34px; border-radius:50%; border:none; background:none; cursor:pointer;
+  color:var(--maroon); display:inline-flex; align-items:center; justify-content:center;
+  transition:background-color .12s ease, transform .12s cubic-bezier(.34,1.56,.64,1);
+}
+.pf-ic svg { width:19px; height:19px; }
+.pf-ic:hover:not(:disabled) { background:var(--maroon-tint); transform:scale(1.08); }
+.pf-ic:disabled { color:#9EC8DE; cursor:default; }
+
+input[type="text"], input[type="email"], input[type="password"], textarea, select {
+  font-family:inherit; font-size:15px; border-radius:var(--r-sm);
+  border:1px solid var(--border-input); padding:8px 10px; background:var(--input-bg); width:100%; color:var(--ink);
+}
+input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus, textarea:focus, select:focus { border-color:var(--maroon); outline:none; box-shadow:0 0 0 1px var(--maroon); }
+#pf-box textarea { height:56px; resize:none; border:none; padding:8px 0; font-size:19px; }
+.rfm textarea { border:none; padding:5px 0; font-size:17px; }
+#pf-box textarea:focus, .rfm textarea:focus { box-shadow:none; }
+
+.pf-note { font-size:11.5px; color:var(--muted); display:block; margin-top:2px; }
+
+.pf-btn, .rfm-row input[type="submit"], .modal-btn {
+  font-family:inherit; font-size:14px; font-weight:700;
+  background:var(--maroon); color:#fff; border:none; border-radius:999px;
+  padding:7px 18px; cursor:pointer; transition:background .12s ease, opacity .1s ease, transform .1s ease;
+}
+.pf-btn:hover, .rfm-row input[type="submit"]:hover, .modal-btn:hover { background:var(--maroon-dk); }
+.pf-btn:active, .rfm-row input[type="submit"]:active, .modal-btn:active { background:var(--maroon-dk); opacity:.85; transform:scale(.97); }
+.pf-btn:disabled, .rfm-row input[type="submit"]:disabled { opacity:0.5; cursor:default; }
+.f-note { font-size:11px; color:var(--muted); text-align:left; padding:8px 0 0; }
+
+input[type="file"] { font-size:13px; color:var(--muted); max-width:100%; }
+input[type="file"]::file-selector-button {
+  font-family:inherit; font-weight:700; font-size:13px;
+  background:var(--maroon-tint); color:var(--maroon); border:none; border-radius:999px; padding:6px 14px; margin-right:8px; cursor:pointer;
+}
+input[type="file"]::file-selector-button:hover { background:var(--maroon); color:#fff; }
+
+select {
+  appearance:none; -webkit-appearance:none;
+  /* neutral mid-gray works on light AND dark surfaces — a fixed dark
+     fill here (as before) went near-invisible against a dark <select>
+     background in Dim/Lights out mode. */
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23536471'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 10px center; padding-right:26px;
+}
+
+.fp { margin-top:8px; }
+.fp img, .fp video { max-width:160px; max-height:120px; border:1px solid var(--line); border-radius:12px; display:block; }
+.rm-f { font-size:12px; color:var(--maroon); cursor:pointer; text-decoration:underline; display:inline-block; margin-top:4px; }
+
+/* ── SECTION BAR ── */
+.sec-bar {
+  background:none; color:var(--ink); font-weight:800; font-size:19px;
+  padding:12px 16px; margin-bottom:0; display:flex; align-items:baseline; gap:8px;
+  border:none; border-bottom:1px solid var(--line); border-radius:0; font-family:inherit;
+  position:sticky; top:0; background-color:var(--translucent-bg); backdrop-filter:blur(8px); z-index:5;
+}
+.sec-bar .sub { font-weight:400; font-size:13px; color:var(--muted); }
+.sec-bar h1 { font:inherit; font-weight:inherit; margin:0; color:inherit; }
+.sec-bar a.back { color:var(--maroon); font-size:14px; font-weight:700; margin-left:auto; text-decoration:none; }
+.sec-bar a.back:hover { text-decoration:underline; }
+
+/* ── MAIN LAYOUT ── */
+#main { display:flex; gap:0; padding:0; max-width:none; margin:0 0 0 275px; align-items:flex-start; flex:1; min-width:0; }
+#feed { flex:1 1 600px; max-width:600px; min-width:0; border-left:1px solid var(--line); border-right:1px solid var(--line); min-height:100vh; }
+#sidebar { flex:0 0 350px; min-width:0; padding:8px 16px; position:sticky; top:0; max-height:100vh; overflow-y:auto; scrollbar-width:none; }
+#sidebar::-webkit-scrollbar { display:none; }
+
+/* ── WHO TO FOLLOW (right column, Twitter-style suggestions box) ── */
+.who-box { background:var(--hover-bg); border-radius:var(--r-lg); padding:4px 0 6px; margin-bottom:16px; }
+.who-box .t-lbl { margin-bottom:0; }
+.who-row { display:flex; align-items:center; gap:10px; padding:10px 16px; text-decoration:none; color:var(--ink); transition:background-color .12s ease; animation:oc-fade-in .2s ease both; }
+.who-row:hover { background:rgba(15,20,25,.03); text-decoration:none; }
+.who-row .avatar { flex:none; }
+.who-row-txt { display:flex; flex-direction:column; min-width:0; flex:1; }
+.who-row-name { font-size:14px; font-weight:800; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.who-row-handle { font-size:13px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.who-follow-btn {
+  flex:none; font-size:13px; font-weight:800; padding:6px 14px; border-radius:999px;
+  background:var(--ink); color:var(--bg); border:none; cursor:pointer; transition:background-color .12s ease, filter .12s ease, transform .1s ease;
+}
+.who-follow-btn:hover { filter:brightness(.85); }
+.who-follow-btn:active { transform:scale(.95); }
+.who-follow-btn:disabled { opacity:.5; cursor:default; }
+.who-box .show-more { display:block; padding:12px 16px; font-size:15px; color:var(--link); text-decoration:none; border-radius:0 0 var(--r-lg) var(--r-lg); }
+.who-box .show-more:hover { background:rgba(15,20,25,.03); text-decoration:none; }
+.who-box .no-t { padding:4px 16px 12px; }
+
+/* ── COMMUNITY GUIDE (communities.html explainer — collapsible accordion,
+   styled after .who-box: same --hover-bg card + --r-lg radius, real
+   margin-top so it reads as its own block below the communities list
+   instead of a flush-against-it wall of text) ── */
+.comm-guide-title { font:inherit; font-weight:800; font-size:19px; color:var(--ink); margin:28px 16px 10px; }
+.comm-guide { background:var(--hover-bg); border-radius:var(--r-lg); margin:0 16px 16px; overflow:hidden; }
+.comm-guide-item { border-top:1px solid var(--line); }
+.comm-guide-item:first-child { border-top:none; }
+.comm-guide-item summary {
+  list-style:none; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:14px 16px; font-size:15px; font-weight:700; color:var(--ink); transition:background-color .12s ease;
+}
+.comm-guide-item summary::-webkit-details-marker { display:none; }
+.comm-guide-item summary:hover { background:rgba(15,20,25,.03); }
+.comm-guide-item summary::after {
+  content:''; flex:none; width:8px; height:8px; margin-top:-3px;
+  border-right:2px solid var(--muted); border-bottom:2px solid var(--muted);
+  transform:rotate(45deg); transition:transform .15s ease;
+}
+.comm-guide-item[open] summary::after { margin-top:3px; transform:rotate(-135deg); }
+.comm-guide-item[open] summary { border-bottom:1px solid var(--line); }
+.comm-guide-body { padding:2px 16px 16px; }
+.comm-guide-body p { font-size:14.5px; line-height:1.5; color:var(--ink); margin:0; }
+.comm-guide-body b { font-weight:700; }
+
+/* ── COMMUNITIES — sidebar box rows, browse list, and single-community page ── */
+.comm-avatar {
+  flex:none; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  background:var(--maroon); color:#fff; font-weight:800; font-size:16px; overflow:hidden;
+}
+.comm-avatar-plus { background:var(--hover-bg); color:var(--maroon); border:1.5px dashed var(--maroon); }
+.comm-avatar-plus svg { width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:2.2; }
+.comm-create-row { display:flex; align-items:center; gap:10px; padding:10px 16px; text-decoration:none; color:var(--ink); transition:background-color .12s ease; }
+.comm-create-row:hover { background:rgba(15,20,25,.03); text-decoration:none; }
+.comm-create-row .who-row-name { color:var(--maroon); }
+.comm-joined-btn { background:none; color:var(--muted); border:1px solid var(--line); }
+.comm-joined-btn:hover { background:rgba(220,38,38,.08); color:#dc2626; border-color:rgba(220,38,38,.4); }
+
+.comm-list { display:flex; flex-direction:column; }
+.comm-list .comm-row { border-bottom:1px solid var(--line); padding:14px 16px; }
+.comm-list .comm-avatar { width:48px; height:48px; font-size:18px; }
+.comm-list .avatar { width:48px; height:48px; }
+.comm-list .who-row-name { font-size:15px; }
+.comm-list .comm-desc { font-size:13px; color:var(--muted); margin-top:2px; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* ── PAGE-NUMBER PAGER — shared by any 10-per-page list (Communities
+   browse, Lists browse): Prev/Next arrows + numbered pages with
+   first/last/current/±1-neighbor kept and gaps collapsed to "…". ── */
+.comm-pager { display:flex; align-items:center; justify-content:center; gap:4px; padding:16px; flex-wrap:wrap; }
+.comm-pager-btn {
+  flex:none; min-width:32px; height:32px; padding:0 6px; border-radius:var(--r-sm); border:none; background:none;
+  font-family:inherit; font-size:14px; font-weight:700; color:var(--ink); cursor:pointer;
+  display:flex; align-items:center; justify-content:center; transition:background-color .12s ease;
+}
+.comm-pager-btn:hover:not(:disabled) { background:var(--hover-bg); }
+.comm-pager-btn:disabled { color:var(--muted); opacity:.4; cursor:default; }
+.comm-pager-btn.active { background:var(--ink); color:var(--bg); }
+.comm-pager-btn svg { width:16px; height:16px; }
+.comm-pager-ellipsis { flex:none; min-width:32px; height:32px; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:14px; }
+
+/* ── COMMUNITY ABOUT TAB — Community Info / Rules / Moderators,
+   styled after an X Community's About panel. ── */
+.comm-about-section { padding:16px; border-bottom:1px solid var(--line); }
+.comm-about-section h3 { font-size:17px; font-weight:800; color:var(--ink); margin:0 0 10px; }
+.comm-about-section-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:2px; }
+.comm-about-section-hdr h3 { margin-bottom:0; }
+.comm-about-desc { font-size:15px; line-height:1.4; color:var(--ink); margin:0 0 14px; white-space:pre-wrap; word-break:break-word; }
+.comm-about-fact { display:flex; align-items:flex-start; gap:12px; font-size:14px; color:var(--ink); margin-bottom:14px; }
+.comm-about-fact:last-child { margin-bottom:0; }
+.comm-about-fact svg { flex:none; width:20px; height:20px; stroke:var(--muted); margin-top:1px; }
+.comm-about-fact strong { font-weight:700; display:block; }
+.comm-about-fact-sub { color:var(--muted); font-size:13px; }
+.comm-about-fact a { color:var(--link); text-decoration:none; font-weight:700; }
+.comm-about-fact a:hover { text-decoration:underline; }
+.comm-about-empty { font-size:14px; color:var(--muted); margin:0; }
+.comm-about-add { background:none; border:none; color:var(--link); font-size:13px; font-weight:700; cursor:pointer; padding:4px 6px; border-radius:6px; }
+.comm-about-add:hover { background:var(--hover-bg); text-decoration:underline; }
+
+.comm-danger-section { border-bottom:none; }
+.comm-danger-section h3 { color:#dc2626; }
+.comm-danger-section .comm-about-fact-sub { display:block; margin:0 0 12px; }
+
+.comm-rules-list { list-style:none; margin:0; padding:0; counter-reset:comm-rule; }
+.comm-rule-row { display:flex; align-items:flex-start; gap:12px; padding:10px 0; border-bottom:1px solid var(--line); }
+.comm-rule-row:last-child { border-bottom:none; }
+.comm-rule-num { flex:none; width:24px; height:24px; border-radius:50%; background:var(--hover-bg); color:var(--muted); font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; counter-increment:comm-rule; }
+.comm-rule-num::before { content:counter(comm-rule); }
+.comm-rule-body { flex:1; min-width:0; }
+.comm-rule-title { font-size:14.5px; font-weight:800; color:var(--ink); }
+.comm-rule-desc { font-size:13.5px; color:var(--muted); margin-top:2px; line-height:1.4; }
+.comm-row-remove { flex:none; background:none; border:none; color:var(--muted); cursor:pointer; font-size:12px; width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+.comm-row-remove:hover { background:rgba(220,38,38,.08); color:#dc2626; }
+
+.comm-mods-list { display:flex; flex-direction:column; }
+.comm-mod-row { padding:8px 0; }
+.comm-mod-row .who-follow-btn { flex:none; }
+
+.comm-inline-form { background:var(--hover-bg); border-radius:var(--r-md); padding:12px; margin:0 0 12px; }
+.comm-inline-form input[type="text"], .comm-inline-form textarea {
+  width:100%; box-sizing:border-box; margin-bottom:8px; background:var(--bg);
+  border:1px solid var(--line); border-radius:8px; padding:8px 10px; font:inherit; color:var(--ink);
+}
+.comm-inline-form textarea { resize:vertical; min-height:44px; }
+.comm-inline-form-actions { display:flex; justify-content:flex-end; }
+.comm-mod-search-row { padding:8px 4px; }
+#cam-results:empty { display:none; }
+
+/* Create-community modal — same .modal shell as the delete/quote/gif
+   modals above, just a little wider to fit the description textarea. */
+.modal.cc-modal { width:420px; padding-bottom:0; }
+.cc-dots { display:flex; justify-content:center; gap:6px; margin:0 0 12px; }
+.cc-dot { width:6px; height:6px; border-radius:50%; background:var(--line); transition:background-color .15s ease, transform .15s ease; }
+.cc-dot.active { background:var(--maroon); transform:scale(1.3); }
+.cc-dot.done { background:var(--muted); }
+.cc-step-body { padding:0 16px; min-height:120px; }
+.cc-modal .cc-step-body label { font-size:15px; font-weight:800; color:var(--ink); display:block; margin:0 0 8px; }
+.cc-modal .cc-step-body input[type="text"], .cc-modal .cc-step-body textarea {
+  width:100%; box-sizing:border-box; margin:0 0 8px; background:var(--bg);
+  border:1px solid var(--line); border-radius:8px; padding:9px 10px; font:inherit; color:var(--ink);
+}
+.cc-step-body textarea { resize:vertical; }
+.cc-modal .comm-inline-form input[type="text"], .cc-modal .comm-inline-form textarea { margin:0 0 8px; width:100%; }
+.cc-step-hint { font-size:12.5px; color:var(--muted); margin:6px 0 0; line-height:1.4; }
+.cc-nav { display:flex; align-items:center; gap:10px; padding:16px; border-top:1px solid var(--line); margin-top:16px; }
+.cc-nav-back { background:none; border:1px solid var(--line); color:var(--ink); border-radius:999px; padding:8px 16px; font-weight:700; cursor:pointer; }
+.cc-nav-back:hover { background:var(--hover-bg); }
+.cc-nav-next { flex:1; margin:0 !important; width:auto !important; }
+
+.cc-banner-wrap {
+  position:relative; height:120px; border-radius:var(--r-md); overflow:visible;
+  background:var(--banner-img, linear-gradient(135deg,#BEE3F8,#E6D9F7)) center/cover no-repeat;
+  margin-bottom:40px;
+}
+.cc-banner-pick {
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:36px; height:36px;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  background:rgba(15,20,25,.55); color:#fff; border-radius:50%; transition:background-color .12s ease;
+}
+.cc-banner-pick:hover { background:rgba(15,20,25,.7); }
+.cc-banner-pick svg { width:18px; height:18px; }
+.cc-avatar-wrap { position:absolute; left:16px; bottom:-32px; width:72px; height:72px; }
+.cc-avatar-preview {
+  display:flex; align-items:center; justify-content:center; width:72px; height:72px; border-radius:50%;
+  border:4px solid var(--cream-card); background:var(--hover-bg); color:var(--muted);
+  font-size:24px; font-weight:800; overflow:hidden;
+  /* border above is var(--cream-card), which equals the modal's own
+     background in dark themes (#000 on #000) — invisible, so the
+     circle had no visible edge and read as a shapeless blob with the
+     pick icon floating on it. .ep-avatar (edit-profile) already
+     solves this with a subtle outline independent of theme; mirror
+     that here. */
+  box-shadow:0 0 0 1px var(--line);
+  /* Without border-box, the 4px border was added OUTSIDE the 72px
+     content box, rendering this at 80x80 while .cc-avatar-wrap and
+     the .cc-avatar-pick overlay (which fills the wrap via inset:0)
+     stayed at 72x72 — an 8px size mismatch between the circle and
+     its own icon overlay. */
+  box-sizing:border-box;
+}
+.cc-avatar-preview img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.cc-avatar-pick {
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center; cursor:pointer;
+  background:rgba(15,20,25,.55); color:#fff; border-radius:50%; opacity:0; transition:opacity .12s ease;
+}
+.cc-avatar-wrap:hover .cc-avatar-pick { opacity:1; }
+.cc-avatar-pick svg { width:20px; height:20px; }
+/* .cc-modal .cc-step-body label (below, meant for plain text labels
+   like "Add a banner & picture") is MORE specific than the bare
+   .cc-avatar-pick/.cc-banner-pick rules above, since both of these
+   labels live inside .cc-step-body inside .cc-modal. It was winning
+   the cascade and forcing display:block + margin:0 0 8px onto them —
+   killing .cc-avatar-pick's flex-centering (icon collapsed to the
+   top-left) and, via the inset:0 + explicit bottom margin combo,
+   shrinking its box by 8px too. .cc-banner-pick escaped visibly
+   because it centers itself with a transform instead of flex, which
+   that override doesn't touch. Re-declare both here with matching
+   specificity so they win instead. */
+.cc-modal .cc-step-body label.cc-avatar-pick,
+.cc-modal .cc-step-body label.cc-banner-pick {
+  display:flex; margin:0;
+}
+
+/* Single community header (community.html) */
+.community-banner-wrap {
+  position:relative; height:100px;
+  background:var(--banner-img, linear-gradient(135deg,#BEE3F8,#E6D9F7)) center/cover no-repeat;
+}
+.comm-banner-pick {
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  width:40px; height:40px; background:rgba(15,20,25,.55); color:#fff;
+  border-radius:50%; transition:background-color .12s ease;
+}
+.comm-banner-pick:hover { background:rgba(15,20,25,.7); }
+.comm-banner-pick svg { width:20px; height:20px; }
+.community-hero { padding:16px; border-bottom:1px solid var(--line); display:flex; gap:14px; align-items:flex-start; }
+.community-hero .comm-avatar { width:56px; height:56px; font-size:22px; }
+.comm-avatar-wrap { position:relative; flex:none; width:56px; height:56px; }
+.comm-avatar-lg { width:56px; height:56px; font-size:22px; }
+.comm-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.comm-avatar-pick {
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  border-radius:50%; background:rgba(15,20,25,.5); color:#fff; opacity:0; cursor:pointer; transition:opacity .12s ease;
+}
+.comm-avatar-pick:hover { opacity:1; }
+.comm-avatar-pick svg { width:20px; height:20px; }
+.community-hero-body { flex:1; min-width:0; }
+.community-hero-name { font-size:19px; font-weight:800; color:var(--ink); word-break:break-word; }
+.community-hero-desc { font-size:14px; color:var(--ink); margin-top:4px; line-height:1.4; }
+.community-hero-meta { font-size:13px; color:var(--muted); margin-top:8px; }
+.community-hero-actions { flex:none; }
+.comm-join-btn, .comm-leave-btn {
+  font-size:14px; font-weight:800; padding:8px 18px; border-radius:999px; cursor:pointer;
+  transition:background-color .12s ease, filter .12s ease;
+}
+.comm-join-btn { background:var(--ink); color:var(--bg); border:none; }
+.comm-join-btn:hover { filter:brightness(.85); }
+.comm-leave-btn { background:none; color:var(--ink); border:1px solid var(--line); }
+.comm-leave-btn:hover { background:rgba(220,38,38,.08); color:#dc2626; border-color:rgba(220,38,38,.4); }
+.comm-join-btn:disabled, .comm-leave-btn:disabled { opacity:.6; cursor:default; }
+
+/* ── LISTS — sidebar box rows, browse list, and single-list page.
+   Square glyph avatar (instead of communities' circle) so a list
+   card never reads as a person or a community at a glance. ── */
+.list-avatar {
+  flex:none; width:40px; height:40px; border-radius:var(--r-sm); display:flex; align-items:center; justify-content:center;
+  background:var(--maroon); color:#fff; overflow:hidden;
+}
+.list-avatar img { width:100%; height:100%; object-fit:cover; }
+.list-avatar-glyph { width:18px; height:18px; }
+.list-avatar-glyph svg { width:100%; height:100%; stroke:currentColor; fill:none; stroke-width:2.2; }
+.list-avatar-sm { width:36px; height:36px; }
+.list-avatar-lg { width:56px; height:56px; border-radius:var(--r-md); }
+.list-avatar-lg .list-avatar-glyph { width:26px; height:26px; }
+.list-privacy-tag { display:inline-flex; align-items:center; gap:3px; font-size:12px; font-weight:700; color:var(--muted); vertical-align:middle; }
+.list-lock-ic { width:11px; height:11px; }
+
+.list-list { display:flex; flex-direction:column; }
+.list-list .list-row { border-bottom:1px solid var(--line); padding:14px 16px; }
+.list-list .list-avatar { width:48px; height:48px; }
+.list-list .list-avatar-glyph { width:22px; height:22px; }
+.list-list .who-row-name { font-size:15px; }
+
+/* Deterministic accent colors for a list's square glyph avatar (only
+   applied when it has no custom picture) — keeps a browse list from
+   reading as a wall of identical maroon squares. */
+.list-avatar-c1 { background:#F59E0B; }
+.list-avatar-c2 { background:#DB2777; }
+.list-avatar-c3 { background:#2563EB; }
+.list-avatar-c4 { background:#059669; }
+.list-avatar-c5 { background:#7C3AED; }
+
+/* "Following" pill on a "Your Lists" row (lists.html/sidebar) — lets
+   you unfollow a List you don't own without opening it. */
+.list-row-unfollow { flex:none; align-self:center; background:none; color:var(--muted); border:1px solid var(--line); font-size:12px; font-weight:800; padding:5px 12px; border-radius:999px; cursor:pointer; transition:background-color .12s ease, color .12s ease, border-color .12s ease; }
+.list-row-unfollow:hover { background:rgba(220,38,38,.08); color:#dc2626; border-color:rgba(220,38,38,.4); }
+
+/* ── LIST DISCOVER SECTION (lists.html) — Twitter-style "Discover new
+   Lists": public Lists the current user doesn't already own or
+   follow, each with a circular Follow (+) button and a small
+   overlapping avatar stack of a few of its followers. ── */
+.list-sec-hdr { font-size:20px; font-weight:800; color:var(--ink); padding:14px 16px 8px; }
+.list-discover-list { display:flex; flex-direction:column; }
+.list-discover-row { display:flex; align-items:flex-start; gap:12px; padding:12px 16px; border-bottom:1px solid var(--line); text-decoration:none; color:var(--ink); transition:background-color .12s ease; animation:oc-fade-in .2s ease both; }
+.list-discover-row:hover { background:rgba(15,20,25,.03); text-decoration:none; }
+.list-discover-row .list-avatar { width:44px; height:44px; margin-top:1px; }
+.list-discover-body { flex:1; min-width:0; }
+.list-discover-name { display:block; font-size:15px; font-weight:800; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.list-discover-meta { display:block; font-size:13px; color:var(--muted); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.list-fp-row { display:flex; align-items:center; gap:6px; margin-top:6px; min-width:0; }
+.list-fp-stack { display:flex; flex:none; }
+.list-fp-avatar { width:20px; height:20px; border-radius:50%; object-fit:cover; border:2px solid var(--bg); margin-left:-8px; background:var(--hover-bg); }
+.list-fp-stack .list-fp-avatar:first-child { margin-left:0; }
+.list-fp-txt { font-size:13px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.list-follow-btn {
+  flex:none; width:32px; height:32px; margin-top:1px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  background:var(--bg); color:var(--ink); border:1px solid var(--line); cursor:pointer; transition:background-color .12s ease, transform .1s ease;
+}
+.list-follow-btn svg { width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:2.4; }
+.list-follow-btn:hover { background:var(--hover-bg); }
+.list-follow-btn:active { transform:scale(.9); }
+.list-follow-btn.list-following-btn { background:var(--ink); color:var(--bg); border-color:var(--ink); }
+.list-discover-showmore { display:block; padding:12px 16px; font-size:15px; color:var(--link); text-decoration:none; border-bottom:1px solid var(--line); }
+.list-discover-showmore:hover { background:rgba(15,20,25,.03); text-decoration:none; }
+
+/* Follow/Following pill on the single-list page header (list.html),
+   shown to a logged-in non-owner viewing a public List — same visual
+   language as .comm-join-btn/.comm-leave-btn. */
+.list-follow-pill, .list-following-pill {
+  font-size:14px; font-weight:800; padding:8px 18px; border-radius:999px; cursor:pointer; transition:background-color .12s ease, color .12s ease, border-color .12s ease, transform .1s ease;
+}
+.list-follow-pill { background:var(--ink); color:var(--bg); border:none; }
+.list-follow-pill:hover { filter:brightness(.85); }
+.list-following-pill { background:none; color:var(--ink); border:1px solid var(--line); }
+.list-following-pill:hover { background:rgba(220,38,38,.08); color:#dc2626; border-color:rgba(220,38,38,.4); }
+.list-follow-pill:active, .list-following-pill:active { transform:scale(.96); }
+.list-follow-pill:disabled, .list-following-pill:disabled { opacity:.6; cursor:default; }
+
+/* Create/edit-list modal — same .modal shell as the create-community
+   modal, just a little taller to fit the Private toggle row. */
+.cl-modal { width:380px; }
+
+/* Add/remove-from-Lists popup, opened from a profile's "···" menu */
+.alm-modal { width:380px; max-height:80vh; display:flex; flex-direction:column; }
+.alm-modal h2 { flex:none; }
+#alm-body { overflow-y:auto; }
+.alm-list { display:flex; flex-direction:column; }
+.alm-row { display:flex; align-items:center; gap:10px; padding:10px 16px; cursor:pointer; transition:background-color .12s ease; }
+.alm-row:hover { background:rgba(15,20,25,.03); }
+.alm-check { flex:none; width:20px; height:20px; accent-color:var(--maroon); cursor:pointer; }
+
+/* Single-list header (list.html) — mirrors .community-hero */
+.list-banner-wrap {
+  position:relative; height:100px;
+  background:var(--banner-img, linear-gradient(135deg,#BEE3F8,#E6D9F7)) center/cover no-repeat;
+}
+.list-banner-pick {
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  width:40px; height:40px; background:rgba(15,20,25,.55); color:#fff;
+  border-radius:50%; transition:background-color .12s ease;
+}
+.list-banner-pick:hover { background:rgba(15,20,25,.7); }
+.list-banner-pick svg { width:20px; height:20px; }
+.list-avatar-wrap { position:relative; flex:none; width:56px; height:56px; }
+.list-avatar-pick {
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center; cursor:pointer;
+  background:rgba(15,20,25,.55); color:#fff; border-radius:var(--r-md); opacity:0;
+  transition:background-color .12s ease, opacity .12s ease;
+}
+.list-avatar-pick:hover { opacity:1; }
+.list-avatar-pick svg { width:22px; height:22px; }
+.list-hero { padding:16px; border-bottom:1px solid var(--line); display:flex; gap:14px; align-items:flex-start; }
+.list-hero-body { flex:1; min-width:0; }
+.list-hero-name { font-size:19px; font-weight:800; color:var(--ink); word-break:break-word; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.list-hero-desc { font-size:14px; color:var(--ink); margin-top:4px; line-height:1.4; }
+.list-hero-meta { font-size:13px; color:var(--muted); margin-top:8px; }
+.list-hero-owner { font-size:13px; color:var(--muted); margin-top:2px; }
+.list-hero-owner a { color:inherit; font-weight:700; }
+.list-hero-actions { flex:none; display:flex; align-items:center; gap:8px; }
+/* The share/"···" icon buttons reuse .pc-menu-wrap (post-card menu
+   component) — its default margin-left:auto is for pinning a lone
+   menu to the right edge of a card; here they sit inline alongside
+   the Follow/Following pill instead, same override profile.html
+   already uses for its own header actions row. */
+.list-hero-actions .pc-menu-wrap { margin-left:0; }
+.list-edit-btn, .list-delete-btn {
+  font-size:14px; font-weight:800; padding:8px 18px; border-radius:999px; cursor:pointer;
+  background:none; color:var(--ink); border:1px solid var(--line); transition:background-color .12s ease, transform .1s ease;
+}
+.list-edit-btn:hover { background:var(--hover-bg); }
+.list-delete-btn:hover { background:rgba(220,38,38,.08); color:#dc2626; border-color:rgba(220,38,38,.4); }
+.list-edit-btn:active, .list-delete-btn:active { transform:scale(.96); }
+
+/* ── ARTICLES ── */
+.article-row { align-items:flex-start; }
+.article-row .who-row-name { font-size:15px; white-space:normal; }
+.article-row .comm-desc { white-space:normal; -webkit-line-clamp:2; display:-webkit-box; -webkit-box-orient:vertical; overflow:hidden; margin-top:2px; }
+.article-row-cover { flex:none; width:64px; height:64px; border-radius:var(--r-md); overflow:hidden; background:var(--hover-bg); margin-left:8px; }
+.article-row-cover img { width:100%; height:100%; object-fit:cover; }
+
+.article-hero { padding:16px; border-bottom:1px solid var(--line); }
+.article-hero-cover { width:100%; max-height:360px; object-fit:cover; border-radius:var(--r-md); margin-bottom:14px; display:block; }
+.article-hero-title { font-size:26px; font-weight:800; color:var(--ink); line-height:1.25; word-break:break-word; }
+.article-hero-byline { display:flex; align-items:center; gap:8px; margin-top:12px; }
+.article-hero-byline .who-row-name { font-size:14px; }
+.article-hero-meta { font-size:13px; color:var(--muted); margin-top:2px; }
+.article-hero-actions { flex:none; display:flex; align-items:center; gap:8px; margin-left:auto; }
+.article-body { font-size:17px; line-height:1.65; color:var(--ink); white-space:pre-wrap; word-wrap:break-word; padding:18px 16px 24px; }
+
+/* Rich content rendered from an article's content_html (sanitized
+   by sanitizeArticleHtml() before this ever reaches the page) —
+   sits inside .article-body, so it doesn't need its own font-size
+   baseline, just spacing/weight for the handful of tags the editor
+   toolbar can produce. */
+.article-rich { white-space:normal; }
+.article-rich p { margin:0 0 14px; }
+.article-rich p:last-child { margin-bottom:0; }
+.article-rich b, .article-rich strong { font-weight:800; }
+.article-rich h2 { font-size:22px; font-weight:800; margin:26px 0 10px; line-height:1.3; }
+.article-rich h3 { font-size:19px; font-weight:800; margin:22px 0 8px; line-height:1.3; }
+.article-rich blockquote {
+  margin:14px 0; padding:2px 0 2px 14px; border-left:3px solid var(--maroon);
+  color:var(--muted); font-style:italic;
+}
+.article-rich ul, .article-rich ol { margin:0 0 14px; padding-left:24px; }
+.article-rich li { margin:4px 0; }
+.article-rich a { color:var(--link); text-decoration:none; }
+.article-rich a:hover { text-decoration:underline; }
+.article-rich img { max-width:100%; height:auto; border-radius:var(--r-md); display:block; margin:16px 0; }
+
+/* ── write/edit article rich-text editor (js/editarticle.js) ── */
+.ea-toolbar {
+  display:flex; align-items:center; gap:2px; padding:6px 12px; margin:0 16px;
+  border:1px solid var(--border-input); border-bottom:none; border-radius:10px 10px 0 0;
+  background:var(--hover-bg); flex-wrap:wrap;
+}
+.ea-tb-btn {
+  display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px;
+  border:none; background:transparent; border-radius:6px; color:var(--ink); cursor:pointer; font-size:14px; font-weight:700;
+}
+.ea-tb-btn svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; }
+.ea-tb-btn:hover { background:var(--maroon-tint); color:var(--maroon); }
+.ea-tb-btn.active { background:var(--maroon-tint); color:var(--maroon); }
+.ea-tb-sep { width:1px; height:20px; background:var(--line); margin:0 4px; flex:none; }
+.ea-editor {
+  min-height:320px; margin:0 16px; padding:14px; font-size:16px; line-height:1.6; color:var(--ink);
+  border:1px solid var(--border-input); border-radius:0 0 10px 10px; background:var(--input-bg);
+  outline:none; word-wrap:break-word;
+}
+.ea-editor:focus { border-color:var(--maroon); }
+.ea-editor:empty::before { content:attr(data-placeholder); color:var(--muted); pointer-events:none; }
+.ea-editor p { margin:0 0 14px; }
+.ea-editor h2 { font-size:21px; font-weight:800; margin:18px 0 8px; }
+.ea-editor h3 { font-size:18px; font-weight:800; margin:16px 0 6px; }
+.ea-editor blockquote { margin:10px 0; padding-left:14px; border-left:3px solid var(--maroon); color:var(--muted); font-style:italic; }
+.ea-editor ul, .ea-editor ol { padding-left:24px; margin:0 0 14px; }
+.ea-editor img { max-width:100%; height:auto; border-radius:var(--r-md); display:block; margin:12px 0; }
+.ea-editor img.ea-img-uploading { opacity:.4; }
+.ea-cover-row { display:flex; gap:8px; }
+.ea-cover-row input { flex:1; }
+.ea-cover-upload-btn {
+  flex:none; padding:0 14px; border-radius:8px; border:1px solid var(--border-input);
+  background:var(--hover-bg); color:var(--ink); font-size:13px; font-weight:700; cursor:pointer;
+}
+.ea-cover-upload-btn:hover { background:var(--maroon-tint); color:var(--maroon); border-color:var(--maroon); }
+.ea-share-field { border-top:1px solid var(--line); margin-top:6px; padding-top:14px; }
+.ea-check { display:flex; align-items:center; gap:8px; font-size:14.5px; font-weight:600; color:var(--ink); cursor:pointer; }
+.ea-check input { width:16px; height:16px; accent-color:var(--maroon); }
+.ea-share-field textarea { margin-top:8px; min-height:60px; }
+
+.ea-field { padding:12px 16px; display:flex; flex-direction:column; gap:6px; }
+.ea-field label { font-size:12.5px; font-weight:700; color:var(--muted); }
+.ea-field input, .ea-field textarea {
+  border:1px solid var(--line); border-radius:var(--r-sm); padding:10px 12px; font:inherit; color:var(--ink);
+  background:var(--bg); resize:vertical;
+}
+.ea-field textarea { line-height:1.5; min-height:280px; }
+.ea-field input:focus, .ea-field textarea:focus { outline:none; border-color:var(--maroon); }
+.ea-actions { padding:8px 16px 20px; }
+.ea-actions .modal-btn { width:100%; margin:0; }
+
+/* Member row on the single-list Members tab — a who-row plus a
+   Remove button that only the list's owner ever sees. */
+.list-member-remove { background:none; color:var(--muted); border:1px solid var(--line); font-size:13px; font-weight:800; padding:6px 14px; border-radius:999px; cursor:pointer; transition:background-color .12s ease, color .12s ease, transform .1s ease; }
+.list-member-remove:hover { background:rgba(220,38,38,.08); color:#dc2626; border-color:rgba(220,38,38,.4); }
+.list-member-remove:active { transform:scale(.94); }
+
+
+/* ── SEARCH BOX (right column, decorative like the reference) ── */
+.xsearch { display:flex; align-items:center; gap:8px; background:var(--hover-bg); border-radius:999px; padding:10px 16px; margin:4px 0 16px; }
+.xsearch svg { width:16px; height:16px; color:var(--muted); flex:none; }
+.xsearch input { background:transparent; border:none; outline:none; font-size:15px; width:100%; color:var(--ink); }
+.xsearch input::placeholder { color:var(--muted); }
+
+/* ── POST CARD (tweet-style) ── */
+.pc {
+  background:var(--cream-card); border:none; border-bottom:1px solid var(--line); border-radius:0;
+  margin-bottom:0; padding:12px 16px; box-shadow:none; cursor:pointer;
+  transition:background-color .12s ease;
+  animation:oc-fade-in .2s ease both;
+  /* Off-screen cards skip layout/paint/style work entirely until they
+     scroll near the viewport — the single biggest lever for keeping
+     long feeds/threads smooth, since a 200-post feed only ever pays
+     rendering cost for the ~10 cards actually on screen. The
+     intrinsic-size guess keeps the scrollbar/scroll position stable
+     before a card has been measured for real. */
+  content-visibility:auto;
+  contain-intrinsic-size:auto 180px;
+}
+/* content-visibility:auto above gives the card its own containment
+   box, which silently clips anything a descendant tries to paint
+   outside it — including the "···" and repost popovers, which are
+   position:absolute and often taller than the (short) card they sit
+   in. That clipped the popover mid-item on small cards instead of
+   letting it float over the content below. Suspending containment
+   while a popover inside this card is open lets it paint normally,
+   without giving up the off-screen perf win everywhere else. */
+.pc:has(.pc-menu-wrap.open), .pc:has(.rp-menu-wrap.open) {
+  content-visibility:visible;
+  /* content-visibility:auto (on every .pc, including this one's
+     siblings) creates a containment box, which is also a stacking
+     context. Turning off containment above stops THIS card from
+     clipping its own popover, but the next sibling card still has
+     its own stacking context and paints after this one in DOM order
+     — so it painted over the popover regardless of z-index, since
+     z-index only ranks elements within the same stacking context.
+     Giving this card position+z-index lifts it into the parent's
+     stacking context so it wins against every sibling. */
+  position:relative;
+  z-index:50;
+}
+.pc:hover { background:var(--hover-bg); border-color:var(--line); }
+.pc.flash { background:var(--maroon-tint); animation:flashfade 2.4s ease-out; }
+@keyframes flashfade { 0% { background:var(--maroon-tint); } 100% { background:var(--maroon-tint); } }
+
+/* "[Name] reposted" / "You reposted" line above a card that showed up
+   in a feed/profile via a repost rather than authorship. */
+.repost-banner {
+  display:flex; align-items:center; gap:8px; margin:0 0 6px 28px;
+  font-size:13px; font-weight:700; color:var(--muted);
+}
+.repost-banner svg {
+  width:15px; height:15px; flex:none; fill:none; stroke:currentColor;
+  stroke-width:2; stroke-linecap:round; stroke-linejoin:round;
+}
+.repost-banner a { color:var(--muted); text-decoration:none; }
+.repost-banner a:hover { text-decoration:underline; }
+
+/* Pinned-post banner — the pin glyph is a solid silhouette (not a
+   stroked outline like the repost icon), tilted slightly and tinted
+   with the accent color so it reads as a small badge rather than
+   plain muted text. */
+.repost-banner svg.pin-ic {
+  width:14px; height:14px; fill:var(--maroon); stroke:none;
+  transform:rotate(-45deg);
+}
+
+.pc-row { display:flex; gap:12px; align-items:flex-start; }
+.pc-avatar-lnk { flex:none; line-height:0; }
+.pc-avatar { width:40px; height:40px; }
+.pc-main { flex:1; min-width:0; }
+
+/* header line: Name  @handle · time  ···menu
+   nowrap + the .ph-names wrapper below is what keeps this to one row
+   no matter how long the display name or username get — previously
+   this wrapped onto a second line once the two together ran out of
+   room, which pushed "· time" and the "···" menu down with it (or,
+   for a single very long unbroken name/handle, let them shove the
+   menu button off the edge of the card entirely). */
+.ph {
+  display:flex; align-items:center; flex-wrap:nowrap; gap:0;
+  font-size:15px; line-height:1.3; margin-bottom:1px; min-width:0;
+}
+/* Groups name+badge+handle so they can be measured, and truncated,
+   as a unit that shrinks to fit whatever room is left after the
+   always-visible timestamp and menu button take theirs. */
+.ph-names { display:flex; align-items:baseline; min-width:0; overflow:hidden; flex:1 1 auto; }
+.ph .nm {
+  color:var(--ink); font-weight:800; text-decoration:none; margin-right:5px;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  min-width:0; max-width:60%; flex:0 1 auto;
+}
+
+/* Verified checkmark shown next to a display name wherever it appears
+   (post cards, reply headers, profile header, who-to-follow, follower
+   lists). Sits inline right after the name text — see vBadge() in
+   js/common.js, which is the single place this <img> gets built. */
+.verified-badge { width:20px; height:20px; margin:0 5px 0 0; vertical-align:-4px; flex:none; display:inline-block; }
+.op-detail-names .verified-badge { width:42px; height:42px; margin-left:0; flex:none; }
+.uname-row .verified-badge { width:26px; height:26px; margin-left:3px; vertical-align:-5px; }
+.ph .nm:hover { text-decoration:underline; }
+.ph .pc-handle {
+  color:var(--muted); font-weight:400; margin-right:5px;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  min-width:22px; flex:1 1 auto;
+}
+.ph .dt { color:var(--muted); font-weight:400; white-space:nowrap; flex:none; }
+.ph .dt::before { content:"\00b7"; margin-right:5px; }
+.ph .num { display:none; }
+
+.pc-menu-wrap { position:relative; margin-left:auto; flex:none; }
+.pc-menu-btn {
+  background:none; border:none; cursor:pointer; color:var(--muted); border-radius:50%;
+  width:30px; height:30px; display:inline-flex; align-items:center; justify-content:center;
+  transition:background .12s ease, color .12s ease;
+}
+.pc-menu-btn:hover { background:var(--maroon-tint); color:var(--maroon); }
+.pc-menu-btn svg { width:17px; height:17px; }
+.pc-menu-dd {
+  position:absolute; right:0; top:calc(100% + 4px); z-index:40; min-width:180px;
+  max-width:min(280px, calc(100vw - 24px));
+  background:var(--cream-card); border:1px solid var(--line); border-radius:14px;
+  box-shadow:var(--shadow-pop); overflow:hidden; padding:6px;
+  opacity:0; visibility:hidden; pointer-events:none;
+  transform:translateY(4px) scale(.97); transform-origin:top right;
+  transition:opacity .13s ease, transform .13s cubic-bezier(.2,.8,.2,1), visibility 0s linear .13s;
+}
+.pc-menu-wrap.open .pc-menu-dd {
+  opacity:1; visibility:visible; pointer-events:auto; transform:translateY(0) scale(1);
+  transition:opacity .15s ease, transform .15s cubic-bezier(.2,.8,.2,1);
+}
+.pc-menu-dd button, .pc-menu-dd a {
+  display:block; width:100%; text-align:left; background:none; border:none; cursor:pointer;
+  border-radius:9px; font-family:inherit; font-size:14px; font-weight:700; color:var(--ink);
+  padding:10px 12px; text-decoration:none; box-sizing:border-box; transition:background .1s ease;
+  overflow-wrap:anywhere; word-break:break-word;
+}
+.pc-menu-dd button:hover, .pc-menu-dd a:hover { background:var(--hover-bg); text-decoration:none; }
+.pc-menu-dd button.pc-menu-danger { color:var(--like); }
+.pc-menu-dd button.pc-menu-danger:hover { background:var(--like-tint); }
+
+/* thread title — kept above the body since this board has subjects, Twitter has none */
+.subj { display:block; font-weight:800; font-size:14px; color:var(--ink); margin:1px 0 3px; }
+
+.pb { line-height:1.4; word-wrap:break-word; font-size:15px; white-space:pre-wrap; color:var(--ink); margin-top:1px; }
+.gt { color:var(--green); }
+.body-link, .body-mention, .body-hashtag { color:var(--link); text-decoration:none; }
+.body-link:hover, .body-mention:hover, .body-hashtag:hover { text-decoration:underline; }
+
+.pm { margin:8px 0 2px; clear:both; }
+.pm .ml { font-size:10px; color:var(--muted); margin-bottom:2px; }
+.pm img  {
+  max-width:100%; max-height:380px; border:1px solid var(--line); border-radius:16px;
+  cursor:pointer; display:block; transition:opacity .12s ease;
+}
+.pm img:hover { opacity:.96; }
+.pm img.exp { max-height:none; }
+.pm video { max-width:100%; max-height:380px; border:1px solid var(--line); border-radius:16px; display:block; }
+
+/* action row: icon + count, evenly spread across the card width */
+.acts { margin-top:10px; clear:both; display:flex; align-items:center; justify-content:space-between; gap:4px; max-width:425px; }
+.act {
+  font-family:inherit; font-size:13px; font-weight:400;
+  border:none; border-radius:999px; padding:6px 8px; cursor:pointer;
+  color:var(--muted); text-decoration:none; background:none; display:inline-flex; align-items:center; gap:6px;
+  transition:background .12s ease, color .12s ease, transform .1s ease;
+}
+.act:active { transform:scale(.92); }
+.act svg { width:18.5px; height:18.5px; flex:none; }
+.act:hover { text-decoration:none; }
+a.act:hover, button.act.reply:hover { background:var(--maroon-tint); color:var(--maroon); }
+.act.views:hover { background:var(--maroon-tint); color:var(--maroon); }
+.act.like:hover { background:var(--like-tint); color:var(--like); }
+.act.share:hover { background:var(--maroon-tint); color:var(--maroon); }
+.act.like svg { fill:none; stroke:currentColor; stroke-width:1.8; }
+.act.like.liked { color:var(--like); }
+.act.like.liked svg { fill:var(--like); stroke:var(--like); animation:oc-pop .28s ease; }
+.act.reply svg, .act.views svg, .act.share svg { fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.act.reply.disabled, .act.reply:disabled {
+  color:var(--muted); opacity:.55; cursor:not-allowed;
+}
+.act.reply.disabled:hover, .act.reply:disabled:hover { background:none; color:var(--muted); }
+.act.share.copied { color:var(--green); }
+.act.bookmark { flex:none; }
+.act.bookmark svg { fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.act.bookmark:hover { background:var(--maroon-tint); color:var(--maroon); }
+.act.bookmark.bookmarked { color:var(--maroon); }
+.act.bookmark.bookmarked svg { fill:var(--maroon); stroke:var(--maroon); animation:oc-pop .28s ease; }
+
+/* ── repost (retweet) button + Repost/Quote dropdown ──
+   Desktop: a small popover anchored above the button (Twitter-style),
+   fading + scaling in from its anchor corner instead of snapping open.
+   Mobile (≤640px): becomes a full-width bottom sheet with its own
+   backdrop, since a 180px popover is a fiddly tap target on a phone. */
+.rp-menu-wrap { position:relative; flex:none; }
+.act.repost svg { fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.act.repost:hover { background:var(--green-tint,rgba(0,186,124,.10)); color:var(--green); }
+.act.repost.reposted { color:var(--green); animation:oc-pop .28s ease; }
+.rp-menu-dd {
+  position:absolute; left:0; bottom:calc(100% + 4px); z-index:40; min-width:200px;
+  background:var(--cream-card); border:1px solid var(--line); border-radius:14px;
+  box-shadow:var(--shadow-pop); overflow:hidden; padding:6px;
+  opacity:0; visibility:hidden; pointer-events:none;
+  transform:translateY(4px) scale(.97); transform-origin:bottom left;
+  transition:opacity .13s ease, transform .13s cubic-bezier(.2,.8,.2,1), visibility 0s linear .13s;
+}
+.rp-menu-wrap.open .rp-menu-dd {
+  opacity:1; visibility:visible; pointer-events:auto; transform:translateY(0) scale(1);
+  transition:opacity .15s ease, transform .15s cubic-bezier(.2,.8,.2,1);
+}
+.rp-menu-dd button {
+  display:flex; align-items:center; gap:12px; width:100%; text-align:left; background:none; border:none; cursor:pointer;
+  border-radius:9px; font-family:inherit; font-size:14.5px; font-weight:700; color:var(--ink); padding:10px 12px;
+  transition:background .1s ease;
+}
+.rp-menu-dd button svg { width:18px; height:18px; flex:none; }
+.rp-menu-dd button:hover { background:var(--hover-bg); }
+.rp-menu-dd button.rp-do svg, .rp-menu-dd button.rp-undo svg {
+  fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;
+}
+.rp-menu-dd button.rp-undo { color:var(--green); }
+.rp-menu-dd button.rp-undo:hover { background:rgba(0,186,124,.08); }
+.rp-menu-dd button.rp-quote:hover { background:var(--maroon-tint); color:var(--maroon); }
+.rp-menu-dd-sep { height:1px; background:var(--line); margin:5px 4px; }
+.rp-menu-sheet-title { display:none; }
+
+@media (max-width: 640px) {
+  .rp-menu-wrap.open::before {
+    content:""; position:fixed; inset:0; background:rgba(15,20,25,.5);
+    z-index:998; animation:oc-fade-in .15s ease;
+  }
+  .rp-menu-dd {
+    position:fixed; left:0; right:0; bottom:0; top:auto; z-index:999;
+    min-width:0; width:100%; max-width:100%; border-radius:20px 20px 0 0; border:none;
+    padding:6px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+    transform:translateY(100%); transform-origin:bottom center;
+    transition:transform .2s cubic-bezier(.2,.8,.2,1), opacity .2s ease, visibility 0s linear .2s;
+  }
+  .rp-menu-wrap.open .rp-menu-dd {
+    transform:translateY(0);
+    transition:transform .22s cubic-bezier(.2,.8,.2,1), opacity .15s ease;
+  }
+  /* Drag-handle, like a real bottom sheet, instead of the row list
+     just starting flush against the top edge. */
+  .rp-menu-dd::before {
+    content:""; display:block; width:36px; height:4px; border-radius:999px;
+    background:var(--line); margin:6px auto 4px;
+  }
+  .rp-menu-sheet-title { display:none; }
+  .rp-menu-dd button { padding:12px 14px; font-size:15px; gap:14px; }
+  .rp-menu-dd button svg { width:19px; height:19px; }
+  .rp-menu-dd-sep { margin:2px 6px; }
+}
+/* Locks background scroll while the mobile repost sheet is open. */
+body.oc-sheet-open { overflow:hidden; }
+
+/* ── POST DETAIL (thread.html's OP) — Twitter's post-detail screen:
+   bigger body text, a "9:00 PM · Aug 8, 2026 · 64.5k Views" meta line
+   instead of the compact card's inline timestamp, a full-width icon
+   row (with a bookmark count, unlike the compact row), and a
+   Relevant/View-quotes row — all separated by hairline dividers. ── */
+.op-detail { padding:12px 16px 0; border-bottom:1px solid var(--line); }
+.op-detail-head { display:flex; align-items:flex-start; gap:12px; }
+.op-detail-head .pc-avatar { width:48px; height:48px; }
+.op-detail-names { flex:1; min-width:0; display:flex; flex-direction:column; line-height:1.3; padding-top:1px; }
+.op-detail-names .op-name-line { display:flex; align-items:center; gap:3px; min-width:0; }
+.op-detail-names .nm { color:var(--ink); font-weight:800; font-size:16px; text-decoration:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.op-detail-names .nm:hover { text-decoration:underline; }
+.op-detail-names .pc-handle { color:var(--muted); font-size:15px; }
+.op-detail-body { font-size:21px; line-height:1.35; word-wrap:break-word; white-space:pre-wrap; color:var(--ink); margin-top:14px; }
+.op-detail-meta { font-size:15px; color:var(--muted); margin-top:16px; padding-bottom:12px; }
+.op-detail-meta b { color:var(--ink); }
+.op-detail-divider { border-top:1px solid var(--line); }
+.op-stats { display:flex; align-items:center; justify-content:space-between; padding:4px 0; margin:0 -8px; }
+.op-stats .act { padding:8px; }
+.op-stats .act svg { width:20px; height:20px; }
+.op-relevant { display:flex; align-items:center; justify-content:space-between; font-size:15px; padding:12px 0; }
+.op-relevant-btn {
+  background:none; border:none; cursor:pointer; font:inherit; font-weight:800; color:var(--ink);
+  display:inline-flex; align-items:center; gap:4px; padding:0;
+}
+.op-relevant-btn svg { width:16px; height:16px; }
+.op-relevant a { color:var(--maroon); font-weight:700; text-decoration:none; }
+.op-relevant a:hover { text-decoration:underline; }
+.op-relevant-wrap { position:relative; }
+.op-relevant-menu {
+  position:absolute; top:calc(100% + 6px); left:0; z-index:20;
+  background:var(--cream-card); border:1px solid var(--line); border-radius:12px;
+  box-shadow:0 4px 18px rgba(0,0,0,.18); padding:6px; min-width:160px;
+  flex-direction:column; gap:2px;
+}
+.op-relevant-menu[hidden] { display:none; }
+.op-relevant-menu:not([hidden]) { display:flex; }
+.op-relevant-opt {
+  display:block; width:100%; text-align:left; background:none; border:none; cursor:pointer;
+  font:inherit; font-size:14px; font-weight:600; color:var(--ink); padding:9px 10px; border-radius:8px;
+}
+.op-relevant-opt:hover { background:var(--hover-bg, rgba(127,127,127,.12)); }
+.op-relevant-opt.active { color:var(--maroon); }
+.op-quotes-list { border-top:1px solid var(--line); margin:0 -16px; }
+
+/* ── quoted-post embed (shown inside a quote post's card) ── */
+.qp-embed {
+  border:1px solid var(--line); border-radius:var(--r-lg,16px); padding:10px 12px; margin-top:8px; cursor:pointer;
+  transition:background-color .12s ease, border-color .12s ease;
+}
+.qp-embed:hover { background:var(--hover-bg); border-color:var(--muted); }
+.qp-embed .ph { font-size:14px; margin-bottom:2px; }
+.qp-embed .pb { font-size:14.5px; }
+.qp-embed .pm img, .qp-embed .pm video { max-height:220px; }
+.qp-embed-gone { border:1px solid var(--line); border-radius:var(--r-md); padding:10px 12px; margin-top:8px; color:var(--muted); font-size:13.5px; }
+
+/* ── article embed (a post that's "promoting" an Article — see
+   articleCardHtml() in common.js) — same X/Twitter-style article
+   card shape as the qp-embed above: full-bleed cover image with a
+   small pill overlay, bold title + a couple lines of excerpt. ── */
+.article-embed {
+  border:1px solid var(--line); border-radius:var(--r-lg,16px); margin-top:8px; cursor:pointer;
+  overflow:hidden; transition:background-color .12s ease, border-color .12s ease;
+}
+.article-embed:hover { border-color:var(--muted); }
+.article-embed-media { position:relative; width:100%; aspect-ratio:2/1; background:var(--hover-bg); }
+.article-embed-media img { width:100%; height:100%; object-fit:cover; display:block; }
+.article-embed-badge {
+  display:inline-flex; align-items:center; gap:4px; position:absolute; left:10px; bottom:10px;
+  background:rgba(15,20,25,.75); color:#fff; font-size:11.5px; font-weight:700; letter-spacing:.2px;
+  padding:4px 9px; border-radius:999px; backdrop-filter:blur(2px);
+}
+.article-embed-badge svg { width:12px; height:12px; fill:none; stroke:#fff; stroke-width:2; }
+.article-embed-badge-standalone { position:static; margin:10px 0 0 10px; background:var(--hover-bg); color:var(--muted); }
+.article-embed-text { padding:10px 12px 12px; }
+.article-embed-title { font-size:15.5px; font-weight:800; color:var(--ink); line-height:1.3; }
+.article-embed-excerpt {
+  font-size:13.5px; color:var(--muted); margin-top:3px; line-height:1.4;
+  overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+}
+
+/* ── quote-post modal (compose a comment on top of an embedded post) ── */
+.qm-body { display:flex; gap:12px; align-items:flex-start; padding:12px 16px 0; }
+.qm-body textarea { height:80px; resize:none; border:none; padding:8px 0; font-size:17px; }
+.qm-body textarea:focus { box-shadow:none; }
+.qm-preview-wrap { padding:0 16px 4px 60px; }
+.qm-foot { display:flex; align-items:center; justify-content:flex-end; gap:10px; padding:6px 16px 0; }
+.qm-count { font-size:13px; color:var(--muted); font-variant-numeric:tabular-nums; }
+.qm-count.qm-count-warn { color:#e0a100; }
+.qm-count.qm-count-over { color:var(--like); font-weight:700; }
+
+/* ── GLOBAL COMPOSE MODAL — opened by the sidebar/mobile "Post"
+   button from any page, X-style. Built in common.js (gcModalEl()).
+   Selectors use the compound ".modal.gc-modal" (not just ".gc-modal")
+   so these reliably win over the generic ".modal{width:340px}" rule
+   above — same class count as it, so without the extra specificity
+   the two rules tie and whichever is later in the file (that one)
+   wins regardless of which is "more specific-sounding" in code. ── */
+.modal.gc-modal { width:600px; max-width:92vw; padding:44px 0 14px; }
+.gc-row { padding:0 16px; }
+.gc-row textarea { height:100px; resize:none; border:none; padding:8px 0; font-size:19px; }
+.gc-row textarea:focus { box-shadow:none; }
+.gc-toolbar { margin-top:0; padding:10px 16px 0; }
+.gc-status { display:block; padding:2px 16px 0; font-size:11px; color:var(--muted); min-height:14px; }
+
+/* ── REPLY AUDIENCE PICKER — the "Everyone can reply" pill above a
+   composer's toolbar (see replyAudienceMenuHtml() in common.js),
+   tappable to restrict a new post to "No one". Same popover-menu look
+   as the repost/quote dropdown (.rp-menu-dd) for visual consistency,
+   just anchored under the pill instead of the repost icon. Shared
+   across the global compose modal (gc), the home feed's inline
+   composer (pf) and a community's inline composer (cf) — only the id
+   prefix differs. ── */
+.ga-row { padding:6px 16px 10px 60px; }
+.ga-wrap { position:relative; display:inline-block; }
+.ga-btn {
+  display:flex; align-items:center; gap:6px; padding:5px 10px 5px 8px;
+  font-family:inherit; font-size:13px; font-weight:700; color:var(--maroon); background:var(--maroon-tint);
+  border:none; border-radius:999px; cursor:pointer; transition:background .12s ease, opacity .12s ease;
+}
+.ga-btn:hover { opacity:.85; }
+.ga-btn-icon { display:inline-flex; }
+.ga-btn-icon svg { width:15px; height:15px; flex:none; }
+.ga-btn .ga-chev { width:14px; height:14px; margin-left:-1px; opacity:.85; }
+.ga-btn.ga-restricted { color:var(--muted); background:var(--hover-bg); }
+.ga-dd {
+  position:absolute; left:0; top:calc(100% + 4px); z-index:40; width:280px; max-width:calc(100vw - 32px);
+  background:var(--cream-card); border:1px solid var(--line); border-radius:14px;
+  box-shadow:var(--shadow-pop); overflow:hidden; padding:6px;
+  opacity:0; visibility:hidden; pointer-events:none;
+  transform:translateY(-4px) scale(.97); transform-origin:top left;
+  transition:opacity .13s ease, transform .13s cubic-bezier(.2,.8,.2,1), visibility 0s linear .13s;
+}
+.ga-wrap.open .ga-dd {
+  opacity:1; visibility:visible; pointer-events:auto; transform:translateY(0) scale(1);
+  transition:opacity .15s ease, transform .15s cubic-bezier(.2,.8,.2,1);
+}
+.ga-dd-title { font-size:15px; font-weight:800; color:var(--ink); padding:8px 10px 6px; }
+.ga-opt {
+  display:flex; align-items:center; gap:12px; width:100%; text-align:left; background:none; border:none; cursor:pointer;
+  border-radius:9px; font-family:inherit; padding:9px 10px; transition:background .1s ease;
+}
+.ga-opt:hover { background:var(--hover-bg); }
+.ga-opt-icon { width:19px; height:19px; flex:none; color:var(--maroon); }
+.ga-opt-txt { flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
+.ga-opt-txt b { font-size:14px; color:var(--ink); font-weight:700; }
+.ga-opt-txt small { font-size:12px; color:var(--muted); font-weight:400; }
+.ga-opt .ga-check { width:17px; height:17px; flex:none; color:var(--maroon); opacity:0; }
+.ga-opt.active .ga-check { opacity:1; }
+@media (max-width: 520px) {
+  .ga-wrap.open::before {
+    content:""; position:fixed; inset:0; background:rgba(15,20,25,.5); z-index:998; animation:oc-backdrop-in .15s ease;
+  }
+  .ga-dd {
+    position:fixed; left:0; right:0; bottom:0; top:auto; z-index:999;
+    width:100%; max-width:100%; border-radius:20px 20px 0 0; border:none;
+    padding:6px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+    transform:translateY(100%); transform-origin:bottom center;
+    transition:transform .2s cubic-bezier(.2,.8,.2,1), opacity .2s ease, visibility 0s linear .2s;
+  }
+  .ga-wrap.open .ga-dd { transform:translateY(0); transition:transform .22s cubic-bezier(.2,.8,.2,1), opacity .15s ease; }
+  .ga-dd::before { content:""; display:block; width:36px; height:4px; border-radius:999px; background:var(--line); margin:6px auto 8px; }
+  .ga-opt { padding:12px 14px; }
+}
+
+@media (max-width:520px) {
+  /* Full-screen compose, X-app style: Close top-left, Post/Reply
+     pinned top-right (pulled out of the toolbar's flow via
+     position:fixed), and the icon toolbar pinned to the bottom of
+     the screen — instead of everything just sitting in normal flow
+     inside a height:100% box, which left a dead, disconnected-looking
+     gap of empty space between the textarea and the toolbar.
+     Height comes off --vvh (kept in sync with window.visualViewport
+     by common.js) instead of a flat 100% — 100%/100vh doesn't shrink
+     when the on-screen keyboard opens on a lot of mobile browsers, so
+     the flex:none toolbar at the bottom of this column would end up
+     sitting under the keyboard instead of right above it like X's
+     compose screen. --vvh tracks the part of the screen actually
+     still visible, so the modal (and the toolbar pinned to its end)
+     shrinks to match as the keyboard opens and closes. */
+  .modal.gc-modal {
+    width:100%; max-width:100%; border-radius:0; padding-top:52px;
+    height:100%; height:var(--vvh, 100%); max-height:100vh; max-height:var(--vvh, 100vh);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  #gc-modal-bg.open { align-items:stretch; justify-content:stretch; }
+  .modal.gc-modal .modal-close { left:14px; right:auto; }
+  .modal.gc-modal .pf-btn { position:fixed; top:11px; right:14px; z-index:2; padding:8px 20px; }
+  .modal.gc-modal .rpc-context { flex:none; }
+  .modal.gc-modal .errmsg { flex:none; }
+  .modal.gc-modal .gc-row { flex:1 1 auto; min-height:0; overflow-y:auto; }
+  .modal.gc-modal .ga-row { flex:none; }
+  .modal.gc-modal .gc-toolbar {
+    flex:none; border-top:1px solid var(--line);
+    padding:10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+  .modal.gc-modal .gc-status { flex:none; }
+}
+
+
+/* ── REPLY POPUP — opened by tapping the comment icon on a feed post
+   card. Same .gc-modal shell as the global compose modal above, just
+   shorter (no poll/schedule) and with a "Replying to @user" line up
+   top. Built in common.js (rpcModalEl()). ── */
+.modal.rpc-modal { padding-top:44px; }
+.rpc-context { padding:0 16px 8px; font-size:13px; color:var(--muted); }
+.rpc-context a { color:var(--link); text-decoration:none; }
+.rpc-context a:hover { text-decoration:underline; }
+/* Mobile full-screen layout, incl. the pinned-toolbar flex fix, comes
+   from the shared ".modal.gc-modal" rules above — .rpc-modal carries
+   that class too, so it doesn't need its own copy here. */
+
+/* legacy classes still referenced by unused code paths — harmless if present */
+.ai { color:var(--muted); font-size:11px; display:inline-flex; align-items:center; gap:4px; padding:4px 6px; }
+.ai.flag { cursor:pointer; border-radius:999px; }
+.ai.flag:hover { color:var(--maroon); background:var(--maroon-tint); }
+.rp-btn { font-family:inherit; font-size:11px; font-weight:700; background:var(--maroon-tint); border:none; border-radius:999px; padding:3px 10px; cursor:pointer; color:var(--maroon); }
+.rp-btn:hover { background:var(--maroon); color:#fff; }
+
+/* Real X reply lists stay edge-to-edge with a full-width avatar column
+   at every depth — replies don't march to the right as they nest, a
+   thin vertical line under the avatar is what shows the conversation
+   is a reply-to-a-reply. That's the look here: constant left padding,
+   a connector line, and a small "Replying to @x" tag on nested ones. */
+.rw { margin-top:0; }
+.rc { background:var(--cream-card); border:none; border-bottom:1px solid var(--line); border-radius:0; padding:12px 16px; margin-bottom:0; box-shadow:none; position:relative; transition:background-color .12s ease; cursor:pointer; animation:oc-fade-in .2s ease both; }
+.rc:hover { background:var(--hover-bg); }
+
+/* Focused-reply "detail" view (see thread.js renderConversation()) —
+   clicking any comment opens it here, Twitter-style: the ancestor
+   chain leading to it in compact rows, then the comment itself as a
+   second, smaller "OP", then its own replies below. This bar sits
+   right above that chain as an escape hatch back to the full thread. */
+.thread-focus-bar { padding:10px 16px; border-bottom:1px solid var(--line); font-size:14px; }
+.thread-focus-bar a { color:var(--maroon); text-decoration:none; font-weight:600; }
+.thread-focus-bar a:hover { text-decoration:underline; }
+#focused-reply .op-detail-body { font-size:19px; }
+.rc .pc-row { position:relative; }
+.rc .pc-avatar { width:40px; height:40px; }
+.rc .ph { font-size:15px; }
+.rc .pb { font-size:15px; }
+.rc .pm img  { max-height:280px; }
+.rc .pm video { max-height:280px; }
+.rc .acts { max-width:340px; }
+.rc-reply-tag { font-size:13px; color:var(--muted); margin:0 0 2px; }
+.rc-reply-tag a { color:var(--maroon); text-decoration:none; }
+.rc-reply-tag a:hover { text-decoration:underline; }
+
+/* connector line: drawn under a reply's avatar whenever it has at
+   least one child, so it visually threads down into the next reply —
+   same trick X uses instead of ever-deepening indentation. */
+.rc.has-children .pc-row::after {
+  content:''; position:absolute; top:44px; bottom:-12px; left:19px;
+  width:2px; background:var(--line);
+}
+
+/* Compact "Post your reply" row — sits right under the Relevant bar,
+   above the replies list, X-style: avatar + single-line textarea that
+   grows as you type, with the Reply button on the same row. */
+.rfm { background:var(--cream-card); border:none; border-top:1px solid var(--line); border-bottom:1px solid var(--line); border-radius:0; box-shadow:none; padding:10px 16px; margin-top:0; overflow:hidden; display:flex; gap:12px; align-items:flex-start; }
+.rfm-locked { align-items:center; justify-content:center; gap:10px; color:var(--muted); font-size:14px; font-weight:600; padding:18px 16px; }
+.rfm-locked svg { width:18px; height:18px; flex:none; }
+.rfm-col { flex:1; min-width:0; }
+.rfm input[type="text"] { margin:0 0 8px; width:100%; max-width:100%; }
+.rfm textarea { display:block; margin:0; width:100%; height:40px; min-height:40px; max-height:200px; resize:none; overflow:hidden; line-height:1.3; }
+.rfm input[type="file"] { margin:0; }
+.rfm .fp { margin-left:0; }
+.rfm-row { display:flex; gap:10px; align-items:center; margin:8px 0 0; }
+.rfm-row .pf-ic:last-of-type { margin-right:auto; }
+.rfm-row input[type="submit"] { margin-left:0; }
+
+/* ── COMPOSER EXTRAS: GIF picker modal ── */
+.modal.gif-modal { width:520px; max-width:92vw; padding-bottom:10px; }
+.gif-search-row { display:flex; align-items:center; gap:8px; margin:0 16px 10px; padding:8px 12px; border:1px solid var(--border-input); border-radius:999px; background:var(--input-bg); }
+.gif-search-row svg { width:16px; height:16px; color:var(--muted); flex:none; }
+.gif-search-row input { border:none; background:none; padding:0; font-size:14px; }
+.gif-search-row input:focus { box-shadow:none; }
+.gif-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; max-height:420px; overflow-y:auto; padding:0 16px; }
+.gif-item { padding:0; border:none; border-radius:var(--r-sm); overflow:hidden; cursor:pointer; background:var(--hover-bg); aspect-ratio:1/1; }
+.gif-item img { width:100%; height:100%; object-fit:cover; display:block; }
+.gif-item:hover { outline:2px solid var(--maroon); outline-offset:-2px; }
+.gif-attrib { font-size:11px; color:var(--muted); text-align:center; padding:10px 0 0; }
+
+/* ── COMPOSER EXTRAS: emoji popover ── */
+.cx-emoji-pop {
+  position:absolute; z-index:1200; background:var(--cream-card); border:1px solid var(--line); border-radius:var(--r-md);
+  box-shadow:var(--shadow-pop); padding:8px; width:240px;
+}
+.cx-emoji-pop[hidden] { display:none; }
+.cx-emoji-search {
+  width:100%; box-sizing:border-box; margin:0 0 8px; padding:7px 10px; font-size:13.5px;
+  border:1px solid var(--border-input); border-radius:999px; background:var(--input-bg);
+}
+.cx-emoji-search:focus { box-shadow:none; border-color:var(--maroon); }
+.cx-emoji-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:2px; max-height:200px; overflow-y:auto; }
+.cx-emoji-empty { grid-column:1/-1; text-align:center; font-size:12.5px; color:var(--muted); padding:14px 0; }
+.cx-emoji-item { background:none; border:none; cursor:pointer; font-size:19px; padding:5px; border-radius:6px; line-height:1; }
+.cx-emoji-item:hover { background:var(--hover-bg); }
+
+/* ── COMPOSER EXTRAS: poll builder ── */
+.cx-poll { border:1px solid var(--line); border-radius:var(--r-md); padding:10px; margin:10px 0 0; }
+.cx-poll-opts { display:flex; flex-direction:column; gap:8px; }
+.cx-poll-opt { font-size:14px; padding:8px 10px; }
+.cx-poll-row { display:flex; align-items:center; gap:10px; margin-top:10px; }
+.cx-poll-add { background:none; border:none; color:var(--maroon); font-weight:700; font-size:13px; cursor:pointer; padding:4px 0; }
+.cx-poll-add:hover { text-decoration:underline; }
+.cx-poll-row select { width:auto; flex:none; font-size:13px; padding:5px 22px 5px 8px; }
+.cx-poll-remove {
+  margin-left:auto; background:none; border:none; color:var(--muted); cursor:pointer; width:26px; height:26px;
+  border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:13px;
+}
+.cx-poll-remove:hover { background:var(--hover-bg); color:var(--ink); }
+
+/* ── COMPOSER EXTRAS: schedule picker ── */
+.cx-sched { display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:var(--r-md); padding:8px 10px; margin:10px 0 0; }
+.cx-sched[hidden], .cx-poll[hidden] { display:none; }
+.cx-sched svg { width:17px; height:17px; color:var(--maroon); flex:none; }
+.cx-sched input[type="datetime-local"] { border:none; background:none; padding:2px 0; font-size:13.5px; width:auto; flex:1; }
+.cx-sched input[type="datetime-local"]:focus { box-shadow:none; }
+.cx-sched-remove { background:none; border:none; color:var(--muted); cursor:pointer; width:22px; height:22px; border-radius:50%; flex:none; }
+.cx-sched-remove:hover { background:var(--hover-bg); color:var(--ink); }
+
+/* ── POLLS (rendered on a post card / thread detail) ── */
+.poll-box { display:flex; flex-direction:column; gap:6px; margin-top:10px; max-width:420px; }
+.poll-opt-btn {
+  text-align:left; font-family:inherit; font-size:14.5px; font-weight:600; color:var(--ink);
+  background:none; border:1px solid var(--maroon); border-radius:999px; padding:9px 14px; cursor:pointer; transition:background-color .12s ease;
+}
+.poll-opt-btn:hover { background:var(--maroon-tint); }
+.poll-opt-result {
+  position:relative; border-radius:999px; padding:9px 14px; font-size:14.5px; font-weight:600; color:var(--ink);
+  background:var(--hover-bg); overflow:hidden; display:flex; justify-content:space-between; gap:8px;
+}
+.poll-opt-result.mine { outline:2px solid var(--maroon); outline-offset:-2px; }
+.poll-opt-fill { position:absolute; inset:0; width:0; background:var(--maroon-tint); border-radius:999px; z-index:0; }
+.poll-opt-label, .poll-opt-pct { position:relative; z-index:1; }
+.poll-opt-pct { font-weight:800; }
+.poll-meta { font-size:13px; color:var(--muted); margin-top:2px; }
+
+/* ── RIGHT COLUMN: trending panel ── */
+.trends-box { background:var(--hover-bg); border-radius:var(--r-lg); padding:4px 0 6px; margin-bottom:16px; }
+.t-block { margin-bottom:2px; }
+.t-block:last-child { margin-bottom:0; }
+.t-lbl { font-weight:800; font-size:15px; color:var(--ink); background:none; padding:10px 16px 6px; border-radius:0; text-transform:none; letter-spacing:0; margin-bottom:0; }
+.tbadge { display:none; }
+.no-t { font-size:13px; color:var(--muted); font-style:normal; padding:4px 16px 12px; }
+
+.tcard {
+  background:none; border:none; border-radius:0; padding:10px 16px; margin-bottom:0;
+  cursor:pointer; text-decoration:none; display:block; color:var(--ink); box-shadow:none;
+  border-top:1px solid var(--line); transition:background-color .12s ease;
+}
+.tcard:first-of-type { border-top:none; }
+.tcard:hover { background:rgba(15,20,25,.03); text-decoration:none; box-shadow:none; }
+
+/* Avatar + text sit in a row, same as a real post card, so the
+   snippet/stats below line up under the name instead of under the
+   avatar — this is what was misaligned before. */
+.tcard-row { display:flex; gap:10px; align-items:flex-start; }
+.tcard-avatar { flex:none; width:34px; height:34px; }
+.tcard-body { flex:1; min-width:0; }
+
+.tcard-head { display:flex; align-items:baseline; gap:4px; flex-wrap:wrap; font-size:13px; line-height:1.3; }
+.tcard-name { font-weight:800; color:var(--ink); }
+.tcard-handle { color:var(--muted); font-weight:400; }
+.tcard-handle::after { content:"\00b7"; margin-left:4px; color:var(--muted); }
+.tcard-dt { color:var(--muted); font-weight:400; white-space:nowrap; }
+
+.tsnip {
+  font-size:13px; line-height:1.35; color:var(--muted); margin-top:2px;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; word-wrap:break-word;
+}
+.tsnip:empty { display:none; margin:0; }
+
+.tmeta { display:flex; align-items:center; gap:14px; margin-top:6px; }
+.tmeta-item { display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:700; color:var(--muted); }
+.tmeta-item svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+
+/* ── EXPLORE PAGE (search.html with no query) ── */
+.expl-hdr { font-weight:800; font-size:20px; color:var(--ink); padding:16px 16px 12px; }
+.expl-section { border-bottom:8px solid var(--line); }
+.expl-post { display:block; padding:12px 16px; border-top:1px solid var(--line); text-decoration:none; color:var(--ink); transition:background-color .12s ease; }
+.expl-post:first-child { border-top:none; }
+.expl-post:hover { background:var(--hover-bg); text-decoration:none; }
+.expl-post-title { font-size:15px; font-weight:800; line-height:1.3; margin-bottom:8px; word-wrap:break-word; }
+.expl-post-meta { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); }
+.expl-post-meta .avatar { width:20px; height:20px; border-radius:50%; flex:none; }
+.expl-post-meta .dot { display:inline; }
+.expl-post-meta .dot::before { content:"\00b7"; margin:0 2px; }
+.trend-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:12px 16px; border-top:1px solid var(--line); text-decoration:none; color:var(--ink); transition:background-color .12s ease; }
+.trend-row:first-child { border-top:none; }
+.trend-row:hover { background:var(--hover-bg); text-decoration:none; }
+.trend-row-txt { display:flex; flex-direction:column; min-width:0; gap:2px; }
+.trend-cat { font-size:13px; color:var(--muted); }
+.trend-word { font-size:15px; font-weight:800; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.trend-count { font-size:13px; color:var(--muted); white-space:nowrap; flex:none; }
+.expl-showmore { display:block; padding:14px 16px; font-size:15px; color:var(--link); text-decoration:none; }
+.expl-showmore:hover { background:var(--hover-bg); text-decoration:none; }
+
+/* ── NESTED REPLIES (reply-to-a-reply) ── */
+.rc-children { margin:0; }
+.rc-parent-tag { font-size:13px; color:var(--muted); margin:0 0 2px; }
+.rc-parent-tag a { color:var(--maroon); font-weight:600; }
+
+/* inline "reply to this comment" composer, toggled per-reply */
+.rc-inline-compose { display:none; padding:10px 16px 14px; border-bottom:1px solid var(--line); background:var(--cream-card); }
+.rc-inline-compose.open { display:block; }
+.rc-inline-compose textarea { height:60px; resize:vertical; font-size:15px; }
+.rc-inline-compose .rfm-row { margin-top:8px; }
+
+html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgba(244,63,94,.14); color:#FDA4AF; }
+
+.spinner { display:block; text-align:center; padding:28px; font-size:14px; color:var(--muted); font-style:normal; }
+
+/* ── SKELETON LOADERS — shown the instant a page/feed starts loading,
+   swapped for real cards the moment data arrives. Reads as "already
+   working" instead of a blank pause, same trick X/Bluesky use instead
+   of a spinner for anything list-shaped. Colors ride the same theme
+   tokens as everything else, so it's correct in dim/dark for free. ── */
+@keyframes skel-pulse { 0%,100% { opacity:.55; } 50% { opacity:1; } }
+.skel-card { display:flex; gap:12px; padding:16px; border-bottom:1px solid var(--line); }
+.skel-avatar { width:40px; height:40px; border-radius:50%; background:var(--line); flex:none; animation:skel-pulse 1.3s ease-in-out infinite; }
+.skel-lines { flex:1; display:flex; flex-direction:column; gap:9px; padding-top:3px; }
+.skel-line { height:11px; border-radius:6px; background:var(--line); animation:skel-pulse 1.3s ease-in-out infinite; }
+.skel-line.w20 { width:20%; }
+.skel-line.w40 { width:40%; }
+.skel-line.w60 { width:60%; }
+.skel-line.w90 { width:90%; }
+.skel-op .skel-avatar { width:48px; height:48px; }
+.skel-op .skel-line.tall { height:16px; }
+.errmsg { background:#FEECEE; border:1px solid var(--like); color:#B0192B; border-radius:var(--r-sm); font-size:13px; padding:8px 12px; margin:10px 16px; }
+#feed-empty { text-align:center; padding:48px 16px; font-size:15px; color:var(--muted); }
+
+.modal-bg { display:none; position:fixed; inset:0; background:rgba(91,112,131,0.4); z-index:1000; align-items:center; justify-content:center; }
+.modal-bg.open { display:flex; animation:oc-backdrop-in .15s ease both; }
+@keyframes oc-backdrop-in { from { background:rgba(91,112,131,0); } to { background:rgba(91,112,131,.4); } }
+.modal { background:var(--cream-card); border:none; border-radius:var(--r-md); padding:0 0 16px; width:340px; max-width:92vw; position:relative; box-shadow:var(--shadow-pop); overflow:hidden; animation:oc-modal-in .18s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes oc-modal-in { from { opacity:0; transform:translateY(10px) scale(.97); } to { opacity:1; transform:translateY(0) scale(1); } }
+.modal h2 { font-family:inherit; font-size:17px; color:var(--ink); background:none; margin-bottom:12px; padding:16px 16px 0; border-bottom:none; font-weight:800; }
+
+/* ── followers/following list modal ── */
+.followlist-body { max-height:340px; overflow-y:auto; padding:2px 8px 6px; }
+.ulrow { display:flex; align-items:center; gap:10px; padding:8px 8px; border-radius:var(--r-sm); text-decoration:none; color:var(--ink); transition:background .12s ease; }
+.ulrow:hover { background:var(--hover-bg); text-decoration:none; }
+.ulrow-txt { display:flex; flex-direction:column; min-width:0; }
+.ulrow-name { font-size:14px; font-weight:800; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ulrow-handle { font-size:13px; color:var(--muted); }
+.modal label { font-size:12px; font-weight:700; display:block; margin:0 16px 5px; color:var(--muted); }
+.modal select, .modal textarea, .modal input[type="text"] { margin:0 16px 12px; width:calc(100% - 32px); }
+.modal-btn { width:calc(100% - 32px); margin:4px 16px 0; padding:9px 14px; }
+.modal-close { position:absolute; top:12px; right:14px; cursor:pointer; font-size:16px; color:var(--muted); text-decoration:none; line-height:1; width:30px; height:30px; display:flex; align-items:center; justify-content:center; border-radius:50%; }
+.modal-close:hover { background:var(--hover-bg); color:var(--ink); }
+
+/* ── delete-post confirmation modal ── */
+.dc-modal { width:300px; padding:20px 20px 16px; text-align:center; }
+.dc-title { font-size:17px; font-weight:800; color:var(--ink); margin:4px 0 8px; }
+.dc-desc { font-size:14px; line-height:1.4; color:var(--muted); margin:0 0 18px; }
+.dc-actions { display:flex; flex-direction:column; gap:10px; }
+.dc-btn { width:100%; padding:11px 14px; border-radius:999px; font-size:15px; font-weight:800; cursor:pointer; border:1px solid transparent; transition:background .12s ease, opacity .12s ease, transform .1s ease; }
+.dc-btn:active { transform:scale(.97); }
+.dc-btn-delete { background:var(--like); color:#fff; }
+.dc-btn-delete:hover { background:#E11D48; }
+.dc-btn-delete:disabled { opacity:.6; cursor:default; }
+.dc-btn-cancel { background:transparent; color:var(--ink); border-color:var(--div); }
+.dc-btn-cancel:hover { background:var(--hover-bg); }
+.dc-btn-primary { background:var(--maroon); color:#fff; }
+.dc-btn-primary:hover { background:var(--maroon-hover, var(--maroon)); filter:brightness(.92); }
+
+/* ── EDIT POST/REPLY MODAL — same .modal/.dc-* shell as the delete
+   confirm modal (dc-modal), just wider and text-aligned left to fit
+   a textarea comfortably. ── */
+.modal.ec-modal { width:420px; max-width:92vw; padding:20px 20px 16px; text-align:left; }
+.ec-modal .dc-title { text-align:left; }
+.ec-modal textarea#ec-body {
+  width:100%; min-height:110px; resize:vertical; font:inherit; font-size:15px;
+  line-height:1.4; padding:10px 12px; border-radius:var(--r-sm); border:1px solid var(--div);
+  background:var(--bg); color:var(--ink); margin:0;
+}
+.ec-modal textarea#ec-body:focus { outline:none; border-color:var(--maroon); }
+.ec-count { font-size:12px; color:var(--muted); text-align:right; margin:4px 0 10px; }
+.ec-modal .errmsg { margin:0 0 10px; }
+
+/* "· Edited" tag shown next to a post/reply's timestamp once it's
+   been changed via the Edit flow — see editedSuffix()/markEditedTag()
+   in js/common.js. */
+.edited-tag { color:var(--muted); font-weight:400; }
+
+/* ── TOAST — replaces alert() for routine confirmations ── */
+.oc-toast {
+  position:fixed; left:50%; bottom:28px; transform:translate(-50%, 16px);
+  display:flex; align-items:center; gap:10px; max-width:min(92vw, 420px);
+  background:var(--ink); color:var(--bg); font-size:14px; font-weight:600; line-height:1.35;
+  padding:12px 18px; border-radius:999px; box-shadow:var(--shadow-pop);
+  opacity:0; pointer-events:none; z-index:999; transition:opacity .18s ease, transform .18s ease;
+}
+.oc-toast.show { opacity:1; transform:translate(-50%, 0); pointer-events:auto; }
+.oc-toast svg { width:18px; height:18px; flex:none; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.oc-toast-error { background:var(--like); color:#fff; }
+@media (max-width: 600px) {
+  .oc-toast { bottom:calc(64px + env(safe-area-inset-bottom, 0px)); font-size:13px; padding:11px 16px; }
+}
+
+#ftr { border-top:none; text-align:left; font-size:13px; color:var(--muted); padding:16px; margin-top:0; }
+#ftr a { font-size:13px; font-weight:700; color:var(--maroon); }
+
+.page-wrap { max-width:600px; margin:0; padding:16px 16px 48px; border-left:1px solid var(--line); border-right:1px solid var(--line); min-height:100vh; }
+.page-wrap h1 { font-family:inherit; font-size:22px; font-weight:800; color:var(--ink); margin-bottom:12px; }
+.page-wrap h2 { font-family:inherit; font-size:16px; font-weight:800; color:var(--ink); margin:20px 0 7px; }
+.page-wrap p, .page-wrap li { font-size:14.5px; line-height:1.6; margin-bottom:8px; color:var(--ink); }
+.page-wrap ul, .page-wrap ol { margin-left:20px; margin-bottom:10px; }
+.page-wrap li::marker { color:var(--maroon); font-weight:700; }
+
+@media (max-width:1150px) {
+  #hdr { width:88px; align-items:center; padding:8px 6px; }
+  #main { margin-left:88px; }
+  #hdr .sb-top { align-items:center; width:100%; }
+  .logo { padding:10px; width:auto; }
+  .logo .wordmark { display:none; }
+  #hdr nav { align-items:center; width:100%; }
+  #hdr nav a { width:auto; padding:12px; gap:0; justify-content:center; }
+  #hdr nav a .navlabel { display:none; }
+  .navmore-btn { width:auto; padding:12px; gap:0; justify-content:center; }
+  .navmore-btn .navlabel { display:none; }
+  .sidebar-post-btn { width:52px; height:52px; padding:0; border-radius:50%; }
+  .sidebar-post-btn span { display:none; }
+  .sidebar-post-btn svg { width:22px; height:22px; }
+  .acct-btn { justify-content:center; padding:8px; }
+  .acct-btn .acct-txt, .acct-btn .acct-dots { display:none; }
+  .acct-menu { left:0; }
+  .auth-cta { align-items:center; }
+  .auth-cta a { width:44px; height:44px; padding:0; display:flex; align-items:center; justify-content:center; font-size:11px; }
+  #sidebar, .xright { display:none; }
+}
+
+@media (max-width:640px) {
+  #feed, .page-wrap, .auth-wrap { border-left:none; }
+  #board-hdr h1 { font-size:17px; }
+  .pc-avatar { width:36px; height:36px; }
+  .rc .pc-avatar { width:30px; height:30px; }
+  .rc { padding-left:16px; }
+
+  /* The action row (reply/repost/like/views/share/bookmark) has six
+     items and, unlike the rest of the row, the Share button always
+     carried a visible "Share" text label. On a phone-width card that
+     extra word was the one thing that didn't fit — the row's total
+     content width ran past the available space, so instead of
+     wrapping or shrinking, the row just spilled past the edge of the
+     card (and, since nothing stopped it, the whole page), which is
+     why Share looked squeezed against the edge and Bookmark vanished
+     off-screen entirely. Icon-only Share on mobile (it already
+     matches the post-detail/lightbox action rows, which never showed
+     the word) plus tighter spacing gives the row enough room to sit
+     fully on-screen again. */
+  .act.share .act-label { display:none; }
+  .acts { gap:0; }
+  .act { padding:6px 5px; }
+}
+
+@media (max-width:380px) {
+  .act { padding:5px 3px; }
+  .act svg { width:17px; height:17px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE APP CHROME — top bar + bottom tab bar + slide-out drawer,
+   built by renderMobileChrome() in common.js and injected on every
+   page. Desktop's left icon rail / #hdr is swapped out for this
+   below the breakpoint, matching the native X app's mobile-web
+   layout rather than just shrinking the desktop one down.
+   ═══════════════════════════════════════════════════════════════ */
+#m-topbar, #m-tabbar, #m-fab, .m-drawer-bg { display:none; }
+
+@media (max-width:700px) {
+  #hdr { display:none; }
+  #main { margin-left:0; padding-top:53px; padding-bottom:calc(50px + env(safe-area-inset-bottom)); }
+  #sidebar, .xright { display:none; }
+
+  #m-topbar {
+    display:flex; align-items:center; justify-content:flex-start;
+    position:fixed; top:0; left:0; right:0; height:53px;
+    padding:0 14px; background:var(--translucent-bg); backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line); z-index:900;
+  }
+  #m-topbar .m-avatar-btn {
+    background:none; border:none; padding:0; line-height:0; cursor:pointer; position:relative; z-index:1;
+    border-radius:50%;
+  }
+  #m-topbar .m-avatar-btn img { width:32px; height:32px; display:block; transition:transform .2s cubic-bezier(.34,1.56,.64,1); }
+  #m-topbar .m-avatar-btn:active img { transform:scale(.86); transition-duration:.08s; }
+  /* Soft ring flash on tap release, layered on top of the generic
+     press-bounce every button already gets — makes a small round
+     avatar (where a 4% scale is easy to miss) read as clearly tapped. */
+  #m-topbar .m-avatar-btn::after {
+    content:""; position:absolute; inset:-5px; border-radius:50%;
+    box-shadow:0 0 0 0 var(--maroon-tint); opacity:0; pointer-events:none;
+  }
+  #m-topbar .m-avatar-btn.oc-bounce::after { animation:oc-avatar-ring .45s ease-out; }
+  @keyframes oc-avatar-ring {
+    0%   { box-shadow:0 0 0 0 var(--maroon-tint); opacity:1; }
+    100% { box-shadow:0 0 0 9px var(--maroon-tint); opacity:0; }
+  }
+  /* Absolutely centered on the bar itself (not flex-centered between
+     siblings) so the logo stays dead-center regardless of what sits
+     to its left — previously it was one of three flex children with
+     the "Post"/"Log in" pill on the right, so removing that pill and
+     centering the logo through flex layout alone would have shifted
+     the whole bar's balance instead of just removing the button. */
+  #m-topbar .m-logo {
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    line-height:0;
+  }
+  #m-topbar .m-logo .logo-mark { width:26px; height:26px; }
+
+  #m-tabbar {
+    display:flex; position:fixed; bottom:0; left:0; right:0; z-index:900;
+    background:var(--translucent-bg); backdrop-filter:blur(10px);
+    border-top:1px solid var(--line); padding-bottom:env(safe-area-inset-bottom);
+  }
+  #m-tabbar a {
+    flex:1; display:flex; align-items:center; justify-content:center; position:relative;
+    height:50px; color:var(--ink); text-decoration:none;
+  }
+  #m-tabbar a svg { width:25px; height:25px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; transition:transform .18s cubic-bezier(.34,1.56,.64,1), fill .12s ease; }
+  #m-tabbar a.cur svg { fill:currentColor; transform:scale(1.1); }
+  #m-tabbar a .navbadge { position:absolute; top:4px; right:calc(50% - 17px); margin-left:0; }
+
+  #m-fab {
+    display:flex; align-items:center; justify-content:center;
+    position:fixed; right:16px; bottom:calc(66px + env(safe-area-inset-bottom)); z-index:850;
+    width:54px; height:54px; border-radius:50%; background:var(--maroon); color:#fff;
+    border:none; box-shadow:0 4px 14px rgba(15,20,25,.25); cursor:pointer;
+  }
+  #m-fab:hover { background:var(--maroon-dk); }
+  #m-fab svg { width:24px; height:24px; fill:none; stroke:#fff; stroke-width:2.4; stroke-linecap:round; }
+
+  .m-drawer-bg {
+    display:block; position:fixed; inset:0; background:rgba(91,112,131,0); z-index:950;
+    pointer-events:none; transition:background-color .28s cubic-bezier(.2,.8,.2,1);
+  }
+  .m-drawer-bg.open { background:rgba(91,112,131,.4); pointer-events:auto; }
+  .m-drawer {
+    position:absolute; top:0; left:0; bottom:0; width:78vw; max-width:300px;
+    background:var(--bg); padding:16px; overflow-y:auto;
+    transform:translateX(-100%); transition:transform .28s cubic-bezier(.2,.8,.2,1);
+  }
+  .m-drawer-bg.open .m-drawer { transform:translateX(0); }
+  .m-drawer .m-drawer-avatar { width:52px; height:52px; display:block; margin-bottom:10px; }
+  .m-drawer .m-drawer-name { display:block; font-size:17px; font-weight:800; color:var(--ink); }
+  .m-drawer .m-drawer-handle { display:block; font-size:14px; color:var(--muted); margin-bottom:10px; }
+  .m-drawer .m-drawer-stats { display:flex; gap:16px; font-size:13.5px; color:var(--muted); margin-bottom:14px; }
+  .m-drawer .m-drawer-stats a { color:var(--ink); text-decoration:none; }
+  .m-drawer .m-drawer-stats a b { font-weight:800; }
+  .m-drawer .m-drawer-stats a:hover { text-decoration:underline; }
+  .m-drawer hr { border:none; border-top:1px solid var(--line); margin:10px 0; }
+  .m-drawer-menu a, .m-drawer-menu button {
+    display:flex; align-items:center; gap:14px; width:100%; text-align:left;
+    font-family:inherit; font-size:16px; font-weight:700; color:var(--ink);
+    background:none; border:none; padding:11px 4px; cursor:pointer; text-decoration:none; border-radius:var(--r-sm);
+  }
+  .m-drawer-menu a:hover, .m-drawer-menu button:hover { background:var(--hover-bg); text-decoration:none; }
+  .m-drawer-menu svg { width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+  .m-drawer-cta { display:flex; flex-direction:column; gap:10px; margin-top:8px; }
+  .m-drawer-cta a { text-align:center; padding:10px; border-radius:999px; font-weight:800; font-size:14.5px; text-decoration:none; }
+  .m-drawer-cta a.cta-primary { background:var(--ink); color:var(--bg); }
+  .m-drawer-cta a.cta-ghost { border:1px solid var(--border-input); color:var(--ink); }
+
+  /* Log out — deliberately separated from the menu list above and
+     styled as a clear "danger" action (tinted, not the site accent),
+     instead of falling through to a bare unstyled <button>. */
+  .m-drawer-logout {
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    width:100%; margin-top:2px; border:1px solid rgba(224,36,36,.25); border-radius:999px;
+    font-family:inherit; font-size:15px; font-weight:800; color:#e02424;
+    background:rgba(224,36,36,.08); padding:12px; cursor:pointer; text-decoration:none;
+    transition:background-color .12s ease;
+  }
+  .m-drawer-logout:hover { background:rgba(224,36,36,.16); }
+  .m-drawer-logout:active { background:rgba(224,36,36,.22); }
+  .m-drawer-logout svg { width:19px; height:19px; flex:none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ACCOUNTS — avatars, dropdown, login/signup, profile page.
+   ═══════════════════════════════════════════════════════════════ */
+
+.avatar {
+  border-radius:50%; object-fit:cover; display:inline-block;
+  background:var(--hover-bg); border:none; flex:none;
+}
+.pfp-sm  { width:16px; height:16px; margin-right:4px; vertical-align:-3px; }
+.pfp-md  { width:32px; height:32px; }
+.pfp-lg  { width:96px; height:96px; border:4px solid var(--bg); box-shadow:0 0 0 1px var(--line); }
+
+.pfl { color:var(--ink); font-weight:800; text-decoration:none; }
+.pfl:hover { text-decoration:underline; }
+
+.post-login-gate {
+  background:var(--cream-card); border:none; border-top:8px solid var(--line); padding:20px 16px;
+  text-align:center; font-size:14px; color:var(--muted);
+}
+.post-login-gate a { font-weight:700; color:var(--maroon); }
+
+/* ── auth pages (login / signup) ──
+   Split-panel card: a gradient brand panel (desktop only, purely
+   decorative — swapped for a compact header on narrow screens) next
+   to the actual form. Icons sit inside the email/username field;
+   the password field also gets a show/hide toggle button
+   (togglePwVis() in js/auth.js). Everything still reads the same
+   theme tokens as the rest of the app, so it follows Dim/Lights out
+   and the 5 accent colors automatically. */
+.auth-wrap {
+  flex:1; min-width:0; margin:0; padding:40px 24px; border-left:1px solid var(--line);
+  min-height:100vh; display:flex; align-items:center; justify-content:center;
+  background:var(--bg);
+}
+.auth-shell {
+  display:flex; width:100%; max-width:400px;
+  background:var(--cream-card); border:1px solid var(--line); border-radius:var(--r-md);
+  overflow:hidden;
+}
+
+/* right form panel */
+.auth-card { flex:1 1 auto; background:var(--cream-card); border:none; width:100%; padding:36px 32px; display:flex; flex-direction:column; justify-content:center; }
+.auth-card-logo { display:flex; align-items:center; gap:9px; font-weight:800; font-size:16px; color:var(--ink); text-decoration:none; margin-bottom:22px; }
+.auth-card-logo .badge { width:30px; height:30px; border-radius:50%; background:var(--hover-bg); display:flex; align-items:center; justify-content:center; flex:none; }
+.auth-card-logo .badge .logo-mark { width:20px; height:20px; }
+.auth-card-logo em { font-style:normal; color:var(--maroon); }
+.auth-card h1 {
+  display:block; font-family:inherit; font-weight:800; font-size:25px;
+  color:var(--ink); background:none; padding:0; border-bottom:none; margin:0;
+}
+/* Visually hidden but still readable by screen readers and search engines —
+   used for pages whose primary heading is decorative/tab-driven in the UI
+   (e.g. the home feed) so every page still has exactly one descriptive <h1>. */
+.sr-only {
+  position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+}
+.auth-sub { font-size:14px; color:var(--muted); margin:6px 0 22px; }
+.auth-card .auth-body { padding:0; }
+.auth-card .auth-body .errmsg, .auth-card .auth-body .auth-ok { margin:0 0 14px; }
+.auth-field { margin-bottom:15px; }
+.auth-field label { display:block; font-size:13px; font-weight:700; color:var(--muted); margin-bottom:5px; }
+.auth-hint { font-size:11.5px; color:var(--muted); margin-top:4px; display:block; }
+
+.auth-input-wrap { position:relative; }
+.auth-input-wrap .auth-fi { position:absolute; left:12px; top:50%; transform:translateY(-50%); width:18px; height:18px; color:var(--muted); pointer-events:none; }
+.auth-input-wrap .auth-fi svg { width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.auth-input-wrap input { padding-left:38px; }
+.auth-input-wrap input[type="password"], .auth-input-wrap input[type="text"].has-pw-toggle { padding-right:40px; }
+.auth-input-wrap:focus-within .auth-fi { color:var(--maroon); }
+
+.pw-toggle {
+  position:absolute; right:5px; top:50%; transform:translateY(-50%);
+  width:28px; height:28px; display:flex; align-items:center; justify-content:center;
+  background:none; border:none; padding:0; margin:0; color:var(--muted); cursor:pointer;
+  border-radius:50%; transition:background .12s ease, color .12s ease;
+}
+.pw-toggle:hover { background:var(--maroon-tint); color:var(--maroon); }
+.pw-toggle svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.pw-toggle .eye-off { display:none; }
+.pw-toggle.showing .eye-on { display:none; }
+.pw-toggle.showing .eye-off { display:block; }
+
+/* "I'm not a robot" reCAPTCHA widget — shared container used on
+   signup/login and every post/reply composer (js/common.js
+   renderCaptchaIfNeeded()/verifyHuman()). Hidden via inline
+   style="display:none" by default and only shown when a check is
+   actually still needed right now. */
+/* ── CAPTCHA CARD — custom shell around the Cloudflare Turnstile
+   widget. Turnstile's own checkbox/challenge UI lives inside a
+   cross-origin iframe we can't restyle, but everything around it is
+   ours: a bordered card matching the app's own inputs, a shield/label
+   header so it reads as "one quick check" rather than a bare box, a
+   shimmer placeholder while the widget script loads, and a green
+   "verified" collapse once it passes — so the state change is
+   obvious instead of the widget just silently vanishing. ── */
+.captcha-card {
+  margin:10px 0; border:1px solid var(--border-input); border-radius:var(--r-md);
+  background:var(--input-bg); overflow:hidden;
+  transition:border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+.captcha-card:empty { display:none; margin:0; }
+.captcha-card.is-error { border-color:var(--like); animation:captchaShake .4s ease; }
+.captcha-card-head {
+  display:flex; align-items:center; gap:10px; padding:10px 12px;
+  border-bottom:1px solid var(--line); background:var(--hover-bg);
+}
+.captcha-card-icon {
+  flex:none; width:30px; height:30px; border-radius:50%; display:flex;
+  align-items:center; justify-content:center; background:var(--maroon-tint); color:var(--maroon);
+  transition:background-color .15s ease, color .15s ease, transform .25s ease;
+}
+.captcha-card-icon svg { width:16px; height:16px; }
+.captcha-card-icon .cci-check { display:none; }
+.captcha-card-text { min-width:0; }
+.captcha-card-title { display:block; font-size:13px; font-weight:700; color:var(--ink); line-height:1.3; }
+.captcha-card-sub { display:block; font-size:11.5px; color:var(--muted); line-height:1.3; margin-top:1px; }
+.captcha-card-body {
+  display:flex; align-items:center; justify-content:center; padding:14px; min-height:69px;
+}
+.captcha-card.is-verified { border-color:var(--green); background:rgba(0,186,124,.06); }
+.captcha-card.is-verified .captcha-card-head { border-bottom-color:rgba(0,186,124,.25); }
+.captcha-card.is-verified .captcha-card-body { display:none; }
+.captcha-card.is-verified .captcha-card-icon { background:rgba(0,186,124,.16); color:var(--green); transform:scale(1.08); }
+.captcha-card.is-verified .captcha-card-icon .cci-shield { display:none; }
+.captcha-card.is-verified .captcha-card-icon .cci-check { display:flex; }
+.captcha-card.is-verified .captcha-card-title { color:var(--green); }
+.captcha-card.is-verified .captcha-card-sub { font-size:0; }
+.captcha-card.is-verified .captcha-card-sub::after { content:"You're verified — you're all set."; font-size:11.5px; }
+.captcha-skeleton {
+  width:100%; max-width:300px; height:65px; border-radius:var(--r-sm);
+  background:linear-gradient(90deg, var(--line) 25%, var(--hover-bg) 50%, var(--line) 75%);
+  background-size:400% 100%; animation:captchaShimmer 1.4s ease infinite;
+}
+@keyframes captchaShimmer { 0% { background-position:100% 0; } 100% { background-position:0 0; } }
+@keyframes captchaShake {
+  10%, 90% { transform:translateX(-1px); } 20%, 80% { transform:translateX(2px); }
+  30%, 50%, 70% { transform:translateX(-4px); } 40%, 60% { transform:translateX(4px); }
+}
+
+.auth-submit {
+  width:100%; font-family:inherit; font-size:15px; font-weight:700;
+  background:var(--maroon); color:#fff; border:none; border-radius:999px; padding:12px 10px; cursor:pointer;
+  margin-top:10px; transition:background .12s ease, filter .12s ease, transform .05s ease;
+}
+.auth-submit:hover { background:var(--maroon-dk); }
+.auth-submit:active { transform:translateY(1px); }
+.auth-submit:disabled { opacity:.6; cursor:default; }
+.auth-switch { text-align:left; font-size:14px; color:var(--muted); margin-top:18px; }
+.auth-switch a { color:var(--maroon); font-weight:700; }
+.auth-legal { font-size:11.5px; color:var(--muted); line-height:1.5; margin-top:18px; }
+.auth-legal a { color:var(--muted); text-decoration:underline; }
+.auth-ok { background:#E8F5EA; border:1px solid var(--green); border-radius:var(--r-sm); color:#0A7A44; font-size:13px; padding:10px 12px; margin-bottom:12px; }
+html[data-theme="dim"] .auth-ok, html[data-theme="dark"] .auth-ok { background:rgba(0,186,124,.14); color:#4ADE80; }
+
+@media (max-width:900px) {
+  .auth-wrap { padding:28px 18px; }
+  .auth-card { padding:36px 30px; }
+}
+@media (max-width:480px) {
+  .auth-wrap { padding:0; border-left:none; }
+  .auth-shell { min-height:100vh; border-radius:0; border:none; }
+  .auth-card { padding:28px 22px; justify-content:flex-start; padding-top:15vh; }
+}
+
+/* ── profile page ── */
+.profile-hdr {
+  display:block; background:var(--cream-card);
+  border:none; border-bottom:1px solid var(--line); border-radius:0; box-shadow:none;
+  padding:0 16px 14px; margin-bottom:0;
+}
+.profile-hdr::before { content:""; display:block; height:150px; margin:0 -16px 0; background:var(--banner-img, linear-gradient(135deg,#BEE3F8,#E6D9F7)) center/cover no-repeat; }
+.profile-id { flex:1; min-width:180px; padding-top:12px; }
+.uname-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.profile-id .uname { font-family:inherit; font-size:20px; font-weight:800; color:var(--ink); overflow-wrap:anywhere; word-break:break-word; min-width:0; }
+.profile-id .handle { font-size:14px; color:var(--muted); margin-bottom:6px; }
+.profile-id .bio { font-size:15px; margin-top:8px; white-space:pre-wrap; }
+.profile-meta { font-size:14px; color:var(--muted); margin-top:10px; }
+.profile-edit-btn {
+  font-family:inherit; font-size:14px; font-weight:700; background:none;
+  border:1px solid var(--border-input); border-radius:999px; padding:7px 15px; cursor:pointer;
+  color:var(--ink); text-decoration:none; display:inline-block; transition:background .12s ease;
+}
+.profile-edit-btn:hover { background:var(--hover-bg); text-decoration:none; }
+
+#pv-avatar { margin-top:-44px; position:relative; z-index:1; }
+
+/* ── header action row: message + "···" menu + follow/edit ── */
+.profile-hdr-actions { display:flex; align-items:center; gap:8px; margin-left:auto; }
+.profile-hdr-actions .follow-btn, .profile-hdr-actions .profile-edit-btn { margin-top:0; }
+.profile-icon-btn {
+  width:36px; height:36px; border-radius:50%; border:1px solid var(--border-input);
+  display:inline-flex; align-items:center; justify-content:center; background:none; cursor:pointer;
+  color:var(--ink); transition:background .12s ease, border-color .12s ease;
+}
+.profile-icon-btn:hover { background:var(--hover-bg); }
+.profile-icon-btn svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.profile-hdr-actions .pc-menu-wrap { margin-left:0; }
+.profile-hdr-actions .pc-menu-dd { min-width:220px; }
+
+/* ── location / website / joined row ── */
+.profile-meta-row { display:flex; flex-wrap:wrap; gap:4px 14px; margin-top:10px; font-size:14px; color:var(--muted); max-width:100%; }
+.pmr-item { display:inline-flex; align-items:center; gap:5px; max-width:100%; min-width:0; }
+.pmr-item a { display:inline-flex; align-items:center; gap:5px; color:var(--maroon); text-decoration:none; min-width:0; max-width:100%; }
+.pmr-item a:hover .pmr-text { text-decoration:underline; }
+.pmr-icon { display:inline-flex; align-items:center; justify-content:center; width:15px; height:15px; flex:none; }
+.pmr-icon svg { width:15px; height:15px; display:block; }
+.pmr-text { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+
+/* ── "Followed by X and Y" mutuals line ── */
+.profile-followed-by { font-size:13px; color:var(--muted); margin-top:8px; }
+
+/* follow button + follower/following stats */
+.follow-btn {
+  font-family:inherit; font-size:14px; font-weight:700;
+  background:var(--ink); color:var(--bg); border:none; border-radius:999px;
+  padding:7px 16px; cursor:pointer; text-decoration:none; display:inline-block; margin-top:12px;
+  transition:background .12s ease, color .12s ease, border-color .12s ease, filter .12s ease;
+}
+.follow-btn:hover { filter:brightness(.85); text-decoration:none; }
+.follow-btn.following { background:var(--cream-card); color:var(--ink); border:1px solid var(--border-input); }
+.follow-btn.following:hover { background:#FEECEE; color:var(--like); border-color:var(--like); filter:none; }
+.follow-btn:disabled { opacity:.6; cursor:default; }
+.follow-btn.locked { opacity:1; cursor:default; display:inline-flex; align-items:center; }
+.follow-btn.locked:hover { background:var(--cream-card); color:var(--ink); border-color:var(--border-input); filter:none; }
+
+.profile-stats { display:flex; gap:18px; margin-top:10px; font-size:14px; color:var(--muted); }
+.stat-item, .stat-item:visited { cursor:pointer; color:var(--ink); font-weight:700; text-decoration:none; }
+.stat-item b { color:var(--ink); font-weight:800; }
+.stat-item:hover { color:var(--ink); text-decoration:none; }
+.stat-item.stat-static { cursor:default; }
+
+.edit-form { display:none; margin-top:0; border-top:none; padding-top:0; }
+.edit-form.open { display:block; }
+.edit-form label { display:block; font-size:12px; font-weight:700; color:var(--muted); margin:10px 0 4px; }
+.edit-form input[type="text"], .edit-form textarea { max-width:100%; }
+.edit-form textarea { height:70px; }
+.edit-row { display:flex; gap:10px; align-items:center; margin-top:10px; }
+.avatar-pick { display:flex; align-items:center; gap:12px; margin-top:8px; }
+
+.empty-note { font-size:13.5px; color:var(--muted); font-style:normal; padding:20px 16px; }
+
+/* Scheduled posts tab (profile.js loadScheduledPosts) */
+.sched-item { padding:12px 16px; border-bottom:1px solid var(--line); }
+.sched-item-when { font-size:12.5px; color:var(--maroon); font-weight:600; margin-bottom:4px; }
+.sched-item-body { font-size:14.5px; white-space:pre-wrap; word-break:break-word; margin-bottom:8px; }
+.sched-item-actions { display:flex; gap:8px; }
+.sched-item-actions button { font-size:12.5px; padding:5px 12px; border-radius:999px; cursor:pointer; }
+.cx-sched-remove-btn { background:none; border:1px solid var(--line); color:var(--muted); }
+.cx-sched-remove-btn:hover { border-color:#c0392b; color:#c0392b; }
+
+/* ═══════════════════════════════════════════════════════════════
+   SEARCH PAGE
+   ═══════════════════════════════════════════════════════════════ */
+.search-topbar { padding:10px 16px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--translucent-bg); backdrop-filter:blur(8px); z-index:5; }
+.search-topbar .xsearch { margin:0; }
+.search-topbar form { display:contents; }
+
+/* ═══════════════════════════════════════════════════════════════
+   NOTIFICATIONS PAGE
+   ═══════════════════════════════════════════════════════════════ */
+.notif-item { display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-bottom:1px solid var(--line); text-decoration:none; color:var(--ink); transition:background-color .12s ease; animation:oc-fade-in .2s ease both; }
+.notif-item:hover { background:var(--hover-bg); text-decoration:none; }
+.notif-item.unread { background:var(--maroon-tint); }
+.notif-item.unread:hover { background:rgba(14,165,233,.16); }
+.notif-icon { flex:none; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-top:2px; }
+.notif-icon svg { width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:2; }
+.notif-icon.like { background:var(--like-tint); color:var(--like); }
+.notif-icon.like svg { fill:var(--like); stroke:var(--like); }
+.notif-icon.reply { background:var(--maroon-tint); color:var(--maroon); }
+.notif-icon.follow { background:var(--maroon-tint); color:var(--maroon); }
+.notif-icon.repost { background:rgba(0,186,124,.10); color:var(--green); }
+.notif-icon.quote { background:var(--maroon-tint); color:var(--maroon); }
+.notif-icon.quote svg { fill:currentColor; stroke:none; }
+.notif-body { flex:1; min-width:0; }
+.notif-body .notif-txt { font-size:14.5px; color:var(--ink); margin-top:4px; }
+.notif-body .notif-txt b { font-weight:800; }
+.notif-body .notif-snip { font-size:13.5px; color:var(--muted); margin-top:2px; white-space:pre-wrap; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.notif-body .notif-time { font-size:12.5px; color:var(--muted); }
+
+/* ═══════════════════════════════════════════════════════════════
+   CHAT PAGE
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── conversation list ── */
+.conv-row { display:flex; gap:12px; align-items:center; padding:12px 16px 12px 14px; border-bottom:1px solid var(--line); text-decoration:none; color:var(--ink); transition:background-color .12s ease; position:relative; animation:oc-fade-in .2s ease both; border-left:3px solid transparent; }
+.conv-row:hover { background:var(--hover-bg); text-decoration:none; }
+.conv-row .avatar { flex:none; width:50px; height:50px; }
+.conv-txt { flex:1; min-width:0; }
+.conv-top { display:flex; align-items:baseline; gap:6px; }
+.conv-name { font-weight:800; font-size:15px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.conv-handle { font-size:13.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.conv-time { font-size:12.5px; color:var(--muted); margin-left:auto; flex:none; }
+.conv-snip { font-size:13.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
+.conv-row.unread { border-left-color:var(--maroon); background:var(--maroon-tint); }
+.conv-row.unread:hover { background:var(--maroon-tint); filter:brightness(0.97); }
+.conv-row.unread .conv-snip, .conv-row.unread .conv-name { color:var(--ink); font-weight:700; }
+.conv-dot { width:9px; height:9px; border-radius:50%; background:var(--maroon); flex:none; align-self:center; box-shadow:0 0 0 3px var(--maroon-tint); }
+
+/* new-message composer: collapsed to a single pill trigger by
+   default; expands into an input+send row when tapped, instead of
+   permanently occupying a full-width bar above the conversation
+   list. */
+.chat-new-trigger { display:flex; align-items:center; gap:10px; margin:10px 16px 6px; padding:10px 16px; border-radius:999px; background:var(--hover-bg); color:var(--muted); border:none; font-size:14.5px; font-family:inherit; cursor:pointer; width:calc(100% - 32px); text-align:left; transition:background .12s ease; }
+.chat-new-trigger:hover { background:var(--border-input); }
+.chat-new-trigger svg { width:18px; height:18px; flex:none; color:var(--maroon); }
+.chat-new { display:flex; gap:8px; align-items:center; padding:10px 16px; border-bottom:1px solid var(--line); animation:oc-fade-in .15s ease both; }
+.chat-new .xsearch { flex:1; margin:0; }
+.chat-new-close { flex:none; width:36px; height:36px; border-radius:50%; border:none; background:none; color:var(--muted); display:inline-flex; align-items:center; justify-content:center; cursor:pointer; transition:background .12s ease; }
+.chat-new-close:hover { background:var(--hover-bg); }
+.chat-new-close svg { width:18px; height:18px; }
+
+.chat-empty { text-align:center; padding:64px 24px; color:var(--muted); }
+.chat-empty svg { width:52px; height:52px; color:var(--maroon); opacity:.5; margin-bottom:14px; }
+.chat-empty h3 { font-size:17px; color:var(--ink); margin:0 0 6px; }
+.chat-empty p { font-size:14px; margin:0; }
+
+/* ── one-on-one thread ── */
+/* .chat-thread is a fixed-height flex column (height set from JS —
+   see sizeChatThread() in chat.js — on desktop; on mobile it's
+   handled purely in CSS, see the mobile block below) so the header
+   stays put, the message list is the only thing that scrolls, and
+   the composer is always pinned to the bottom of the screen —
+   instead of just trailing after the last message with dead space
+   below it. */
+.chat-thread { display:flex; flex-direction:column; overflow:hidden; background:var(--cream-card); }
+
+/* .chat-hdr is the thread's one and only header — the generic
+   #chat-sec-bar ("← Name") that every other section on this page
+   uses is hidden the moment a thread is open (see the body:has()
+   rule below) so there's just one back arrow / one name, not two
+   stacked headers. */
+body:has(.chat-thread) #chat-sec-bar { display:none; }
+.chat-hdr { display:flex; align-items:center; gap:10px; padding:10px 16px; border-bottom:1px solid var(--line); flex:none; background:var(--translucent-bg); backdrop-filter:blur(8px); z-index:5; }
+.chat-hdr-back { display:inline-flex; flex:none; align-items:center; justify-content:center; width:32px; height:32px; margin:-4px 0 -4px -6px; border-radius:50%; color:var(--ink); transition:background .12s ease; }
+.chat-hdr-back:hover { background:var(--hover-bg); }
+.chat-hdr-back svg { width:22px; height:22px; }
+.chat-hdr .avatar { width:34px; height:34px; }
+.chat-hdr .nm { font-weight:800; font-size:16px; }
+.chat-hdr .pc-handle { font-size:13.5px; color:var(--muted); display:block; }
+
+.chat-msgs { flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; display:flex; flex-direction:column; padding:16px; overscroll-behavior:contain; }
+.chat-daydivider { text-align:center; font-size:12.5px; font-weight:700; color:var(--muted); margin:14px 0 10px; }
+.chat-daydivider:first-child { margin-top:0; }
+
+/* End-to-end encryption notice — a slim, dismissible-feeling pill
+   (WhatsApp/Signal convention) sitting above the first message
+   rather than a persistent banner that eats space forever. */
+.chat-e2e-banner { display:flex; align-items:center; justify-content:center; gap:6px; text-align:center; font-size:12px; line-height:1.35; color:var(--muted); background:var(--hover-bg); border-radius:12px; padding:8px 14px; margin:0 auto 14px; max-width:90%; }
+.chat-e2e-banner svg { width:13px; height:13px; flex:none; }
+.chat-e2e-banner.pending { opacity:.8; }
+
+/* Messages sent within a few minutes of each other by the same
+   person are visually grouped (tight spacing, fully-rounded corners
+   throughout) with the speech-bubble "tail" only on the last bubble
+   of the group — same convention as iMessage/Telegram — instead of
+   every single message getting its own tail and full gap. */
+.msg-row { display:flex; align-items:flex-end; gap:6px; margin-top:2px; animation:oc-fade-in .15s ease both; }
+.msg-row.g-start { margin-top:14px; }
+.chat-daydivider + .msg-row.g-start { margin-top:0; }
+.msg-row.mine { justify-content:flex-end; }
+.msg-bubble { max-width:72%; padding:9px 14px; border-radius:18px; font-size:14.5px; line-height:1.4; white-space:pre-wrap; word-wrap:break-word; box-shadow:0 1px 1px rgba(0,0,0,.04); }
+.msg-row.mine .msg-bubble { background:var(--maroon); color:#fff; border-bottom-right-radius:18px; }
+.msg-row.theirs .msg-bubble { background:var(--hover-bg); color:var(--ink); border-bottom-left-radius:18px; }
+.msg-row.mine.g-end .msg-bubble { border-bottom-right-radius:4px; }
+.msg-row.theirs.g-end .msg-bubble { border-bottom-left-radius:4px; }
+.msg-undecryptable { display:inline-flex; align-items:center; gap:5px; font-style:italic; opacity:.75; }
+.msg-undecryptable svg { width:13px; height:13px; flex:none; }
+/* timestamp + read ticks are always in the layout (so nothing
+   reflows) but only visibly shown on the last bubble of a group or
+   on hover, keeping the thread visually calm without hiding the
+   info entirely. */
+.msg-time-inline { font-size:11px; color:var(--muted); white-space:nowrap; padding-bottom:3px; flex:none; opacity:0; transition:opacity .12s ease; }
+.msg-row.g-end .msg-time-inline, .msg-row:hover .msg-time-inline { opacity:1; }
+/* Read receipts — one check (still unread) or two (read), WhatsApp-
+   style; tinted with the app's accent colour once read instead of
+   WhatsApp's blue, to stay on-brand. */
+.msg-ticks { width:15px; height:14px; color:var(--muted); display:inline-flex; align-items:center; margin-left:1px; flex:none; padding-bottom:3px; opacity:0; transition:opacity .12s ease, color .15s ease; }
+.msg-row.g-end .msg-ticks, .msg-row:hover .msg-ticks { opacity:1; }
+.msg-ticks.read { color:var(--maroon); }
+.msg-ticks svg { width:100%; height:100%; }
+
+/* Typing indicator — three dots bouncing in sequence, styled as an
+   ordinary incoming bubble so it slots into the thread exactly like
+   a real message would (and gets pushed out by one the instant it
+   arrives). */
+.chat-typing-bubble { padding:11px 16px; }
+.chat-typing-dots { display:flex; align-items:center; gap:4px; }
+.chat-typing-dots span { width:6px; height:6px; border-radius:50%; background:var(--muted); opacity:.5; animation:oc-typing-bounce 1.2s infinite ease-in-out; }
+.chat-typing-dots span:nth-child(2) { animation-delay:.15s; }
+.chat-typing-dots span:nth-child(3) { animation-delay:.3s; }
+@keyframes oc-typing-bounce {
+  0%, 60%, 100% { transform:translateY(0); opacity:.5; }
+  30% { transform:translateY(-4px); opacity:1; }
+}
+
+.chat-composer { display:flex; gap:8px; align-items:flex-end; padding:10px 16px; border-top:1px solid var(--line); flex:none; background:var(--cream-card); }
+/* font-size:16px is load-bearing, not decorative — anything smaller
+   makes iOS Safari zoom the whole page in on focus, which is what
+   made the composer look like it needed scrolling to reach. */
+.chat-composer textarea { flex:1; height:40px; max-height:120px; resize:none; border-radius:20px; padding:10px 16px; overflow-y:auto; transition:height .08s ease; font-size:16px; }
+.chat-send-btn { flex:none; width:38px; height:38px; border-radius:50%; border:none; background:var(--maroon); color:#fff; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; transition:background .12s ease, opacity .1s ease, transform .1s ease; }
+.chat-send-btn svg { width:17px; height:17px; margin-left:-1px; }
+.chat-send-btn:hover { background:var(--maroon-dk); }
+.chat-send-btn:active { transform:scale(.92); }
+.chat-send-btn:disabled { opacity:.4; cursor:default; }
+
+/* ── mobile: full-screen immersive thread ──
+   Below 700px, an open thread (.chat-thread) takes over the whole
+   screen — same convention as X/WhatsApp/iMessage on mobile web —
+   instead of squeezing into the space left by the fixed top bar and
+   bottom tab bar. That removes the composer's dependency on those
+   other elements' heights entirely (previously it was positioned by
+   subtracting fixed 53px/50px guesses from 100vh in JS, which fell
+   apart the moment the on-screen keyboard opened and ate into the
+   viewport without 100vh shrinking to match). Height instead comes
+   off --vvh, the live window.visualViewport height that common.js
+   keeps in sync — the same mechanism the global compose modal
+   already relies on — so the composer rides right above the keyboard
+   as it opens/closes rather than disappearing underneath it. :has()
+   lets the header/tab bar hide purely in CSS, no JS state to keep in
+   sync with which page/view is showing. */
+@media (max-width:700px) {
+  /* :has() drives this normally, but a handful of still-in-the-wild
+     mobile browsers (older in-app/WebView shells in particular) don't
+     support it — on those, none of these rules would ever match, the
+     old fixed top/bottom bars would stay put, and the composer could
+     end up rendered partly under them, which reads exactly like "have
+     to scroll to reach it". loadThread()/loadConversationList() in
+     chat.js toggle a matching .chat-thread-open class on <body> as a
+     belt-and-suspenders fallback so this doesn't depend on :has()
+     support at all. */
+  body:has(.chat-thread) #m-topbar, body.chat-thread-open #m-topbar,
+  body:has(.chat-thread) #m-tabbar, body.chat-thread-open #m-tabbar,
+  body:has(.chat-thread) #m-fab, body.chat-thread-open #m-fab,
+  body:has(.chat-thread) #chat-sec-bar, body.chat-thread-open #chat-sec-bar { display:none !important; }
+  body:has(.chat-thread) #main, body.chat-thread-open #main { padding-top:0; padding-bottom:0; }
+  body:has(.chat-thread) #feed, body.chat-thread-open #feed { border:none; min-height:0; }
+
+  .chat-thread {
+    position:fixed; inset:0; z-index:940;
+    /* 100dvh first so a pre-JS/pre-vvh first paint (before common.js's
+       syncViewportHeight() has run) still fills the real visible
+       viewport instead of the address-bar-inclusive 100vh, on browsers
+       new enough to support dvh — var(--vvh) then takes over as the
+       live, keyboard-aware source of truth once JS is running. */
+    height:100vh; height:100dvh; height:var(--vvh, 100dvh);
+  }
+  .chat-hdr { padding-top:calc(10px + env(safe-area-inset-top)); }
+  .chat-composer { padding-bottom:calc(10px + env(safe-area-inset-bottom)); }
+
+  .msg-bubble { max-width:80%; }
+  /* Ticks/timestamp are always-on on touch devices — there's no
+     hover to reveal them on tap, and screen space is tighter so
+     they're worth keeping visible on every group-ending bubble. */
+  .msg-row.g-end .msg-time-inline, .msg-row.g-end .msg-ticks { opacity:1; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   SETTINGS PAGE
+   ═══════════════════════════════════════════════════════════════ */
+.settings-section { padding:16px; border-bottom:1px solid var(--line); }
+.settings-section h2 { font-size:16px; font-weight:800; margin-bottom:10px; }
+.settings-section .sub { font-size:13.5px; color:var(--muted); margin-bottom:12px; }
+.settings-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0; }
+.settings-row .lbl { font-size:14.5px; }
+.settings-row .val { font-size:14px; color:var(--muted); }
+
+/* ── Appearance / theme swatch picker (Settings → Appearance) ── */
+.theme-picker { display:flex; gap:12px; margin-top:4px; }
+.theme-swatch {
+  flex:1; border:2px solid var(--border-input); border-radius:var(--r-sm); padding:0; overflow:hidden;
+  cursor:pointer; font-family:inherit; text-align:left; transition:border-color .12s ease;
+}
+.theme-swatch.active { border-color:var(--maroon); }
+.theme-swatch .ts-preview { height:52px; display:flex; align-items:center; gap:6px; padding:0 10px; }
+.theme-swatch .ts-preview span { display:block; width:16px; height:16px; border-radius:50%; }
+.theme-swatch .ts-label { display:block; font-size:13px; font-weight:700; padding:8px 10px; color:var(--ink); background:var(--cream-card); }
+.theme-swatch[data-theme-opt="auto"] .ts-preview { background:linear-gradient(135deg, #FFFFFF 50%, #15202B 50%); }
+.theme-swatch[data-theme-opt="auto"] .ts-preview span { background:linear-gradient(135deg, #0F1419 50%, #F7F9F9 50%); }
+.theme-swatch[data-theme-opt="light"] .ts-preview { background:#FFFFFF; }
+.theme-swatch[data-theme-opt="light"] .ts-preview span { background:#0F1419; }
+.theme-swatch[data-theme-opt="dim"] .ts-preview { background:#15202B; }
+.theme-swatch[data-theme-opt="dim"] .ts-preview span { background:#F7F9F9; }
+.theme-swatch[data-theme-opt="dark"] .ts-preview { background:#000000; }
+.theme-swatch[data-theme-opt="dark"] .ts-preview span { background:#E7E9EA; }
+
+/* ── Appearance / accent color picker (Settings → Appearance) ── */
+.accent-picker { display:flex; gap:14px; margin-top:12px; }
+.accent-swatch {
+  width:32px; height:32px; border-radius:50%; border:2px solid transparent; padding:2px;
+  cursor:pointer; background:var(--accent-swatch-color); position:relative; flex:none;
+  transition:transform .12s ease;
+}
+.accent-swatch:hover { transform:scale(1.08); }
+.accent-swatch.active { border-color:var(--ink); }
+.accent-swatch.active::after {
+  content:""; position:absolute; inset:6px; border-radius:50%; border:2px solid #fff;
+}
+.accent-swatch[data-accent-opt="blue"]   { --accent-swatch-color:#0EA5E9; }
+.accent-swatch[data-accent-opt="red"]    { --accent-swatch-color:#DC2626; }
+.accent-swatch[data-accent-opt="green"]  { --accent-swatch-color:#16A34A; }
+.accent-swatch[data-accent-opt="purple"] { --accent-swatch-color:#7C3AED; }
+.accent-swatch[data-accent-opt="orange"] { --accent-swatch-color:#F97316; }
+
+/* ── TOGGLE SWITCH — used on settings.html for notification prefs ── */
+.toggle { position:relative; display:inline-block; width:40px; height:24px; flex:none; cursor:pointer; }
+.toggle input { opacity:0; width:0; height:0; position:absolute; }
+.toggle-track {
+  position:absolute; inset:0; background:#CFD9DE; border-radius:999px;
+  transition:background-color .15s ease;
+}
+.toggle-track::before {
+  content:""; position:absolute; left:3px; top:3px; width:18px; height:18px;
+  background:#fff; border-radius:50%; box-shadow:0 1px 2px rgba(0,0,0,.25);
+  transition:transform .15s ease;
+}
+.toggle input:checked + .toggle-track { background:var(--maroon); }
+.toggle input:checked + .toggle-track::before { transform:translateX(16px); }
+.toggle input:focus-visible + .toggle-track { box-shadow:0 0 0 2px var(--maroon-tint); }
+
+#ep-hdr, #fl-hdr, #thread-hdr { align-items:center; gap:0; }
+.sec-bar-title { display:flex; flex-direction:column; line-height:1.25; }
+.sec-bar-title .sub { font-size:12.5px; }
+
+/* ── "back arrow" circle button — editprofile.html / followlist.html ── */
+.ep-back {
+  width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  color:var(--ink); text-decoration:none; font-size:18px; margin-right:14px; flex:none;
+  transition:background-color .12s ease;
+}
+.ep-back:hover { background:var(--hover-bg); text-decoration:none; }
+
+/* ── EDIT PROFILE PAGE ── */
+.ep-banner-wrap {
+  position:relative; height:150px; background:var(--banner-img, linear-gradient(135deg,#BEE3F8,#E6D9F7)) center/cover no-repeat;
+  margin-bottom:52px;
+}
+.ep-avatar {
+  position:absolute; left:16px; bottom:-44px; width:88px; height:88px;
+  border:4px solid var(--bg); box-shadow:0 0 0 1px var(--line); background:var(--hover-bg);
+}
+.ep-banner-pick, .ep-avatar-pick {
+  position:absolute; display:flex; align-items:center; justify-content:center; cursor:pointer;
+  background:rgba(15,20,25,.55); color:#fff; border-radius:50%; transition:background-color .12s ease;
+}
+.ep-banner-pick { top:50%; left:50%; transform:translate(-50%,-50%); width:40px; height:40px; }
+.ep-banner-pick svg { width:20px; height:20px; }
+.ep-avatar-pick { left:16px; bottom:-44px; width:88px; height:88px; opacity:0; }
+.ep-avatar-pick:hover, .ep-banner-pick:hover { background:rgba(15,20,25,.7); }
+.ep-avatar-pick:hover { opacity:1; }
+.ep-avatar-pick svg { width:26px; height:26px; }
+.ep-form { padding:0 16px 16px; }
+.ep-form label { display:block; font-size:12px; font-weight:700; color:var(--muted); margin:14px 0 4px; }
+.ep-form input[type="text"], .ep-form textarea { max-width:100%; }
+.ep-form textarea { height:80px; }
+
+/* ── FOLLOWERS / FOLLOWING LIST PAGE ── */
+.fl-row { display:flex; align-items:center; gap:8px; padding:4px 16px; }
+.fl-row .follow-btn { margin-top:0; flex:none; }
+
+/* ═══════════════════════════════════════════════════════════════
+   MEDIA LIGHTBOX — full-screen photo/video viewer (see renderMedia()
+   / openLightbox() in common.js). Always a near-black stage
+   regardless of the active theme (same as X's own photo modal);
+   the side panel and mobile bar borrow the app's normal tokens so
+   text/icons stay legible in Default, Dim, and Lights out alike.
+   ═══════════════════════════════════════════════════════════════ */
+.lb-bg {
+  display:none; position:fixed; inset:0; z-index:3000;
+  background:#000; flex-direction:column;
+}
+.lb-bg.open { display:flex; }
+
+.lb-topbar {
+  position:absolute; top:0; left:0; right:0; z-index:5;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 12px;
+}
+.lb-icon-btn {
+  width:38px; height:38px; border-radius:50%; border:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(15,20,25,.55); color:#fff; transition:background-color .12s ease;
+}
+.lb-icon-btn:hover { background:rgba(15,20,25,.75); }
+.lb-icon-btn svg { width:19px; height:19px; }
+.lb-panel-toggle[hidden] { display:none; }
+.lb-bg.panel-collapsed .lb-panel-toggle svg { transform:rotate(180deg); }
+
+.lb-body { flex:1; display:flex; min-height:0; }
+
+.lb-stage {
+  flex:1; position:relative; display:flex; align-items:center; justify-content:center;
+  overflow:hidden; touch-action:none; overscroll-behavior:contain;
+}
+.lb-media-wrap {
+  max-width:100%; max-height:100%; display:flex; align-items:center; justify-content:center;
+  will-change:transform; transition:transform .15s ease;
+}
+.lb-media-wrap.dragging { transition:none; }
+.lb-media-wrap img, .lb-media-wrap video {
+  max-width:calc(100vw - 32px); max-height:100vh; object-fit:contain;
+  -webkit-user-drag:none; user-select:none; touch-action:none; display:block;
+}
+.lb-media-wrap img { cursor:zoom-in; }
+.lb-media-wrap.dragging img { cursor:grabbing; }
+
+.lb-sidebar {
+  width:500px; max-width:38vw; flex-shrink:0; height:100%; overflow-y:auto;
+  background:var(--bg); border-left:1px solid var(--line);
+}
+.lb-bg.panel-collapsed .lb-sidebar { display:none; }
+.lb-sb-head { display:flex; align-items:flex-start; gap:10px; padding:14px 16px 0; }
+.lb-sb-head .pc-avatar { width:40px; height:40px; }
+.lb-sb-head .op-detail-names { padding-top:2px; }
+.lb-sb-head .op-detail-names .nm { font-size:15px; }
+.lb-sb-head .op-detail-names .verified-badge { width:20px; height:20px; margin-left:0; flex:none; }
+.lb-sb-head .op-detail-names .pc-handle { font-size:14px; }
+.lb-sidebar .op-detail-body { padding:0 16px; margin-top:12px; font-size:17px; }
+.lb-sidebar .op-detail-meta { padding:0 16px 12px; margin-top:12px; }
+.lb-sidebar .op-detail-divider { margin:0 16px; }
+.lb-sidebar .op-stats, .lb-sidebar .acts { padding:10px 16px; max-width:none; margin-top:0; }
+.lb-sb-replybox {
+  display:flex; align-items:center; gap:10px; padding:12px 16px; text-decoration:none;
+  color:var(--muted); font-size:15px; border-bottom:1px solid var(--line);
+}
+.lb-sb-replybox img { width:32px; height:32px; border-radius:50%; }
+.lb-sb-replybox:hover span { text-decoration:underline; }
+.lb-sb-viewall {
+  display:block; padding:14px 16px; color:var(--link); text-decoration:none; font-size:15px; font-weight:700;
+}
+.lb-sb-viewall:hover { text-decoration:underline; }
+
+.lb-mobile-bar {
+  display:none; position:absolute; left:0; right:0; bottom:0; z-index:5;
+  padding:10px 16px calc(10px + env(safe-area-inset-bottom));
+  background:linear-gradient(to top, rgba(0,0,0,.75), rgba(0,0,0,0));
+}
+.lb-mobile-bar[hidden] { display:none; }
+.lb-mobile-bar .acts { max-width:none; }
+.lb-mobile-bar .act { color:#fff; }
+.lb-mobile-bar .act:hover { background:rgba(255,255,255,.12); }
+.lb-mobile-bar .act.liked { color:var(--like); }
+.lb-mobile-bar .act.bookmarked { color:var(--maroon); }
+
+@media (max-width:700px) {
+  .lb-sidebar, .lb-panel-toggle { display:none !important; }
+  .lb-mobile-bar { display:flex; }
+  .lb-media-wrap img, .lb-media-wrap video { max-width:100vw; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TTV — custom video player (replaces native <video controls>)
+   Self-contained skin that sits on top of the video, dark scrim +
+   white icons regardless of light/dim/dark site theme, same as
+   X's own player. Sky accent (var(--maroon)) for the played bar to
+   match the rest of the app instead of hardcoding Twitter blue.
+   ═══════════════════════════════════════════════════════════════ */
+.ttv {
+  position:relative; display:block; width:max-content; max-width:100%;
+  border-radius:16px; overflow:hidden; background:#000; outline:none;
+  line-height:0; -webkit-tap-highlight-color:transparent;
+}
+.ttv:focus-visible { box-shadow:0 0 0 2px var(--maroon); }
+.ttv-video { display:block; max-width:100%; max-height:380px; width:auto; height:auto; background:#000; }
+.rc .ttv-video, .qp-embed .ttv-video { max-height:280px; }
+.lb-media-wrap .ttv { width:auto; max-width:none; border-radius:0; }
+.lb-media-wrap .ttv-video { max-height:calc(100vh - 40px); max-width:calc(100vw - 40px); }
+
+.ttv-overlay {
+  position:absolute; inset:0; cursor:pointer; background:transparent;
+}
+.ttv-spinner {
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  width:32px; height:32px; border-radius:50%;
+  border:3px solid rgba(255,255,255,.35); border-top-color:#fff;
+  animation:ttv-spin .8s linear infinite;
+}
+.ttv-spinner[hidden] { display:none; }
+@keyframes ttv-spin { to { transform:rotate(360deg); } }
+
+/* Centered with an absolute + transform (viewport/box-relative,
+   independent of the video's own size or flex behavior) rather than
+   flexbox — this is what makes it stay dead-centered on the player
+   in every context, including fullscreen. */
+.ttv-big-play {
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  width:64px; height:64px; border-radius:50%; border:none; cursor:pointer;
+  background:rgba(15,20,25,.6); color:#fff; display:flex; align-items:center; justify-content:center;
+  transition:background .15s, transform .15s;
+}
+.ttv-big-play:hover { background:rgba(15,20,25,.78); transform:translate(-50%,-50%) scale(1.05); }
+.ttv-big-play svg { width:28px; height:28px; margin-left:3px; }
+.ttv.ttv-playing .ttv-big-play { display:none; }
+.ttv.ttv-buffering .ttv-big-play { display:none; }
+
+/* bottom gradient control bar — fades out while playing + idle */
+.ttv-controls {
+  position:absolute; left:0; right:0; bottom:0; z-index:2;
+  padding:20px 10px 8px;
+  background:linear-gradient(to top, rgba(0,0,0,.72), rgba(0,0,0,0));
+  opacity:1; transition:opacity .18s ease;
+}
+.ttv.ttv-playing.ttv-idle .ttv-controls { opacity:0; }
+.ttv.ttv-playing.ttv-idle { cursor:none; }
+.ttv.ttv-menu-open .ttv-controls { opacity:1; }
+
+.ttv-progress {
+  position:relative; height:14px; margin:0 2px 2px; cursor:pointer; touch-action:none;
+}
+.ttv-progress-track {
+  position:absolute; left:0; right:0; top:50%; transform:translateY(-50%);
+  height:3px; border-radius:3px; background:rgba(255,255,255,.3);
+  transition:height .1s;
+}
+.ttv-progress:hover .ttv-progress-track, .ttv-progress.ttv-dragging .ttv-progress-track { height:5px; }
+.ttv-progress-buffered {
+  position:absolute; left:0; top:0; bottom:0; width:0%; border-radius:3px;
+  background:rgba(255,255,255,.45);
+}
+.ttv-progress-played {
+  position:absolute; left:0; top:0; bottom:0; width:0%; border-radius:3px;
+  background:var(--maroon);
+}
+.ttv-progress-handle {
+  position:absolute; top:50%; left:0%; width:12px; height:12px; border-radius:50%;
+  background:var(--maroon); transform:translate(-50%,-50%) scale(0);
+  transition:transform .1s; box-shadow:0 0 0 1px rgba(0,0,0,.2);
+}
+.ttv-progress:hover .ttv-progress-handle, .ttv-progress.ttv-dragging .ttv-progress-handle { transform:translate(-50%,-50%) scale(1); }
+.ttv-progress-preview {
+  position:absolute; bottom:16px; transform:translateX(-50%);
+  background:rgba(15,20,25,.9); color:#fff; font-size:12px; font-weight:700;
+  padding:3px 6px; border-radius:4px; white-space:nowrap; pointer-events:none;
+  opacity:0; transition:opacity .1s;
+}
+.ttv-progress:hover .ttv-progress-preview, .ttv-progress.ttv-dragging .ttv-progress-preview { opacity:1; }
+
+.ttv-row { display:flex; align-items:center; gap:2px; height:32px; }
+.ttv-btn {
+  flex:none; width:32px; height:32px; border-radius:50%; border:none; cursor:pointer;
+  background:transparent; color:#fff; display:flex; align-items:center; justify-content:center;
+  position:relative;
+}
+.ttv-btn:hover { background:rgba(255,255,255,.15); }
+.ttv-btn svg { width:18px; height:18px; }
+.ttv-btn.ttv-play svg { width:17px; height:17px; }
+.ttv-time {
+  color:#fff; font-size:12.5px; font-weight:600; padding:0 6px; user-select:none;
+  font-variant-numeric:tabular-nums; white-space:nowrap;
+}
+.ttv-spacer { flex:1; }
+.ttv-speed { width:auto; padding:0 8px; font-size:12.5px; font-weight:700; border-radius:15px; }
+.ttv-vol-wrap { display:flex; align-items:center; }
+.ttv-vol-slider {
+  width:0; opacity:0; overflow:hidden; transition:width .15s, opacity .15s, margin .15s;
+  -webkit-appearance:none; appearance:none; height:3px; border-radius:3px; background:rgba(255,255,255,.35);
+  cursor:pointer; vertical-align:middle;
+}
+.ttv-vol-wrap:hover .ttv-vol-slider, .ttv-vol-wrap:focus-within .ttv-vol-slider { width:60px; opacity:1; margin-left:2px; }
+.ttv-vol-slider::-webkit-slider-thumb {
+  -webkit-appearance:none; width:11px; height:11px; border-radius:50%; background:#fff; cursor:pointer;
+}
+.ttv-vol-slider::-moz-range-thumb { width:11px; height:11px; border-radius:50%; background:#fff; border:none; cursor:pointer; }
+.ttv-vol-slider::-moz-range-track { height:3px; border-radius:3px; background:rgba(255,255,255,.35); }
+
+.ttv-menu {
+  display:none; position:absolute; right:8px; bottom:44px; z-index:6;
+  background:rgba(21,24,28,.96); backdrop-filter:blur(6px); border-radius:12px;
+  min-width:120px; padding:6px; box-shadow:0 4px 18px rgba(0,0,0,.4);
+}
+.ttv.ttv-menu-open .ttv-menu { display:block; }
+.ttv-menu-opt {
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  width:100%; background:none; border:none; color:#fff; font-size:13px; font-weight:600;
+  padding:7px 10px; border-radius:8px; cursor:pointer; text-align:left; font-family:inherit;
+}
+.ttv-menu-opt:hover { background:rgba(255,255,255,.12); }
+.ttv-menu-opt .ck { width:14px; height:14px; opacity:0; }
+.ttv-menu-opt.active .ck { opacity:1; }
+
+@media (max-width:700px) {
+  .ttv-vol-wrap { display:none; } /* no hover on touch — mute toggle only */
+}
+
+/* FULLSCREEN — the browser only stretches the .ttv wrapper itself to
+   fill the screen; without this the <video> stayed capped at its
+   feed-sized max-height (380px) and sat small in a corner, while the
+   center play button (centered on the wrapper) ended up floating in
+   the middle of the empty black space instead of over the video.
+   Flex-centering the wrapper and letting the video grow to fill it
+   (object-fit:contain, so aspect ratio is preserved with letterbox
+   bars instead of stretching) keeps the video and the button locked
+   to the same center point. */
+.ttv:fullscreen, .ttv:-webkit-full-screen {
+  width:100% !important; height:100% !important; max-width:none !important; border-radius:0 !important;
+  display:flex; align-items:center; justify-content:center;
+}
+.ttv:fullscreen .ttv-video, .ttv:-webkit-full-screen .ttv-video {
+  max-width:100% !important; max-height:100% !important; width:auto !important; height:auto !important; object-fit:contain;
+}
+.ttv:fullscreen .ttv-big-play, .ttv:-webkit-full-screen .ttv-big-play {
+  width:80px !important; height:80px !important;
+}
+.ttv:fullscreen .ttv-big-play svg, .ttv:-webkit-full-screen .ttv-big-play svg {
+  width:34px !important; height:34px !important;
+}
+
+/* ── CROP MODAL — shared "Edit media" step (crop-modal.js) used
+   before any image becomes an avatar or banner: profile, community,
+   or List. Dark, full-bleed, matches Twitter's own edit-media UI. ── */
+.cm-modal-bg {
+  position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:1200;
+  display:none; align-items:center; justify-content:center; padding:16px;
+}
+.cm-modal-bg.open { display:flex; }
+.cm-modal {
+  width:100%; max-width:520px; background:#000; border-radius:var(--r-lg,16px);
+  overflow:hidden; display:flex; flex-direction:column;
+}
+.cm-modal-hdr {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 14px; color:#fff;
+}
+.cm-back {
+  background:none; border:none; color:#fff; cursor:pointer; padding:8px;
+  border-radius:50%; display:flex; align-items:center; justify-content:center;
+  transition:background-color .12s ease;
+}
+.cm-back:hover { background:rgba(255,255,255,.1); }
+.cm-back svg { width:20px; height:20px; }
+.cm-title { font-size:15px; font-weight:800; }
+.cm-apply {
+  background:#fff; color:#000; border:none; border-radius:999px;
+  font-size:14px; font-weight:700; padding:7px 16px; cursor:pointer;
+}
+.cm-apply:hover { background:#e2e2e2; }
+.cm-stage {
+  position:relative; height:min(60vh,420px); background:#333;
+  overflow:hidden; display:flex; align-items:center; justify-content:center;
+  cursor:grab; touch-action:none;
+}
+.cm-stage:active { cursor:grabbing; }
+.cm-img {
+  position:absolute; top:50%; left:50%; max-width:none;
+  user-select:none; -webkit-user-drag:none;
+}
+.cm-frame {
+  position:absolute; top:50%; left:50%; pointer-events:none;
+  width:var(--cm-frame-w); height:var(--cm-frame-h);
+  transform:translate(-50%,-50%);
+  box-shadow:0 0 0 2000px rgba(0,0,0,.55);
+  border:1px solid rgba(255,255,255,.9);
+}
+.cm-frame-square { border-radius:50%; }
+.cm-frame-wide { border-radius:6px; }
+.cm-controls {
+  display:flex; align-items:center; gap:10px; padding:14px 20px 18px; background:#000;
+}
+.cm-zoom-ic { width:15px; height:15px; color:#71767b; flex:none; }
+.cm-zoom-ic-lg { width:19px; height:19px; }
+.cm-controls input[type="range"] {
+  flex:1; accent-color:var(--maroon); cursor:pointer;
+}
+
+@media (max-width:520px) {
+  .cm-modal { border-radius:0; max-width:none; height:100%; }
+  .cm-modal-bg { padding:0; }
+  .cm-stage { height:auto; flex:1; }
+}

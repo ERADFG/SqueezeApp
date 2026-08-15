@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Communautés — InteractInk</title>
+<meta name="description" content="Explorez et rejoignez des communautés sur InteractInk.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="InteractInk">
+<meta property="og:title" content="Communautés — InteractInk">
+<meta property="og:description" content="Explorez et rejoignez des communautés sur InteractInk.">
+<meta property="og:image" content="/img/logo-light.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Communautés — InteractInk">
+<meta name="twitter:description" content="Explorez et rejoignez des communautés sur InteractInk.">
+<meta name="twitter:image" content="/img/logo-light.png">
+<link rel="canonical" href="https://interactink.vercel.app/fr/communities">
+<meta property="og:url" content="https://interactink.vercel.app/fr/communities">
+<link rel="alternate" hreflang="en" href="https://interactink.vercel.app/communities">
+<link rel="alternate" hreflang="es" href="https://interactink.vercel.app/es/communities">
+<link rel="alternate" hreflang="fr" href="https://interactink.vercel.app/fr/communities">
+<link rel="alternate" hreflang="de" href="https://interactink.vercel.app/de/communities">
+<link rel="alternate" hreflang="pt" href="https://interactink.vercel.app/pt/communities">
+<link rel="alternate" hreflang="ja" href="https://interactink.vercel.app/ja/communities">
+<link rel="alternate" hreflang="x-default" href="https://interactink.vercel.app/communities">
+<base href="/">
+<link rel="icon" type="image/png" href="/img/favicon-32.png" sizes="32x32" id="fav32">
+<link rel="icon" type="image/png" href="/img/favicon.png" sizes="512x512" id="fav512">
+<link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+<meta name="theme-color" content="#16A34A">
+<script>(function(){try{var t=localStorage.getItem('oc-theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}if(t&&t!=="light"){document.documentElement.setAttribute('data-theme',t);}var a=localStorage.getItem('oc-accent');if(a&&a!=="green")document.documentElement.setAttribute('data-accent',a);}catch(e){}})();</script>
+<link rel="preconnect" href="https://pyitivzoqleukuclajrf.supabase.co">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body data-page="communities">
+
+<div class="xshell">
+  <div id="hdr">
+    <div class="sb-top">
+      <a class="logo" href="/fr">
+        <span class="badge">
+          <img class="logo-mark logo-mark-light" src="/img/logo-light.png" alt="InteractInk logo" width="36" height="36">
+          <img class="logo-mark logo-mark-dark" src="/img/logo-dark.png" alt="InteractInk logo" width="36" height="36">
+        </span>
+        <span class="wordmark">Interact<em>Ink</em></span>
+      </a>
+      <nav id="side-nav"></nav>
+    </div>
+    <span id="auth-area" class="auth-area"></span>
+  </div>
+
+  <div id="main">
+    <div id="feed">
+      <div class="sec-bar">
+        <h1>Communautés</h1>
+        <a href="#" class="back" onclick="openCreateCommunityModal();return false;">+ Créer</a>
+      </div>
+
+      <div class="xsearch" id="comm-searchbox" style="margin:12px 16px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+        <input id="comm-search" placeholder="Rechercher des communautés" autocomplete="off">
+      </div>
+
+      <div id="board-hdr">
+        <div class="xtabs" id="communities-tabs">
+          <button class="xtab active" id="ctab-all" onclick="switchCommunitiesTab('all');return false;">Toutes</button>
+          <button class="xtab" id="ctab-mine" onclick="switchCommunitiesTab('mine');return false;">Rejointes</button>
+        </div>
+      </div>
+
+      <div id="communities-list"><span class="spinner">Chargement&hellip;</span></div>
+
+      <h2 class="comm-guide-title">Guide des communautés</h2>
+      <div class="comm-about comm-guide">
+        <details class="comm-guide-item" name="comm-guide">
+          <summary>Que sont les communautés ?</summary>
+          <div class="comm-guide-body">
+            <p>Une communauté est un forum plus restreint au sein d'InteractInk, construit autour d'un sujet, d'un fandom, d'un loisir ou d'un intérêt précis — un espace ciblé plutôt que le flux général du fil principal. Chaque communauté a sa propre chronologie composée uniquement des publications de ses membres, donc si vous préférez suivre un seul sujet de près plutôt que de faire défiler tout le reste, rejoindre une communauté est le moyen d'y parvenir. Tout le monde peut consulter les publications d'une communauté ; il vous faudra un compte gratuit pour la rejoindre, y publier ou y répondre.</p>
+          </div>
+        </details>
+
+        <details class="comm-guide-item" name="comm-guide">
+          <summary>Rejoindre une communauté</summary>
+          <div class="comm-guide-body">
+            <p>Recherchez ou parcourez la liste ci-dessus pour trouver une communauté correspondant à vos centres d'intérêt, puis appuyez sur <b>Rejoindre</b>. Une fois membre, ses publications apparaîtront lorsque vous visiterez directement la communauté, et vous pourrez y publier et y répondre comme partout ailleurs sur InteractInk. Plus intéressé·e ? Vous pouvez quitter tout aussi facilement — il n'y a ni délai d'attente ni pénalité à rejoindre et quitter des communautés au fil de l'évolution de vos intérêts.</p>
+          </div>
+        </details>
+
+        <details class="comm-guide-item" name="comm-guide">
+          <summary>Créer la vôtre</summary>
+          <div class="comm-guide-body">
+            <p>Vous ne trouvez pas de communauté pour ce qui vous intéresse ? Utilisez le bouton <b>+ Créer</b> ci-dessus pour en lancer une. Vous choisirez un nom et une brève description expliquant son sujet — plus cette description est claire, plus il sera facile aux bonnes personnes de la trouver ensuite. Une fois créée, tout le monde pourra la trouver et la rejoindre depuis cette page, comme n'importe quelle autre communauté. Créer une communauté vous rend responsable de ce qu'elle devient, donc cela vaut la peine de prendre une minute pour réfléchir à ce que vous voulez qu'elle soit avant d'y publier votre première publication.</p>
+          </div>
+        </details>
+
+        <details class="comm-guide-item" name="comm-guide">
+          <summary>Trouver la bonne</summary>
+          <div class="comm-guide-body">
+            <p>Utilisez le champ de recherche ci-dessus pour chercher par nom ou description si vous savez déjà à peu près ce que vous voulez. Sinon, l'onglet <b>Toutes</b> répertorie chaque communauté, les plus actives en premier, ce qui en fait une bonne façon de découvrir ce qui existe déjà avant d'en créer une nouvelle. L'onglet <b>Rejointes</b> n'affiche que les communautés dont votre compte est membre, ce qui permet de revenir rapidement à celles que vous consultez vraiment.</p>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <div id="sidebar">
+      <div class="xsearch">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+        <input id="side-search" placeholder="Rechercher sur InteractInk">
+      </div>
+      <div class="who-box" id="who-to-follow"></div>
+      <div id="ftr" style="padding:0;">
+        [<a href="/fr">&larr; Retour à l'accueil</a>] &nbsp;&mdash;&nbsp; <a href="/communities">English</a> &mdash; <a href="/es/communities">Español</a> &mdash; <a href="/de/communities">Deutsch</a> &mdash; <a href="/pt/communities">Português</a>
+        <br><span style="font-size:10px;color:var(--muted);">&copy; 2026 InteractInk &mdash; <a href="/fr/about">À propos</a> &mdash; <a href="/fr/contact">Contact</a> &mdash; <a href="/fr/privacy">Confidentialité</a> &mdash; <a href="/fr/terms">Conditions</a></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/js/supabase-config.js"></script>
+<script src="/js/i18n.js"></script>
+<script src="/js/common.js"></script>
+<script src="/js/video-player.js"></script>
+<script src="/js/crop-modal.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/communities.js"></script>
+</body>
+</html>
