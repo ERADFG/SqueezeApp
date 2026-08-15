@@ -1077,9 +1077,9 @@ select {
    (post cards, reply headers, profile header, who-to-follow, follower
    lists). Sits inline right after the name text — see vBadge() in
    js/common.js, which is the single place this <img> gets built. */
-.verified-badge { width:20px; height:20px; margin:0 5px 0 0; vertical-align:-4px; flex:none; display:inline-block; }
-.op-detail-names .verified-badge { width:42px; height:42px; margin-left:0; flex:none; }
-.uname-row .verified-badge { width:26px; height:26px; margin-left:3px; vertical-align:-5px; }
+.verified-badge { width:22px; height:22px; margin:0 5px 0 0; vertical-align:-4.4px; flex:none; display:inline-block; }
+.op-detail-names .verified-badge { width:46px; height:46px; margin-left:0; flex:none; }
+.uname-row .verified-badge { width:29px; height:29px; margin-left:3px; vertical-align:-5.5px; }
 .ph .nm:hover { text-decoration:underline; }
 .ph .pc-handle {
   color:var(--muted); font-weight:400; margin-right:5px;
@@ -2534,7 +2534,7 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .lb-sb-head .pc-avatar { width:40px; height:40px; }
 .lb-sb-head .op-detail-names { padding-top:2px; }
 .lb-sb-head .op-detail-names .nm { font-size:15px; }
-.lb-sb-head .op-detail-names .verified-badge { width:20px; height:20px; margin-left:0; flex:none; }
+.lb-sb-head .op-detail-names .verified-badge { width:22px; height:22px; margin-left:0; flex:none; }
 .lb-sb-head .op-detail-names .pc-handle { font-size:14px; }
 .lb-sidebar .op-detail-body { padding:0 16px; margin-top:12px; font-size:17px; }
 .lb-sidebar .op-detail-meta { padding:0 16px 12px; margin-top:12px; }
