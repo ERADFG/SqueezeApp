@@ -501,9 +501,11 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
    it can scroll into view before the user hits the literal bottom. */
 .feed-sentinel { height:1px; }
 
-/* ── POST FORM (inline composer, Twitter-style) ── */
-#pf-wrap { max-width:none; margin:0; padding:0; border-bottom:8px solid var(--line); }
-#pf-box { background:var(--cream-card); border-bottom:1px solid var(--line); border-radius:0; box-shadow:none; overflow:visible; padding:12px 16px 8px; }
+/* ── POST FORM (inline composer, Twitter-style) — matches the .pc card
+   treatment above so it reads as the composer sitting on top of the
+   card stack, not a flush bar with a hard edge. ── */
+#pf-wrap { max-width:none; margin:0; padding:0; border-bottom:none; }
+#pf-box { background:var(--cream-card); border:1px solid var(--line); border-radius:18px; margin:12px 12px 0; box-shadow:0 1px 2px rgba(15,20,25,.04), 0 4px 14px rgba(15,20,25,.06); overflow:visible; padding:14px 16px 10px; }
 .pf-row { display:flex; gap:12px; align-items:flex-start; }
 .pf-avatar { flex:none; width:40px; height:40px; border-radius:50%; overflow:hidden; display:block; background:var(--hover-bg); }
 .pf-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
@@ -574,7 +576,7 @@ select {
 
 /* ── MAIN LAYOUT ── */
 #main { display:flex; gap:0; padding:0; max-width:none; margin:0 0 0 275px; align-items:flex-start; flex:1; min-width:0; }
-#feed { flex:1 1 600px; max-width:600px; min-width:0; border-left:1px solid var(--line); border-right:1px solid var(--line); min-height:100vh; }
+#feed { flex:1 1 600px; max-width:600px; min-width:0; border-left:1px solid var(--line); border-right:1px solid var(--line); min-height:100vh; background:var(--hover-bg); padding-bottom:12px; }
 /* position:fixed (not sticky) — same reason #hdr above uses fixed
    instead of sticky: the overflow-x:hidden rule on html/body (see
    top of file) implicitly turns their overflow-y into 'auto' too
@@ -1068,11 +1070,14 @@ select {
 .xsearch input { background:transparent; border:none; outline:none; font-size:15px; width:100%; color:var(--ink); }
 .xsearch input::placeholder { color:var(--muted); }
 
-/* ── POST CARD (tweet-style) ── */
+/* ── POST CARD (tweet-style) — restyled as its own distinct rounded
+   card floating on the feed's light surface (#feed background above),
+   instead of a flush row separated only by a hairline. ── */
 .pc {
-  background:var(--cream-card); border:none; border-bottom:1px solid var(--line); border-radius:0;
-  margin-bottom:0; padding:12px 16px; box-shadow:none; cursor:pointer;
-  transition:background-color .12s ease;
+  background:var(--cream-card); border:1px solid var(--line); border-radius:18px;
+  margin:0 12px 12px; padding:14px 16px; box-shadow:0 1px 2px rgba(15,20,25,.04), 0 4px 14px rgba(15,20,25,.06);
+  cursor:pointer;
+  transition:background-color .12s ease, box-shadow .15s ease, transform .15s cubic-bezier(.2,.8,.2,1);
   /* fill-mode intentionally omitted (was `both`) — with `both`/`forwards`,
      the animation's final `transform:translateY(0)` keyframe stays applied
      to this element forever after the .2s entrance finishes. A transform
@@ -1119,7 +1124,8 @@ select {
   position:relative;
   z-index:50;
 }
-.pc:hover { background:var(--hover-bg); border-color:var(--line); }
+.pc:hover { box-shadow:0 2px 4px rgba(15,20,25,.06), 0 8px 22px rgba(15,20,25,.09); border-color:var(--line); }
+.pc:first-child { margin-top:12px; }
 .pc.flash { background:var(--maroon-tint); animation:flashfade 2.4s ease-out; }
 @keyframes flashfade { 0% { background:var(--maroon-tint); } 100% { background:var(--maroon-tint); } }
 
@@ -1271,6 +1277,10 @@ select {
 .act:hover::before { opacity:.08; transform:scale(1); }
 .act:active::before, .act:focus-visible::before { opacity:.16; transform:scale(1); }
 
+/* Comment / Like / Save — no glass-sheen background on hover/press,
+   just the icon (and its own color change / pop animation) reacting. */
+.act.reply::before, .act.like::before, .act.bookmark::before { display:none; }
+
 a.act:hover, button.act.reply:hover, button.act.reply:active { color:var(--maroon); }
 .act.views:hover { color:var(--maroon); }
 .act.like:hover, .act.like:active { color:var(--like); }
@@ -1298,8 +1308,8 @@ a.act:hover, button.act.reply:hover, button.act.reply:active { color:var(--maroo
    Mobile (≤640px): becomes a full-width bottom sheet with its own
    backdrop, since a 180px popover is a fiddly tap target on a phone. */
 .rp-menu-wrap { position:relative; flex:none; }
-.act.repost:hover, .act.repost:active { color:var(--green); }
-.act.repost.reposted { color:var(--green); animation:oc-pop .28s ease; }
+.act.repost:hover, .act.repost:active { color:var(--vis); }
+.act.repost.reposted { color:var(--vis); animation:oc-pop .28s ease; }
 .rp-menu-dd {
   position:absolute; left:0; bottom:calc(100% + 4px); z-index:40; min-width:200px;
   background:var(--cream-card); border:1px solid var(--line); border-radius:14px;
