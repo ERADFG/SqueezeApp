@@ -223,17 +223,22 @@ button:not(:disabled):active, [role="button"]:active, input[type="submit"]:activ
    Supported in Chromium-based browsers; everywhere else this rule is
    simply ignored and navigation behaves exactly as before. The
    `@view-transition` opt-in itself lives once, at the very top of this
-   file — this section just tunes how the cross-fade actually moves:
-   a slightly longer, eased-both-ways fade+scale reads as a soft,
-   deliberate transition instead of an abrupt flash. */
-::view-transition-old(root) {
-  animation: oc-vt-out .22s cubic-bezier(.4,0,.2,1) both;
+   file — this section just tunes how the cross-fade actually moves.
+
+   Opacity ONLY — deliberately no scale/translate here. #m-topbar,
+   #m-tabbar and #m-fab are position:fixed and get swept up into this
+   same root snapshot; a scale on the root (an earlier version of this
+   rule used one) stretches those fixed bars along with the page, so
+   for the ~250ms the two snapshots overlap you see the outgoing bar
+   and incoming bar sitting at very slightly different sizes/positions
+   — which reads as a flickering double nav bar, not a smooth
+   transition. Plain opacity crossfades both snapshots in place with
+   nothing to misalign, so the bars just sit still. Kept short (180ms)
+   so it reads as quick and responsive rather than a slow dissolve. */
+::view-transition-old(root), ::view-transition-new(root) {
+  animation-duration: .18s;
+  animation-timing-function: ease;
 }
-::view-transition-new(root) {
-  animation: oc-vt-in .32s cubic-bezier(.16,1,.3,1) both;
-}
-@keyframes oc-vt-out { to { opacity:0; transform:scale(.985); } }
-@keyframes oc-vt-in { from { opacity:0; transform:scale(1.015); } to { opacity:1; transform:scale(1); } }
 
 html { scroll-behavior:auto; }
 
@@ -245,9 +250,10 @@ body {
   line-height:1.35;
   min-height:100vh;
   /* JS-driven fallback fade for browsers that ignore @view-transition
-     above (see wirePageLeaveFade in common.js) — toggled by adding
+     above (see wirePageLeaveFade in common.js, which only wires this
+     up when the browser lacks native support) — toggled by adding
      .oc-page-leaving to <html> right before navigating away. */
-  transition:opacity .12s ease;
+  transition:opacity .07s ease;
 }
 html.oc-page-leaving body { opacity:0; }
 

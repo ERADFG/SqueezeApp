@@ -143,16 +143,19 @@ function wireLinkPrefetch() {
 document.addEventListener('DOMContentLoaded', wireLinkPrefetch);
 
 // ── FALLBACK FADE FOR NAVIGATION — the CSS `@view-transition` rule
-// (top of style.css) gives supporting browsers (current Chrome/Edge,
-// Safari 18.2+) a native cross-fade between pages instead of the
-// default hard flash-to-white. Older engines and in-app WebViews
-// (common for links opened from other apps) silently ignore that
-// rule and still hard-cut, which is what shows up there. This adds
-// a small opacity fade-out before the real navigation fires, so even
-// unsupported browsers get a soft departure. It's harmless to layer
-// on top of the native transition too — a page that's already faded
-// out is just what gets snapshotted as the "old" state.
+// (top of style.css) gives supporting browsers a native cross-fade
+// between pages instead of the default hard flash-to-white. Browsers
+// that support it also fire the `pageswap`/`pagereveal` events (that's
+// the standard feature-detection signal for this API) — checked below
+// via 'onpageswap' in window, so this fallback only runs where the
+// native transition WON'T: older engines and in-app WebViews that
+// still hard-cut. Running both at once was the bug in an earlier
+// version of this — two fades stacking on every tap added latency
+// and, combined with a scale transform on the native one (now
+// removed above), made the fixed nav bars briefly double up. Now
+// exactly one of the two ever runs.
 function wirePageLeaveFade() {
+  if ('onpageswap' in window) return; // native cross-document transition handles it
   document.addEventListener('click', (e) => {
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     const a = e.target.closest && e.target.closest('a[href]');
@@ -167,7 +170,7 @@ function wirePageLeaveFade() {
     if (url.pathname === location.pathname && url.search === location.search && url.hash) return; // same-page anchor jump
     e.preventDefault();
     document.documentElement.classList.add('oc-page-leaving');
-    setTimeout(() => { location.href = a.href; }, 120);
+    setTimeout(() => { location.href = a.href; }, 70);
   });
 }
 document.addEventListener('DOMContentLoaded', wirePageLeaveFade);
