@@ -42,6 +42,14 @@
      brighter rose-500 below for the same reason as --maroon above. */
   --like:      #E11D48;   /* rose-600 (AA on white) */
   --like-tint: rgba(225,29,72,.10);
+  /* --share and --save are the two new semantic action colors: the
+     Share button lights up blue, Save/Bookmark lights up yellow/amber,
+     independent of the swappable accent above so they read the same
+     everywhere. */
+  --share:      #1D9BF0;  /* share — classic "link" blue */
+  --share-tint: rgba(29,155,240,.12);
+  --save:       #EAB308;  /* save/bookmark — amber-500 (AA on white) */
+  --save-tint:  rgba(234,179,8,.14);
   --hover-bg:  #F7F9F9;   /* row hover wash */
   --div:       #EFF3F4;   /* used by a couple of inline hr styles */
   --input-bg:  #FFFFFF;   /* form field / card-on-card background */
@@ -76,6 +84,8 @@ html[data-theme="dim"] {
   --maroon:#16A34A; --maroon-dk:#22C55E; --mustard:#16A34A; --mustard-dk:#22C55E; --link:#16A34A;
   --like:#F43F5E;
   --maroon-tint: rgba(22,163,74,.16); --like-tint: rgba(244,63,94,.16);
+  --share:#3BA9F5; --share-tint: rgba(59,169,245,.18);
+  --save:#FBBF24; --save-tint: rgba(251,191,36,.18);
   color-scheme: dark;
 }
 html[data-theme="dark"] {
@@ -85,6 +95,8 @@ html[data-theme="dark"] {
   --maroon:#16A34A; --maroon-dk:#22C55E; --mustard:#16A34A; --mustard-dk:#22C55E; --link:#16A34A;
   --like:#F43F5E;
   --maroon-tint: rgba(22,163,74,.16); --like-tint: rgba(244,63,94,.16);
+  --share:#3BA9F5; --share-tint: rgba(59,169,245,.18);
+  --save:#FBBF24; --save-tint: rgba(251,191,36,.18);
   color-scheme: dark;
 }
 
@@ -176,6 +188,16 @@ a[href]:not(.body-link):not(.body-mention):not(.body-hashtag) {
 button:not(:disabled):active, [role="button"]:active, input[type="submit"]:active, input[type="button"]:active, .accent-swatch:active,
 a[href]:not(.body-link):not(.body-mention):not(.body-hashtag):active {
   transform:scale(.96);
+  /* ── "glass" press feedback — a soft frosted sheen that fills the
+     control the instant it's tapped. The `inset 0 0 0 100vmax` trick
+     floods the box with a translucent wash that's automatically
+     clipped to whatever border-radius the element has (pill, circle,
+     rounded-square, …), so it always reads as a soft glass tint on
+     the button's own shape instead of a hard-edged rectangle. Buttons
+     with their own bespoke :active rule elsewhere (e.g. .act, the
+     dark solid CTAs) layer a stronger/tinted version of this instead
+     of this neutral default. ── */
+  box-shadow: inset 0 0 0 100vmax rgba(120,130,140,.14);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -230,8 +252,16 @@ a:focus-visible, button:focus-visible, input:focus-visible,
 textarea:focus-visible, select:focus-visible, .bl:focus-visible, .br:focus-visible {
   outline: 2px solid var(--maroon);
   outline-offset: 1px;
-  border-radius:2px;
+  /* was a hardcoded 2px radius, which squared off the outline on every
+     pill/circle control (the "box around the like/share button" issue) —
+     `inherit` lets the outline follow whatever radius the element
+     already has (999px pill, 50% circle, etc.) instead of fighting it. */
+  border-radius:inherit;
 }
+/* Post action buttons (like/reply/share/save/repost) get their own
+   deliberate glass press-effect below instead of the default focus
+   ring, so keyboard focus doesn't double up with it. */
+.act:focus-visible { outline:none; }
 
 .onigiri { display:inline-block; flex:none; width:1em; height:1em; }
 /* ── LOGO MARK — img-based & logo, theme-swapped: a self-contained
@@ -344,7 +374,7 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
 }
 .sidebar-post-btn svg { width:18px; height:18px; flex:none; }
 .sidebar-post-btn:hover { background:var(--maroon-dk); text-decoration:none; color:#fff; box-shadow:0 4px 10px rgba(15,20,25,.16); }
-.sidebar-post-btn:active { transform:scale(.97); box-shadow:0 1px 2px rgba(15,20,25,.12); }
+.sidebar-post-btn:active { transform:scale(.97); box-shadow:0 1px 2px rgba(15,20,25,.12), inset 0 0 0 100vmax rgba(255,255,255,.16); }
 
 /* auth-area sits at the bottom of the sidebar, Twitter-profile-button style */
 .auth-area { display:block; margin-top:auto; padding-top:8px; }
@@ -538,7 +568,7 @@ select {
   background:var(--ink); color:var(--bg); border:none; cursor:pointer; transition:background-color .12s ease, filter .12s ease, transform .1s ease;
 }
 .who-follow-btn:hover { filter:brightness(.85); }
-.who-follow-btn:active { transform:scale(.95); }
+.who-follow-btn:active { transform:scale(.95); box-shadow:inset 0 0 0 100vmax rgba(255,255,255,.18); }
 .who-follow-btn:disabled { opacity:.5; cursor:default; }
 .who-box .show-more { display:block; padding:12px 16px; font-size:15px; color:var(--link); text-decoration:none; border-radius:0 0 var(--r-lg) var(--r-lg); }
 .who-box .show-more:hover { background:rgba(15,20,25,.03); text-decoration:none; }
@@ -1170,33 +1200,58 @@ select {
 
 /* action row: icon + count, evenly spread across the card width */
 .acts { margin-top:10px; clear:both; display:flex; align-items:center; justify-content:space-between; gap:4px; max-width:425px; }
+
+/* Each pill is its own little "glass chip": transparent by default,
+   fills with a soft frosted tint of its own color on hover, and on
+   press/tap shows a stronger frosted-glass sheen (blur + translucent
+   color wash) that's always clipped to the pill's own rounded shape —
+   never a hard square box, on any of the four actions. */
 .act {
-  font-family:inherit; font-size:13px; font-weight:400;
-  border:none; border-radius:999px; padding:6px 8px; cursor:pointer;
+  position:relative; isolation:isolate; overflow:hidden;
+  font-family:inherit; font-size:13px; font-weight:600;
+  border:none; border-radius:999px; padding:7px 10px; cursor:pointer;
   color:var(--muted); text-decoration:none; background:none; display:inline-flex; align-items:center; gap:6px;
-  transition:background .12s ease, color .12s ease, transform .1s ease;
+  transition:background .15s ease, color .15s ease, transform .1s cubic-bezier(.2,.8,.2,1);
 }
-.act:active { transform:scale(.92); }
-.act svg { width:18.5px; height:18.5px; flex:none; }
+.act:active { transform:scale(.90); }
+.act svg { width:19px; height:19px; flex:none; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; transition:transform .18s cubic-bezier(.34,1.56,.64,1); }
 .act:hover { text-decoration:none; }
-a.act:hover, button.act.reply:hover { background:var(--maroon-tint); color:var(--maroon); }
-.act.views:hover { background:var(--maroon-tint); color:var(--maroon); }
-.act.like:hover { background:var(--like-tint); color:var(--like); }
-.act.share:hover { background:var(--maroon-tint); color:var(--maroon); }
-.act.like svg { fill:none; stroke:currentColor; stroke-width:1.8; }
+.act:active svg { transform:scale(.86); }
+
+/* the frosted glass sheen — a blurred, translucent fill that pops in
+   under the icon the instant you press, then fades right back out.
+   Sits between the pill's own transparent background and its icon
+   (z-index via `isolation:isolate` above), and is always cropped to
+   the pill's border-radius:999px, so it's a soft glass capsule, not
+   a box. */
+.act::before {
+  content:""; position:absolute; inset:0; border-radius:inherit; z-index:-1;
+  background:currentColor; opacity:0; backdrop-filter:blur(6px);
+  transform:scale(.6); transition:opacity .18s ease, transform .18s cubic-bezier(.2,.8,.2,1);
+}
+.act:hover::before { opacity:.08; transform:scale(1); }
+.act:active::before, .act:focus-visible::before { opacity:.16; transform:scale(1); }
+
+a.act:hover, button.act.reply:hover, button.act.reply:active { color:var(--maroon); }
+.act.views:hover { color:var(--maroon); }
+.act.like:hover, .act.like:active { color:var(--like); }
 .act.like.liked { color:var(--like); }
 .act.like.liked svg { fill:var(--like); stroke:var(--like); animation:oc-pop .28s ease; }
-.act.reply svg, .act.views svg, .act.share svg { fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 .act.reply.disabled, .act.reply:disabled {
   color:var(--muted); opacity:.55; cursor:not-allowed;
 }
-.act.reply.disabled:hover, .act.reply:disabled:hover { background:none; color:var(--muted); }
-.act.share.copied { color:var(--green); }
+.act.reply.disabled:hover, .act.reply:disabled:hover { color:var(--muted); }
+.act.reply.disabled::before, .act.reply:disabled::before { display:none; }
+
+/* Share — always reads blue, on hover, press, and after a successful
+   copy, so tapping it never looks like an unrelated brand color. */
+.act.share:hover, .act.share:active, .act.share.copied { color:var(--share); }
+
+/* Save/Bookmark — always reads amber/yellow, same idea. */
 .act.bookmark { flex:none; }
-.act.bookmark svg { fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
-.act.bookmark:hover { background:var(--maroon-tint); color:var(--maroon); }
-.act.bookmark.bookmarked { color:var(--maroon); }
-.act.bookmark.bookmarked svg { fill:var(--maroon); stroke:var(--maroon); animation:oc-pop .28s ease; }
+.act.bookmark:hover, .act.bookmark:active { color:var(--save); }
+.act.bookmark.bookmarked { color:var(--save); }
+.act.bookmark.bookmarked svg { fill:var(--save); stroke:var(--save); animation:oc-pop .28s ease; }
 
 /* ── repost (retweet) button + Repost/Quote dropdown ──
    Desktop: a small popover anchored above the button (Twitter-style),
@@ -1204,8 +1259,7 @@ a.act:hover, button.act.reply:hover { background:var(--maroon-tint); color:var(-
    Mobile (≤640px): becomes a full-width bottom sheet with its own
    backdrop, since a 180px popover is a fiddly tap target on a phone. */
 .rp-menu-wrap { position:relative; flex:none; }
-.act.repost svg { fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
-.act.repost:hover { background:var(--green-tint,rgba(0,186,124,.10)); color:var(--green); }
+.act.repost:hover, .act.repost:active { color:var(--green); }
 .act.repost.reposted { color:var(--green); animation:oc-pop .28s ease; }
 .rp-menu-dd {
   position:absolute; left:0; bottom:calc(100% + 4px); z-index:40; min-width:200px;
@@ -1729,7 +1783,7 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
 .dc-desc { font-size:14px; line-height:1.4; color:var(--muted); margin:0 0 18px; }
 .dc-actions { display:flex; flex-direction:column; gap:10px; }
 .dc-btn { width:100%; padding:11px 14px; border-radius:999px; font-size:15px; font-weight:800; cursor:pointer; border:1px solid transparent; transition:background .12s ease, opacity .12s ease, transform .1s ease; }
-.dc-btn:active { transform:scale(.97); }
+.dc-btn:active { transform:scale(.97); box-shadow:inset 0 0 0 100vmax rgba(255,255,255,.16); }
 .dc-btn-delete { background:var(--like); color:#fff; }
 .dc-btn-delete:hover { background:#E11D48; }
 .dc-btn-delete:disabled { opacity:.6; cursor:default; }
@@ -2593,9 +2647,9 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .lb-mobile-bar[hidden] { display:none; }
 .lb-mobile-bar .acts { max-width:none; }
 .lb-mobile-bar .act { color:#fff; }
-.lb-mobile-bar .act:hover { background:rgba(255,255,255,.12); }
 .lb-mobile-bar .act.liked { color:var(--like); }
-.lb-mobile-bar .act.bookmarked { color:var(--maroon); }
+.lb-mobile-bar .act.share:hover, .lb-mobile-bar .act.share:active { color:var(--share); }
+.lb-mobile-bar .act.bookmarked, .lb-mobile-bar .act.bookmark:hover, .lb-mobile-bar .act.bookmark:active { color:var(--save); }
 
 @media (max-width:700px) {
   .lb-sidebar, .lb-panel-toggle { display:none !important; }
