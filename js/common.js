@@ -142,6 +142,42 @@ function wireLinkPrefetch() {
 }
 document.addEventListener('DOMContentLoaded', wireLinkPrefetch);
 
+// ── FALLBACK FADE FOR NAVIGATION — the CSS `@view-transition` rule
+// (top of style.css) gives supporting browsers (current Chrome/Edge,
+// Safari 18.2+) a native cross-fade between pages instead of the
+// default hard flash-to-white. Older engines and in-app WebViews
+// (common for links opened from other apps) silently ignore that
+// rule and still hard-cut, which is what shows up there. This adds
+// a small opacity fade-out before the real navigation fires, so even
+// unsupported browsers get a soft departure. It's harmless to layer
+// on top of the native transition too — a page that's already faded
+// out is just what gets snapshotted as the "old" state.
+function wirePageLeaveFade() {
+  document.addEventListener('click', (e) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const a = e.target.closest && e.target.closest('a[href]');
+    if (!a) return;
+    const href = a.getAttribute('href');
+    if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:') || href.startsWith('javascript:')) return;
+    if (a.target && a.target !== '' && a.target !== '_self') return;
+    if (a.hasAttribute('download')) return;
+    let url;
+    try { url = new URL(a.href, location.href); } catch (_) { return; }
+    if (url.origin !== location.origin) return;
+    if (url.pathname === location.pathname && url.search === location.search && url.hash) return; // same-page anchor jump
+    e.preventDefault();
+    document.documentElement.classList.add('oc-page-leaving');
+    setTimeout(() => { location.href = a.href; }, 120);
+  });
+}
+document.addEventListener('DOMContentLoaded', wirePageLeaveFade);
+// Safety net: if this page is restored from the back-forward cache
+// (browser Back/Forward) it can be restored mid-fade with the class
+// still applied, which would leave it stuck invisible — pageshow
+// fires on every normal load *and* every bfcache restore, so this
+// always clears it.
+window.addEventListener('pageshow', () => { document.documentElement.classList.remove('oc-page-leaving'); });
+
 // ── SHARED SCROLL LOCK — the global compose modal, the GIF picker
 // (opened *from inside* the compose modal), and the delete-confirm
 // modal each need to lock body scroll while open. Previously each

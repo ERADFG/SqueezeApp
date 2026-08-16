@@ -244,7 +244,12 @@ body {
   color:var(--ink);
   line-height:1.35;
   min-height:100vh;
+  /* JS-driven fallback fade for browsers that ignore @view-transition
+     above (see wirePageLeaveFade in common.js) — toggled by adding
+     .oc-page-leaving to <html> right before navigating away. */
+  transition:opacity .12s ease;
 }
+html.oc-page-leaving body { opacity:0; }
 
 /* Safety net: nothing on the page should ever be wider than the
    viewport, but a too-wide row (e.g. a cramped post action row on a
