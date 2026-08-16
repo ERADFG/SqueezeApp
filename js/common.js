@@ -4389,7 +4389,9 @@ async function voteOnPoll(postId, optionIndex) {
 // file preview slot `${prefix}-fp`, its poll builder
 // `${prefix}-poll-box`, its schedule picker `${prefix}-sched-box`.
 // ─────────────────────────────────────────────────────────────
-const GIPHY_API_KEY = 'a4SzSp8qCSlLKqPT5wtatv0YCop7VWBL';
+// GIF search/trending goes through /api/giphy (see that file) instead
+// of calling api.giphy.com directly — keeps the GIPHY API key
+// server-side only, never shipped in this JS bundle.
 let composeExtras = {}; // { [prefix]: { gifUrl } }
 let gifPickerTarget = null;
 
@@ -4444,11 +4446,11 @@ function closeGifPicker() {
   unlockScroll();
 }
 async function loadTrendingGifs() {
-  await fetchGifs(`https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_API_KEY}&limit=24&rating=pg-13`);
+  await fetchGifs(`/api/giphy?type=trending`);
 }
 async function searchGifs(q) {
   if (!q) { loadTrendingGifs(); return; }
-  await fetchGifs(`https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&limit=24&rating=pg-13&q=${encodeURIComponent(q)}`);
+  await fetchGifs(`/api/giphy?type=search&q=${encodeURIComponent(q)}`);
 }
 async function fetchGifs(url) {
   const grid = document.getElementById('gif-grid');

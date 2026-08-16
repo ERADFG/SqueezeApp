@@ -28,6 +28,13 @@
 // step is a sitemap *index* file that points at several smaller
 // sitemap-<n>.xml files (Google's limit is 50,000 URLs / 50MB per
 // file) — ask for that when the cap starts being an issue.
+//
+// Also includes every localized (es/fr/de/pt/ja) copy of the 9
+// static pages that ship one, each carrying the same hreflang
+// alternates already declared in that page's own <head> (see
+// localizedStaticUrls() below) — so a crawler can discover /es/about,
+// /fr/rules, etc. straight from the sitemap instead of only via an
+// in-page link off the English version.
 // ─────────────────────────────────────────────────────────────
 
 // Same project + anon key as js/supabase-config.js. The anon key is
@@ -84,13 +91,67 @@ function xmlEscape(s) {
   return String(s).replace(/[<>&'"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]));
 }
 
-function urlTag(loc, lastmod, changefreq, priority) {
+function urlTag(loc, lastmod, changefreq, priority, alternates) {
+  const altLinks = (alternates || [])
+    .map(a => `
+    <xhtml:link rel="alternate" hreflang="${a.lang}" href="${xmlEscape(a.href)}"/>`)
+    .join('');
   return `  <url>
-    <loc>${xmlEscape(loc)}</loc>${lastmod ? `
+    <loc>${xmlEscape(loc)}</loc>${altLinks}${lastmod ? `
     <lastmod>${new Date(lastmod).toISOString()}</lastmod>` : ''}${changefreq ? `
     <changefreq>${changefreq}</changefreq>` : ''}${priority ? `
     <priority>${priority}</priority>` : ''}
   </url>`;
+}
+
+// ── LOCALIZED STATIC PAGES ──
+// Every one of these 9 pages already ships with its own <link
+// rel="alternate" hreflang="..."> block in <head> (en + es/fr/de/pt/ja
+// + x-default) — see e.g. about.html's <head>. This mirrors that same
+// set of URLs into the sitemap with matching xhtml:link alternates, so
+// crawlers get the language cluster from the sitemap itself instead of
+// only discovering /es/about etc. by following an in-page link from
+// the English version (which they may never crawl deeply enough to
+// reach). `path: ''` is the home page, whose locale URLs are bare
+// "/es" (no trailing segment) per vercel.json's "^/es$" route rather
+// than "/es/" — every href built below follows that same shape.
+const LOCALES = ['es', 'fr', 'de', 'pt', 'ja'];
+const STATIC_PAGES = [
+  { path: '', file: 'index.html', changefreq: 'hourly', priority: '1.0' },
+  { path: 'communities', file: 'communities.html', changefreq: 'daily', priority: '0.5' },
+  { path: 'rules', file: 'rules.html', changefreq: 'monthly', priority: '0.3' },
+  { path: 'about', file: 'about.html', changefreq: 'monthly', priority: '0.3' },
+  { path: 'contact', file: 'contact.html', changefreq: 'monthly', priority: '0.2' },
+  { path: 'privacy', file: 'privacy.html', changefreq: 'monthly', priority: '0.2' },
+  { path: 'terms', file: 'terms.html', changefreq: 'monthly', priority: '0.2' },
+  { path: 'login', file: 'login.html', changefreq: 'yearly', priority: '0.1' },
+  { path: 'signup', file: 'signup.html', changefreq: 'yearly', priority: '0.2' },
+];
+
+function hrefForVariant(origin, path, lang) {
+  if (lang === 'en') return path ? `${origin}/${path}` : `${origin}/`;
+  return path ? `${origin}/${lang}/${path}` : `${origin}/${lang}`;
+}
+
+function localizedStaticUrls(origin) {
+  const urls = [];
+  for (const page of STATIC_PAGES) {
+    const enHref = hrefForVariant(origin, page.path, 'en');
+    // Bidirectional per Google's spec: every language variant of a
+    // page lists the FULL set of alternates (itself included), plus
+    // x-default pointing at the English version.
+    const alternates = [
+      { lang: 'en', href: enHref },
+      ...LOCALES.map(l => ({ lang: l, href: hrefForVariant(origin, page.path, l) })),
+      { lang: 'x-default', href: enHref },
+    ];
+    urls.push(urlTag(enHref, fileLastmod(page.file), page.changefreq, page.priority, alternates));
+    for (const l of LOCALES) {
+      const file = page.path ? `${l}/${page.file}` : `${l}/index.html`;
+      urls.push(urlTag(hrefForVariant(origin, page.path, l), fileLastmod(file), page.changefreq, page.priority, alternates));
+    }
+  }
+  return urls;
 }
 
 module.exports = async function handler(req, res) {
@@ -113,16 +174,21 @@ module.exports = async function handler(req, res) {
   }
 
   const now = Date.now();
+  // 9 pages x (1 English + 5 locales) = 54 URLs, each carrying the
+  // full hreflang alternates set.
   const staticUrls = [
-    urlTag(`${origin}/`, fileLastmod('index.html'), 'hourly', '1.0'),
-    urlTag(`${origin}/communities`, fileLastmod('communities.html'), 'daily', '0.5'),
-    urlTag(`${origin}/rules`, fileLastmod('rules.html'), 'monthly', '0.3'),
-    urlTag(`${origin}/about`, fileLastmod('about.html'), 'monthly', '0.3'),
-    urlTag(`${origin}/contact`, fileLastmod('contact.html'), 'monthly', '0.2'),
-    urlTag(`${origin}/privacy`, fileLastmod('privacy.html'), 'monthly', '0.2'),
-    urlTag(`${origin}/terms`, fileLastmod('terms.html'), 'monthly', '0.2'),
-    urlTag(`${origin}/login`, fileLastmod('login.html'), 'yearly', '0.1'),
-    urlTag(`${origin}/signup`, fileLastmod('signup.html'), 'yearly', '0.2'),
+    ...localizedStaticUrls(origin),
+    // Not localized (no /es/articles route exists), so just the plain
+    // English URL, same as before this change.
+    //
+    // Deliberately NOT adding /lists here even though it's a real
+    // page: robots.js Disallows it (it's a browse-your-own-lists
+    // utility screen, not indexable content — the individual public
+    // lists at /i/lists/<id> below are the actual content and are
+    // already included), and a URL that's blocked in robots.txt but
+    // present in the sitemap is a contradiction Search Console flags
+    // as an error. Keep these two files in sync if that ever changes.
+    urlTag(`${origin}/articles`, fileLastmod('articles.html'), 'daily', '0.5'),
   ];
 
   const profileUrls = profiles.map(p =>
@@ -150,7 +216,7 @@ module.exports = async function handler(req, res) {
     .map(a => urlTag(`${origin}/i/articles/${encodeURIComponent(a.id)}`, a.created_at, 'weekly', '0.5'));
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
 ${[...staticUrls, ...profileUrls, ...postUrls, ...communityUrls, ...listUrls, ...articleUrls].join('\n')}
 </urlset>
 `;

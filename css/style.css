@@ -506,7 +506,22 @@ select {
 /* ── MAIN LAYOUT ── */
 #main { display:flex; gap:0; padding:0; max-width:none; margin:0 0 0 275px; align-items:flex-start; flex:1; min-width:0; }
 #feed { flex:1 1 600px; max-width:600px; min-width:0; border-left:1px solid var(--line); border-right:1px solid var(--line); min-height:100vh; }
-#sidebar { flex:0 0 350px; min-width:0; padding:8px 16px; position:sticky; top:0; max-height:100vh; overflow-y:auto; scrollbar-width:none; }
+/* position:fixed (not sticky) — same reason #hdr above uses fixed
+   instead of sticky: the overflow-x:hidden rule on html/body (see
+   top of file) implicitly turns their overflow-y into 'auto' too
+   (CSS pairs overflow-x/overflow-y so neither stays 'visible' once
+   the other isn't), which makes html AND body both scroll
+   containers. With two ambiguous scrolling ancestors, sticky's
+   containing block resolution gets unreliable — the sidebar drifts
+   or scrolls away with the feed instead of staying put. Fixed pins
+   it to the viewport with zero ambiguity. Mirrors #hdr's left-edge
+   formula exactly, just measured from the right: .xshell centers at
+   max-width:1265px via margin:0 auto, so its right edge sits at
+   max(0, (viewport-1265)/2) in from the viewport's right edge, same
+   as #hdr's left offset. #main needs no extra margin to compensate —
+   #feed already caps at max-width:600px on its own, so it renders in
+   exactly the same place whether #sidebar takes up flex space or not. */
+#sidebar { width:350px; flex:none; min-width:0; padding:8px 16px; position:fixed; top:0; right:max(0px, calc(50% - 632.5px)); height:100vh; overflow-y:auto; scrollbar-width:none; z-index:5; }
 #sidebar::-webkit-scrollbar { display:none; }
 
 /* ── WHO TO FOLLOW (right column, Twitter-style suggestions box) ── */
