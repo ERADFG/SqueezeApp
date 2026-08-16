@@ -1912,6 +1912,12 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
    layout rather than just shrinking the desktop one down.
    ═══════════════════════════════════════════════════════════════ */
 #m-topbar, #m-tabbar, #m-fab, .m-drawer-bg { display:none; }
+/* mobile chrome (topbar + floating dock) is injected by JS after the
+   static page markup has already painted — without this it just
+   snaps into existence the instant renderMobileChrome() runs, which
+   reads as a jarring pop mid-navigation. Fading it in instead makes
+   it feel like part of the same soft transition as the page itself. */
+#m-chrome { animation:oc-fade-in .22s ease-out both; }
 
 @media (max-width:700px) {
   #hdr { display:none; }
