@@ -451,31 +451,42 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
 .acct-menu a:last-child, .acct-menu button:last-child { border-bottom:none; }
 .acct-menu a:hover, .acct-menu button:hover { background:var(--hover-bg); }
 
-/* ── TABS — sticky "For you / Following" header of the center column ── */
+/* ── TABS — sticky "For you / Following" header of the center column.
+   Pill/segmented-control styling: the two tabs live inside one rounded
+   "track" and the active tab is a solid filled pill that slides between
+   them, same modern language as the mobile dock (#m-tabbar) and drawer
+   CTAs elsewhere in this file, instead of the old flat underline. ── */
 #board-hdr {
   position:sticky; top:0; z-index:5;
   background:var(--translucent-bg); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
   border-bottom:1px solid var(--line);
-  display:flex; align-items:stretch;
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:10px 14px;
 }
-.xtabs { display:flex; flex:1; min-width:0; }
+.xtabs {
+  display:flex; flex:1; min-width:0; gap:2px;
+  background:var(--hover-bg); border:1px solid var(--line);
+  border-radius:999px; padding:4px;
+}
 .xtab {
   flex:1; background:none; border:none; cursor:pointer; font-family:inherit;
-  font-size:15px; font-weight:700; color:var(--muted); padding:16px 0; position:relative;
-  transition:background-color .12s ease, color .12s ease;
+  font-size:14.5px; font-weight:700; color:var(--muted); padding:9px 0;
+  border-radius:999px; position:relative;
+  transition:background-color .18s cubic-bezier(.2,.8,.2,1), color .18s ease, box-shadow .18s ease;
 }
-.xtab:hover { background:var(--hover-bg); color:var(--ink); }
-.xtab.active { color:var(--ink); }
-.xtab.active::after {
-  content:""; position:absolute; left:50%; bottom:0; transform:translateX(-50%);
-  width:56px; height:4px; border-radius:4px; background:var(--maroon);
+.xtab:hover { color:var(--ink); }
+.xtab.active {
+  color:#fff; background:var(--maroon);
+  box-shadow:0 2px 8px rgba(15,20,25,.12);
 }
+.xtab.active:hover { background:var(--maroon-dk); }
 .xtabs-plus {
-  flex:none; width:52px; display:flex; align-items:center; justify-content:center;
-  background:none; border:none; border-left:1px solid var(--line); color:var(--muted); cursor:pointer;
+  flex:none; width:38px; height:38px; display:flex; align-items:center; justify-content:center;
+  background:var(--hover-bg); border:1px solid var(--line); border-radius:999px;
+  color:var(--muted); cursor:pointer; transition:background-color .15s ease, color .15s ease, border-color .15s ease;
 }
-.xtabs-plus:hover { color:var(--maroon); }
-.xtabs-plus svg { width:18px; height:18px; }
+.xtabs-plus:hover { color:var(--maroon); background:var(--maroon-tint); border-color:transparent; }
+.xtabs-plus svg { width:17px; height:17px; }
 
 /* ── SHOW N NEW POSTS PILL — Twitter's "refresh" affordance ── */
 .show-new-pill {
@@ -2042,9 +2053,28 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
   #m-fab svg { width:24px; height:24px; fill:none; stroke:#fff; stroke-width:2.4; stroke-linecap:round; }
 
   .m-drawer-bg {
-    display:block; position:fixed; inset:0; background:rgba(91,112,131,0); z-index:950;
+    display:block; position:fixed; inset:0; background:rgba(91,112,131,0); z-index:2000;
+    /* isolation:isolate pins this as its own stacking context so its
+       z-index is compared as a single unit against page content —
+       without it, some mobile browsers (esp. combined with the
+       backdrop-filter blur used by #board-hdr / #m-topbar) have been
+       seen compositing the sticky "For you / Following" bar into a
+       layer that paints above this overlay despite its lower z-index,
+       which is exactly the "tab bar sits on top of the open menu" bug. */
+    isolation:isolate;
     pointer-events:none; transition:background-color .28s cubic-bezier(.2,.8,.2,1);
   }
+  /* Belt-and-suspenders: while the drawer is open, force every sticky/
+     fixed chrome element that could otherwise leak above it (via the
+     backdrop-filter compositing quirk above) down to z-index:0 and
+     lock page scroll, so the bar can never visually sit on top of the
+     open drawer no matter what. Toggled by openMobileDrawer()/
+     closeMobileDrawer() in common.js. */
+  html.oc-drawer-open { overflow:hidden; }
+  html.oc-drawer-open #board-hdr,
+  html.oc-drawer-open #m-topbar,
+  html.oc-drawer-open #m-tabbar,
+  html.oc-drawer-open #m-fab { z-index:0; }
   .m-drawer-bg.open { background:rgba(91,112,131,.4); pointer-events:auto; }
   .m-drawer {
     position:absolute; top:0; left:0; bottom:0; width:78vw; max-width:300px;

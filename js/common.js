@@ -660,8 +660,19 @@ function renderMobileChrome() {
     </div>`;
 }
 
-function openMobileDrawer() { document.getElementById('m-drawer-bg')?.classList.add('open'); }
-function closeMobileDrawer() { document.getElementById('m-drawer-bg')?.classList.remove('open'); }
+// oc-drawer-open on <html> both locks page scroll behind the drawer and
+// (via the matching CSS rule) force-drops #board-hdr/#m-topbar/#m-tabbar/
+// #m-fab to z-index:0 while it's open — fixes those sticky/backdrop-filter
+// bars occasionally compositing above the drawer overlay despite its much
+// higher z-index (see .m-drawer-bg comment in style.css).
+function openMobileDrawer() {
+  document.getElementById('m-drawer-bg')?.classList.add('open');
+  document.documentElement.classList.add('oc-drawer-open');
+}
+function closeMobileDrawer() {
+  document.getElementById('m-drawer-bg')?.classList.remove('open');
+  document.documentElement.classList.remove('oc-drawer-open');
+}
 
 // ─────────────────────────────────────────────────────────────
 // GLOBAL COMPOSE MODAL — the sidebar "Post" button, mobile top-bar
