@@ -501,16 +501,25 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
    it can scroll into view before the user hits the literal bottom. */
 .feed-sentinel { height:1px; }
 
-/* ── POST FORM (inline composer, Twitter-style) — matches the .pc card
-   treatment above so it reads as the composer sitting on top of the
-   card stack, not a flush bar with a hard edge. ── */
-#pf-wrap { max-width:none; margin:0; padding:0; border-bottom:none; }
-#pf-box { background:var(--cream-card); border:1px solid var(--line); border-radius:18px; margin:12px 12px 0; box-shadow:0 1px 2px rgba(15,20,25,.04), 0 4px 14px rgba(15,20,25,.06); overflow:visible; padding:14px 16px 10px; }
-.pf-row { display:flex; gap:12px; align-items:flex-start; }
+/* ── POST FORM (inline composer, Twitter-style) — compact by default
+   (single slim row: avatar + placeholder, like Bluesky's "What's up?"
+   bar) and expands to the full toolbar/audience-picker once you tap
+   in or start typing. See pf-body focus/blur wiring in board.js. ── */
+#pf-wrap { max-width:none; margin:0; padding:0; border-bottom:8px solid var(--line); }
+#pf-box { background:var(--cream-card); border-bottom:1px solid var(--line); border-radius:0; box-shadow:none; overflow:visible; padding:10px 16px; transition:padding .15s ease; }
+#pf-box.pf-expanded { padding:12px 16px 8px; }
+.pf-row { display:flex; gap:12px; align-items:center; }
+#pf-box.pf-expanded .pf-row { align-items:flex-start; }
 .pf-avatar { flex:none; width:40px; height:40px; border-radius:50%; overflow:hidden; display:block; background:var(--hover-bg); }
 .pf-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
 .pf-col { flex:1; min-width:0; }
-.pf-toolbar { display:flex; align-items:center; justify-content:space-between; margin-top:8px; padding-top:10px; border-top:1px solid var(--line); }
+/* Collapsed by default: no toolbar, no audience pill, no bottom
+   border under the row — just the slim avatar + placeholder line.
+   #pf-box.pf-expanded (added on focus/typing, removed on blur when
+   empty — see board.js) reveals all of it again. */
+.pf-toolbar, #pf-ga-slot { display:none; }
+#pf-box.pf-expanded .pf-toolbar { display:flex; align-items:center; justify-content:space-between; margin-top:8px; padding-top:10px; border-top:1px solid var(--line); }
+#pf-box.pf-expanded #pf-ga-slot { display:block; }
 .pf-icons { display:flex; align-items:center; gap:2px; }
 .pf-ic {
   width:34px; height:34px; border-radius:50%; border:none; background:none; cursor:pointer;
@@ -526,7 +535,11 @@ input[type="text"], input[type="email"], input[type="password"], textarea, selec
   border:1px solid var(--border-input); padding:8px 10px; background:var(--input-bg); width:100%; color:var(--ink);
 }
 input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus, textarea:focus, select:focus { border-color:var(--maroon); outline:none; box-shadow:0 0 0 1px var(--maroon); }
-#pf-box textarea { height:56px; resize:none; border:none; padding:8px 0; font-size:19px; }
+/* Compact single line by default (Bluesky-style "What's up?" bar);
+   board.js's focus/input handlers add .pf-expanded and grow this to
+   its old 56px+ auto-growing height once you actually start typing. */
+#pf-box textarea { height:24px; min-height:24px; resize:none; border:none; padding:8px 0; font-size:16px; transition:height .15s ease; }
+#pf-box.pf-expanded textarea { height:56px; min-height:56px; font-size:19px; }
 .rfm textarea { border:none; padding:5px 0; font-size:17px; }
 #pf-box textarea:focus, .rfm textarea:focus { box-shadow:none; }
 
@@ -576,7 +589,7 @@ select {
 
 /* ── MAIN LAYOUT ── */
 #main { display:flex; gap:0; padding:0; max-width:none; margin:0 0 0 275px; align-items:flex-start; flex:1; min-width:0; }
-#feed { flex:1 1 600px; max-width:600px; min-width:0; border-left:1px solid var(--line); border-right:1px solid var(--line); min-height:100vh; background:var(--hover-bg); padding-bottom:12px; }
+#feed { flex:1 1 600px; max-width:600px; min-width:0; border-left:1px solid var(--line); border-right:1px solid var(--line); min-height:100vh; }
 /* position:fixed (not sticky) — same reason #hdr above uses fixed
    instead of sticky: the overflow-x:hidden rule on html/body (see
    top of file) implicitly turns their overflow-y into 'auto' too
@@ -1070,14 +1083,11 @@ select {
 .xsearch input { background:transparent; border:none; outline:none; font-size:15px; width:100%; color:var(--ink); }
 .xsearch input::placeholder { color:var(--muted); }
 
-/* ── POST CARD (tweet-style) — restyled as its own distinct rounded
-   card floating on the feed's light surface (#feed background above),
-   instead of a flush row separated only by a hairline. ── */
+/* ── POST CARD (tweet-style) ── */
 .pc {
-  background:var(--cream-card); border:1px solid var(--line); border-radius:18px;
-  margin:0 12px 12px; padding:14px 16px; box-shadow:0 1px 2px rgba(15,20,25,.04), 0 4px 14px rgba(15,20,25,.06);
-  cursor:pointer;
-  transition:background-color .12s ease, box-shadow .15s ease, transform .15s cubic-bezier(.2,.8,.2,1);
+  background:var(--cream-card); border:none; border-bottom:1px solid var(--line); border-radius:0;
+  margin-bottom:0; padding:12px 16px; box-shadow:none; cursor:pointer;
+  transition:background-color .12s ease, transform .12s cubic-bezier(.34,1.56,.64,1);
   /* fill-mode intentionally omitted (was `both`) — with `both`/`forwards`,
      the animation's final `transform:translateY(0)` keyframe stays applied
      to this element forever after the .2s entrance finishes. A transform
@@ -1124,8 +1134,10 @@ select {
   position:relative;
   z-index:50;
 }
-.pc:hover { box-shadow:0 2px 4px rgba(15,20,25,.06), 0 8px 22px rgba(15,20,25,.09); border-color:var(--line); }
-.pc:first-child { margin-top:12px; }
+.pc:hover { background:var(--hover-bg); border-color:var(--line); }
+/* Tap/click bounce — a quick squeeze-and-release on press so opening
+   a post feels responsive, like tapping a native app row. */
+.pc:active { transform:scale(.97); }
 .pc.flash { background:var(--maroon-tint); animation:flashfade 2.4s ease-out; }
 @keyframes flashfade { 0% { background:var(--maroon-tint); } 100% { background:var(--maroon-tint); } }
 
@@ -1598,8 +1610,9 @@ body.oc-sheet-open { overflow:hidden; }
    non-"none" transform on this card after the entrance animation ends,
    turning it into a containing block that breaks the fixed-position
    "···" menu the same way it did on .pc. */
-.rc { background:var(--cream-card); border:1px solid var(--line); border-radius:18px; padding:14px 16px; margin:0 12px 12px; box-shadow:0 1px 2px rgba(15,20,25,.04), 0 4px 14px rgba(15,20,25,.06); position:relative; transition:background-color .12s ease, box-shadow .15s ease; cursor:pointer; animation:oc-fade-in .2s ease; }
-.rc:hover { box-shadow:0 2px 4px rgba(15,20,25,.06), 0 8px 22px rgba(15,20,25,.09); }
+.rc { background:var(--cream-card); border:none; border-bottom:1px solid var(--line); border-radius:0; padding:12px 16px; margin-bottom:0; box-shadow:none; position:relative; transition:background-color .12s ease, transform .12s cubic-bezier(.34,1.56,.64,1); cursor:pointer; animation:oc-fade-in .2s ease; }
+.rc:hover { background:var(--hover-bg); }
+.rc:active { transform:scale(.97); }
 
 /* Focused-reply "detail" view (see thread.js renderConversation()) —
    clicking any comment opens it here, Twitter-style: the ancestor
@@ -1624,17 +1637,15 @@ body.oc-sheet-open { overflow:hidden; }
 /* connector line: drawn under a reply's avatar whenever it has at
    least one child, so it visually threads down into the next reply —
    same trick X uses instead of ever-deepening indentation. */
-/* Separate floating cards don't thread together visually the way a
-   flush list does, so the old connector line down into child replies
-   (which relied on cards touching edge-to-edge) is dropped here. */
-.rc.has-children .pc-row::after { display:none; }
+.rc.has-children .pc-row::after {
+  content:''; position:absolute; top:44px; bottom:-12px; left:19px;
+  width:2px; background:var(--line);
+}
 
 /* Compact "Post your reply" row — sits right under the Relevant bar,
    above the replies list, X-style: avatar + single-line textarea that
-   grows as you type, with the Reply button on the same row. Restyled
-   as a floating pill-cornered card (matching .pc/#pf-box) instead of
-   a flush bar wedged between hairlines. */
-.rfm { background:var(--cream-card); border:1px solid var(--line); border-top:1px solid var(--line); border-bottom:1px solid var(--line); border-radius:22px; box-shadow:0 1px 2px rgba(15,20,25,.04), 0 4px 14px rgba(15,20,25,.06); padding:12px 18px; margin:12px 12px; overflow:hidden; display:flex; gap:12px; align-items:flex-start; }
+   grows as you type, with the Reply button on the same row. */
+.rfm { background:var(--cream-card); border:none; border-top:1px solid var(--line); border-bottom:1px solid var(--line); border-radius:0; box-shadow:none; padding:10px 16px; margin-top:0; overflow:hidden; display:flex; gap:12px; align-items:flex-start; }
 .rfm-locked { align-items:center; justify-content:center; gap:10px; color:var(--muted); font-size:14px; font-weight:600; padding:18px 16px; }
 .rfm-locked svg { width:18px; height:18px; flex:none; }
 .rfm-col { flex:1; min-width:0; }
@@ -2076,17 +2087,20 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
     isolation:isolate;
     pointer-events:none; transition:background-color .28s cubic-bezier(.2,.8,.2,1);
   }
-  /* Belt-and-suspenders: while the drawer is open, force every sticky/
-     fixed chrome element that could otherwise leak above it (via the
-     backdrop-filter compositing quirk above) down to z-index:0 and
-     lock page scroll, so the bar can never visually sit on top of the
-     open drawer no matter what. Toggled by openMobileDrawer()/
-     closeMobileDrawer() in common.js. */
+  /* Belt-and-suspenders: while the drawer is open, completely hide
+     (not just lower the z-index of) every other fixed/sticky mobile
+     chrome element that could otherwise leak above it — the sticky
+     "For you / Following" bar, the top bar, the bottom dock, and the
+     compose FAB — and lock page scroll. display:none sidesteps any
+     backdrop-filter compositing-layer quirk entirely (a z-index trick
+     only wins if the browser's stacking math cooperates; an element
+     that isn't rendered at all can never paint on top of anything).
+     Toggled by openMobileDrawer()/closeMobileDrawer() in common.js. */
   html.oc-drawer-open { overflow:hidden; }
   html.oc-drawer-open #board-hdr,
   html.oc-drawer-open #m-topbar,
   html.oc-drawer-open #m-tabbar,
-  html.oc-drawer-open #m-fab { z-index:0; }
+  html.oc-drawer-open #m-fab { display:none !important; }
   .m-drawer-bg.open { background:rgba(91,112,131,.4); pointer-events:auto; }
   .m-drawer {
     position:absolute; top:0; left:0; bottom:0; width:78vw; max-width:300px;
@@ -2102,13 +2116,16 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
   .m-drawer .m-drawer-stats a b { font-weight:800; }
   .m-drawer .m-drawer-stats a:hover { text-decoration:underline; }
   .m-drawer hr { border:none; border-top:1px solid var(--line); margin:10px 0; }
+  /* Bigger, bolder icons with more breathing room per row — closer to
+     Bluesky's roomy hamburger-menu list than the previous tighter,
+     thinner-stroke rows. */
   .m-drawer-menu a, .m-drawer-menu button {
-    display:flex; align-items:center; gap:14px; width:100%; text-align:left;
-    font-family:inherit; font-size:16px; font-weight:700; color:var(--ink);
-    background:none; border:none; padding:11px 4px; cursor:pointer; text-decoration:none; border-radius:var(--r-sm);
+    display:flex; align-items:center; gap:16px; width:100%; text-align:left;
+    font-family:inherit; font-size:16.5px; font-weight:600; color:var(--ink);
+    background:none; border:none; padding:13px 6px; cursor:pointer; text-decoration:none; border-radius:var(--r-sm);
   }
   .m-drawer-menu a:hover, .m-drawer-menu button:hover { background:var(--hover-bg); text-decoration:none; }
-  .m-drawer-menu svg { width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+  .m-drawer-menu svg { width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex:none; }
   .m-drawer-cta { display:flex; flex-direction:column; gap:10px; margin-top:8px; }
   .m-drawer-cta a { text-align:center; padding:10px; border-radius:999px; font-weight:800; font-size:14.5px; text-decoration:none; }
   .m-drawer-cta a.cta-primary { background:var(--ink); color:var(--bg); }

@@ -559,8 +559,33 @@ document.addEventListener('DOMContentLoaded', async () => {
   wireFilePreview('pf-file', 'pf-fp', 'pf-err');
   injectReplyAudienceUi('pf');
   const pfBody = document.getElementById('pf-body');
+  const pfBox = document.getElementById('pf-box');
+  // Compact "What's up?" bar by default (see #pf-box CSS) — expands to
+  // the full toolbar/audience-picker on focus or the first keystroke,
+  // and collapses back once you click away with nothing typed/attached
+  // and no poll/schedule in progress, same idea as Bluesky's composer.
+  const pfHasContent = () => {
+    if (pfBody.value.trim()) return true;
+    const fp = document.getElementById('pf-fp');
+    if (fp && fp.innerHTML.trim()) return true;
+    const pollBox = document.getElementById('pf-poll-box');
+    if (pollBox && !pollBox.hidden) return true;
+    const schedBox = document.getElementById('pf-sched-box');
+    if (schedBox && !schedBox.hidden) return true;
+    return false;
+  };
+  const pfExpand = () => pfBox && pfBox.classList.add('pf-expanded');
+  const pfCollapseIfEmpty = () => {
+    if (pfBox && !pfHasContent()) {
+      pfBox.classList.remove('pf-expanded');
+      if (pfBody) pfBody.style.height = '';
+    }
+  };
   if (pfBody) {
+    pfBody.addEventListener('focus', pfExpand);
+    pfBody.addEventListener('blur', pfCollapseIfEmpty);
     pfBody.addEventListener('input', () => {
+      pfExpand();
       updatePostBtnState();
       pfBody.style.height = 'auto';
       pfBody.style.height = Math.max(56, pfBody.scrollHeight) + 'px';
