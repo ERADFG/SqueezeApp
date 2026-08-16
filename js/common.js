@@ -606,7 +606,7 @@ function renderMobileChrome() {
       <a class="${cur('messages')}" href="chat.html">${NAV_ICON.chat}${chatBadge}<span class="m-tab-label">Chat</span></a>
     </div>
 
-    ${currentSession && !onChatPage ? `<button id="m-fab" onclick="mobileCompose();return false;" aria-label="Post">${PLUS_ICON}</button>` : ''}
+    ${currentSession && !onChatPage ? `<button id="m-fab" onclick="mobileCompose();return false;" aria-label="Post">${ICON_COMPOSE}</button>` : ''}
 
     <div class="m-drawer-bg" id="m-drawer-bg" onclick="if(event.target===this)closeMobileDrawer();">
       <div class="m-drawer">
