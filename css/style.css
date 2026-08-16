@@ -188,15 +188,22 @@ a[href]:not(.body-link):not(.body-mention):not(.body-hashtag) {
 button:not(:disabled):active, [role="button"]:active, input[type="submit"]:active, input[type="button"]:active, .accent-swatch:active,
 a[href]:not(.body-link):not(.body-mention):not(.body-hashtag):active {
   transform:scale(.96);
-  /* ── "glass" press feedback — a soft frosted sheen that fills the
-     control the instant it's tapped. The `inset 0 0 0 100vmax` trick
-     floods the box with a translucent wash that's automatically
-     clipped to whatever border-radius the element has (pill, circle,
-     rounded-square, …), so it always reads as a soft glass tint on
-     the button's own shape instead of a hard-edged rectangle. Buttons
-     with their own bespoke :active rule elsewhere (e.g. .act, the
-     dark solid CTAs) layer a stronger/tinted version of this instead
-     of this neutral default. ── */
+}
+/* ── "glass" press feedback — a soft frosted sheen that fills a
+   control the instant it's tapped. The `inset 0 0 0 100vmax` trick
+   floods the box with a translucent wash that's automatically
+   clipped to whatever border-radius the element has, so it always
+   reads as a soft glass tint on the control's own pill/circle shape.
+   Scoped to *actual buttons/pills* only (real <button>s, submit
+   inputs, and anything explicitly marked role="button") — deliberately
+   NOT the broad a[href] selector above, since most links on this app
+   (post cards, avatars, usernames, nav rows) have no border-radius of
+   their own and would've shown this as a hard-edged gray rectangle
+   instead of a glassy pill, which is exactly the "box" this is meant
+   to avoid. Buttons with their own bespoke :active rule elsewhere
+   (.act, the dark solid CTAs) layer their own tinted version instead
+   of this neutral default. ── */
+button:not(:disabled):active, [role="button"]:active, input[type="submit"]:active, input[type="button"]:active, .accent-swatch:active {
   box-shadow: inset 0 0 0 100vmax rgba(120,130,140,.14);
 }
 
@@ -339,6 +346,9 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
   transition:background .12s ease; position:relative;
 }
 #hdr nav a:hover { background:var(--hover-bg); text-decoration:none; color:var(--ink); }
+#hdr nav a:active, .navmore-btn:active, .logo:active {
+  box-shadow: inset 0 0 0 100vmax rgba(120,130,140,.14);
+}
 #hdr nav a:visited { color:var(--ink); }
 #hdr nav a.cur { font-weight:800; }
 #hdr nav a .navicon { width:24px; height:24px; flex:none; position:relative; display:flex; }
@@ -1823,7 +1833,7 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
 .oc-toast svg { width:18px; height:18px; flex:none; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 .oc-toast-error { background:var(--like); color:#fff; }
 @media (max-width: 600px) {
-  .oc-toast { bottom:calc(64px + env(safe-area-inset-bottom, 0px)); font-size:13px; padding:11px 16px; }
+  .oc-toast { bottom:calc(84px + env(safe-area-inset-bottom, 0px)); font-size:13px; padding:11px 16px; }
 }
 
 #ftr { border-top:none; text-align:left; font-size:13px; color:var(--muted); padding:16px; margin-top:0; }
@@ -1898,7 +1908,7 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
 
 @media (max-width:700px) {
   #hdr { display:none; }
-  #main { margin-left:0; padding-top:53px; padding-bottom:calc(50px + env(safe-area-inset-bottom)); }
+  #main { margin-left:0; padding-top:53px; padding-bottom:calc(86px + env(safe-area-inset-bottom)); }
   #sidebar, .xright { display:none; }
 
   #m-topbar {
@@ -1938,24 +1948,50 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
   #m-topbar .m-logo .logo-mark { width:26px; height:26px; }
 
   #m-tabbar {
-    display:flex; position:fixed; bottom:0; left:0; right:0; z-index:900;
-    background:var(--translucent-bg); backdrop-filter:blur(10px);
-    border-top:1px solid var(--line); padding-bottom:env(safe-area-inset-bottom);
+    display:flex; align-items:center; gap:2px;
+    position:fixed; left:50%; bottom:calc(14px + env(safe-area-inset-bottom));
+    transform:translateX(-50%); z-index:900;
+    max-width:calc(100vw - 24px);
+    background:rgba(15,20,25,.92); backdrop-filter:blur(16px) saturate(160%);
+    border:1px solid rgba(255,255,255,.08); border-radius:999px; padding:5px;
+    box-shadow:0 10px 30px rgba(15,20,25,.30), 0 2px 10px rgba(15,20,25,.16);
   }
   #m-tabbar a {
-    flex:1; display:flex; align-items:center; justify-content:center; position:relative;
-    height:50px; color:var(--ink); text-decoration:none;
+    flex:none; display:flex; align-items:center; justify-content:center;
+    position:relative; overflow:hidden;
+    height:44px; width:44px; padding:0; border-radius:999px;
+    color:rgba(255,255,255,.62); text-decoration:none;
+    transition:width .22s cubic-bezier(.2,.8,.2,1), padding .22s cubic-bezier(.2,.8,.2,1),
+               background .18s ease, color .18s ease;
   }
-  #m-tabbar a svg { width:25px; height:25px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; transition:transform .18s cubic-bezier(.34,1.56,.64,1), fill .12s ease; }
-  #m-tabbar a.cur svg { fill:currentColor; transform:scale(1.1); }
-  #m-tabbar a .navbadge { position:absolute; top:4px; right:calc(50% - 17px); margin-left:0; }
+  #m-tabbar a svg { width:22px; height:22px; flex:none; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; transition:transform .18s cubic-bezier(.34,1.56,.64,1); }
+  /* the active tab grows into a filled white pill with its label
+     revealed next to the icon — same "dock" language as the reference
+     screenshots — while the rest stay plain icons on the dark bar.
+     margin-left (not flex gap) carries the icon↔label spacing, so an
+     inactive tab's hidden label adds zero width and the icon stays
+     perfectly centered in its circle. */
+  #m-tabbar a .m-tab-label {
+    font-size:14px; font-weight:800; white-space:nowrap; letter-spacing:-.1px;
+    max-width:0; margin-left:0; opacity:0; overflow:hidden; transition:max-width .22s ease, margin-left .22s ease, opacity .15s ease;
+  }
+  #m-tabbar a.cur {
+    width:auto; padding:0 16px 0 13px; background:#fff; color:#0F1419;
+  }
+  #m-tabbar a.cur svg { transform:scale(1.05); }
+  #m-tabbar a.cur .m-tab-label { max-width:90px; margin-left:6px; opacity:1; }
+  #m-tabbar a:active { box-shadow:inset 0 0 0 100vmax rgba(255,255,255,.16); }
+  #m-tabbar a.cur:active { box-shadow:inset 0 0 0 100vmax rgba(15,20,25,.08); }
+  #m-tabbar a .navbadge { position:absolute; top:2px; right:2px; margin-left:0; box-shadow:0 0 0 2px rgba(15,20,25,.92); }
+  #m-tabbar a.cur .navbadge { box-shadow:0 0 0 2px #fff; }
 
   #m-fab {
     display:flex; align-items:center; justify-content:center;
-    position:fixed; right:16px; bottom:calc(66px + env(safe-area-inset-bottom)); z-index:850;
-    width:54px; height:54px; border-radius:50%; background:var(--maroon); color:#fff;
+    position:fixed; right:16px; bottom:calc(84px + env(safe-area-inset-bottom)); z-index:850;
+    width:54px; height:54px; border-radius:999px; background:var(--maroon); color:#fff;
     border:none; box-shadow:0 4px 14px rgba(15,20,25,.25); cursor:pointer;
   }
+  #m-fab:active { box-shadow:0 4px 14px rgba(15,20,25,.25), inset 0 0 0 100vmax rgba(255,255,255,.18); }
   #m-fab:hover { background:var(--maroon-dk); }
   #m-fab svg { width:24px; height:24px; fill:none; stroke:#fff; stroke-width:2.4; stroke-linecap:round; }
 

@@ -560,11 +560,11 @@ function renderMobileChrome() {
     </div>
 
     <div id="m-tabbar">
-      <a class="${cur('home')}" href="${lp || '/'}">${NAV_ICON.home}</a>
-      <a class="${cur('search')}" href="search.html">${NAV_ICON.search}</a>
-      <a class="${cur('bookmarks')}" href="bookmarks.html">${NAV_ICON.bookmark}</a>
-      <a class="${cur('notifications')}" href="notifications.html">${NAV_ICON.bell}${badge}</a>
-      <a class="${cur('messages')}" href="chat.html">${NAV_ICON.chat}${chatBadge}</a>
+      <a class="${cur('home')}" href="${lp || '/'}">${NAV_ICON.home}<span class="m-tab-label">Home</span></a>
+      <a class="${cur('search')}" href="search.html">${NAV_ICON.search}<span class="m-tab-label">Search</span></a>
+      <a class="${cur('bookmarks')}" href="bookmarks.html">${NAV_ICON.bookmark}<span class="m-tab-label">Saved</span></a>
+      <a class="${cur('notifications')}" href="notifications.html">${NAV_ICON.bell}${badge}<span class="m-tab-label">Alerts</span></a>
+      <a class="${cur('messages')}" href="chat.html">${NAV_ICON.chat}${chatBadge}<span class="m-tab-label">Chat</span></a>
     </div>
 
     ${currentSession && !onChatPage ? `<button id="m-fab" onclick="mobileCompose();return false;" aria-label="Post">${PLUS_ICON}</button>` : ''}
