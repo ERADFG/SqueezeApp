@@ -1917,7 +1917,18 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
    snaps into existence the instant renderMobileChrome() runs, which
    reads as a jarring pop mid-navigation. Fading it in instead makes
    it feel like part of the same soft transition as the page itself. */
-#m-chrome { animation:oc-fade-in .22s ease-out both; }
+/* opacity-only fade — must NOT animate `transform` here. #m-topbar,
+   #m-tabbar and #m-fab inside #m-chrome rely on position:fixed being
+   relative to the viewport; giving #m-chrome itself any non-none
+   transform (even a translateY(0) resting state from fill-mode:both)
+   makes it a new containing block for those fixed descendants, which
+   silently turns "fixed to the screen" into "fixed to this div" —
+   and since #m-chrome is just appended at the end of <body> with
+   static position, everything then collapses to wherever that div
+   falls in normal flow (the very bottom, stacked in a column) instead
+   of floating over the page. */
+#m-chrome { animation:oc-fade-in-opacity .22s ease-out both; }
+@keyframes oc-fade-in-opacity { from { opacity:0; } to { opacity:1; } }
 
 @media (max-width:700px) {
   #hdr { display:none; }
