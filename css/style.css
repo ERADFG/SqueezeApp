@@ -505,16 +505,16 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
    (single slim row: avatar + placeholder, like Bluesky's "What's up?"
    bar) and expands to the full toolbar/audience-picker once you tap
    in or start typing. See pf-body focus/blur wiring in board.js.
-   Floating pill card: sits clear of the feed edges with its own
-   shadow instead of a flush, bordered bar — full stadium shape while
-   collapsed to a single line, softening to a rounded card once it
-   grows past one line. ── */
+   Same floating rounded-card treatment as the "Post your reply" box
+   (.rfm) below — one consistent radius whether collapsed or expanded,
+   not a stretched stadium/pill shape once the audience chip and
+   toolbar make it taller than one line. ── */
 #pf-wrap { max-width:none; margin:0; padding:10px 12px; border-bottom:8px solid var(--line); }
 #pf-box {
-  background:var(--cream-card); border:1px solid var(--line); border-radius:999px;
-  box-shadow:0 2px 10px rgba(15,20,25,.07); overflow:visible; padding:10px 18px; transition:padding .15s ease, border-radius .15s ease;
+  background:var(--cream-card); border:1px solid var(--line); border-radius:26px;
+  box-shadow:0 2px 10px rgba(15,20,25,.07); overflow:visible; padding:12px 18px; transition:padding .15s ease;
 }
-#pf-box.pf-expanded { padding:14px 18px 10px; border-radius:26px; }
+#pf-box.pf-expanded { padding:14px 18px 10px; }
 .pf-row { display:flex; gap:12px; align-items:center; }
 #pf-box.pf-expanded .pf-row { align-items:flex-start; }
 .pf-avatar { flex:none; width:40px; height:40px; border-radius:50%; overflow:hidden; display:block; background:var(--hover-bg); }

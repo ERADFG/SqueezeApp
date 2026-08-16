@@ -81,16 +81,16 @@ async function loadProfile() {
           <div class="uname">${esc(profile.display_name || profile.username)}${vBadge(profile)}</div>
         </div>
         <div class="handle">@${esc(profile.username)}</div>
+        <div class="profile-stats">
+          <span class="stat-item stat-static"><b id="stat-posts">${fmtCount(profile.posts_count)}</b> Posts</span>
+          <a class="stat-item" href="${flu('followers')}"><b id="stat-followers">${fmtCount(profile.followers_count)}</b> Followers</a>
+          <a class="stat-item" href="${flu('following')}"><b id="stat-following">${fmtCount(profile.following_count)}</b> Following</a>
+        </div>
         <div class="bio">${esc(profile.bio || '')}</div>
         <div class="profile-meta-row">
           ${locationLabel ? `<span class="pmr-item" title="${esc(locationFull)}">${ICON_LOC}<span class="pmr-text">${esc(locationLabel)}</span></span>` : ''}
           ${websiteHref ? `<span class="pmr-item"><a href="${esc(websiteHref)}" target="_blank" rel="noopener noreferrer" title="${esc(websiteFullLabel)}" aria-label="${esc(websiteFullLabel)}">${ICON_LINK}<span class="pmr-text">${esc(websiteLabel)}</span></a></span>` : ''}
           <span class="pmr-item">${ICON_CAL}Joined ${new Date(profile.created_at).toLocaleDateString()}</span>
-        </div>
-        <div class="profile-stats">
-          <span class="stat-item stat-static"><b id="stat-posts">${fmtCount(profile.posts_count)}</b> Posts</span>
-          <a class="stat-item" href="${flu('followers')}"><b id="stat-followers">${fmtCount(profile.followers_count)}</b> Followers</a>
-          <a class="stat-item" href="${flu('following')}"><b id="stat-following">${fmtCount(profile.following_count)}</b> Following</a>
         </div>
         <div id="profile-followed-by"></div>
       </div>
