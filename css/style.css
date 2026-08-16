@@ -504,10 +504,17 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
 /* ── POST FORM (inline composer, Twitter-style) — compact by default
    (single slim row: avatar + placeholder, like Bluesky's "What's up?"
    bar) and expands to the full toolbar/audience-picker once you tap
-   in or start typing. See pf-body focus/blur wiring in board.js. ── */
-#pf-wrap { max-width:none; margin:0; padding:0; border-bottom:8px solid var(--line); }
-#pf-box { background:var(--cream-card); border-bottom:1px solid var(--line); border-radius:0; box-shadow:none; overflow:visible; padding:10px 16px; transition:padding .15s ease; }
-#pf-box.pf-expanded { padding:12px 16px 8px; }
+   in or start typing. See pf-body focus/blur wiring in board.js.
+   Floating pill card: sits clear of the feed edges with its own
+   shadow instead of a flush, bordered bar — full stadium shape while
+   collapsed to a single line, softening to a rounded card once it
+   grows past one line. ── */
+#pf-wrap { max-width:none; margin:0; padding:10px 12px; border-bottom:8px solid var(--line); }
+#pf-box {
+  background:var(--cream-card); border:1px solid var(--line); border-radius:999px;
+  box-shadow:0 2px 10px rgba(15,20,25,.07); overflow:visible; padding:10px 18px; transition:padding .15s ease, border-radius .15s ease;
+}
+#pf-box.pf-expanded { padding:14px 18px 10px; border-radius:26px; }
 .pf-row { display:flex; gap:12px; align-items:center; }
 #pf-box.pf-expanded .pf-row { align-items:flex-start; }
 .pf-avatar { flex:none; width:40px; height:40px; border-radius:50%; overflow:hidden; display:block; background:var(--hover-bg); }
@@ -1644,8 +1651,11 @@ body.oc-sheet-open { overflow:hidden; }
 
 /* Compact "Post your reply" row — sits right under the Relevant bar,
    above the replies list, X-style: avatar + single-line textarea that
-   grows as you type, with the Reply button on the same row. */
-.rfm { background:var(--cream-card); border:none; border-top:1px solid var(--line); border-bottom:1px solid var(--line); border-radius:0; box-shadow:none; padding:10px 16px; margin-top:0; overflow:hidden; display:flex; gap:12px; align-items:flex-start; }
+   grows as you type, with the Reply button on the same row. Floating
+   pill/rounded card (same treatment as #pf-box above) instead of a
+   flush, edge-to-edge bar — margin on all sides, its own shadow, no
+   straight divider lines. */
+.rfm { background:var(--cream-card); border:1px solid var(--line); border-radius:26px; box-shadow:0 2px 10px rgba(15,20,25,.07); padding:12px 18px; margin:10px 12px; overflow:hidden; display:flex; gap:12px; align-items:flex-start; }
 .rfm-locked { align-items:center; justify-content:center; gap:10px; color:var(--muted); font-size:14px; font-weight:600; padding:18px 16px; }
 .rfm-locked svg { width:18px; height:18px; flex:none; }
 .rfm-col { flex:1; min-width:0; }
@@ -2116,16 +2126,16 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
   .m-drawer .m-drawer-stats a b { font-weight:800; }
   .m-drawer .m-drawer-stats a:hover { text-decoration:underline; }
   .m-drawer hr { border:none; border-top:1px solid var(--line); margin:10px 0; }
-  /* Bigger, bolder icons with more breathing room per row — closer to
-     Bluesky's roomy hamburger-menu list than the previous tighter,
-     thinner-stroke rows. */
+  /* Bigger, bolder icons with more breathing room per row — matches
+     Bluesky's roomy hamburger-menu list: larger glyphs, generous
+     row height, semi-bold label. */
   .m-drawer-menu a, .m-drawer-menu button {
-    display:flex; align-items:center; gap:16px; width:100%; text-align:left;
-    font-family:inherit; font-size:16.5px; font-weight:600; color:var(--ink);
-    background:none; border:none; padding:13px 6px; cursor:pointer; text-decoration:none; border-radius:var(--r-sm);
+    display:flex; align-items:center; gap:18px; width:100%; text-align:left;
+    font-family:inherit; font-size:17.5px; font-weight:600; color:var(--ink);
+    background:none; border:none; padding:14px 6px; cursor:pointer; text-decoration:none; border-radius:var(--r-sm);
   }
   .m-drawer-menu a:hover, .m-drawer-menu button:hover { background:var(--hover-bg); text-decoration:none; }
-  .m-drawer-menu svg { width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+  .m-drawer-menu svg { width:25px; height:25px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; flex:none; }
   .m-drawer-cta { display:flex; flex-direction:column; gap:10px; margin-top:8px; }
   .m-drawer-cta a { text-align:center; padding:10px; border-radius:999px; font-weight:800; font-size:14.5px; text-decoration:none; }
   .m-drawer-cta a.cta-primary { background:var(--ink); color:var(--bg); }
@@ -2313,33 +2323,54 @@ html[data-theme="dim"] .auth-ok, html[data-theme="dark"] .auth-ok { background:r
 
 /* ── profile page ── */
 .profile-hdr {
-  display:block; background:var(--cream-card);
+  display:block; background:var(--cream-card); position:relative;
   border:none; border-bottom:1px solid var(--line); border-radius:0; box-shadow:none;
   padding:0 16px 14px; margin-bottom:0;
 }
-.profile-hdr::before { content:""; display:block; height:150px; margin:0 -16px 0; background:var(--banner-img, linear-gradient(135deg,#BEE3F8,#E6D9F7)) center/cover no-repeat; }
-.profile-id { flex:1; min-width:180px; padding-top:12px; }
+.profile-hdr::before { content:""; display:block; height:170px; margin:0 -16px 0; background:var(--banner-img, linear-gradient(135deg,#BEE3F8,#E6D9F7)) center/cover no-repeat; }
+.profile-id { flex:1; min-width:180px; padding-top:10px; }
 .uname-row { display:flex; align-items:flex-start; gap:10px; flex-wrap:wrap; }
 .profile-id .uname { font-family:inherit; font-size:20px; font-weight:800; color:var(--ink); overflow-wrap:anywhere; word-break:break-word; min-width:0; flex:1 1 auto; }
 .profile-id .handle { font-size:14px; color:var(--muted); margin-bottom:6px; }
 .profile-id .bio { font-size:15px; margin-top:8px; white-space:pre-wrap; }
 .profile-meta { font-size:14px; color:var(--muted); margin-top:10px; }
 .profile-edit-btn {
-  font-family:inherit; font-size:14px; font-weight:700; background:none;
+  font-family:inherit; font-size:14px; font-weight:700; background:var(--bg);
   border:1px solid var(--border-input); border-radius:999px; padding:7px 15px; cursor:pointer;
   color:var(--ink); text-decoration:none; display:inline-block; transition:background .12s ease;
+  box-shadow:0 1px 5px rgba(15,20,25,.14);
 }
 .profile-edit-btn:hover { background:var(--hover-bg); text-decoration:none; }
 
-#pv-avatar { margin-top:-44px; position:relative; z-index:1; }
+/* Floating circular "back" button, overlaid on the banner photo
+   (top-left) instead of a separate full-width bar above the feed —
+   translucent dark pill with a blurred backdrop, same idea as most
+   native apps' back chevron over a hero image. */
+.profile-back-btn {
+  position:absolute; top:12px; left:12px; z-index:2;
+  width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  background:rgba(15,20,25,.5); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+  color:#fff; text-decoration:none; box-shadow:0 1px 5px rgba(15,20,25,.25);
+  transition:background .12s ease;
+}
+.profile-back-btn:hover { background:rgba(15,20,25,.68); }
+.profile-back-btn svg { width:19px; height:19px; }
+
+/* Row that holds the avatar and the action buttons (message/follow/
+   edit) together, pulled up over the bottom of the banner as a unit —
+   avatar on the left, buttons floating at its baseline on the right,
+   same layout rhythm as Bluesky/X profile headers. */
+.profile-hdr-top { display:flex; align-items:flex-end; justify-content:space-between; gap:10px; margin-top:-44px; position:relative; z-index:1; }
+#pv-avatar { position:relative; z-index:1; }
 
 /* ── header action row: message + "···" menu + follow/edit ── */
-.profile-hdr-actions { display:flex; align-items:center; gap:8px; margin-left:auto; flex:none; }
+.profile-hdr-actions { display:flex; align-items:center; gap:8px; flex:none; align-self:flex-end; margin-bottom:6px; }
 .profile-hdr-actions .follow-btn, .profile-hdr-actions .profile-edit-btn { margin-top:0; }
 .profile-icon-btn {
   width:36px; height:36px; border-radius:50%; border:1px solid var(--border-input);
-  display:inline-flex; align-items:center; justify-content:center; background:none; cursor:pointer;
+  display:inline-flex; align-items:center; justify-content:center; background:var(--bg); cursor:pointer;
   color:var(--ink); transition:background .12s ease, border-color .12s ease;
+  box-shadow:0 1px 5px rgba(15,20,25,.14);
 }
 .profile-icon-btn:hover { background:var(--hover-bg); }
 .profile-icon-btn svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
@@ -2364,6 +2395,7 @@ html[data-theme="dim"] .auth-ok, html[data-theme="dark"] .auth-ok { background:r
   background:var(--ink); color:var(--bg); border:none; border-radius:999px;
   padding:7px 16px; cursor:pointer; text-decoration:none; display:inline-block; margin-top:12px;
   transition:background .12s ease, color .12s ease, border-color .12s ease, filter .12s ease;
+  box-shadow:0 1px 5px rgba(15,20,25,.18);
 }
 .follow-btn:hover { filter:brightness(.85); text-decoration:none; }
 .follow-btn.following { background:var(--cream-card); color:var(--ink); border:1px solid var(--border-input); }

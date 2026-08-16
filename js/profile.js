@@ -61,21 +61,24 @@ async function loadProfile() {
 
   root.innerHTML = `
     <div class="profile-hdr" style="${profile.banner_url ? `--banner-img:url('${esc(profile.banner_url)}')` : ''}">
-      <img class="avatar pfp-lg" id="pv-avatar" src="${esc(avatarUrl(profile.avatar_url))}" alt="">
+      <a class="profile-back-btn" href="index.html" aria-label="Back to home">${ICON_BACK}</a>
+      <div class="profile-hdr-top">
+        <img class="avatar pfp-lg" id="pv-avatar" src="${esc(avatarUrl(profile.avatar_url))}" alt="">
+        <div class="profile-hdr-actions">
+          ${!isOwnProfile && session ? `
+            <a class="profile-icon-btn" href="${messagesUrl(profile.username)}" title="Message" aria-label="Message">${ICON_MESSAGE}</a>
+            <div class="pc-menu-wrap" id="pmenu-profile-${profile.id}">
+              <button class="pc-menu-btn profile-icon-btn" onclick="togglePostMenu('profile-${profile.id}', event)">${ICON.menu}</button>
+              <div class="pc-menu-dd" id="profile-menu-dd">${profileMenuItemsHtml(profile)}</div>
+            </div>` : ''}
+          ${!isOwnProfile && session ? `<button class="follow-btn" id="follow-btn" onclick="toggleFollow()">${t('action.follow')}</button>` : ''}
+          ${!isOwnProfile && !session ? `<a class="follow-btn" href="login.html">${t('action.follow')}</a>` : ''}
+          ${isOwnProfile ? `<a class="profile-edit-btn" href="editprofile.html">Edit Profile</a>` : ''}
+        </div>
+      </div>
       <div class="profile-id">
         <div class="uname-row">
           <div class="uname">${esc(profile.display_name || profile.username)}${vBadge(profile)}</div>
-          <div class="profile-hdr-actions">
-            ${!isOwnProfile && session ? `
-              <a class="profile-icon-btn" href="${messagesUrl(profile.username)}" title="Message" aria-label="Message">${ICON_MESSAGE}</a>
-              <div class="pc-menu-wrap" id="pmenu-profile-${profile.id}">
-                <button class="pc-menu-btn profile-icon-btn" onclick="togglePostMenu('profile-${profile.id}', event)">${ICON.menu}</button>
-                <div class="pc-menu-dd" id="profile-menu-dd">${profileMenuItemsHtml(profile)}</div>
-              </div>` : ''}
-            ${!isOwnProfile && session ? `<button class="follow-btn" id="follow-btn" onclick="toggleFollow()">${t('action.follow')}</button>` : ''}
-            ${!isOwnProfile && !session ? `<a class="follow-btn" href="login.html">${t('action.follow')}</a>` : ''}
-            ${isOwnProfile ? `<a class="profile-edit-btn" href="editprofile.html">Edit Profile</a>` : ''}
-          </div>
         </div>
         <div class="handle">@${esc(profile.username)}</div>
         <div class="bio">${esc(profile.bio || '')}</div>
@@ -129,6 +132,7 @@ async function loadReplyCountIntoStat(userId, basePostsCount) {
 }
 
 // ── HEADER ICONS used only on the profile page ──
+const ICON_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 8 12l7 7"/></svg>';
 const ICON_MESSAGE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4.5h16v12H8.5L4 20.5v-16Z"/></svg>';
 const ICON_LOC_RAW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.5 7-11.5A7 7 0 0 0 5 9.5C5 14.5 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.4"/></svg>';
 const ICON_LOC = `<span class="pmr-icon">${ICON_LOC_RAW}</span>`;
