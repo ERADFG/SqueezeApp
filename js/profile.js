@@ -82,9 +82,9 @@ async function loadProfile() {
         </div>
         <div class="handle">@${esc(profile.username)}</div>
         <div class="profile-stats">
-          <span class="stat-item stat-static"><b id="stat-posts">${fmtCount(profile.posts_count)}</b> Posts</span>
-          <a class="stat-item" href="${flu('followers')}"><b id="stat-followers">${fmtCount(profile.followers_count)}</b> Followers</a>
           <a class="stat-item" href="${flu('following')}"><b id="stat-following">${fmtCount(profile.following_count)}</b> Following</a>
+          <a class="stat-item" href="${flu('followers')}"><b id="stat-followers">${fmtCount(profile.followers_count)}</b> Followers</a>
+          <span class="stat-item stat-static"><b id="stat-posts">${fmtCount(profile.posts_count)}</b> Posts</span>
         </div>
         <div class="bio">${esc(profile.bio || '')}</div>
         <div class="profile-meta-row">

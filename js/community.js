@@ -73,6 +73,17 @@ function updateComposerVisibility() {
   }
 }
 
+// "•••" icon next to Join — copies this community's URL, same idea
+// as a native share sheet's "Copy Link" entry.
+function copyCommunityLink() {
+  const url = location.href;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(() => toast('Link copied')).catch(() => toast('Could not copy link', 'error'));
+  } else {
+    toast('Could not copy link', 'error');
+  }
+}
+
 function renderHero() {
   const heroEl = document.getElementById('community-hero');
   const actionBtn = !currentSession
@@ -104,7 +115,11 @@ function renderHero() {
     <div class="community-hero">
       <div class="community-hero-top">
         <span class="comm-avatar-wrap">${avatarInner}</span>
-        <div class="community-hero-actions">${actionBtn}</div>
+        <div class="community-hero-actions">
+          <button type="button" class="profile-icon-btn" title="Copy link" aria-label="Copy link to this community" onclick="copyCommunityLink()">${ICON.menu}</button>
+          <a class="profile-icon-btn" href="search.html" title="Search" aria-label="Search InteractInk">${NAV_ICON.search}</a>
+          ${actionBtn}
+        </div>
       </div>
       <div class="community-hero-body">
         <div class="community-hero-name">${esc(community.name)}</div>

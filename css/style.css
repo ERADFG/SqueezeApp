@@ -846,7 +846,7 @@ select {
 .community-hero-name { font-size:19px; font-weight:800; color:var(--ink); word-break:break-word; }
 .community-hero-desc { font-size:14px; color:var(--ink); margin-top:4px; line-height:1.4; }
 .community-hero-meta { font-size:13px; color:var(--muted); margin-top:8px; }
-.community-hero-actions { flex:none; }
+.community-hero-actions { flex:none; display:flex; align-items:center; gap:8px; }
 .comm-join-btn, .comm-leave-btn {
   font-size:14px; font-weight:800; padding:8px 18px; border-radius:999px; cursor:pointer;
   transition:background-color .12s ease, filter .12s ease;
@@ -2328,7 +2328,7 @@ html[data-theme="dim"] .auth-ok, html[data-theme="dark"] .auth-ok { background:r
   border:none; border-bottom:1px solid var(--line); border-radius:0; box-shadow:none;
   padding:0 16px 14px; margin-bottom:0;
 }
-.profile-hdr::before { content:""; display:block; height:170px; margin:0 -16px 0; background:var(--banner-img, linear-gradient(135deg,#BEE3F8,#E6D9F7)) center/cover no-repeat; }
+.profile-hdr::before { content:""; display:block; height:170px; margin:0 -16px 0; background:var(--banner-img, linear-gradient(135deg,#3F4B5A,#98A2AE)) center/cover no-repeat; }
 .profile-id { flex:1; min-width:180px; padding-top:10px; }
 .uname-row { display:flex; align-items:flex-start; gap:10px; flex-wrap:wrap; }
 .profile-id .uname { font-family:inherit; font-size:20px; font-weight:800; color:var(--ink); overflow-wrap:anywhere; word-break:break-word; min-width:0; flex:1 1 auto; }
@@ -3061,42 +3061,43 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
    Two looks, mapped to two page groups so the rest of the app is
    untouched:
      • Profile page      → monochrome, X/Bluesky-style header —
-       squircle avatar overlapping the banner, underline tabs,
+       circular avatar overlapping the banner, underline tabs,
        solid black "Follow" pill.
      • Community pages   → warm "Skale" look — squircle community
        icon in an orange gradient, faint sunburst banner lines,
        bold stat row, solid black pill CTAs/active tabs.
    ═══════════════════════════════════════════════════════════════ */
 
-/* ── PROFILE: squircle avatar overlapping the banner ── */
+/* ── PROFILE: avatar stays circular (per reference) — just made
+   larger and pulled further up over the banner to match the
+   photo's proportions. ── */
 .profile-hdr .avatar.pfp-lg {
-  width:116px; height:116px; border-radius:26px;
+  width:112px; height:112px; border-radius:50%;
   border:4px solid var(--bg); box-shadow:0 1px 3px rgba(15,20,25,.15);
 }
-.profile-hdr-top { margin-top:-64px; }
-.profile-hdr::before { height:190px; }
+.profile-hdr-top { margin-top:-62px; }
+.profile-hdr::before { height:220px; }
 @media (max-width:480px) {
-  .profile-hdr .avatar.pfp-lg { width:92px; height:92px; border-radius:20px; }
-  .profile-hdr-top { margin-top:-48px; }
-  .profile-hdr::before { height:150px; }
+  .profile-hdr .avatar.pfp-lg { width:88px; height:88px; }
+  .profile-hdr-top { margin-top:-46px; }
+  .profile-hdr::before { height:180px; }
 }
 
-/* ── PROFILE: flat underline tabs (Posts / Replies / …) instead of
-   the pill/segmented track used elsewhere (search, follower lists) —
-   matches the reference profile's plain tab row with a single black
-   underline beneath the active tab. ── */
+/* ── PROFILE: flat underline tabs, evenly spread across the full
+   width (Posts / Replies / Media / Likes) instead of the pill/
+   segmented track used elsewhere (search, follower lists). ── */
 .profile-tabs .xtabs {
   background:none; border:none; border-bottom:1px solid var(--line);
   border-radius:0; padding:0; gap:0;
 }
 .profile-tabs .xtab {
-  flex:none; padding:14px 18px; border-radius:0; font-weight:700; color:var(--muted);
+  padding:14px 4px; border-radius:0; font-weight:700; color:var(--muted); font-size:14.5px;
 }
 .profile-tabs .xtab:hover { color:var(--ink); background:var(--hover-bg); }
 .profile-tabs .xtab.active { background:none; color:var(--ink); box-shadow:none; position:relative; }
 .profile-tabs .xtab.active:hover { background:var(--hover-bg); }
 .profile-tabs .xtab.active::after {
-  content:""; position:absolute; left:16px; right:16px; bottom:0;
+  content:""; position:absolute; left:14px; right:14px; bottom:0;
   height:3px; border-radius:3px 3px 0 0; background:var(--ink);
 }
 
@@ -3145,6 +3146,7 @@ body[data-page="community"] .comm-leave-btn { padding:9px 20px; font-weight:800;
 /* Board tabs (Top/Latest/Media/About, All/Joined) → plain track with
    a solid black active pill, matching the reference's
    Community/Design/Education row instead of the app's usual green. */
+body[data-page="community"] .sec-bar { padding:8px 16px; font-size:13px; border-bottom:none; }
 body[data-page="community"] #board-hdr,
 body[data-page="communities"] #board-hdr {
   background:none; border:none; backdrop-filter:none; padding:10px 16px 4px;
@@ -3159,4 +3161,7 @@ body[data-page="community"] .xtab.active:hover, body[data-page="communities"] .x
   body[data-page="community"] .community-hero .comm-avatar { width:60px; height:60px; font-size:22px; }
   body[data-page="community"] .community-hero-top { margin-top:-30px; }
   body[data-page="community"] .community-banner-wrap { height:110px; }
+  body[data-page="community"] .community-hero-actions .profile-icon-btn { width:32px; height:32px; }
+  body[data-page="community"] .community-hero-actions .profile-icon-btn svg { width:16px; height:16px; }
+  body[data-page="community"] .comm-join-btn, body[data-page="community"] .comm-leave-btn { padding:7px 14px; font-size:13px; }
 }
