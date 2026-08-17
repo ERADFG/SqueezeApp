@@ -223,11 +223,39 @@ function setupFeedObserver() {
   feedObserver.observe(sentinel);
 }
 
+// Moves/resizes the sliding-pill indicator (see .xtabs-indicator in
+// style.css) to sit exactly behind whichever .xtab is active, measured
+// off the real button geometry so it stays correct regardless of label
+// width, font, or viewport size instead of a hardcoded 50%.
+function positionTabIndicator(skipAnim) {
+  const track = document.getElementById('xtabs');
+  const indicator = document.getElementById('xtabs-indicator');
+  const activeBtn = track?.querySelector('.xtab.active');
+  if (!track || !indicator || !activeBtn) return;
+  const trackRect = track.getBoundingClientRect();
+  const btnRect = activeBtn.getBoundingClientRect();
+  indicator.classList.toggle('no-anim', !!skipAnim);
+  indicator.style.width = btnRect.width + 'px';
+  indicator.style.transform = `translateX(${btnRect.left - trackRect.left}px)`;
+  if (skipAnim) {
+    // Force layout so the next (animated) move doesn't inherit this
+    // one's no-transition state.
+    void indicator.offsetWidth;
+    indicator.classList.remove('no-anim');
+  }
+}
+window.addEventListener('resize', () => positionTabIndicator(true));
+// Fonts/webfonts can finish loading after DOMContentLoaded and nudge
+// button widths a few px — resync once everything (including fonts)
+// has actually settled so the pill isn't left a hair off on first paint.
+window.addEventListener('load', () => positionTabIndicator(true));
+
 function switchTab(tab) {
   if (tab === activeTab) return;
   activeTab = tab;
   document.getElementById('tab-foryou').classList.toggle('active', tab === 'foryou');
   document.getElementById('tab-following').classList.toggle('active', tab === 'following');
+  positionTabIndicator();
   window.scrollTo({ top: 0, behavior: 'smooth' });
   loadFeed();
 }
@@ -553,6 +581,7 @@ function subscribeRealtime() {
 
 document.addEventListener('DOMContentLoaded', async () => {
   await authReady; // see auth.js — otherwise cards can render before we know who's logged in
+  positionTabIndicator(true);
   loadFeed();
   loadTrending();
   subscribeRealtime();

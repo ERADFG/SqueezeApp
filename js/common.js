@@ -858,6 +858,7 @@ function gcModalEl() {
         </div>
       </div>
       ${replyAudienceMenuHtml('gc')}
+      <div class="gc-spacer" aria-hidden="true"></div>
       <div class="pf-toolbar gc-toolbar">
         <div class="pf-icons">
           <button type="button" class="pf-ic" title="Media" aria-label="Media" onclick="document.getElementById('gc-file').click();return false;">
@@ -1041,6 +1042,7 @@ function rpcModalEl() {
           <div id="rpc-fp" class="fp"></div>
         </div>
       </div>
+      <div class="gc-spacer" aria-hidden="true"></div>
       <div class="pf-toolbar gc-toolbar">
         <div class="pf-icons">
           <button type="button" class="pf-ic" title="Media" aria-label="Media" onclick="document.getElementById('rpc-file').click();return false;">
