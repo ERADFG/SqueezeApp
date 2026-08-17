@@ -841,8 +841,8 @@ function gcModalEl() {
           <div id="gc-fp" class="fp"></div>
           <div class="cx-poll" id="gc-poll-box" hidden>
             <div class="cx-poll-opts" id="gc-poll-opts">
-              <input type="text" class="cx-poll-opt" placeholder="Choice 1" maxlength="25">
-              <input type="text" class="cx-poll-opt" placeholder="Choice 2" maxlength="25">
+              <div class="cx-poll-opt-row"><input type="text" class="cx-poll-opt" placeholder="Choice 1" maxlength="25"></div>
+              <div class="cx-poll-opt-row"><input type="text" class="cx-poll-opt" placeholder="Choice 2" maxlength="25"></div>
             </div>
             <div class="cx-poll-row">
               <button type="button" class="cx-poll-add" onclick="addPollOption('gc');return false;">+ Add option</button>
@@ -4648,41 +4648,56 @@ function renderEmojiGrid(filter) {
 }
 function toggleEmojiPicker(prefix, anchorBtn) {
   if (!requireLogin()) return;
-  let pop = document.getElementById('emoji-pop');
-  if (pop && emojiPickerTarget === prefix && !pop.hidden) { pop.hidden = true; return; }
-  if (!pop) {
-    pop = document.createElement('div');
-    pop.id = 'emoji-pop';
-    pop.className = 'cx-emoji-pop';
-    pop.hidden = true;
-    pop.innerHTML = `
-      <input type="text" class="cx-emoji-search" id="emoji-search" placeholder="Search emoji" autocomplete="off">
-      <div class="cx-emoji-grid" id="emoji-grid"></div>`;
-    document.body.appendChild(pop);
-    renderEmojiGrid('');
-    pop.querySelector('#emoji-search').addEventListener('input', e => renderEmojiGrid(e.target.value));
-    pop.addEventListener('click', e => {
-      const btn = e.target.closest('.cx-emoji-item');
-      if (!btn || !emojiPickerTarget) return;
-      insertAtCursor(document.getElementById(`${emojiPickerTarget}-body`), btn.dataset.e);
-    });
-    document.addEventListener('click', e => {
-      if (pop.hidden || e.target.closest('.cx-emoji-pop') || e.target.closest('[title="Emoji"]')) return;
-      pop.hidden = true;
-    });
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && !pop.hidden) pop.hidden = true;
-    });
-  }
+  const el = emojiModalEl();
+  if (el.classList.contains('open') && emojiPickerTarget === prefix) { closeEmojiPicker(); return; }
   emojiPickerTarget = prefix;
-  const search = pop.querySelector('#emoji-search');
+  el.classList.add('open');
+  lockScroll();
+  const search = el.querySelector('#emoji-search');
   search.value = '';
   renderEmojiGrid('');
-  const r = anchorBtn.getBoundingClientRect();
-  pop.style.top = `${r.bottom + window.scrollY + 6}px`;
-  pop.style.left = `${Math.max(8, r.left + window.scrollX - 100)}px`;
-  pop.hidden = false;
-  setTimeout(() => search.focus(), 30);
+  setTimeout(() => search.focus(), 50);
+}
+function closeEmojiPicker() {
+  const el = document.getElementById('emoji-modal-bg');
+  if (!el || !el.classList.contains('open')) return;
+  el.classList.remove('open');
+  unlockScroll();
+}
+// Same floating centered-modal shell as the GIF picker (gifModalEl())
+// instead of a small absolutely-positioned popover pinned to the
+// button's coordinates — that positioning broke down on the mobile
+// full-screen composer (popover anchored off-screen or clipped by
+// the modal's own overflow:hidden), which is what made the emoji
+// picker look "cut off." A centered modal can't clip like that.
+function emojiModalEl() {
+  let el = document.getElementById('emoji-modal-bg');
+  if (el) return el;
+  el = document.createElement('div');
+  el.id = 'emoji-modal-bg';
+  el.className = 'modal-bg';
+  el.addEventListener('click', e => { if (e.target === el) closeEmojiPicker(); });
+  el.innerHTML = `
+    <div class="modal emoji-modal">
+      <a class="modal-close" href="#" onclick="closeEmojiPicker();return false;">&#10005;</a>
+      <h2>Emoji</h2>
+      <div class="gif-search-row cx-emoji-search-row">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="emoji-search" placeholder="Search emoji" autocomplete="off">
+      </div>
+      <div class="cx-emoji-grid" id="emoji-grid"></div>
+    </div>`;
+  document.body.appendChild(el);
+  el.querySelector('#emoji-grid').addEventListener('click', e => {
+    const btn = e.target.closest('.cx-emoji-item');
+    if (!btn || !emojiPickerTarget) return;
+    insertAtCursor(document.getElementById(`${emojiPickerTarget}-body`), btn.dataset.e);
+  });
+  el.querySelector('#emoji-search').addEventListener('input', e => renderEmojiGrid(e.target.value));
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && el.classList.contains('open')) closeEmojiPicker();
+  });
+  return el;
 }
 function insertAtCursor(el, text) {
   if (!el) return;
@@ -4712,18 +4727,43 @@ function addPollOption(prefix) {
   const wrap = document.getElementById(`${prefix}-poll-opts`);
   if (!wrap || wrap.querySelectorAll('.cx-poll-opt').length >= 4) return;
   const n = wrap.querySelectorAll('.cx-poll-opt').length;
+  const row = document.createElement('div');
+  row.className = 'cx-poll-opt-row';
   const inp = document.createElement('input');
   inp.type = 'text'; inp.className = 'cx-poll-opt'; inp.maxLength = 25;
   inp.placeholder = `Choice ${n + 1}`;
-  wrap.appendChild(inp);
+  const rm = document.createElement('button');
+  rm.type = 'button'; rm.className = 'cx-poll-opt-rm'; rm.title = 'Remove option'; rm.setAttribute('aria-label', 'Remove option');
+  rm.innerHTML = '&#10005;';
+  rm.onclick = () => { row.remove(); renumberPollOptions(prefix); };
+  row.append(inp, rm);
+  wrap.appendChild(row);
   inp.focus();
+  if (wrap.querySelectorAll('.cx-poll-opt').length >= 4) {
+    const addBtn = document.querySelector(`#${prefix}-poll-box .cx-poll-add`);
+    if (addBtn) addBtn.disabled = true;
+  }
+}
+// Keeps placeholders sequential ("Choice 1"/"Choice 2"/…) after an
+// option in the middle gets removed, so a gap left by deleting
+// Choice 2 doesn't leave the remaining option still reading "Choice 3."
+function renumberPollOptions(prefix) {
+  const wrap = document.getElementById(`${prefix}-poll-opts`);
+  if (!wrap) return;
+  wrap.querySelectorAll('.cx-poll-opt').forEach((inp, i) => { inp.placeholder = `Choice ${i + 1}`; });
+  const addBtn = document.querySelector(`#${prefix}-poll-box .cx-poll-add`);
+  if (addBtn) addBtn.disabled = false;
 }
 function removePoll(prefix) {
   if (composeExtras[prefix]) composeExtras[prefix].poll = null;
   const box = document.getElementById(`${prefix}-poll-box`);
   if (!box) return;
   box.hidden = true;
-  box.querySelectorAll('.cx-poll-opt').forEach((o, i) => { if (i > 1) o.remove(); else o.value = ''; });
+  box.querySelectorAll('.cx-poll-opt-row').forEach((row, i) => {
+    const inp = row.querySelector('.cx-poll-opt');
+    if (i > 1) row.remove(); else if (inp) inp.value = '';
+  });
+  renumberPollOptions(prefix);
   const dur = document.getElementById(`${prefix}-poll-dur`);
   if (dur) dur.value = '3';
 }

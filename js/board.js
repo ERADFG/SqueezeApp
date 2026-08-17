@@ -604,11 +604,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     return false;
   };
   const pfExpand = () => pfBox && pfBox.classList.add('pf-expanded');
+  // Any composer popup/subpanel that should keep the composer expanded
+  // even though the textarea itself just lost focus — the GIF and
+  // emoji pickers are separate floating panels (not children of
+  // #pf-box), so tapping into either one blurs #pf-body first.
+  const pfPopupOpen = () => {
+    const gifEl = document.getElementById('gif-modal-bg');
+    if (gifEl && gifEl.classList.contains('open') && gifPickerTarget === 'pf') return true;
+    const emojiEl = document.getElementById('emoji-modal-bg');
+    if (emojiEl && emojiEl.classList.contains('open') && emojiPickerTarget === 'pf') return true;
+    return false;
+  };
   const pfCollapseIfEmpty = () => {
-    if (pfBox && !pfHasContent()) {
-      pfBox.classList.remove('pf-expanded');
-      if (pfBody) pfBody.style.height = '';
-    }
+    // Deferred one tick: blur fires on mousedown, a beat before the
+    // toolbar button's click — collapsing synchronously here would
+    // hide the toolbar (display:none outside .pf-expanded) out from
+    // under that click before it ever runs, which is why tapping
+    // Media/GIF/Poll/Emoji/Schedule with an empty textarea looked
+    // like the buttons "didn't work." Waiting a tick lets the click
+    // land (opening the poll box, a popup, etc.) before we decide.
+    setTimeout(() => {
+      if (!pfBox) return;
+      if (pfBox.contains(document.activeElement)) return;
+      if (pfPopupOpen()) return;
+      if (!pfHasContent()) {
+        pfBox.classList.remove('pf-expanded');
+        pfBody.style.height = '';
+      }
+    }, 150);
   };
   if (pfBody) {
     pfBody.addEventListener('focus', pfExpand);

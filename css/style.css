@@ -1749,49 +1749,59 @@ body.oc-sheet-open { overflow:hidden; }
 .gif-search-row input { border:none; background:none; padding:0; font-size:14px; }
 .gif-search-row input:focus { box-shadow:none; }
 .gif-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; max-height:420px; overflow-y:auto; padding:0 16px; }
-.gif-item { padding:0; border:none; border-radius:var(--r-sm); overflow:hidden; cursor:pointer; background:var(--hover-bg); aspect-ratio:1/1; }
+.gif-item { padding:0; border:none; border-radius:12px; overflow:hidden; cursor:pointer; background:var(--hover-bg); aspect-ratio:1/1; }
 .gif-item img { width:100%; height:100%; object-fit:cover; display:block; }
 .gif-item:hover { outline:2px solid var(--maroon); outline-offset:-2px; }
 .gif-attrib { font-size:11px; color:var(--muted); text-align:center; padding:10px 0 0; }
 
-/* ── COMPOSER EXTRAS: emoji popover ── */
-.cx-emoji-pop {
-  position:absolute; z-index:1200; background:var(--cream-card); border:1px solid var(--line); border-radius:var(--r-md);
-  box-shadow:var(--shadow-pop); padding:8px; width:240px;
-}
-.cx-emoji-pop[hidden] { display:none; }
-.cx-emoji-search {
-  width:100%; box-sizing:border-box; margin:0 0 8px; padding:7px 10px; font-size:13.5px;
-  border:1px solid var(--border-input); border-radius:999px; background:var(--input-bg);
-}
-.cx-emoji-search:focus { box-shadow:none; border-color:var(--maroon); }
-.cx-emoji-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:2px; max-height:200px; overflow-y:auto; }
+/* ── COMPOSER EXTRAS: emoji picker — same centered-modal shell as the
+   GIF picker (.modal.gif-modal) instead of a small anchored popover,
+   so it can't get clipped/cut off inside the mobile full-screen
+   composer the way the old position:absolute version did. ── */
+.modal.emoji-modal { width:420px; max-width:92vw; padding-bottom:14px; }
+.cx-emoji-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; max-height:320px; overflow-y:auto; padding:2px 16px 0; }
 .cx-emoji-empty { grid-column:1/-1; text-align:center; font-size:12.5px; color:var(--muted); padding:14px 0; }
-.cx-emoji-item { background:none; border:none; cursor:pointer; font-size:19px; padding:5px; border-radius:6px; line-height:1; }
+.cx-emoji-item { background:none; border:none; cursor:pointer; font-size:22px; padding:7px; border-radius:10px; line-height:1; }
 .cx-emoji-item:hover { background:var(--hover-bg); }
 
-/* ── COMPOSER EXTRAS: poll builder ── */
-.cx-poll { border:1px solid var(--line); border-radius:var(--r-md); padding:10px; margin:10px 0 0; }
+/* ── COMPOSER EXTRAS: poll builder — rounded card instead of a flat
+   1px square box, tinted background so it reads as its own module
+   inside the composer, and a per-option remove (×) button once a
+   third/fourth choice has been added (previously the only way to
+   drop back to 2 options was scrapping the whole poll). ── */
+.cx-poll { border:1px solid var(--line); border-radius:16px; padding:14px; margin:12px 0 0; background:var(--hover-bg); }
 .cx-poll-opts { display:flex; flex-direction:column; gap:8px; }
-.cx-poll-opt { font-size:14px; padding:8px 10px; }
-.cx-poll-row { display:flex; align-items:center; gap:10px; margin-top:10px; }
+.cx-poll-opt-row { display:flex; align-items:center; gap:8px; }
+.cx-poll-opt { font-size:14px; padding:10px 14px; border-radius:999px; flex:1; min-width:0; }
+.cx-poll-opt-rm {
+  flex:none; width:26px; height:26px; border-radius:50%; border:none; background:none; color:var(--muted);
+  cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-size:13px;
+}
+.cx-poll-opt-rm:hover { background:var(--line); color:var(--ink); }
+.cx-poll-row { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:12px; }
 .cx-poll-add { background:none; border:none; color:var(--maroon); font-weight:700; font-size:13px; cursor:pointer; padding:4px 0; }
 .cx-poll-add:hover { text-decoration:underline; }
-.cx-poll-row select { width:auto; flex:none; font-size:13px; padding:5px 22px 5px 8px; }
+.cx-poll-add:disabled { color:var(--muted); cursor:default; text-decoration:none; }
+.cx-poll-row select {
+  width:auto; min-width:0; flex:1 1 110px; font-size:13px; padding:7px 24px 7px 12px;
+  border-radius:999px; background-color:var(--input-bg);
+}
 .cx-poll-remove {
   margin-left:auto; background:none; border:none; color:var(--muted); cursor:pointer; width:26px; height:26px;
   border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:13px;
 }
-.cx-poll-remove:hover { background:var(--hover-bg); color:var(--ink); }
+.cx-poll-remove:hover { background:var(--line); color:var(--ink); }
 
-/* ── COMPOSER EXTRAS: schedule picker ── */
-.cx-sched { display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:var(--r-md); padding:8px 10px; margin:10px 0 0; }
+/* ── COMPOSER EXTRAS: schedule picker — same rounded-card treatment
+   as the poll builder above, and the date input can shrink instead
+   of forcing the row wider than the composer on narrow screens. ── */
+.cx-sched { display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:999px; padding:9px 14px; margin:12px 0 0; background:var(--hover-bg); }
 .cx-sched[hidden], .cx-poll[hidden] { display:none; }
 .cx-sched svg { width:17px; height:17px; color:var(--maroon); flex:none; }
-.cx-sched input[type="datetime-local"] { border:none; background:none; padding:2px 0; font-size:13.5px; width:auto; flex:1; }
+.cx-sched input[type="datetime-local"] { border:none; background:none; padding:2px 0; font-size:13.5px; width:auto; min-width:0; flex:1; }
 .cx-sched input[type="datetime-local"]:focus { box-shadow:none; }
 .cx-sched-remove { background:none; border:none; color:var(--muted); cursor:pointer; width:22px; height:22px; border-radius:50%; flex:none; }
-.cx-sched-remove:hover { background:var(--hover-bg); color:var(--ink); }
+.cx-sched-remove:hover { background:var(--line); color:var(--ink); }
 
 /* ── POLLS (rendered on a post card / thread detail) ── */
 .poll-box { display:flex; flex-direction:column; gap:6px; margin-top:10px; max-width:420px; }
@@ -1907,7 +1917,7 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
 .modal-bg { display:none; position:fixed; inset:0; background:rgba(91,112,131,0.4); z-index:1000; align-items:center; justify-content:center; }
 .modal-bg.open { display:flex; animation:oc-backdrop-in .15s ease both; }
 @keyframes oc-backdrop-in { from { background:rgba(91,112,131,0); } to { background:rgba(91,112,131,.4); } }
-.modal { background:var(--cream-card); border:none; border-radius:var(--r-md); padding:0 0 16px; width:340px; max-width:92vw; position:relative; box-shadow:var(--shadow-pop); overflow:hidden; animation:oc-modal-in .18s cubic-bezier(.2,.8,.2,1) both; }
+.modal { background:var(--cream-card); border:none; border-radius:20px; padding:0 0 16px; width:340px; max-width:92vw; position:relative; box-shadow:var(--shadow-pop); overflow:hidden; animation:oc-modal-in .18s cubic-bezier(.2,.8,.2,1) both; }
 @keyframes oc-modal-in { from { opacity:0; transform:translateY(10px) scale(.97); } to { opacity:1; transform:translateY(0) scale(1); } }
 .modal h2 { font-family:inherit; font-size:17px; color:var(--ink); background:none; margin-bottom:12px; padding:16px 16px 0; border-bottom:none; font-weight:800; }
 
