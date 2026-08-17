@@ -599,7 +599,6 @@ function renderMobileChrome() {
         <img class="logo-mark logo-mark-light" src="img/logo-light.png" alt="" width="26" height="26">
         <img class="logo-mark logo-mark-dark" src="img/logo-dark.png" alt="" width="26" height="26">
       </a>
-      <a class="m-feeds-btn" href="articles.html" aria-label="Feeds">${ICON_FEEDS}</a>
     </div>
 
     <div id="m-tabbar">

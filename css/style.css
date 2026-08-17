@@ -477,10 +477,10 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
 }
 .xtab:hover { color:var(--ink); }
 .xtab.active {
-  color:#fff; background:var(--maroon);
-  box-shadow:none;
+  color:var(--maroon); background:transparent;
+  box-shadow:inset 0 0 0 1.5px var(--maroon);
 }
-.xtab.active:hover { background:var(--maroon-dk); }
+.xtab.active:hover { background:var(--maroon-tint); }
 .xtabs-plus {
   flex:none; width:38px; height:38px; display:flex; align-items:center; justify-content:center;
   background:var(--hover-bg); border:1px solid var(--line); border-radius:999px;
@@ -528,6 +528,14 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
    empty — see board.js) reveals all of it again. */
 .pf-toolbar, #pf-ga-slot { display:none; }
 #pf-box.pf-expanded .pf-toolbar { display:flex; align-items:center; justify-content:space-between; margin-top:8px; padding-top:10px; border-top:1px solid var(--line); }
+/* The floating global-compose and reply modals (.gc-toolbar) reuse the
+   same .pf-toolbar class as the home-feed inline composer, but they
+   aren't nested inside #pf-box.pf-expanded — so without this they
+   inherited display:none from the rule above and the whole toolbar
+   (media/GIF/poll/emoji/schedule icons AND the Post/Reply submit
+   button, which lives in the same row) was invisible any time you
+   opened the "What's happening?" composer or a reply box. */
+.gc-toolbar { display:flex !important; align-items:center; justify-content:space-between; }
 #pf-box.pf-expanded #pf-ga-slot { display:block; }
 .pf-icons { display:flex; align-items:center; gap:2px; }
 .pf-ic {
@@ -2383,10 +2391,12 @@ html[data-theme="dim"] .auth-ok, html[data-theme="dark"] .auth-ok { background:r
 .profile-back-btn svg { width:19px; height:19px; }
 
 /* Row that holds the avatar and the action buttons (message/follow/
-   edit) together, pulled up over the bottom of the banner as a unit —
-   avatar on the left, buttons floating at its baseline on the right,
-   same layout rhythm as Bluesky/X profile headers. */
-.profile-hdr-top { display:flex; align-items:flex-end; justify-content:space-between; gap:10px; margin-top:-44px; position:relative; z-index:1; }
+   edit) together — avatar on the left, buttons on the right. Only the
+   avatar overlaps the banner photo (via its own negative margin,
+   below); this row itself stays in normal flow so the Follow/Edit
+   profile button always sits clear of the banner instead of getting
+   pulled up onto it. */
+.profile-hdr-top { display:flex; align-items:flex-end; justify-content:space-between; gap:10px; margin-top:14px; position:relative; z-index:1; }
 #pv-avatar { position:relative; z-index:1; }
 
 /* ── header action row: message + "···" menu + follow/edit ── */
@@ -3122,16 +3132,20 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 
 /* ── PROFILE: avatar stays circular (per reference) — just made
    larger and pulled further up over the banner to match the
-   photo's proportions. ── */
+   photo's proportions. Only the avatar itself overlaps the banner
+   (via its own negative margin) — .profile-hdr-top stays in normal
+   flow so the Follow/Edit profile button next to it always sits
+   clear of the banner instead of getting dragged up onto it. ── */
 .profile-hdr .avatar.pfp-lg {
   width:112px; height:112px; border-radius:50%;
   border:4px solid var(--bg); box-shadow:0 1px 3px rgba(15,20,25,.15);
+  margin-top:-62px;
 }
-.profile-hdr-top { margin-top:-62px; }
+.profile-hdr-top { margin-top:14px; }
 .profile-hdr::before { height:220px; }
 @media (max-width:480px) {
-  .profile-hdr .avatar.pfp-lg { width:88px; height:88px; }
-  .profile-hdr-top { margin-top:-46px; }
+  .profile-hdr .avatar.pfp-lg { width:88px; height:88px; margin-top:-46px; }
+  .profile-hdr-top { margin-top:12px; }
   .profile-hdr::before { height:180px; }
 }
 
