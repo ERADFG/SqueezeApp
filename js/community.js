@@ -102,13 +102,18 @@ function renderHero() {
       ${bannerPick}
     </div>
     <div class="community-hero">
-      <span class="comm-avatar-wrap">${avatarInner}</span>
+      <div class="community-hero-top">
+        <span class="comm-avatar-wrap">${avatarInner}</span>
+        <div class="community-hero-actions">${actionBtn}</div>
+      </div>
       <div class="community-hero-body">
         <div class="community-hero-name">${esc(community.name)}</div>
         ${community.description ? `<div class="community-hero-desc">${esc(community.description)}</div>` : ''}
-        <div class="community-hero-meta">${fmtCount(community.member_count)} member${community.member_count === 1 ? '' : 's'} &nbsp;&middot;&nbsp; ${fmtCount(community.post_count)} post${community.post_count === 1 ? '' : 's'}</div>
+        <div class="community-hero-meta">
+          <span><b>${fmtCount(community.member_count)}</b> Member${community.member_count === 1 ? '' : 's'}</span>
+          <span><b>${fmtCount(community.post_count)}</b> Post${community.post_count === 1 ? '' : 's'}</span>
+        </div>
       </div>
-      <div class="community-hero-actions">${actionBtn}</div>
     </div>`;
 }
 

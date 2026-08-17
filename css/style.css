@@ -830,7 +830,8 @@ select {
 }
 .comm-banner-pick:hover { background:rgba(15,20,25,.7); }
 .comm-banner-pick svg { width:20px; height:20px; }
-.community-hero { padding:16px; border-bottom:1px solid var(--line); display:flex; gap:14px; align-items:flex-start; }
+.community-hero { padding:16px; border-bottom:1px solid var(--line); }
+.community-hero-top { display:flex; gap:14px; align-items:flex-end; justify-content:space-between; }
 .community-hero .comm-avatar { width:56px; height:56px; font-size:22px; }
 .comm-avatar-wrap { position:relative; flex:none; width:56px; height:56px; }
 .comm-avatar-lg { width:56px; height:56px; font-size:22px; }
@@ -841,7 +842,7 @@ select {
 }
 .comm-avatar-pick:hover { opacity:1; }
 .comm-avatar-pick svg { width:20px; height:20px; }
-.community-hero-body { flex:1; min-width:0; }
+.community-hero-body { min-width:0; margin-top:12px; }
 .community-hero-name { font-size:19px; font-weight:800; color:var(--ink); word-break:break-word; }
 .community-hero-desc { font-size:14px; color:var(--ink); margin-top:4px; line-height:1.4; }
 .community-hero-meta { font-size:13px; color:var(--muted); margin-top:8px; }
@@ -3053,4 +3054,109 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
   .cm-modal { border-radius:0; max-width:none; height:100%; }
   .cm-modal-bg { padding:0; }
   .cm-stage { height:auto; flex:1; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   REFERENCE REDESIGN
+   Two looks, mapped to two page groups so the rest of the app is
+   untouched:
+     • Profile page      → monochrome, X/Bluesky-style header —
+       squircle avatar overlapping the banner, underline tabs,
+       solid black "Follow" pill.
+     • Community pages   → warm "Skale" look — squircle community
+       icon in an orange gradient, faint sunburst banner lines,
+       bold stat row, solid black pill CTAs/active tabs.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── PROFILE: squircle avatar overlapping the banner ── */
+.profile-hdr .avatar.pfp-lg {
+  width:116px; height:116px; border-radius:26px;
+  border:4px solid var(--bg); box-shadow:0 1px 3px rgba(15,20,25,.15);
+}
+.profile-hdr-top { margin-top:-64px; }
+.profile-hdr::before { height:190px; }
+@media (max-width:480px) {
+  .profile-hdr .avatar.pfp-lg { width:92px; height:92px; border-radius:20px; }
+  .profile-hdr-top { margin-top:-48px; }
+  .profile-hdr::before { height:150px; }
+}
+
+/* ── PROFILE: flat underline tabs (Posts / Replies / …) instead of
+   the pill/segmented track used elsewhere (search, follower lists) —
+   matches the reference profile's plain tab row with a single black
+   underline beneath the active tab. ── */
+.profile-tabs .xtabs {
+  background:none; border:none; border-bottom:1px solid var(--line);
+  border-radius:0; padding:0; gap:0;
+}
+.profile-tabs .xtab {
+  flex:none; padding:14px 18px; border-radius:0; font-weight:700; color:var(--muted);
+}
+.profile-tabs .xtab:hover { color:var(--ink); background:var(--hover-bg); }
+.profile-tabs .xtab.active { background:none; color:var(--ink); box-shadow:none; position:relative; }
+.profile-tabs .xtab.active:hover { background:var(--hover-bg); }
+.profile-tabs .xtab.active::after {
+  content:""; position:absolute; left:16px; right:16px; bottom:0;
+  height:3px; border-radius:3px 3px 0 0; background:var(--ink);
+}
+
+/* ── COMMUNITY / COMMUNITIES: squircle community icon in the warm
+   orange gradient from the reference, plus a faint sunburst-line
+   banner. Scoped to these two pages only — the accent color a
+   person picked in Settings still governs the rest of the app. ── */
+body[data-page="community"] .comm-avatar,
+body[data-page="communities"] .comm-avatar {
+  border-radius:24%;
+  background:linear-gradient(135deg,#FF8A50,#FF3D1F);
+}
+body[data-page="community"] .comm-avatar img,
+body[data-page="communities"] .comm-avatar img { border-radius:22%; }
+body[data-page="community"] .comm-avatar-pick { border-radius:24%; }
+
+body[data-page="community"] .comm-avatar-wrap,
+body[data-page="community"] .comm-avatar-lg,
+body[data-page="community"] .community-hero .comm-avatar {
+  width:76px; height:76px; font-size:28px;
+}
+body[data-page="community"] .community-hero .comm-avatar {
+  border:4px solid var(--bg); box-shadow:0 1px 4px rgba(15,20,25,.15);
+}
+body[data-page="community"] .community-hero-top {
+  margin-top:-38px; position:relative; z-index:1;
+}
+body[data-page="community"] .community-banner-wrap {
+  height:150px;
+  background-image:
+    var(--banner-img, none),
+    repeating-conic-gradient(from 0deg at 16% 128%, rgba(255,90,31,.18) 0deg 1deg, transparent 1deg 8deg);
+  background-position:center, 16% 128%;
+  background-size:cover, 220% 220%;
+  background-color:var(--hover-bg);
+  background-repeat:no-repeat, no-repeat;
+}
+body[data-page="community"] .community-hero-name { font-size:21px; }
+body[data-page="community"] .community-hero-meta {
+  display:flex; gap:16px; font-size:14px; color:var(--ink); margin-top:8px;
+}
+body[data-page="community"] .community-hero-meta b { color:var(--ink); font-weight:800; }
+body[data-page="community"] .comm-join-btn,
+body[data-page="community"] .comm-leave-btn { padding:9px 20px; font-weight:800; }
+
+/* Board tabs (Top/Latest/Media/About, All/Joined) → plain track with
+   a solid black active pill, matching the reference's
+   Community/Design/Education row instead of the app's usual green. */
+body[data-page="community"] #board-hdr,
+body[data-page="communities"] #board-hdr {
+  background:none; border:none; backdrop-filter:none; padding:10px 16px 4px;
+}
+body[data-page="community"] .xtabs, body[data-page="communities"] .xtabs { padding:3px; }
+body[data-page="community"] .xtab.active, body[data-page="communities"] .xtab.active { background:var(--ink); color:var(--bg); }
+body[data-page="community"] .xtab.active:hover, body[data-page="communities"] .xtab.active:hover { background:var(--ink); filter:brightness(.85); }
+
+@media (max-width:480px) {
+  body[data-page="community"] .comm-avatar-wrap,
+  body[data-page="community"] .comm-avatar-lg,
+  body[data-page="community"] .community-hero .comm-avatar { width:60px; height:60px; font-size:22px; }
+  body[data-page="community"] .community-hero-top { margin-top:-30px; }
+  body[data-page="community"] .community-banner-wrap { height:110px; }
 }
