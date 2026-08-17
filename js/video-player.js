@@ -342,12 +342,37 @@ const ttvViewportObserver = new IntersectionObserver((entries) => {
     if (v && !v.paused) v.pause();
   });
 }, { threshold: 0 });
+// Bug fix: this MutationObserver was only ever adding `.ttv` players to
+// ttvViewportObserver as they appeared (infinite-scroll feed, quote
+// posts, thread replies) and never removing them once their DOM nodes
+// were gone — e.g. switching feed tabs replaces #feed-posts wholesale
+// (renderFeedPage's `feedEl.innerHTML = html` path). Every old player
+// stayed registered with the observer *and* kept its <video> element's
+// decoder/buffer alive in memory (IntersectionObserver holds a strong
+// reference to observed targets), since nothing ever paused + released
+// them. On a session with a lot of scrolling through video posts this
+// leaked one full video decoder per post, unbounded — exactly the kind
+// of slow memory growth that ends in a mobile Chrome tab renderer OOM
+// ("Aw, Snap!"). Now every removal is mirrored: unobserve the player
+// and drop the <video>'s source so the decoder can actually be freed,
+// not just visually removed from the page.
+function ttvReleasePlayer(root) {
+  ttvViewportObserver.unobserve(root);
+  const v = root.querySelector?.('.ttv-video');
+  if (!v) return;
+  try { v.pause(); v.removeAttribute('src'); v.load(); } catch (e) {}
+}
 new MutationObserver((mutations) => {
   for (const m of mutations) {
     m.addedNodes.forEach(node => {
       if (node.nodeType !== 1) return;
       if (node.matches?.('.ttv')) ttvViewportObserver.observe(node);
       node.querySelectorAll?.('.ttv').forEach(el => ttvViewportObserver.observe(el));
+    });
+    m.removedNodes.forEach(node => {
+      if (node.nodeType !== 1) return;
+      if (node.matches?.('.ttv')) ttvReleasePlayer(node);
+      node.querySelectorAll?.('.ttv').forEach(ttvReleasePlayer);
     });
   }
 }).observe(document.body, { childList: true, subtree: true });

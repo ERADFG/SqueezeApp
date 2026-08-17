@@ -1997,7 +1997,7 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
 
 @media (max-width:700px) {
   #hdr { display:none; }
-  #main { margin-left:0; padding-top:53px; padding-bottom:calc(86px + env(safe-area-inset-bottom)); }
+  #main { margin-left:0; padding-top:53px; padding-bottom:calc(66px + env(safe-area-inset-bottom)); }
   #sidebar, .xright { display:none; }
 
   #m-topbar {
@@ -2036,62 +2036,44 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
   }
   #m-topbar .m-logo .logo-mark { width:26px; height:26px; }
 
+  /* Flush, edge-to-edge bottom bar — Bluesky's own bottom nav is a
+     plain full-width strip sitting flat against the screen edge (solid
+     background, one hairline border on top, icons evenly spaced), not
+     a floating rounded "dock" chip with a shadow under it. Rebuilt to
+     match that: no border-radius, no box-shadow, no frosted-glass
+     blur, spans the full width instead of centering as an island. */
   #m-tabbar {
-    display:flex; align-items:center; gap:2px;
-    position:fixed; left:50%; bottom:calc(14px + env(safe-area-inset-bottom));
-    transform:translateX(-50%); z-index:900;
-    max-width:calc(100vw - 24px);
-    /* "matte glass" dock — a frosted, translucent wash of the page's
-       own theme color (not a flat black bar) with a strong blur+
-       saturation boost behind it, so whatever's scrolling underneath
-       reads as soft frosted glass rather than a solid slab. Reuses
-       --translucent-bg so it's automatically the right tint in every
-       theme (milky white on Default, frosted dark on Dim/Lights out)
-       instead of being hardcoded to one. */
-    background:var(--translucent-bg);
-    backdrop-filter:blur(22px) saturate(180%);
-    -webkit-backdrop-filter:blur(22px) saturate(180%);
-    border:1px solid var(--line); border-radius:999px; padding:5px;
-    box-shadow:0 10px 28px rgba(15,20,25,.14), 0 2px 8px rgba(15,20,25,.06);
+    display:flex; align-items:center; justify-content:space-around;
+    position:fixed; left:0; right:0; bottom:0; z-index:900;
+    padding:8px 4px calc(8px + env(safe-area-inset-bottom));
+    background:var(--bg); border-top:1px solid var(--line);
+    border-radius:0; box-shadow:none;
   }
   #m-tabbar a {
-    flex:none; display:flex; align-items:center; justify-content:center;
+    flex:1; display:flex; align-items:center; justify-content:center;
     position:relative; overflow:hidden;
-    height:44px; width:44px; padding:0; border-radius:999px;
+    height:40px; padding:0; border-radius:12px;
     color:var(--muted); text-decoration:none;
-    transition:width .26s cubic-bezier(.34,1.3,.4,1), padding .26s cubic-bezier(.34,1.3,.4,1),
-               background .18s ease, color .18s ease;
+    transition:color .15s ease, background-color .15s ease;
   }
-  #m-tabbar a svg { width:22px; height:22px; flex:none; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; transition:transform .28s cubic-bezier(.34,1.56,.64,1); }
-  /* the active tab grows into a solid pill (ink-on-bg, so it auto-
-     inverts per theme) with its label revealed next to the icon —
-     same "dock" language as the reference screenshots — while the
-     rest stay plain icons on the frosted glass bar. margin-left (not
-     flex gap) carries the icon↔label spacing, so an inactive tab's
-     hidden label adds zero width and the icon stays perfectly
-     centered in its circle. */
-  #m-tabbar a .m-tab-label {
-    font-size:14px; font-weight:800; white-space:nowrap; letter-spacing:-.1px;
-    max-width:0; margin-left:0; opacity:0; overflow:hidden; transition:max-width .26s cubic-bezier(.34,1.3,.4,1), margin-left .26s cubic-bezier(.34,1.3,.4,1), opacity .18s ease;
-  }
-  #m-tabbar a.cur {
-    width:auto; padding:0 16px 0 13px; background:var(--ink); color:var(--bg);
-  }
-  #m-tabbar a.cur svg { transform:scale(1.05); }
-  #m-tabbar a.cur .m-tab-label { max-width:90px; margin-left:6px; opacity:1; }
-  #m-tabbar a:active { box-shadow:inset 0 0 0 100vmax rgba(120,130,140,.16); }
-  #m-tabbar a.cur:active { box-shadow:inset 0 0 0 100vmax rgba(255,255,255,.16); }
-  #m-tabbar a .navbadge { position:absolute; top:2px; right:2px; margin-left:0; box-shadow:0 0 0 2px var(--translucent-bg); }
-  #m-tabbar a.cur .navbadge { box-shadow:0 0 0 2px var(--ink); }
+  #m-tabbar a svg { width:24px; height:24px; flex:none; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  /* Icon-only bar, same as Bluesky's — the active tab is just a
+     bolder/filled icon in ink, no growing pill or revealed label. */
+  #m-tabbar a .m-tab-label { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
+  #m-tabbar a.cur { color:var(--ink); }
+  #m-tabbar a.cur svg { stroke-width:2.5; }
+  #m-tabbar a:active { background:var(--hover-bg); }
+  #m-tabbar a .navbadge { position:absolute; top:2px; right:calc(50% - 17px); margin-left:0; box-shadow:0 0 0 2px var(--bg); }
 
 
   #m-fab {
     display:flex; align-items:center; justify-content:center;
-    position:fixed; right:16px; bottom:calc(84px + env(safe-area-inset-bottom)); z-index:850;
+    position:fixed; right:16px; bottom:calc(72px + env(safe-area-inset-bottom)); z-index:850;
     width:54px; height:54px; border-radius:999px; background:var(--maroon); color:#fff;
-    border:none; box-shadow:0 4px 14px rgba(15,20,25,.25); cursor:pointer;
+    border:none; box-shadow:0 4px 14px rgba(15,20,25,.2); cursor:pointer;
+    transition:background-color .15s ease;
   }
-  #m-fab:active { box-shadow:0 4px 14px rgba(15,20,25,.25), inset 0 0 0 100vmax rgba(255,255,255,.18); }
+  #m-fab:active { background:var(--maroon-dk); }
   #m-fab:hover { background:var(--maroon-dk); }
   #m-fab svg { width:24px; height:24px; fill:none; stroke:#fff; stroke-width:2.4; stroke-linecap:round; }
 
@@ -2120,12 +2102,33 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
   html.oc-drawer-open #board-hdr,
   html.oc-drawer-open #m-topbar,
   html.oc-drawer-open #m-tabbar,
-  html.oc-drawer-open #m-fab { display:none !important; }
+  html.oc-drawer-open #m-fab,
+  /* Same bug, same fix, on every OTHER page: any page that isn't the
+     home feed has its own sticky/backdrop-filter bar in this exact
+     shape — the profile page's "Posts / Replies / Scheduled" tab bar
+     (#profile-tabs.sec-bar), the same .sec-bar class reused on
+     search/lists/notifications/etc, the search page's sticky topbar,
+     and the profile page's translucent back-button over the banner —
+     and every one of them was missing from this list, which is
+     exactly the "profile page content sits on top of the open drawer"
+     bug (tab bar + avatar + Edit Profile bleeding through on top of
+     the menu). Hiding the same way #board-hdr already was above. */
+  html.oc-drawer-open .sec-bar,
+  html.oc-drawer-open .search-topbar,
+  html.oc-drawer-open .profile-back-btn,
+  html.oc-drawer-open .profile-hdr-actions { display:none !important; }
+  /* Extra safety net for the same leak: #pv-avatar and .profile-hdr-top
+     each open their own local stacking context (position:relative +
+     z-index:1) so the avatar can sit over the banner photo — neutralize
+     that while the drawer's open too, in case a browser promotes it
+     into the same compositing layer as the sticky bars above. */
+  html.oc-drawer-open .profile-hdr-top,
+  html.oc-drawer-open #pv-avatar { z-index:auto !important; }
   .m-drawer-bg.open { background:rgba(91,112,131,.4); pointer-events:auto; }
   .m-drawer {
     position:absolute; top:0; left:0; bottom:0; width:80vw; max-width:308px;
     background:var(--bg); padding:18px 14px; overflow-y:auto;
-    border-radius:0 22px 22px 0; box-shadow:6px 0 24px rgba(15,20,25,.10);
+    border-radius:0; box-shadow:none; border-right:1px solid var(--line);
     transform:translateX(-100%); transition:transform .26s cubic-bezier(.2,.8,.2,1);
   }
   .m-drawer-bg.open .m-drawer { transform:translateX(0); }
@@ -2386,7 +2389,7 @@ html[data-theme="dim"] .auth-ok, html[data-theme="dark"] .auth-ok { background:r
 #pv-avatar { position:relative; z-index:1; }
 
 /* ── header action row: message + "···" menu + follow/edit ── */
-.profile-hdr-actions { display:flex; align-items:center; gap:8px; flex:none; align-self:flex-end; margin-bottom:6px; }
+.profile-hdr-actions { display:flex; align-items:center; gap:10px; flex:none; align-self:flex-end; margin-bottom:8px; }
 .profile-hdr-actions .follow-btn, .profile-hdr-actions .profile-edit-btn { margin-top:0; }
 .profile-icon-btn {
   width:36px; height:36px; border-radius:50%; border:1px solid var(--border-input);

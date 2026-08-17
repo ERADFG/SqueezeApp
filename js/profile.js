@@ -60,7 +60,7 @@ async function loadProfile() {
   const locationLabel = truncateLabel(locationFull);
 
   root.innerHTML = `
-    <div class="profile-hdr" style="${profile.banner_url ? `--banner-img:url('${esc(profile.banner_url)}')` : ''}">
+    <div class="profile-hdr" id="profile-hdr" style="${profile.banner_url ? `--banner-img:url('${esc(profile.banner_url)}')` : ''}">
       <a class="profile-back-btn" href="index.html" aria-label="Back to home">${ICON_BACK}</a>
       <div class="profile-hdr-top">
         <img class="avatar pfp-lg" id="pv-avatar" src="${esc(avatarUrl(profile.avatar_url))}" alt="">
@@ -105,6 +105,21 @@ async function loadProfile() {
     </div>
     <div id="profile-posts">${skeletonFeedHtml(3)}</div>
   `;
+
+  // Bug fix: a banner URL that 404s or otherwise fails to load used to
+  // just render as a solid black rectangle — CSS's var() fallback
+  // (the gradient in .profile-hdr::before) only kicks in when the
+  // custom property itself is unset, not when the image it points to
+  // fails to load. Preload-check it and drop back to the gradient
+  // fallback if it can't actually be displayed.
+  if (profile.banner_url) {
+    const bannerCheck = new Image();
+    bannerCheck.onerror = () => {
+      const hdrEl = document.getElementById('profile-hdr');
+      if (hdrEl) hdrEl.style.removeProperty('--banner-img');
+    };
+    bannerCheck.src = profile.banner_url;
+  }
 
   if (!isOwnProfile && session) {
     isFollowing(profile.id).then(f => setFollowBtnState(f));
