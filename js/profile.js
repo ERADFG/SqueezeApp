@@ -96,7 +96,7 @@ async function loadProfile() {
       </div>
     </div>
 
-    <div id="profile-tabs" class="sec-bar" style="padding:0;">
+    <div id="profile-tabs" class="sec-bar profile-tabs" style="padding:0;">
       <div class="xtabs">
         <button class="xtab active" id="ptab-posts" onclick="switchProfileTab('posts');return false;">Posts</button>
         <button class="xtab" id="ptab-replies" onclick="switchProfileTab('replies');return false;">Replies</button>
@@ -435,7 +435,7 @@ async function loadUserReplies(userId) {
 // as cardClick() in common.js, just landing on the reply's spot in
 // the thread instead of the top of it.
 function replyCardClick(ev, postId, replyId, opUsername) {
-  if (ev.target.closest('a, button, input, textarea, .pc-menu-wrap, .pm')) return;
+  if (ev.target.closest('a, button, input, textarea, .pc-menu-wrap, .rp-menu-wrap, .pm')) return;
   location.href = postUrlById(postId, opUsername) + `#reply-${replyId}`;
 }
 

@@ -55,9 +55,9 @@
   --input-bg:  #FFFFFF;   /* form field / card-on-card background */
   --border-input: #CFD9DE; /* form field / outline-button border */
   --translucent-bg: rgba(255,255,255,.85); /* sticky/backdrop-blur headers */
-  --r-sm: 8px;
-  --r-md: 16px;
-  --r-lg: 20px;
+  --r-sm: 0px;
+  --r-md: 0px;
+  --r-lg: 0px;
   --shadow-card: none;
   --shadow-card-hov: none;
   --shadow-pop:  0 12px 32px rgba(15,20,25,.18), 0 2px 8px rgba(15,20,25,.08);
@@ -517,7 +517,7 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
    toolbar make it taller than one line. ── */
 #pf-wrap { max-width:none; margin:0; padding:10px 12px; border-bottom:8px solid var(--line); }
 #pf-box {
-  background:var(--cream-card); border:1px solid var(--line); border-radius:20px;
+  background:var(--cream-card); border:1px solid var(--line); border-radius:0;
   box-shadow:none; overflow:visible; padding:12px 18px; transition:padding .15s ease, border-color .15s ease;
 }
 #pf-box.pf-expanded { border-color:var(--border-input); }
@@ -1118,7 +1118,7 @@ select {
 .pc {
   background:var(--cream-card); border:none; border-bottom:1px solid var(--line); border-radius:0;
   margin-bottom:0; padding:12px 16px; box-shadow:none; cursor:pointer;
-  transition:background-color .12s ease, transform .12s cubic-bezier(.34,1.56,.64,1);
+  transition:background-color .12s ease;
   /* fill-mode intentionally omitted (was `both`) — with `both`/`forwards`,
      the animation's final `transform:translateY(0)` keyframe stays applied
      to this element forever after the .2s entrance finishes. A transform
@@ -1166,9 +1166,6 @@ select {
   z-index:50;
 }
 .pc:hover { background:var(--hover-bg); border-color:var(--line); }
-/* Tap/click bounce — a quick squeeze-and-release on press so opening
-   a post feels responsive, like tapping a native app row. */
-.pc:active { transform:scale(.97); }
 .pc.flash { background:var(--maroon-tint); animation:flashfade 2.4s ease-out; }
 @keyframes flashfade { 0% { background:var(--maroon-tint); } 100% { background:var(--maroon-tint); } }
 
@@ -1326,6 +1323,10 @@ select {
 
 a.act:hover, button.act.reply:hover, button.act.reply:active { color:var(--maroon); }
 .act.views:hover { color:var(--maroon); }
+/* the views icon is solid bars (Twitter's analytics glyph), unlike the
+   outlined stroke icons the other .act buttons use — override the
+   shared .act svg stroke treatment above so it renders filled. */
+.act.views svg { fill:currentColor; stroke:none; }
 .act.like:hover, .act.like:active { color:var(--like); }
 .act.like.liked { color:var(--like); }
 .act.like.liked svg { fill:var(--like); stroke:var(--like); animation:oc-pop .28s ease; }
@@ -1351,8 +1352,8 @@ a.act:hover, button.act.reply:hover, button.act.reply:active { color:var(--maroo
    Mobile (≤640px): becomes a full-width bottom sheet with its own
    backdrop, since a 180px popover is a fiddly tap target on a phone. */
 .rp-menu-wrap { position:relative; flex:none; }
-.act.repost:hover, .act.repost:active { color:var(--vis); }
-.act.repost.reposted { color:var(--vis); animation:oc-pop .28s ease; }
+.act.repost:hover, .act.repost:active { color:var(--maroon); }
+.act.repost.reposted { color:var(--maroon); animation:oc-pop .28s ease; }
 .rp-menu-dd {
   position:absolute; left:0; bottom:calc(100% + 4px); z-index:40; min-width:200px;
   background:var(--cream-card); border:1px solid var(--line); border-radius:14px;
@@ -1679,7 +1680,7 @@ body.oc-sheet-open { overflow:hidden; }
    pill/rounded card (same treatment as #pf-box above) instead of a
    flush, edge-to-edge bar — margin on all sides, its own shadow, no
    straight divider lines. */
-.rfm { background:var(--cream-card); border:1px solid var(--line); border-radius:20px; box-shadow:none; padding:12px 18px; margin:10px 12px; overflow:hidden; display:flex; gap:12px; align-items:flex-start; }
+.rfm { background:var(--cream-card); border:1px solid var(--line); border-radius:0; box-shadow:none; padding:12px 18px; margin:10px 12px; overflow:hidden; display:flex; gap:12px; align-items:flex-start; }
 .rfm-locked { align-items:center; justify-content:center; gap:10px; color:var(--muted); font-size:14px; font-weight:600; padding:18px 16px; }
 .rfm-locked svg { width:18px; height:18px; flex:none; }
 .rfm-col { flex:1; min-width:0; }

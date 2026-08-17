@@ -16,8 +16,10 @@ let flMyFollowing = new Set(); // ids of people the *viewer* (logged-in user) fo
 function flRenderTabs() {
   const el = document.getElementById('fl-tabs');
   el.innerHTML = `
-    <button class="xtab${flTab === 'followers' ? ' active' : ''}" onclick="flSetTab('followers')">Followers</button>
-    <button class="xtab${flTab === 'following' ? ' active' : ''}" onclick="flSetTab('following')">Following</button>`;
+    <div class="xtabs">
+      <button class="xtab${flTab === 'followers' ? ' active' : ''}" onclick="flSetTab('followers')">Followers</button>
+      <button class="xtab${flTab === 'following' ? ' active' : ''}" onclick="flSetTab('following')">Following</button>
+    </div>`;
 }
 
 function flSetTab(tab) {

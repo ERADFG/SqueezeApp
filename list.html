@@ -97,6 +97,22 @@
   </div>
 </div>
 
+<!-- QUOTE POST MODAL -->
+<div class="modal-bg" id="modal-quote">
+  <div class="modal" style="width:420px;">
+    <a class="modal-close" href="#" onclick="closeQuoteModal();return false;">&#10005;</a>
+    <h2>Quote Post</h2>
+    <div class="errmsg" id="qm-err" style="display:none;margin:0 16px 8px;"></div>
+    <div class="qm-body">
+      <span class="pf-avatar" id="qm-avatar"></span>
+      <textarea id="qm-body" maxlength="500" placeholder="Add a comment"></textarea>
+    </div>
+    <div class="qm-preview-wrap" id="qm-preview"></div>
+    <div class="qm-foot"><span class="qm-count" id="qm-count">500</span></div>
+    <button class="modal-btn" id="qm-btn" onclick="submitQuote()">Post</button>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
 <script src="js/supabase-config.js" defer></script>
 <script src="js/i18n.js" defer></script>
