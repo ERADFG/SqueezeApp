@@ -26,16 +26,16 @@
      brighter green-600 #16A34A, since against a near-black background
      that reads at a strong 5.7–7.3:1 while staying visually lighter/
      more legible than the green-700 shade would there. */
-  --maroon:    #0B6FE0;   /* accent — Bluesky-blue, darkened slightly for AA on white */
-  --maroon-dk: #0857B3;   /* accent hover/active */
-  --maroon-tint: rgba(11,111,224,.10); /* accent hover wash */
-  --mustard:   #0B6FE0;   /* secondary accent, kept same as maroon for one accent color */
-  --mustard-dk:#0857B3;
+  --maroon:    #15803D;   /* accent — green-700, clears 4.5:1 AA on white */
+  --maroon-dk: #166534;   /* accent hover/active */
+  --maroon-tint: rgba(21,128,61,.10); /* accent hover wash */
+  --mustard:   #15803D;   /* secondary accent, kept same as maroon for one accent color */
+  --mustard-dk:#166534;
   --cream-card:#FFFFFF;   /* card background */
   --line:      #EFF3F4;   /* hairline border — gray-100 */
   --muted:     #536471;   /* secondary text — twitter gray-500 */
   --green:     #00BA7C;   /* greentext */
-  --link:      #0B6FE0;
+  --link:      #15803D;
   --vis:       #7C3AED;
   /* --like was rose-500 #F43F5E, 3.67:1 on white — also below AA.
      Darkened to rose-600 (4.7:1); dark/dim mode restores the
@@ -81,9 +81,9 @@ html[data-theme="dim"] {
   --bg:#15202B; --ink:#F7F9F9; --cream-card:#15202B; --line:#38444D;
   --muted:#8B98A5; --hover-bg:#1E2732; --input-bg:#1E2732; --div:#38444D;
   --border-input:#38444D; --translucent-bg:rgba(21,32,43,.85);
-  --maroon:#1185FE; --maroon-dk:#3B9EFF; --mustard:#1185FE; --mustard-dk:#3B9EFF; --link:#1185FE;
+  --maroon:#16A34A; --maroon-dk:#22C55E; --mustard:#16A34A; --mustard-dk:#22C55E; --link:#16A34A;
   --like:#F43F5E;
-  --maroon-tint: rgba(17,133,254,.16); --like-tint: rgba(244,63,94,.16);
+  --maroon-tint: rgba(22,163,74,.16); --like-tint: rgba(244,63,94,.16);
   --share:#3BA9F5; --share-tint: rgba(59,169,245,.18);
   --save:#FBBF24; --save-tint: rgba(251,191,36,.18);
   color-scheme: dark;
@@ -92,9 +92,9 @@ html[data-theme="dark"] {
   --bg:#000000; --ink:#E7E9EA; --cream-card:#000000; --line:#2F3336;
   --muted:#71767B; --hover-bg:#0B0B0B; --input-bg:#000000; --div:#2F3336;
   --border-input:#2F3336; --translucent-bg:rgba(0,0,0,.85);
-  --maroon:#1185FE; --maroon-dk:#3B9EFF; --mustard:#1185FE; --mustard-dk:#3B9EFF; --link:#1185FE;
+  --maroon:#16A34A; --maroon-dk:#22C55E; --mustard:#16A34A; --mustard-dk:#22C55E; --link:#16A34A;
   --like:#F43F5E;
-  --maroon-tint: rgba(17,133,254,.16); --like-tint: rgba(244,63,94,.16);
+  --maroon-tint: rgba(22,163,74,.16); --like-tint: rgba(244,63,94,.16);
   --share:#3BA9F5; --share-tint: rgba(59,169,245,.18);
   --save:#FBBF24; --save-tint: rgba(251,191,36,.18);
   color-scheme: dark;
@@ -113,6 +113,10 @@ html[data-theme="dark"] {
    were previously 3.3:1 and 2.8:1 — both failed AA); the dark/dim
    overrides beneath restore the original, brighter shades since those
    already had strong contrast against near-black surfaces. */
+html[data-accent="blue"] {
+  --maroon:#0B6FE0; --maroon-dk:#0857B3; --maroon-tint:rgba(11,111,224,.10);
+  --mustard:#0B6FE0; --mustard-dk:#0857B3; --link:#0B6FE0;
+}
 html[data-accent="green"] {
   --maroon:#15803D; --maroon-dk:#166534; --maroon-tint:rgba(21,128,61,.10);
   --mustard:#15803D; --mustard-dk:#166534; --link:#15803D;
@@ -129,6 +133,7 @@ html[data-accent="orange"] {
   --maroon:#C2410C; --maroon-dk:#9A3412; --maroon-tint:rgba(194,65,12,.10);
   --mustard:#C2410C; --mustard-dk:#9A3412; --link:#C2410C;
 }
+html[data-theme="dim"][data-accent="blue"],  html[data-theme="dark"][data-accent="blue"]  { --maroon:#1185FE; --maroon-dk:#3B9EFF; --mustard:#1185FE; --mustard-dk:#3B9EFF; --link:#1185FE; --maroon-tint:rgba(17,133,254,.16); }
 html[data-theme="dim"][data-accent="green"], html[data-theme="dark"][data-accent="green"] { --maroon:#16A34A; --maroon-dk:#22C55E; --mustard:#16A34A; --mustard-dk:#22C55E; --link:#16A34A; --maroon-tint:rgba(22,163,74,.16); }
 html[data-theme="dim"][data-accent="red"],   html[data-theme="dark"][data-accent="red"]   { --maroon-tint:rgba(220,38,38,.16); }
 html[data-theme="dim"][data-accent="purple"],html[data-theme="dark"][data-accent="purple"]{ --maroon-tint:rgba(124,58,237,.16); }

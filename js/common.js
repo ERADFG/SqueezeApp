@@ -461,12 +461,12 @@ const ACCENT_OPTIONS = [
   { id: 'orange', label: 'Orange' }
 ];
 function applyAccent(accent) {
-  if (accent && accent !== 'blue') document.documentElement.setAttribute('data-accent', accent);
+  if (accent && accent !== 'green') document.documentElement.setAttribute('data-accent', accent);
   else document.documentElement.removeAttribute('data-accent');
-  try { localStorage.setItem(ACCENT_KEY, accent || 'blue'); } catch (e) {}
+  try { localStorage.setItem(ACCENT_KEY, accent || 'green'); } catch (e) {}
 }
 function getAccent() {
-  try { return localStorage.getItem(ACCENT_KEY) || 'blue'; } catch (e) { return 'blue'; }
+  try { return localStorage.getItem(ACCENT_KEY) || 'green'; } catch (e) { return 'green'; }
 }
 
 let unreadNotifCount = 0;
