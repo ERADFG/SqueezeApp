@@ -29,7 +29,7 @@
 // sitemap-<n>.xml files (Google's limit is 50,000 URLs / 50MB per
 // file) — ask for that when the cap starts being an issue.
 //
-// Also includes every localized (es/fr/de/pt/ja/ru) copy of the 9
+// Also includes every localized (es/fr/de/pt/ja/ru) copy of the 10
 // static pages that ship one, each carrying the same hreflang
 // alternates already declared in that page's own <head> (see
 // localizedStaticUrls() below) — so a crawler can discover /es/about,
@@ -105,7 +105,7 @@ function urlTag(loc, lastmod, changefreq, priority, alternates) {
 }
 
 // ── LOCALIZED STATIC PAGES ──
-// Every one of these 9 pages already ships with its own <link
+// Every one of these 10 pages already ships with its own <link
 // rel="alternate" hreflang="..."> block in <head> (en + es/fr/de/pt/ja/ru
 // + x-default) — see e.g. about.html's <head>. This mirrors that same
 // set of URLs into the sitemap with matching xhtml:link alternates, so
@@ -119,6 +119,7 @@ const LOCALES = ['es', 'fr', 'de', 'pt', 'ja', 'ru'];
 const STATIC_PAGES = [
   { path: '', file: 'index.html', changefreq: 'hourly', priority: '1.0' },
   { path: 'communities', file: 'communities.html', changefreq: 'daily', priority: '0.5' },
+  { path: 'articles', file: 'articles.html', changefreq: 'daily', priority: '0.5' },
   { path: 'rules', file: 'rules.html', changefreq: 'monthly', priority: '0.3' },
   { path: 'about', file: 'about.html', changefreq: 'monthly', priority: '0.3' },
   { path: 'contact', file: 'contact.html', changefreq: 'monthly', priority: '0.2' },
@@ -174,22 +175,22 @@ module.exports = async function handler(req, res) {
   }
 
   const now = Date.now();
-  // 9 pages x (1 English + 6 locales) = 63 URLs, each carrying the
-  // full hreflang alternates set.
-  const staticUrls = [
-    ...localizedStaticUrls(origin),
-    // Not localized (no /es/articles route exists), so just the plain
-    // English URL, same as before this change.
-    //
-    // Deliberately NOT adding /lists here even though it's a real
-    // page: robots.js Disallows it (it's a browse-your-own-lists
-    // utility screen, not indexable content — the individual public
-    // lists at /i/lists/<id> below are the actual content and are
-    // already included), and a URL that's blocked in robots.txt but
-    // present in the sitemap is a contradiction Search Console flags
-    // as an error. Keep these two files in sync if that ever changes.
-    urlTag(`${origin}/articles`, fileLastmod('articles.html'), 'daily', '0.5'),
-  ];
+  // 10 pages x (1 English + 6 locales) = 70 URLs, each carrying the
+  // full hreflang alternates set. articles.html joined this set
+  // (alongside its own /es/articles etc. pages and the noindex tag
+  // removed from the English version) so the article *listing* page
+  // is indexed in every language, same as communities.html already
+  // was — individual articles are handled separately below by
+  // articleUrls.
+  //
+  // Deliberately NOT adding /lists here even though it's a real
+  // page: robots.js Disallows it (it's a browse-your-own-lists
+  // utility screen, not indexable content — the individual public
+  // lists at /i/lists/<id> below are the actual content and are
+  // already included), and a URL that's blocked in robots.txt but
+  // present in the sitemap is a contradiction Search Console flags
+  // as an error. Keep these two files in sync if that ever changes.
+  const staticUrls = localizedStaticUrls(origin);
 
   const profileUrls = profiles.map(p =>
     urlTag(`${origin}/${encodeURIComponent(p.username)}`, p.created_at, 'daily', '0.8'));

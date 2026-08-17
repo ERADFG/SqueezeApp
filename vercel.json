@@ -44,6 +44,7 @@
     { "src": "^/es/login$",           "dest": "/es/login.html" },
     { "src": "^/es/signup$",          "dest": "/es/signup.html" },
     { "src": "^/es/communities$",     "dest": "/es/communities.html" },
+    { "src": "^/es/articles$",       "dest": "/es/articles.html" },
 
     { "src": "^/fr$",                 "dest": "/fr/index.html" },
     { "src": "^/fr/home$",            "dest": "/fr/index.html" },
@@ -55,6 +56,7 @@
     { "src": "^/fr/login$",           "dest": "/fr/login.html" },
     { "src": "^/fr/signup$",          "dest": "/fr/signup.html" },
     { "src": "^/fr/communities$",     "dest": "/fr/communities.html" },
+    { "src": "^/fr/articles$",       "dest": "/fr/articles.html" },
 
     { "src": "^/de$",                 "dest": "/de/index.html" },
     { "src": "^/de/home$",            "dest": "/de/index.html" },
@@ -66,6 +68,7 @@
     { "src": "^/de/login$",           "dest": "/de/login.html" },
     { "src": "^/de/signup$",          "dest": "/de/signup.html" },
     { "src": "^/de/communities$",     "dest": "/de/communities.html" },
+    { "src": "^/de/articles$",       "dest": "/de/articles.html" },
 
     { "src": "^/pt$",                 "dest": "/pt/index.html" },
     { "src": "^/pt/home$",            "dest": "/pt/index.html" },
@@ -77,6 +80,7 @@
     { "src": "^/pt/login$",           "dest": "/pt/login.html" },
     { "src": "^/pt/signup$",          "dest": "/pt/signup.html" },
     { "src": "^/pt/communities$",     "dest": "/pt/communities.html" },
+    { "src": "^/pt/articles$",       "dest": "/pt/articles.html" },
 
     { "src": "^/ja$",                 "dest": "/ja/index.html" },
     { "src": "^/ja/home$",            "dest": "/ja/index.html" },
@@ -88,6 +92,7 @@
     { "src": "^/ja/login$",           "dest": "/ja/login.html" },
     { "src": "^/ja/signup$",          "dest": "/ja/signup.html" },
     { "src": "^/ja/communities$",     "dest": "/ja/communities.html" },
+    { "src": "^/ja/articles$",       "dest": "/ja/articles.html" },
 
     { "src": "^/ru$",                 "dest": "/ru/index.html" },
     { "src": "^/ru/home$",            "dest": "/ru/index.html" },
@@ -99,6 +104,7 @@
     { "src": "^/ru/login$",           "dest": "/ru/login.html" },
     { "src": "^/ru/signup$",          "dest": "/ru/signup.html" },
     { "src": "^/ru/communities$",     "dest": "/ru/communities.html" },
+    { "src": "^/ru/articles$",       "dest": "/ru/articles.html" },
     { "src": "^/communities/(?<slug>[^/]+)$", "dest": "/api/prerender?type=community&slug=$slug" },
 
     { "src": "^/lists$",              "dest": "/lists.html" },
