@@ -32,6 +32,32 @@ function accentSwatchHtml(id, label, active) {
     <button type="button" class="accent-swatch${active ? ' active' : ''}" data-accent-opt="${id}" title="${label}" aria-label="${label}" onclick="chooseAccent('${id}')"></button>`;
 }
 
+const CHEVRON_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>';
+
+// One tappable row in the top-level Settings menu — chevron on the
+// right, opens/closes its matching panel below on tap. Mirrors the
+// reference app's flat "Account / Privacy / Notifications…" list
+// instead of one long scrolling page of every setting at once.
+function settingsRowHtml(id, icon, label) {
+  return `
+    <button type="button" class="settings-menu-row" data-panel="panel-${id}" onclick="toggleSettingsPanel('${id}')">
+      <span class="smr-icon">${icon}</span>
+      <span class="smr-label">${label}</span>
+      <span class="smr-chevron">${CHEVRON_ICON}</span>
+    </button>`;
+}
+
+function toggleSettingsPanel(id) {
+  const row = document.querySelector(`.settings-menu-row[data-panel="panel-${id}"]`);
+  const panel = document.getElementById(`panel-${id}`);
+  if (!panel) return;
+  const opening = !panel.classList.contains('open');
+  // accordion — only one panel open at a time, same as the reference
+  document.querySelectorAll('.settings-panel.open').forEach(p => p.classList.remove('open'));
+  document.querySelectorAll('.settings-menu-row.open').forEach(r => r.classList.remove('open'));
+  if (opening) { panel.classList.add('open'); row?.classList.add('open'); }
+}
+
 async function loadSettings() {
   const root = document.getElementById('settings-root');
   const { data: { session } } = await sb.auth.getSession();
@@ -50,99 +76,101 @@ async function loadSettings() {
   const s = settings || { notify_likes: true, notify_replies: true, notify_follows: true, notify_mentions: true, dm_privacy: 'everyone' };
 
   root.innerHTML = `
-    <div class="settings-section">
-      <h2>${t('settings.profile')}</h2>
-      <p class="sub">${t('settings.profileSub')}</p>
-      <a class="profile-edit-btn" href="editprofile.html">${t('settings.editProfile')}</a>
-    </div>
-
-    <div class="settings-section">
-      <h2>${t('settings.appearance')}</h2>
-      <p class="sub">${t('settings.appearanceSub')}</p>
-      <div class="theme-picker" id="theme-picker">
-        ${themeSwatchHtml('auto', 'Match device', !getStoredTheme())}
-        ${themeSwatchHtml('light', 'Default', curTheme === 'light' && !!getStoredTheme())}
-        ${themeSwatchHtml('dim', 'Dim', curTheme === 'dim' && !!getStoredTheme())}
-        ${themeSwatchHtml('dark', 'Lights out', curTheme === 'dark' && !!getStoredTheme())}
-      </div>
-      <p class="pf-note" style="margin-top:8px;">"Match device" follows your phone or browser's light/dark setting automatically.</p>
-      <p class="sub" style="margin-top:16px;">Pick an accent color for buttons and links.</p>
-      <div class="accent-picker" id="accent-picker">
-        ${ACCENT_OPTIONS.map(a => accentSwatchHtml(a.id, a.label, curAccent === a.id)).join('')}
+    <div class="settings-header-card">
+      <a href="${profileUrl(uname)}"><img class="avatar" src="${esc(avatarUrl(profile?.avatar_url))}" alt="" style="width:52px;height:52px;"></a>
+      <div>
+        <div class="settings-header-name">${esc(profile?.display_name || uname)}</div>
+        <div class="settings-header-handle">@${esc(uname)}</div>
       </div>
     </div>
+    <a class="settings-menu-row" href="editprofile.html" style="text-decoration:none;">
+      <span class="smr-icon">${NAV_ICON.user}</span>
+      <span class="smr-label">${t('settings.editProfile')}</span>
+      <span class="smr-chevron">${CHEVRON_ICON}</span>
+    </a>
 
-    <div class="settings-section">
-      <h2>${t('settings.language')}</h2>
-      <p class="sub">${t('settings.languageSub')}</p>
-      <div class="settings-row">
-        <div><div class="lbl">${t('settings.language')}</div></div>
-        ${langSelectHtml('set-lang')}
-      </div>
-    </div>
-
-    <div class="settings-section">
-      <h2>${t('settings.notifications')}</h2>
-      <p class="sub">Choose what shows up on your Notifications page.</p>
-      ${toggleRowHtml('notify_likes', 'Likes', 'When someone likes your post', s.notify_likes)}
-      ${toggleRowHtml('notify_replies', 'Replies', 'When someone replies to your post', s.notify_replies)}
-      ${toggleRowHtml('notify_mentions', 'Mentions', 'When someone tags you with @', s.notify_mentions)}
-      ${toggleRowHtml('notify_follows', 'New followers', 'When someone follows you', s.notify_follows)}
-    </div>
-
-    <div class="settings-section">
-      <h2>${t('settings.privacy')}</h2>
-      <div class="settings-row">
-        <div>
-          <div class="lbl">Who can message you</div>
-          <div class="pf-note" style="margin-top:2px;">Applies to new conversations only.</div>
+    <div class="settings-menu">
+      ${settingsRowHtml('account', NAV_ICON.gear, t('settings.account'))}
+      <div class="settings-panel" id="panel-account">
+        <div class="errmsg" id="set-uname-err" style="display:none;"></div>
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin:0 0 4px;">Username</label>
+        <input type="text" id="set-uname" value="${esc(uname)}" maxlength="20">
+        <span class="auth-hint">3–20 characters: letters, numbers, and underscores only.</span>
+        <div style="margin-top:8px;">
+          <input type="submit" class="pf-btn" value="Update Username" onclick="updateUsername();return false;">
+          <span id="set-uname-st" style="font-size:11px;color:var(--muted);margin-left:8px;"></span>
         </div>
-        <select id="dm-privacy" onchange="saveDmPrivacy()" style="width:auto;">
-          <option value="everyone" ${s.dm_privacy === 'everyone' ? 'selected' : ''}>Everyone</option>
-          <option value="following" ${s.dm_privacy === 'following' ? 'selected' : ''}>People you follow</option>
-        </select>
+        <div class="settings-row" style="margin-top:16px;">
+          <span class="lbl">Email</span>
+          <span class="val">${esc(session.user.email || '')}</span>
+        </div>
+        <div class="errmsg" id="set-email-err" style="display:none;"></div>
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin:10px 0 4px;">Change email</label>
+        <input type="email" id="set-email" placeholder="new@email.com">
+        <div style="margin-top:8px;">
+          <input type="submit" class="pf-btn" value="Update Email" onclick="updateEmail();return false;">
+          <span id="set-email-st" style="font-size:11px;color:var(--muted);margin-left:8px;"></span>
+        </div>
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin:16px 0 4px;">New password</label>
+        <div class="errmsg" id="set-pw-err" style="display:none;"></div>
+        <input type="password" id="set-pw" minlength="8" autocomplete="new-password">
+        <span class="auth-hint">At least 8 characters.</span>
+        <div style="margin-top:8px;">
+          <input type="submit" class="pf-btn" value="Update Password" onclick="updatePassword();return false;">
+          <span id="set-pw-st" style="font-size:11px;color:var(--muted);margin-left:8px;"></span>
+        </div>
       </div>
-      <span id="dm-privacy-st" style="font-size:11px;color:var(--muted);"></span>
+
+      ${settingsRowHtml('privacy', NAV_ICON.shield, t('settings.privacy'))}
+      <div class="settings-panel" id="panel-privacy">
+        <div class="settings-row">
+          <div>
+            <div class="lbl">Who can message you</div>
+            <div class="pf-note" style="margin-top:2px;">Applies to new conversations only.</div>
+          </div>
+          <select id="dm-privacy" onchange="saveDmPrivacy()" style="width:auto;">
+            <option value="everyone" ${s.dm_privacy === 'everyone' ? 'selected' : ''}>Everyone</option>
+            <option value="following" ${s.dm_privacy === 'following' ? 'selected' : ''}>People you follow</option>
+          </select>
+        </div>
+        <span id="dm-privacy-st" style="font-size:11px;color:var(--muted);"></span>
+      </div>
+
+      ${settingsRowHtml('notifications', NAV_ICON.bell, t('settings.notifications'))}
+      <div class="settings-panel" id="panel-notifications">
+        <p class="sub">Choose what shows up on your Notifications page.</p>
+        ${toggleRowHtml('notify_likes', 'Likes', 'When someone likes your post', s.notify_likes)}
+        ${toggleRowHtml('notify_replies', 'Replies', 'When someone replies to your post', s.notify_replies)}
+        ${toggleRowHtml('notify_mentions', 'Mentions', 'When someone tags you with @', s.notify_mentions)}
+        ${toggleRowHtml('notify_follows', 'New followers', 'When someone follows you', s.notify_follows)}
+      </div>
+
+      ${settingsRowHtml('content', NAV_ICON.doc, t('settings.language'))}
+      <div class="settings-panel" id="panel-content">
+        <div class="settings-row">
+          <div><div class="lbl">${t('settings.language')}</div></div>
+          ${langSelectHtml('set-lang')}
+        </div>
+      </div>
+
+      ${settingsRowHtml('appearance', NAV_ICON.info, t('settings.appearance'))}
+      <div class="settings-panel" id="panel-appearance">
+        <p class="sub">${t('settings.appearanceSub')}</p>
+        <div class="theme-picker" id="theme-picker">
+          ${themeSwatchHtml('auto', 'Match device', !getStoredTheme())}
+          ${themeSwatchHtml('light', 'Default', curTheme === 'light' && !!getStoredTheme())}
+          ${themeSwatchHtml('dim', 'Dim', curTheme === 'dim' && !!getStoredTheme())}
+          ${themeSwatchHtml('dark', 'Lights out', curTheme === 'dark' && !!getStoredTheme())}
+        </div>
+        <p class="pf-note" style="margin-top:8px;">"Match device" follows your phone or browser's light/dark setting automatically.</p>
+        <p class="sub" style="margin-top:16px;">Pick an accent color for buttons and links.</p>
+        <div class="accent-picker" id="accent-picker">
+          ${ACCENT_OPTIONS.map(a => accentSwatchHtml(a.id, a.label, curAccent === a.id)).join('')}
+        </div>
+      </div>
     </div>
 
-    <div class="settings-section">
-      <h2>${t('settings.account')}</h2>
-      <div class="errmsg" id="set-uname-err" style="display:none;"></div>
-      <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin:0 0 4px;">Username</label>
-      <input type="text" id="set-uname" value="${esc(uname)}" maxlength="20">
-      <span class="auth-hint">3–20 characters: letters, numbers, and underscores only.</span>
-      <div style="margin-top:8px;">
-        <input type="submit" class="pf-btn" value="Update Username" onclick="updateUsername();return false;">
-        <span id="set-uname-st" style="font-size:11px;color:var(--muted);margin-left:8px;"></span>
-      </div>
-
-      <div class="settings-row" style="margin-top:16px;">
-        <span class="lbl">Email</span>
-        <span class="val">${esc(session.user.email || '')}</span>
-      </div>
-      <div class="errmsg" id="set-email-err" style="display:none;"></div>
-      <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin:10px 0 4px;">Change email</label>
-      <input type="email" id="set-email" placeholder="new@email.com">
-      <div style="margin-top:8px;">
-        <input type="submit" class="pf-btn" value="Update Email" onclick="updateEmail();return false;">
-        <span id="set-email-st" style="font-size:11px;color:var(--muted);margin-left:8px;"></span>
-      </div>
-    </div>
-
-    <div class="settings-section">
-      <h2>${t('settings.password')}</h2>
-      <div class="errmsg" id="set-pw-err" style="display:none;"></div>
-      <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin:0 0 4px;">New password</label>
-      <input type="password" id="set-pw" minlength="8" autocomplete="new-password">
-      <span class="auth-hint">At least 8 characters.</span>
-      <div style="margin-top:8px;">
-        <input type="submit" class="pf-btn" value="Update Password" onclick="updatePassword();return false;">
-        <span id="set-pw-st" style="font-size:11px;color:var(--muted);margin-left:8px;"></span>
-      </div>
-    </div>
-
-    <div class="settings-section">
-      <h2>${t('settings.session')}</h2>
+    <div class="settings-section" style="border-top:1px solid var(--line);margin-top:8px;padding-top:16px;">
       <button class="pf-btn" style="background:var(--like);" onclick="logOut()">${t('nav.logOut')}</button>
     </div>
   `;

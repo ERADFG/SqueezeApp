@@ -454,19 +454,19 @@ function updateFavicon(theme) {
 // needs no attribute (matches the :root values in style.css). ──
 const ACCENT_KEY = 'oc-accent';
 const ACCENT_OPTIONS = [
-  { id: 'green',  label: 'Green'  },
   { id: 'blue',   label: 'Blue'   },
+  { id: 'green',  label: 'Green'  },
   { id: 'red',    label: 'Red'    },
   { id: 'purple', label: 'Purple' },
   { id: 'orange', label: 'Orange' }
 ];
 function applyAccent(accent) {
-  if (accent && accent !== 'green') document.documentElement.setAttribute('data-accent', accent);
+  if (accent && accent !== 'blue') document.documentElement.setAttribute('data-accent', accent);
   else document.documentElement.removeAttribute('data-accent');
-  try { localStorage.setItem(ACCENT_KEY, accent || 'green'); } catch (e) {}
+  try { localStorage.setItem(ACCENT_KEY, accent || 'blue'); } catch (e) {}
 }
 function getAccent() {
-  try { return localStorage.getItem(ACCENT_KEY) || 'green'; } catch (e) { return 'green'; }
+  try { return localStorage.getItem(ACCENT_KEY) || 'blue'; } catch (e) { return 'blue'; }
 }
 
 let unreadNotifCount = 0;
@@ -561,6 +561,11 @@ function toggleMoreMenu() { document.getElementById('more-wrap')?.classList.togg
 const PLUS_ICON = '<svg viewBox="0 0 24 24"><path d="M12 4v16M4 12h16"/></svg>';
 const CHECK_ICON = '<svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>';
 const ICON_COMPOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+// Hamburger (opens the drawer) and hashtag/Feeds icon, both used in the
+// mobile top bar — matches the reference app's icon-left / logo-center /
+// icon-right topbar layout.
+const ICON_HAMBURGER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>';
+const ICON_FEEDS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>';
 
 function mchrome() {
   let el = document.getElementById('m-chrome');
@@ -589,21 +594,20 @@ function renderMobileChrome() {
 
   el.innerHTML = `
     <div id="m-topbar">
-      <button class="m-avatar-btn" onclick="openMobileDrawer();return false;" aria-label="Open menu">
-        <img class="avatar" src="${esc(avatar)}" alt="">
-      </button>
+      <button class="m-menu-btn" onclick="openMobileDrawer();return false;" aria-label="Open menu">${ICON_HAMBURGER}</button>
       <a class="m-logo" href="${lp || '/'}">
         <img class="logo-mark logo-mark-light" src="img/logo-light.png" alt="" width="26" height="26">
         <img class="logo-mark logo-mark-dark" src="img/logo-dark.png" alt="" width="26" height="26">
       </a>
+      <a class="m-feeds-btn" href="articles.html" aria-label="Feeds">${ICON_FEEDS}</a>
     </div>
 
     <div id="m-tabbar">
       <a class="${cur('home')}" href="${lp || '/'}">${NAV_ICON.home}<span class="m-tab-label">Home</span></a>
       <a class="${cur('search')}" href="search.html">${NAV_ICON.search}<span class="m-tab-label">Search</span></a>
-      <a class="${cur('bookmarks')}" href="bookmarks.html">${NAV_ICON.bookmark}<span class="m-tab-label">Saved</span></a>
-      <a class="${cur('notifications')}" href="notifications.html">${NAV_ICON.bell}${badge}<span class="m-tab-label">Alerts</span></a>
       <a class="${cur('messages')}" href="chat.html">${NAV_ICON.chat}${chatBadge}<span class="m-tab-label">Chat</span></a>
+      <a class="${cur('notifications')}" href="notifications.html">${NAV_ICON.bell}${badge}<span class="m-tab-label">Notifications</span></a>
+      <a class="${cur('profile')} m-tab-avatar" href="${ownHref}"><img class="avatar" src="${esc(avatar)}" alt=""><span class="m-tab-label">Profile</span></a>
     </div>
 
     ${currentSession && !onChatPage ? `<button id="m-fab" onclick="mobileCompose();return false;" aria-label="Post">${ICON_COMPOSE}</button>` : ''}
@@ -617,35 +621,34 @@ function renderMobileChrome() {
             <span class="m-drawer-handle">@${esc(currentProfile?.username || '')}</span>
           </a>
           <div class="m-drawer-stats">
-            <a href="${currentProfile ? followListUrl(currentProfile.username, 'following') : '#'}"><b>${fmtCount(currentProfile?.following_count)}</b> Following</a>
-            <a href="${currentProfile ? followListUrl(currentProfile.username, 'followers') : '#'}"><b>${fmtCount(currentProfile?.followers_count)}</b> Followers</a>
+            <a href="${currentProfile ? followListUrl(currentProfile.username, 'followers') : '#'}"><b>${fmtCount(currentProfile?.followers_count)}</b> followers</a>
+            <a href="${currentProfile ? followListUrl(currentProfile.username, 'following') : '#'}"><b>${fmtCount(currentProfile?.following_count)}</b> following</a>
           </div>
           <hr>
-          <div class="m-drawer-group">
-            <div class="m-drawer-menu">
-              <a href="${ownHref}">${NAV_ICON.user}Profile</a>
-              <a href="editprofile.html">${NAV_ICON.doc}Edit profile</a>
-              <a href="bookmarks.html">${NAV_ICON.bookmark}Bookmarks</a>
-              <a href="lists.html">${NAV_ICON.list}Lists</a>
-              <a href="/settings">${NAV_ICON.gear}Settings and privacy</a>
-            </div>
+          <div class="m-drawer-menu">
+            <a href="search.html">${NAV_ICON.search}Explore</a>
+            <a href="${lp || '/'}">${NAV_ICON.home}Home</a>
+            <a href="chat.html">${NAV_ICON.chat}${chatBadge}Chat</a>
+            <a href="notifications.html">${NAV_ICON.bell}${badge}Notifications</a>
+            <a href="articles.html">${NAV_ICON.article}Feeds</a>
+            <a href="lists.html">${NAV_ICON.list}Lists</a>
+            <a href="bookmarks.html">${NAV_ICON.bookmark}Saved</a>
+            <a href="${ownHref}">${NAV_ICON.user}Profile</a>
+            <a href="/settings">${NAV_ICON.gear}Settings</a>
           </div>
-          <div class="m-drawer-group">
-            <span class="m-drawer-group-label">Discover</span>
-            <div class="m-drawer-menu">
-              <a href="articles.html">${NAV_ICON.article}Articles</a>
-              <a href="${lp}/communities">${NAV_ICON.people}Communities</a>
-            </div>
+          <span class="m-drawer-group-label">Discover</span>
+          <div class="m-drawer-menu">
+            <a href="${lp}/communities">${NAV_ICON.people}Communities</a>
+            <a href="${lp}/rules">${NAV_ICON.doc}Rules</a>
+            <a href="${lp}/about">${NAV_ICON.info}About</a>
+            <a href="${lp}/contact">${NAV_ICON.mail}Contact</a>
+            <a href="${lp}/privacy">${NAV_ICON.shield}Privacy Policy</a>
           </div>
-          <div class="m-drawer-group">
-            <span class="m-drawer-group-label">About</span>
-            <div class="m-drawer-menu">
-              <a href="${lp}/rules">${NAV_ICON.doc}Rules</a>
-              <a href="${lp}/about">${NAV_ICON.info}About</a>
-              <a href="${lp}/contact">${NAV_ICON.mail}Contact</a>
-              <a href="${lp}/privacy">${NAV_ICON.shield}Privacy Policy</a>
-              <a href="${lp}/terms">${NAV_ICON.doc}Terms of Service</a>
-            </div>
+          <hr>
+          <a class="m-drawer-tos" href="${lp}/terms">Terms of Service</a>
+          <div class="m-drawer-footer-row">
+            <a class="m-drawer-pill" href="${lp}/contact">Feedback</a>
+            <a class="m-drawer-pill" href="${lp}/rules">Help</a>
           </div>
           <hr>
           <button class="m-drawer-logout" onclick="closeMobileDrawer();logOut();"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4.5H6a1.5 1.5 0 0 0-1.5 1.5v12A1.5 1.5 0 0 0 6 19.5h3"/><path d="M15.5 16.5 20 12l-4.5-4.5"/><path d="M20 12H9"/></svg>Log out</button>
@@ -653,22 +656,20 @@ function renderMobileChrome() {
           <img class="avatar m-drawer-avatar" src="${DEFAULT_AVATAR}" alt="">
           <span class="m-drawer-name">Welcome to InteractInk</span>
           <span class="m-drawer-handle">Log in to follow, post, and reply.</span>
-          <div class="m-drawer-group" style="margin-top:8px;">
-            <div class="m-drawer-menu">
-              <a href="articles.html">${NAV_ICON.article}Articles</a>
-              <a href="${lp}/communities">${NAV_ICON.people}Communities</a>
-              <a href="lists.html">${NAV_ICON.list}Lists</a>
-            </div>
+          <hr>
+          <div class="m-drawer-menu" style="margin-top:8px;">
+            <a href="search.html">${NAV_ICON.search}Explore</a>
+            <a href="articles.html">${NAV_ICON.article}Feeds</a>
+            <a href="${lp}/communities">${NAV_ICON.people}Communities</a>
+            <a href="lists.html">${NAV_ICON.list}Lists</a>
           </div>
-          <div class="m-drawer-group">
-            <span class="m-drawer-group-label">About</span>
-            <div class="m-drawer-menu">
-              <a href="${lp}/rules">${NAV_ICON.doc}Rules</a>
-              <a href="${lp}/about">${NAV_ICON.info}About</a>
-              <a href="${lp}/contact">${NAV_ICON.mail}Contact</a>
-              <a href="${lp}/privacy">${NAV_ICON.shield}Privacy Policy</a>
-              <a href="${lp}/terms">${NAV_ICON.doc}Terms of Service</a>
-            </div>
+          <span class="m-drawer-group-label">About</span>
+          <div class="m-drawer-menu">
+            <a href="${lp}/rules">${NAV_ICON.doc}Rules</a>
+            <a href="${lp}/about">${NAV_ICON.info}About</a>
+            <a href="${lp}/contact">${NAV_ICON.mail}Contact</a>
+            <a href="${lp}/privacy">${NAV_ICON.shield}Privacy Policy</a>
+            <a href="${lp}/terms">${NAV_ICON.doc}Terms of Service</a>
           </div>
           <div class="m-drawer-cta">
             <a class="cta-primary" href="${lp}/signup">Sign up</a>

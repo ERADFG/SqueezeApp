@@ -26,16 +26,16 @@
      brighter green-600 #16A34A, since against a near-black background
      that reads at a strong 5.7–7.3:1 while staying visually lighter/
      more legible than the green-700 shade would there. */
-  --maroon:    #15803D;   /* accent — green-700 (AA on white) */
-  --maroon-dk: #166534;   /* accent hover/active — green-800 */
-  --maroon-tint: rgba(21,128,61,.10); /* accent hover wash */
-  --mustard:   #15803D;   /* secondary accent, kept same as maroon for one accent color */
-  --mustard-dk:#166534;
+  --maroon:    #0B6FE0;   /* accent — Bluesky-blue, darkened slightly for AA on white */
+  --maroon-dk: #0857B3;   /* accent hover/active */
+  --maroon-tint: rgba(11,111,224,.10); /* accent hover wash */
+  --mustard:   #0B6FE0;   /* secondary accent, kept same as maroon for one accent color */
+  --mustard-dk:#0857B3;
   --cream-card:#FFFFFF;   /* card background */
   --line:      #EFF3F4;   /* hairline border — gray-100 */
   --muted:     #536471;   /* secondary text — twitter gray-500 */
   --green:     #00BA7C;   /* greentext */
-  --link:      #15803D;
+  --link:      #0B6FE0;
   --vis:       #7C3AED;
   /* --like was rose-500 #F43F5E, 3.67:1 on white — also below AA.
      Darkened to rose-600 (4.7:1); dark/dim mode restores the
@@ -81,9 +81,9 @@ html[data-theme="dim"] {
   --bg:#15202B; --ink:#F7F9F9; --cream-card:#15202B; --line:#38444D;
   --muted:#8B98A5; --hover-bg:#1E2732; --input-bg:#1E2732; --div:#38444D;
   --border-input:#38444D; --translucent-bg:rgba(21,32,43,.85);
-  --maroon:#16A34A; --maroon-dk:#22C55E; --mustard:#16A34A; --mustard-dk:#22C55E; --link:#16A34A;
+  --maroon:#1185FE; --maroon-dk:#3B9EFF; --mustard:#1185FE; --mustard-dk:#3B9EFF; --link:#1185FE;
   --like:#F43F5E;
-  --maroon-tint: rgba(22,163,74,.16); --like-tint: rgba(244,63,94,.16);
+  --maroon-tint: rgba(17,133,254,.16); --like-tint: rgba(244,63,94,.16);
   --share:#3BA9F5; --share-tint: rgba(59,169,245,.18);
   --save:#FBBF24; --save-tint: rgba(251,191,36,.18);
   color-scheme: dark;
@@ -92,9 +92,9 @@ html[data-theme="dark"] {
   --bg:#000000; --ink:#E7E9EA; --cream-card:#000000; --line:#2F3336;
   --muted:#71767B; --hover-bg:#0B0B0B; --input-bg:#000000; --div:#2F3336;
   --border-input:#2F3336; --translucent-bg:rgba(0,0,0,.85);
-  --maroon:#16A34A; --maroon-dk:#22C55E; --mustard:#16A34A; --mustard-dk:#22C55E; --link:#16A34A;
+  --maroon:#1185FE; --maroon-dk:#3B9EFF; --mustard:#1185FE; --mustard-dk:#3B9EFF; --link:#1185FE;
   --like:#F43F5E;
-  --maroon-tint: rgba(22,163,74,.16); --like-tint: rgba(244,63,94,.16);
+  --maroon-tint: rgba(17,133,254,.16); --like-tint: rgba(244,63,94,.16);
   --share:#3BA9F5; --share-tint: rgba(59,169,245,.18);
   --save:#FBBF24; --save-tint: rgba(251,191,36,.18);
   color-scheme: dark;
@@ -105,20 +105,21 @@ html[data-theme="dark"] {
    reads var(--maroon)/var(--mustard)/var(--link)) between 5 options.
    Applied via data-accent on <html>, set by settings.js (chooseAccent())
    and persisted to localStorage, applied pre-paint by the same inline
-   <head> script that handles the theme, to avoid a flash. "Green" is
-   the default and needs no override — it's just the :root values above.
+   <head> script that handles the theme, to avoid a flash. "Blue" (the
+   Bluesky-style brand blue) is the default and needs no override —
+   it's just the :root values above.
    Light-mode values below are darkened from the original palette so
    every accent clears 4.5:1 on a white background (green and orange
    were previously 3.3:1 and 2.8:1 — both failed AA); the dark/dim
    overrides beneath restore the original, brighter shades since those
    already had strong contrast against near-black surfaces. */
+html[data-accent="green"] {
+  --maroon:#15803D; --maroon-dk:#166534; --maroon-tint:rgba(21,128,61,.10);
+  --mustard:#15803D; --mustard-dk:#166534; --link:#15803D;
+}
 html[data-accent="red"] {
   --maroon:#DC2626; --maroon-dk:#B91C1C; --maroon-tint:rgba(220,38,38,.10);
   --mustard:#DC2626; --mustard-dk:#B91C1C; --link:#DC2626;
-}
-html[data-accent="blue"] {
-  --maroon:#0369A1; --maroon-dk:#075985; --maroon-tint:rgba(3,105,161,.10);
-  --mustard:#0369A1; --mustard-dk:#075985; --link:#0369A1;
 }
 html[data-accent="purple"] {
   --maroon:#7C3AED; --maroon-dk:#6D28D9; --maroon-tint:rgba(124,58,237,.10);
@@ -128,8 +129,8 @@ html[data-accent="orange"] {
   --maroon:#C2410C; --maroon-dk:#9A3412; --maroon-tint:rgba(194,65,12,.10);
   --mustard:#C2410C; --mustard-dk:#9A3412; --link:#C2410C;
 }
+html[data-theme="dim"][data-accent="green"], html[data-theme="dark"][data-accent="green"] { --maroon:#16A34A; --maroon-dk:#22C55E; --mustard:#16A34A; --mustard-dk:#22C55E; --link:#16A34A; --maroon-tint:rgba(22,163,74,.16); }
 html[data-theme="dim"][data-accent="red"],   html[data-theme="dark"][data-accent="red"]   { --maroon-tint:rgba(220,38,38,.16); }
-html[data-theme="dim"][data-accent="blue"],  html[data-theme="dark"][data-accent="blue"]  { --maroon:#0EA5E9; --maroon-dk:#38BDF8; --mustard:#0EA5E9; --mustard-dk:#38BDF8; --link:#0EA5E9; --maroon-tint:rgba(14,165,233,.16); }
 html[data-theme="dim"][data-accent="purple"],html[data-theme="dark"][data-accent="purple"]{ --maroon-tint:rgba(124,58,237,.16); }
 html[data-theme="dim"][data-accent="orange"],html[data-theme="dark"][data-accent="orange"]{ --maroon:#F97316; --maroon-dk:#FB923C; --mustard:#F97316; --mustard-dk:#FB923C; --link:#F97316; --maroon-tint:rgba(249,115,22,.16); }
 
@@ -2001,29 +2002,19 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
   #sidebar, .xright { display:none; }
 
   #m-topbar {
-    display:flex; align-items:center; justify-content:flex-start;
+    display:flex; align-items:center; justify-content:space-between;
     position:fixed; top:0; left:0; right:0; height:53px;
-    padding:0 14px; background:var(--translucent-bg); backdrop-filter:blur(10px);
+    padding:0 6px; background:var(--translucent-bg); backdrop-filter:blur(10px);
     border-bottom:1px solid var(--line); z-index:900;
   }
-  #m-topbar .m-avatar-btn {
-    background:none; border:none; padding:0; line-height:0; cursor:pointer; position:relative; z-index:1;
-    border-radius:50%;
+  #m-topbar .m-menu-btn, #m-topbar .m-feeds-btn {
+    display:flex; align-items:center; justify-content:center;
+    width:40px; height:40px; flex:none; position:relative; z-index:1;
+    background:none; border:none; border-radius:50%; color:var(--ink);
+    cursor:pointer; text-decoration:none;
   }
-  #m-topbar .m-avatar-btn img { width:32px; height:32px; display:block; transition:transform .2s cubic-bezier(.34,1.56,.64,1); }
-  #m-topbar .m-avatar-btn:active img { transform:scale(.86); transition-duration:.08s; }
-  /* Soft ring flash on tap release, layered on top of the generic
-     press-bounce every button already gets — makes a small round
-     avatar (where a 4% scale is easy to miss) read as clearly tapped. */
-  #m-topbar .m-avatar-btn::after {
-    content:""; position:absolute; inset:-5px; border-radius:50%;
-    box-shadow:0 0 0 0 var(--maroon-tint); opacity:0; pointer-events:none;
-  }
-  #m-topbar .m-avatar-btn.oc-bounce::after { animation:oc-avatar-ring .45s ease-out; }
-  @keyframes oc-avatar-ring {
-    0%   { box-shadow:0 0 0 0 var(--maroon-tint); opacity:1; }
-    100% { box-shadow:0 0 0 9px var(--maroon-tint); opacity:0; }
-  }
+  #m-topbar .m-menu-btn svg, #m-topbar .m-feeds-btn svg { width:22px; height:22px; }
+  #m-topbar .m-menu-btn:active, #m-topbar .m-feeds-btn:active { background:var(--hover-bg); }
   /* Absolutely centered on the bar itself (not flex-centered between
      siblings) so the logo stays dead-center regardless of what sits
      to its left — previously it was one of three flex children with
@@ -2064,6 +2055,11 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
   #m-tabbar a.cur svg { stroke-width:2.5; }
   #m-tabbar a:active { background:var(--hover-bg); }
   #m-tabbar a .navbadge { position:absolute; top:2px; right:calc(50% - 17px); margin-left:0; box-shadow:0 0 0 2px var(--bg); }
+  /* Last tab is the person's own avatar (Bluesky puts the profile pic,
+     not an icon, in the bottom-right slot) — small ring on the active
+     state instead of the bolder-stroke treatment icons get. */
+  #m-tabbar a.m-tab-avatar img { width:24px; height:24px; border-radius:50%; display:block; }
+  #m-tabbar a.m-tab-avatar.cur img { box-shadow:0 0 0 2px var(--ink); }
 
 
   #m-fab {
@@ -2165,6 +2161,11 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
   .m-drawer-cta a { text-align:center; padding:10px; border-radius:999px; font-weight:800; font-size:14.5px; text-decoration:none; }
   .m-drawer-cta a.cta-primary { background:var(--ink); color:var(--bg); }
   .m-drawer-cta a.cta-ghost { border:1px solid var(--border-input); color:var(--ink); }
+  .m-drawer-tos { display:block; font-size:13px; color:var(--link); text-decoration:none; padding:6px 8px; }
+  .m-drawer-tos:hover { text-decoration:underline; }
+  .m-drawer-footer-row { display:flex; gap:8px; padding:4px 8px 8px; }
+  .m-drawer-pill { flex:1; text-align:center; padding:7px 0; border-radius:999px; border:1px solid var(--border-input); color:var(--ink); font-size:13px; font-weight:700; text-decoration:none; }
+  .m-drawer-pill:hover { background:var(--hover-bg); text-decoration:none; }
 
   /* Log out — deliberately separated from the menu list above and
      styled as a clear "danger" action (tinted, not the site accent),
@@ -2667,6 +2668,31 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 /* ═══════════════════════════════════════════════════════════════
    SETTINGS PAGE
    ═══════════════════════════════════════════════════════════════ */
+/* ── Bluesky-style Settings menu: avatar/name header card, then a flat
+   list of tappable rows (icon + label + chevron) that expand an
+   accordion panel below themselves instead of showing every field on
+   one long page. ── */
+.settings-header-card { display:flex; align-items:center; gap:14px; padding:18px 16px; border-bottom:1px solid var(--line); }
+.settings-header-name { font-size:17px; font-weight:800; color:var(--ink); }
+.settings-header-handle { font-size:14px; color:var(--muted); }
+.settings-menu { border-bottom:1px solid var(--line); }
+.settings-menu-row {
+  display:flex; align-items:center; gap:14px; width:100%; text-align:left;
+  font-family:inherit; font-size:15.5px; font-weight:600; color:var(--ink);
+  background:none; border:none; border-top:1px solid var(--line); padding:15px 16px;
+  cursor:pointer;
+}
+.settings-menu-row:first-child { border-top:none; }
+.settings-menu-row .smr-icon { flex:none; width:22px; height:22px; color:var(--muted); }
+.settings-menu-row .smr-icon svg { width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:1.8; }
+.settings-menu-row .smr-label { flex:1; }
+.settings-menu-row .smr-chevron { flex:none; width:18px; height:18px; color:var(--muted); transition:transform .15s ease; }
+.settings-menu-row .smr-chevron svg { width:100%; height:100%; }
+.settings-menu-row.open .smr-chevron { transform:rotate(90deg); }
+.settings-menu-row:hover { background:var(--hover-bg); }
+.settings-panel { display:none; padding:4px 16px 18px; border-top:1px solid var(--line); background:var(--hover-bg); }
+.settings-panel.open { display:block; }
+
 .settings-section { padding:16px; border-bottom:1px solid var(--line); }
 .settings-section h2 { font-size:16px; font-weight:800; margin-bottom:10px; }
 .settings-section .sub { font-size:13.5px; color:var(--muted); margin-bottom:12px; }
