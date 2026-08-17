@@ -166,8 +166,8 @@ html { -webkit-tap-highlight-color:transparent; }
    thing is over in ~200ms, so it reads as tactile feedback rather
    than a flashy bounce. Folds into the prefers-reduced-motion rule
    above like every other animation in this file. ── */
-@keyframes oc-btn-bounce { 0% { transform:scale(1); } 32% { transform:scale(.93); } 60% { transform:scale(1.035); } 82% { transform:scale(.99); } 100% { transform:scale(1); } }
-.oc-bounce { animation:oc-btn-bounce .38s cubic-bezier(.34,1.56,.64,1); }
+@keyframes oc-btn-bounce { 0% { transform:scale(1); } 45% { transform:scale(.96); } 100% { transform:scale(1); } }
+.oc-bounce { animation:oc-btn-bounce .18s ease-out; }
 
 /* ── INSTANT PRESS-DOWN — fires the moment a finger/cursor goes down,
    before the click (and the oc-bounce release animation above) even
@@ -397,12 +397,12 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
   width:100%; margin-top:14px; border:none; border-radius:999px;
   background:var(--maroon); color:#fff; font-family:inherit; font-weight:800; font-size:16px;
   padding:13px; cursor:pointer; text-decoration:none;
-  box-shadow:0 1px 2px rgba(15,20,25,.12);
-  transition:background .12s ease, box-shadow .12s ease, transform .08s ease;
+  box-shadow:none;
+  transition:background-color .15s ease;
 }
 .sidebar-post-btn svg { width:18px; height:18px; flex:none; }
-.sidebar-post-btn:hover { background:var(--maroon-dk); text-decoration:none; color:#fff; box-shadow:0 4px 10px rgba(15,20,25,.16); }
-.sidebar-post-btn:active { transform:scale(.97); box-shadow:0 1px 2px rgba(15,20,25,.12), inset 0 0 0 100vmax rgba(255,255,255,.16); }
+.sidebar-post-btn:hover { background:var(--maroon-dk); text-decoration:none; color:#fff; }
+.sidebar-post-btn:active { background:var(--maroon-dk); opacity:.9; }
 
 /* auth-area sits at the bottom of the sidebar, Twitter-profile-button style */
 .auth-area { display:block; margin-top:auto; padding-top:8px; }
@@ -477,7 +477,7 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
 .xtab:hover { color:var(--ink); }
 .xtab.active {
   color:#fff; background:var(--maroon);
-  box-shadow:0 2px 8px rgba(15,20,25,.12);
+  box-shadow:none;
 }
 .xtab.active:hover { background:var(--maroon-dk); }
 .xtabs-plus {
@@ -511,9 +511,10 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
    toolbar make it taller than one line. ── */
 #pf-wrap { max-width:none; margin:0; padding:10px 12px; border-bottom:8px solid var(--line); }
 #pf-box {
-  background:var(--cream-card); border:1px solid var(--line); border-radius:26px;
-  box-shadow:0 2px 10px rgba(15,20,25,.07); overflow:visible; padding:12px 18px; transition:padding .15s ease;
+  background:var(--cream-card); border:1px solid var(--line); border-radius:20px;
+  box-shadow:none; overflow:visible; padding:12px 18px; transition:padding .15s ease, border-color .15s ease;
 }
+#pf-box.pf-expanded { border-color:var(--border-input); }
 #pf-box.pf-expanded { padding:14px 18px 10px; }
 .pf-row { display:flex; gap:12px; align-items:center; }
 #pf-box.pf-expanded .pf-row { align-items:flex-start; }
@@ -531,10 +532,11 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
 .pf-ic {
   width:34px; height:34px; border-radius:50%; border:none; background:none; cursor:pointer;
   color:var(--maroon); display:inline-flex; align-items:center; justify-content:center;
-  transition:background-color .12s ease, transform .12s cubic-bezier(.34,1.56,.64,1);
+  transition:background-color .15s ease;
 }
-.pf-ic svg { width:19px; height:19px; }
-.pf-ic:hover:not(:disabled) { background:var(--maroon-tint); transform:scale(1.08); }
+.pf-ic svg { width:19px; height:19px; display:block; }
+.pf-ic:hover:not(:disabled) { background:var(--maroon-tint); }
+.pf-ic:active:not(:disabled) { background:var(--maroon-tint); filter:brightness(.92); }
 .pf-ic:disabled { color:#9EC8DE; cursor:default; }
 
 input[type="text"], input[type="email"], input[type="password"], textarea, select {
@@ -545,10 +547,17 @@ input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focu
 /* Compact single line by default (Bluesky-style "What's up?" bar);
    board.js's focus/input handlers add .pf-expanded and grow this to
    its old 56px+ auto-growing height once you actually start typing. */
-#pf-box textarea { height:24px; min-height:24px; resize:none; border:none; padding:8px 0; font-size:16px; transition:height .15s ease; }
+/* height must fit padding + one full line at this font-size (box-sizing:
+   border-box means padding eats into the height budget) — too short and
+   the browser reserves a scrollbar track that clips the placeholder text,
+   which is the "What's happening?" getting cut off with a gray sliver on
+   the right. overflow:hidden is belt-and-suspenders so no scrollbar can
+   ever appear even if a browser rounds line-height up a hair. */
+#pf-box textarea { height:40px; min-height:40px; resize:none; border:none; padding:8px 0; font-size:16px; line-height:1.4; overflow:hidden; overflow-y:hidden; transition:height .15s ease; }
 #pf-box.pf-expanded textarea { height:56px; min-height:56px; font-size:19px; }
-.rfm textarea { border:none; padding:5px 0; font-size:17px; }
+.rfm textarea { border:none; padding:5px 0; font-size:17px; line-height:1.4; overflow-y:hidden; }
 #pf-box textarea:focus, .rfm textarea:focus { box-shadow:none; }
+#pf-box textarea::-webkit-scrollbar, .rfm textarea::-webkit-scrollbar, .cx-emoji-search::-webkit-scrollbar { display:none; }
 
 .pf-note { font-size:11.5px; color:var(--muted); display:block; margin-top:2px; }
 
@@ -1618,9 +1627,9 @@ body.oc-sheet-open { overflow:hidden; }
    non-"none" transform on this card after the entrance animation ends,
    turning it into a containing block that breaks the fixed-position
    "···" menu the same way it did on .pc. */
-.rc { background:var(--cream-card); border:none; border-bottom:1px solid var(--line); border-radius:0; padding:12px 16px; margin-bottom:0; box-shadow:none; position:relative; transition:background-color .12s ease, transform .12s cubic-bezier(.34,1.56,.64,1); cursor:pointer; animation:oc-fade-in .2s ease; }
+.rc { background:var(--cream-card); border:none; border-bottom:1px solid var(--line); border-radius:0; padding:12px 16px; margin-bottom:0; box-shadow:none; position:relative; transition:background-color .15s ease; cursor:pointer; animation:oc-fade-in .2s ease; }
 .rc:hover { background:var(--hover-bg); }
-.rc:active { transform:scale(.97); }
+.rc:active { background:var(--hover-bg); }
 
 /* Focused-reply "detail" view (see thread.js renderConversation()) —
    clicking any comment opens it here, Twitter-style: the ancestor
@@ -1656,7 +1665,7 @@ body.oc-sheet-open { overflow:hidden; }
    pill/rounded card (same treatment as #pf-box above) instead of a
    flush, edge-to-edge bar — margin on all sides, its own shadow, no
    straight divider lines. */
-.rfm { background:var(--cream-card); border:1px solid var(--line); border-radius:26px; box-shadow:0 2px 10px rgba(15,20,25,.07); padding:12px 18px; margin:10px 12px; overflow:hidden; display:flex; gap:12px; align-items:flex-start; }
+.rfm { background:var(--cream-card); border:1px solid var(--line); border-radius:20px; box-shadow:none; padding:12px 18px; margin:10px 12px; overflow:hidden; display:flex; gap:12px; align-items:flex-start; }
 .rfm-locked { align-items:center; justify-content:center; gap:10px; color:var(--muted); font-size:14px; font-weight:600; padding:18px 16px; }
 .rfm-locked svg { width:18px; height:18px; flex:none; }
 .rfm-col { flex:1; min-width:0; }
@@ -2114,9 +2123,10 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
   html.oc-drawer-open #m-fab { display:none !important; }
   .m-drawer-bg.open { background:rgba(91,112,131,.4); pointer-events:auto; }
   .m-drawer {
-    position:absolute; top:0; left:0; bottom:0; width:78vw; max-width:300px;
-    background:var(--bg); padding:16px; overflow-y:auto;
-    transform:translateX(-100%); transition:transform .28s cubic-bezier(.2,.8,.2,1);
+    position:absolute; top:0; left:0; bottom:0; width:80vw; max-width:308px;
+    background:var(--bg); padding:18px 14px; overflow-y:auto;
+    border-radius:0 22px 22px 0; box-shadow:6px 0 24px rgba(15,20,25,.10);
+    transform:translateX(-100%); transition:transform .26s cubic-bezier(.2,.8,.2,1);
   }
   .m-drawer-bg.open .m-drawer { transform:translateX(0); }
   .m-drawer .m-drawer-avatar { width:52px; height:52px; display:block; margin-bottom:10px; }
@@ -2126,17 +2136,28 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
   .m-drawer .m-drawer-stats a { color:var(--ink); text-decoration:none; }
   .m-drawer .m-drawer-stats a b { font-weight:800; }
   .m-drawer .m-drawer-stats a:hover { text-decoration:underline; }
-  .m-drawer hr { border:none; border-top:1px solid var(--line); margin:10px 0; }
+  .m-drawer hr { border:none; border-top:1px solid var(--line); margin:10px 4px; }
   /* Bigger, bolder icons with more breathing room per row — matches
      Bluesky's roomy hamburger-menu list: larger glyphs, generous
-     row height, semi-bold label. */
+     row height, semi-bold label. Grouped into labelled sections
+     (Account / Discover / About) instead of one long undifferentiated
+     list, same idea as a modern settings-screen redesign — small
+     caps group headers give the eye somewhere to land. */
+  .m-drawer-group + .m-drawer-group { margin-top:6px; }
+  .m-drawer-group-label {
+    display:block; font-size:11.5px; font-weight:800; letter-spacing:.04em; text-transform:uppercase;
+    color:var(--muted); padding:10px 10px 4px;
+  }
+  .m-drawer-menu { display:flex; flex-direction:column; }
   .m-drawer-menu a, .m-drawer-menu button {
-    display:flex; align-items:center; gap:18px; width:100%; text-align:left;
-    font-family:inherit; font-size:17.5px; font-weight:600; color:var(--ink);
-    background:none; border:none; padding:14px 6px; cursor:pointer; text-decoration:none; border-radius:var(--r-sm);
+    display:flex; align-items:center; gap:16px; width:100%; text-align:left;
+    font-family:inherit; font-size:16.5px; font-weight:600; color:var(--ink);
+    background:none; border:none; padding:12px 10px; cursor:pointer; text-decoration:none; border-radius:14px;
+    transition:background-color .12s ease;
   }
   .m-drawer-menu a:hover, .m-drawer-menu button:hover { background:var(--hover-bg); text-decoration:none; }
-  .m-drawer-menu svg { width:25px; height:25px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+  .m-drawer-menu a:active, .m-drawer-menu button:active { background:var(--maroon-tint); }
+  .m-drawer-menu svg { width:23px; height:23px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; flex:none; }
   .m-drawer-cta { display:flex; flex-direction:column; gap:10px; margin-top:8px; }
   .m-drawer-cta a { text-align:center; padding:10px; border-radius:999px; font-weight:800; font-size:14.5px; text-decoration:none; }
   .m-drawer-cta a.cta-primary { background:var(--ink); color:var(--bg); }
@@ -2338,8 +2359,8 @@ html[data-theme="dim"] .auth-ok, html[data-theme="dark"] .auth-ok { background:r
 .profile-edit-btn {
   font-family:inherit; font-size:14px; font-weight:700; background:var(--bg);
   border:1px solid var(--border-input); border-radius:999px; padding:7px 15px; cursor:pointer;
-  color:var(--ink); text-decoration:none; display:inline-block; transition:background .12s ease;
-  box-shadow:0 1px 5px rgba(15,20,25,.14);
+  color:var(--ink); text-decoration:none; display:inline-block; transition:background-color .15s ease, border-color .15s ease;
+  box-shadow:none;
 }
 .profile-edit-btn:hover { background:var(--hover-bg); text-decoration:none; }
 
@@ -2370,10 +2391,11 @@ html[data-theme="dim"] .auth-ok, html[data-theme="dark"] .auth-ok { background:r
 .profile-icon-btn {
   width:36px; height:36px; border-radius:50%; border:1px solid var(--border-input);
   display:inline-flex; align-items:center; justify-content:center; background:var(--bg); cursor:pointer;
-  color:var(--ink); transition:background .12s ease, border-color .12s ease;
-  box-shadow:0 1px 5px rgba(15,20,25,.14);
+  color:var(--ink); transition:background-color .15s ease, border-color .15s ease;
+  box-shadow:none;
 }
-.profile-icon-btn:hover { background:var(--hover-bg); }
+.profile-icon-btn:hover { background:var(--hover-bg); border-color:var(--muted); }
+.profile-icon-btn:active { background:var(--maroon-tint); }
 .profile-icon-btn svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 .profile-hdr-actions .pc-menu-wrap { margin-left:0; }
 .profile-hdr-actions .pc-menu-dd { min-width:220px; }
@@ -2393,12 +2415,13 @@ html[data-theme="dim"] .auth-ok, html[data-theme="dark"] .auth-ok { background:r
 /* follow button + follower/following stats */
 .follow-btn {
   font-family:inherit; font-size:14px; font-weight:700;
-  background:var(--ink); color:var(--bg); border:none; border-radius:999px;
+  background:var(--ink); color:var(--bg); border:1px solid var(--ink); border-radius:999px;
   padding:7px 16px; cursor:pointer; text-decoration:none; display:inline-block; margin-top:12px;
-  transition:background .12s ease, color .12s ease, border-color .12s ease, filter .12s ease;
-  box-shadow:0 1px 5px rgba(15,20,25,.18);
+  transition:background-color .15s ease, color .15s ease, border-color .15s ease, filter .15s ease;
+  box-shadow:none;
 }
-.follow-btn:hover { filter:brightness(.85); text-decoration:none; }
+.follow-btn:hover { filter:brightness(.88); text-decoration:none; }
+.follow-btn:active { filter:brightness(.78); }
 .follow-btn.following { background:var(--cream-card); color:var(--ink); border:1px solid var(--border-input); }
 .follow-btn.following:hover { background:#FEECEE; color:var(--like); border-color:var(--like); filter:none; }
 .follow-btn:disabled { opacity:.6; cursor:default; }

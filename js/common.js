@@ -621,19 +621,31 @@ function renderMobileChrome() {
             <a href="${currentProfile ? followListUrl(currentProfile.username, 'followers') : '#'}"><b>${fmtCount(currentProfile?.followers_count)}</b> Followers</a>
           </div>
           <hr>
-          <div class="m-drawer-menu">
-            <a href="${ownHref}">${NAV_ICON.user}Profile</a>
-            <a href="bookmarks.html">${NAV_ICON.bookmark}Bookmarks</a>
-            <a href="articles.html">${NAV_ICON.article}Articles</a>
-            <a href="${lp}/communities">${NAV_ICON.people}Communities</a>
-            <a href="editprofile.html">${NAV_ICON.doc}Edit profile</a>
-            <a href="/settings">${NAV_ICON.gear}Settings and privacy</a>
-            <a href="lists.html">${NAV_ICON.list}Lists</a>
-            <a href="${lp}/rules">${NAV_ICON.doc}Rules</a>
-            <a href="${lp}/about">${NAV_ICON.info}About</a>
-            <a href="${lp}/contact">${NAV_ICON.mail}Contact</a>
-            <a href="${lp}/privacy">${NAV_ICON.shield}Privacy Policy</a>
-            <a href="${lp}/terms">${NAV_ICON.doc}Terms of Service</a>
+          <div class="m-drawer-group">
+            <div class="m-drawer-menu">
+              <a href="${ownHref}">${NAV_ICON.user}Profile</a>
+              <a href="editprofile.html">${NAV_ICON.doc}Edit profile</a>
+              <a href="bookmarks.html">${NAV_ICON.bookmark}Bookmarks</a>
+              <a href="lists.html">${NAV_ICON.list}Lists</a>
+              <a href="/settings">${NAV_ICON.gear}Settings and privacy</a>
+            </div>
+          </div>
+          <div class="m-drawer-group">
+            <span class="m-drawer-group-label">Discover</span>
+            <div class="m-drawer-menu">
+              <a href="articles.html">${NAV_ICON.article}Articles</a>
+              <a href="${lp}/communities">${NAV_ICON.people}Communities</a>
+            </div>
+          </div>
+          <div class="m-drawer-group">
+            <span class="m-drawer-group-label">About</span>
+            <div class="m-drawer-menu">
+              <a href="${lp}/rules">${NAV_ICON.doc}Rules</a>
+              <a href="${lp}/about">${NAV_ICON.info}About</a>
+              <a href="${lp}/contact">${NAV_ICON.mail}Contact</a>
+              <a href="${lp}/privacy">${NAV_ICON.shield}Privacy Policy</a>
+              <a href="${lp}/terms">${NAV_ICON.doc}Terms of Service</a>
+            </div>
           </div>
           <hr>
           <button class="m-drawer-logout" onclick="closeMobileDrawer();logOut();"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4.5H6a1.5 1.5 0 0 0-1.5 1.5v12A1.5 1.5 0 0 0 6 19.5h3"/><path d="M15.5 16.5 20 12l-4.5-4.5"/><path d="M20 12H9"/></svg>Log out</button>
@@ -641,15 +653,22 @@ function renderMobileChrome() {
           <img class="avatar m-drawer-avatar" src="${DEFAULT_AVATAR}" alt="">
           <span class="m-drawer-name">Welcome to InteractInk</span>
           <span class="m-drawer-handle">Log in to follow, post, and reply.</span>
-          <div class="m-drawer-menu" style="margin-top:8px;">
-            <a href="articles.html">${NAV_ICON.article}Articles</a>
-            <a href="${lp}/communities">${NAV_ICON.people}Communities</a>
-            <a href="lists.html">${NAV_ICON.list}Lists</a>
-            <a href="${lp}/rules">${NAV_ICON.doc}Rules</a>
-            <a href="${lp}/about">${NAV_ICON.info}About</a>
-            <a href="${lp}/contact">${NAV_ICON.mail}Contact</a>
-            <a href="${lp}/privacy">${NAV_ICON.shield}Privacy Policy</a>
-            <a href="${lp}/terms">${NAV_ICON.doc}Terms of Service</a>
+          <div class="m-drawer-group" style="margin-top:8px;">
+            <div class="m-drawer-menu">
+              <a href="articles.html">${NAV_ICON.article}Articles</a>
+              <a href="${lp}/communities">${NAV_ICON.people}Communities</a>
+              <a href="lists.html">${NAV_ICON.list}Lists</a>
+            </div>
+          </div>
+          <div class="m-drawer-group">
+            <span class="m-drawer-group-label">About</span>
+            <div class="m-drawer-menu">
+              <a href="${lp}/rules">${NAV_ICON.doc}Rules</a>
+              <a href="${lp}/about">${NAV_ICON.info}About</a>
+              <a href="${lp}/contact">${NAV_ICON.mail}Contact</a>
+              <a href="${lp}/privacy">${NAV_ICON.shield}Privacy Policy</a>
+              <a href="${lp}/terms">${NAV_ICON.doc}Terms of Service</a>
+            </div>
           </div>
           <div class="m-drawer-cta">
             <a class="cta-primary" href="${lp}/signup">Sign up</a>
@@ -845,7 +864,7 @@ function gcModalEl() {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10.5" r="1.6"/><path d="m4 17 5-5 3.5 3.5L17 11l3 3"/></svg>
           </button>
           <button type="button" class="pf-ic" title="GIF" aria-label="GIF" onclick="openGifPicker('gc');return false;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M11.2 9.5H9a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h2.2v-2h-1M13.6 9.5v5M16 14.5v-5h2.4M16 12h1.8"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="14" rx="3.5"/><text x="12" y="15.2" font-family="Arial,Helvetica,sans-serif" font-size="7.3" font-weight="700" letter-spacing="0.3" text-anchor="middle" fill="currentColor" stroke="none">GIF</text></svg>
           </button>
           <button type="button" class="pf-ic" title="Poll" aria-label="Poll" onclick="togglePollBuilder('gc');return false;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 15v2M12 11v6M17 8v10"/></svg>
@@ -1028,7 +1047,7 @@ function rpcModalEl() {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10.5" r="1.6"/><path d="m4 17 5-5 3.5 3.5L17 11l3 3"/></svg>
           </button>
           <button type="button" class="pf-ic" title="GIF" aria-label="GIF" onclick="openGifPicker('rpc');return false;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M11.2 9.5H9a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h2.2v-2h-1M13.6 9.5v5M16 14.5v-5h2.4M16 12h1.8"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="14" rx="3.5"/><text x="12" y="15.2" font-family="Arial,Helvetica,sans-serif" font-size="7.3" font-weight="700" letter-spacing="0.3" text-anchor="middle" fill="currentColor" stroke="none">GIF</text></svg>
           </button>
           <button type="button" class="pf-ic" title="Emoji" aria-label="Emoji" onclick="toggleEmojiPicker('rpc', this);return false;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8.5 10h.01M15.5 10h.01M8 14.5c1 1.2 2.3 1.8 4 1.8s3-.6 4-1.8"/></svg>
