@@ -525,29 +525,31 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
    (.rfm) below — one consistent radius whether collapsed or expanded,
    not a stretched stadium/pill shape once the audience chip and
    toolbar make it taller than one line. ── */
-#pf-wrap { max-width:none; margin:0; padding:10px 12px; border-bottom:8px solid var(--line); }
-/* Collapsed state reads as a plain flat row that blends into the page
-   (same white as the feed behind it, only a 1px line for definition) —
-   easy to miss as a tappable control. A hover/focus wash + pointer
-   cursor gives it the same "this is a button" affordance the rest of
-   the app uses (row hovers, .pf-ic, etc.), and the focus-within ring
-   matches what happens once you're actually typing, so the collapsed
-   state doesn't feel like a dead end. */
+#pf-wrap { max-width:none; margin:10px 12px 14px; padding:0; }
+/* Composer card: a real elevated card (rounded corners + soft shadow)
+   instead of the flat hairline-bordered square it used to be — reads
+   as an inviting, tappable surface at rest, then lifts slightly and
+   picks up the accent border once expanded, so the "start typing"
+   state change is felt, not just inferred from a color swap. */
 #pf-box {
-  background:var(--cream-card); border:1px solid var(--line); border-radius:0;
-  box-shadow:none; overflow:visible; padding:12px 18px; cursor:text;
-  transition:padding .15s ease, border-color .15s ease, background-color .15s ease, box-shadow .15s ease;
+  background:var(--cream-card); border:1px solid var(--line); border-radius:18px;
+  box-shadow:0 1px 2px rgba(15,20,25,.04); overflow:visible; padding:16px 18px; cursor:text;
+  transition:padding .15s ease, border-color .15s ease, background-color .15s ease, box-shadow .15s ease, transform .15s ease;
 }
-#pf-box:not(.pf-expanded):hover { background:var(--hover-bg); }
+#pf-box:not(.pf-expanded):hover {
+  border-color:color-mix(in srgb, var(--maroon) 35%, var(--line));
+  box-shadow:0 4px 16px rgba(15,20,25,.08);
+  transform:translateY(-1px);
+}
 #pf-box.pf-expanded {
-  border-color:var(--maroon); padding:14px 18px 10px;
-  box-shadow:0 1px 12px rgba(15,20,25,.06);
+  border-color:var(--maroon); padding:18px 18px 12px;
+  box-shadow:0 8px 24px rgba(15,20,25,.1), 0 0 0 1px var(--maroon);
 }
 .pf-row { display:flex; gap:14px; align-items:center; }
 #pf-box.pf-expanded .pf-row { align-items:flex-start; }
 .pf-avatar {
-  flex:none; width:44px; height:44px; border-radius:50%; overflow:hidden; display:block;
-  background:var(--hover-bg); box-shadow:0 0 0 1px var(--line);
+  flex:none; width:46px; height:46px; border-radius:50%; overflow:hidden; display:block;
+  background:var(--hover-bg); box-shadow:0 0 0 2px var(--card-bg, var(--cream-card)), 0 0 0 3px var(--line);
 }
 .pf-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
 .pf-col { flex:1; min-width:0; }
@@ -556,7 +558,7 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
    #pf-box.pf-expanded (added on focus/typing, removed on blur when
    empty — see board.js) reveals all of it again. */
 .pf-toolbar, #pf-ga-slot { display:none; }
-#pf-box.pf-expanded .pf-toolbar { display:flex; align-items:center; justify-content:space-between; margin-top:8px; padding-top:10px; border-top:1px solid var(--line); }
+#pf-box.pf-expanded .pf-toolbar { display:flex; align-items:center; justify-content:space-between; margin-top:10px; padding-top:12px; border-top:1px solid var(--line); }
 /* The floating global-compose and reply modals (.gc-toolbar) reuse the
    same .pf-toolbar class as the home-feed inline composer, but they
    aren't nested inside #pf-box.pf-expanded — so without this they
@@ -602,9 +604,10 @@ input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focu
 .pf-btn, .rfm-row input[type="submit"], .modal-btn {
   font-family:inherit; font-size:14px; font-weight:700;
   background:var(--maroon); color:#fff; border:none; border-radius:999px;
-  padding:7px 18px; cursor:pointer; transition:background .12s ease, opacity .1s ease, transform .1s ease;
+  padding:7px 18px; cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,.15);
+  transition:background .12s ease, opacity .1s ease, transform .1s ease, box-shadow .12s ease;
 }
-.pf-btn:hover, .rfm-row input[type="submit"]:hover, .modal-btn:hover { background:var(--maroon-dk); }
+.pf-btn:hover, .rfm-row input[type="submit"]:hover, .modal-btn:hover { background:var(--maroon-dk); box-shadow:0 2px 8px rgba(0,0,0,.22); }
 .pf-btn:active, .rfm-row input[type="submit"]:active, .modal-btn:active { background:var(--maroon-dk); opacity:.85; transform:scale(.97); }
 .pf-btn:disabled, .rfm-row input[type="submit"]:disabled { opacity:0.5; cursor:default; }
 .f-note { font-size:11px; color:var(--muted); text-align:left; padding:8px 0 0; }
@@ -3219,6 +3222,26 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
   content:""; position:absolute; left:14px; right:14px; bottom:0;
   height:3px; border-radius:3px 3px 0 0; background:var(--ink);
 }
+
+/* ── HOME: same flat underline tab style as the profile page's
+   Posts/Replies tabs, instead of the pill/segmented track — the
+   sliding pill indicator is switched off here and the active tab
+   gets a static underline like .profile-tabs above. ── */
+body[data-page="home"] #board-hdr .xtabs {
+  background:none; border:none; border-bottom:1px solid var(--line);
+  border-radius:0; padding:0; gap:0;
+}
+body[data-page="home"] #board-hdr .xtab {
+  padding:14px 4px; border-radius:0; font-weight:700; color:var(--muted); font-size:14.5px;
+}
+body[data-page="home"] #board-hdr .xtab:hover { color:var(--ink); background:var(--hover-bg); }
+body[data-page="home"] #board-hdr .xtab.active { background:none; color:var(--ink); box-shadow:none; position:relative; }
+body[data-page="home"] #board-hdr .xtab.active:hover { background:var(--hover-bg); }
+body[data-page="home"] #board-hdr .xtab.active::after {
+  content:""; position:absolute; left:14px; right:14px; bottom:0;
+  height:3px; border-radius:3px 3px 0 0; background:var(--ink);
+}
+body[data-page="home"] #board-hdr .xtabs-indicator { display:none; }
 
 /* ── COMMUNITY / COMMUNITIES: squircle community icon in the warm
    orange gradient from the reference, plus a faint sunburst-line
