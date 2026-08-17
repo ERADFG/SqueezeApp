@@ -22,6 +22,7 @@
 <link rel="alternate" hreflang="de" href="https://interactink.vercel.app/de/signup">
 <link rel="alternate" hreflang="pt" href="https://interactink.vercel.app/pt/signup">
 <link rel="alternate" hreflang="ja" href="https://interactink.vercel.app/ja/signup">
+<link rel="alternate" hreflang="ru" href="https://interactink.vercel.app/ru/signup">
 <link rel="alternate" hreflang="x-default" href="https://interactink.vercel.app/signup">
 <base href="/">
 <link rel="icon" type="image/png" href="/img/favicon-32.png" sizes="32x32" id="fav32">
@@ -80,6 +81,27 @@
             </div>
           </div>
           <div class="auth-field">
+            <label for="su-age" data-i18n="auth.age">年齢</label>
+            <div class="auth-input-wrap">
+              <span class="auth-fi"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span>
+              <input type="number" id="su-age" required min="13" max="120" step="1" inputmode="numeric" autocomplete="off" placeholder="18">
+            </div>
+            <span class="auth-hint" data-i18n="auth.ageHint">13〜120歳。</span>
+          </div>
+          <div class="auth-field">
+            <label for="su-gender" data-i18n="auth.gender">性別</label>
+            <div class="auth-input-wrap">
+              <span class="auth-fi"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></span>
+              <select id="su-gender" required>
+                <option value="" disabled selected data-i18n="auth.genderSelect">選択してください…</option>
+                <option value="male" data-i18n="auth.genderMale">男性</option>
+                <option value="female" data-i18n="auth.genderFemale">女性</option>
+                <option value="other" data-i18n="auth.genderOther">その他</option>
+                <option value="not_specified" data-i18n="auth.genderNotSpecified">回答しない</option>
+              </select>
+            </div>
+          </div>
+          <div class="auth-field">
             <label for="su-password" data-i18n="auth.password">パスワード</label>
             <div class="auth-input-wrap">
               <span class="auth-fi"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
@@ -111,7 +133,7 @@
 
         <div class="auth-switch" id="su-switch"><span data-i18n="auth.haveAccount">すでにアカウントをお持ちですか?</span> <a href="/ja/login" data-i18n="nav.logIn">ログイン</a></div>
         <div class="auth-legal" id="su-legal" data-i18n="auth.legal">登録することで、InteractInkの<a href="/ja/rules">ルール</a>に同意したものとみなされます。</div>
-        <div class="auth-legal" style="margin-top:4px;"><a href="/signup">English</a> &mdash; <a href="/es/signup">Español</a> &mdash; <a href="/fr/signup">Français</a> &mdash; <a href="/de/signup">Deutsch</a> &mdash; <a href="/pt/signup">Português</a></div>
+        <div class="auth-legal" style="margin-top:4px;"><a href="/signup">English</a> &mdash; <a href="/es/signup">Español</a> &mdash; <a href="/fr/signup">Français</a> &mdash; <a href="/de/signup">Deutsch</a> &mdash; <a href="/pt/signup">Português</a> &mdash; <a href="/ru/signup">Русский</a></div>
       </div>
     </div>
   </div>

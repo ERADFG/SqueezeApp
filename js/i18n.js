@@ -1,6 +1,7 @@
 // ─────────────────────────────────────────────────────────────
 // I18N — lightweight translation layer. Supports English (default)
-// plus 5 languages: Spanish, French, German, Portuguese, Japanese.
+// plus 6 languages: Spanish, French, German, Portuguese, Japanese,
+// Russian.
 //
 // Usage:
 //   t('nav.home')                 -> translated string
@@ -24,7 +25,8 @@ const I18N_LANGS = {
   fr: 'Français',
   de: 'Deutsch',
   pt: 'Português',
-  ja: '日本語'
+  ja: '日本語',
+  ru: 'Русский'
 };
 
 const I18N_DICT = {
@@ -53,6 +55,10 @@ const I18N_DICT = {
     'auth.signUp': 'Sign Up', 'auth.signUpSub': 'Create your account.',
     'auth.legal': "By continuing you agree to InteractInk's rules.",
     'auth.rulesLink': 'rules',
+    'auth.age': 'Age', 'auth.ageHint': '13–120 years old.',
+    'auth.gender': 'Gender', 'auth.genderSelect': 'Select…',
+    'auth.genderMale': 'Male', 'auth.genderFemale': 'Female',
+    'auth.genderOther': 'Other', 'auth.genderNotSpecified': 'Prefer not to say',
     'settings.profile': 'Profile', 'settings.profileSub': 'Banner, avatar, display name, and bio.',
     'settings.editProfile': 'Edit Profile',
     'settings.appearance': 'Appearance', 'settings.appearanceSub': 'Pick how InteractInk looks on this device.',
@@ -96,6 +102,10 @@ const I18N_DICT = {
     'auth.signUp': 'Registrarse', 'auth.signUpSub': 'Crea tu cuenta.',
     'auth.legal': 'Al continuar aceptas las normas de InteractInk.',
     'auth.rulesLink': 'normas',
+    'auth.age': 'Edad', 'auth.ageHint': '13–120 años.',
+    'auth.gender': 'Género', 'auth.genderSelect': 'Selecciona…',
+    'auth.genderMale': 'Masculino', 'auth.genderFemale': 'Femenino',
+    'auth.genderOther': 'Otro', 'auth.genderNotSpecified': 'Prefiero no decirlo',
     'settings.profile': 'Perfil', 'settings.profileSub': 'Portada, avatar, nombre y biografía.',
     'settings.editProfile': 'Editar perfil',
     'settings.appearance': 'Apariencia', 'settings.appearanceSub': 'Elige cómo se ve InteractInk en este dispositivo.',
@@ -139,6 +149,10 @@ const I18N_DICT = {
     'auth.signUp': "S'inscrire", 'auth.signUpSub': 'Créez votre compte.',
     'auth.legal': 'En continuant, vous acceptez les règles d\u2019InteractInk.',
     'auth.rulesLink': 'règles',
+    'auth.age': 'Âge', 'auth.ageHint': '13–120 ans.',
+    'auth.gender': 'Genre', 'auth.genderSelect': 'Sélectionner…',
+    'auth.genderMale': 'Homme', 'auth.genderFemale': 'Femme',
+    'auth.genderOther': 'Autre', 'auth.genderNotSpecified': 'Préfère ne pas préciser',
     'settings.profile': 'Profil', 'settings.profileSub': 'Bannière, avatar, nom affiché et bio.',
     'settings.editProfile': 'Modifier le profil',
     'settings.appearance': 'Apparence', 'settings.appearanceSub': "Choisissez l'apparence d'InteractInk sur cet appareil.",
@@ -182,6 +196,10 @@ const I18N_DICT = {
     'auth.signUp': 'Registrieren', 'auth.signUpSub': 'Erstelle dein Konto.',
     'auth.legal': 'Mit der Fortsetzung akzeptierst du die Regeln von InteractInk.',
     'auth.rulesLink': 'Regeln',
+    'auth.age': 'Alter', 'auth.ageHint': '13–120 Jahre.',
+    'auth.gender': 'Geschlecht', 'auth.genderSelect': 'Auswählen…',
+    'auth.genderMale': 'Männlich', 'auth.genderFemale': 'Weiblich',
+    'auth.genderOther': 'Divers', 'auth.genderNotSpecified': 'Keine Angabe',
     'settings.profile': 'Profil', 'settings.profileSub': 'Banner, Avatar, Anzeigename und Bio.',
     'settings.editProfile': 'Profil bearbeiten',
     'settings.appearance': 'Darstellung', 'settings.appearanceSub': 'Lege fest, wie InteractInk auf diesem Gerät aussieht.',
@@ -225,6 +243,10 @@ const I18N_DICT = {
     'auth.signUp': 'Cadastrar-se', 'auth.signUpSub': 'Crie sua conta.',
     'auth.legal': 'Ao continuar você concorda com as regras do InteractInk.',
     'auth.rulesLink': 'regras',
+    'auth.age': 'Idade', 'auth.ageHint': '13–120 anos.',
+    'auth.gender': 'Gênero', 'auth.genderSelect': 'Selecionar…',
+    'auth.genderMale': 'Masculino', 'auth.genderFemale': 'Feminino',
+    'auth.genderOther': 'Outro', 'auth.genderNotSpecified': 'Prefiro não dizer',
     'settings.profile': 'Perfil', 'settings.profileSub': 'Capa, avatar, nome de exibição e bio.',
     'settings.editProfile': 'Editar perfil',
     'settings.appearance': 'Aparência', 'settings.appearanceSub': 'Escolha a aparência do InteractInk neste dispositivo.',
@@ -268,6 +290,10 @@ const I18N_DICT = {
     'auth.signUp': '新規登録', 'auth.signUpSub': 'アカウントを作成しましょう。',
     'auth.legal': '続行することで、InteractInkのルールに同意したものとみなされます。',
     'auth.rulesLink': 'ルール',
+    'auth.age': '年齢', 'auth.ageHint': '13〜120歳。',
+    'auth.gender': '性別', 'auth.genderSelect': '選択してください…',
+    'auth.genderMale': '男性', 'auth.genderFemale': '女性',
+    'auth.genderOther': 'その他', 'auth.genderNotSpecified': '回答しない',
     'settings.profile': 'プロフィール', 'settings.profileSub': 'バナー、アイコン、表示名、自己紹介。',
     'settings.editProfile': 'プロフィールを編集',
     'settings.appearance': '外観', 'settings.appearanceSub': 'この端末でのInteractInkの見た目を選択します。',
@@ -285,6 +311,53 @@ const I18N_DICT = {
     'chat.e2ePending': '@{username}がチャットを開くと暗号化が有効になります',
     'chat.failedToSend': '送信に失敗しました。', 'chat.typing': '入力中',
     'chat.today': '今日', 'chat.yesterday': '昨日', 'chat.sendViaChat': 'チャットで送信'
+  },
+  ru: {
+    'nav.home': 'Главная', 'nav.explore': 'Обзор', 'nav.notifications': 'Уведомления',
+    'nav.chat': 'Чат', 'nav.bookmarks': 'Закладки', 'nav.lists': 'Списки', 'nav.articles': 'Статьи',
+    'nav.communities': 'Сообщества', 'nav.profile': 'Профиль', 'nav.more': 'Ещё',
+    'nav.settings': 'Настройки', 'nav.rules': 'Правила', 'nav.post': 'Опубликовать',
+    'nav.about': 'О нас', 'nav.contact': 'Контакты', 'nav.privacy': 'Политика конфиденциальности', 'nav.terms': 'Условия использования',
+    'nav.logIn': 'Войти', 'nav.signUp': 'Регистрация', 'nav.logOut': 'Выйти',
+    'compose.placeholder': 'Что происходит?',
+    'compose.reply': 'Опубликуйте ваш ответ',
+    'compose.submit': 'Опубликовать', 'compose.reply.submit': 'Ответить', 'compose.cancel': 'Отмена',
+    'action.follow': 'Читать', 'action.following': 'Читаете', 'action.unfollow': 'Отписаться',
+    'action.report': 'Пожаловаться', 'action.delete': 'Удалить', 'action.save': 'Сохранить',
+    'action.edit': 'Изменить', 'action.share': 'Поделиться', 'action.copyLink': 'Скопировать ссылку',
+    'action.mute': 'Скрыть', 'action.block': 'Заблокировать', 'action.message': 'Сообщение',
+    'action.showMore': 'Показать ещё',
+    'time.now': 'только что', 'time.m': 'мин. назад', 'time.h': 'ч. назад', 'time.d': 'дн. назад',
+    'toast.reportSubmitted': 'Жалоба отправлена. Модераторы её рассмотрят.',
+    'toast.linkCopied': 'Ссылка скопирована в буфер обмена',
+    'toast.muted': 'Аккаунт скрыт', 'toast.blocked': 'Аккаунт заблокирован',
+    'auth.logIn': 'Вход', 'auth.logInSub': 'Рады видеть вас снова.',
+    'auth.email': 'Эл. почта', 'auth.password': 'Пароль', 'auth.username': 'Имя пользователя',
+    'auth.noAccount': 'Ещё нет аккаунта?', 'auth.haveAccount': 'Уже есть аккаунт?',
+    'auth.signUp': 'Регистрация', 'auth.signUpSub': 'Создайте свой аккаунт.',
+    'auth.legal': 'Продолжая, вы соглашаетесь с правилами InteractInk.',
+    'auth.rulesLink': 'правилами',
+    'auth.age': 'Возраст', 'auth.ageHint': '13–120 лет.',
+    'auth.gender': 'Пол', 'auth.genderSelect': 'Выбрать…',
+    'auth.genderMale': 'Мужской', 'auth.genderFemale': 'Женский',
+    'auth.genderOther': 'Другое', 'auth.genderNotSpecified': 'Не указывать',
+    'settings.profile': 'Профиль', 'settings.profileSub': 'Баннер, аватар, отображаемое имя и биография.',
+    'settings.editProfile': 'Редактировать профиль',
+    'settings.appearance': 'Оформление', 'settings.appearanceSub': 'Выберите, как InteractInk выглядит на этом устройстве.',
+    'settings.language': 'Язык', 'settings.languageSub': 'Выберите язык, используемый на сайте.',
+    'settings.notifications': 'Уведомления', 'settings.privacy': 'Конфиденциальность',
+    'settings.account': 'Аккаунт', 'settings.password': 'Пароль', 'settings.session': 'Сеанс',
+    'chat.directMessages': 'Личные сообщения',
+    'chat.loginGate': 'Войдите, чтобы отправлять и получать сообщения. {login} или {signup}.',
+    'chat.newMessage': 'Новое сообщение\u2026', 'chat.messageUsernamePlaceholder': 'Написать пользователю\u2026',
+    'chat.startMessagePlaceholder': 'Введите сообщение\u2026', 'chat.send': 'Отправить', 'chat.back': 'Назад',
+    'chat.noMessagesTitle': 'Пока нет сообщений', 'chat.noMessagesSub': 'Когда вы напишете кому-то, переписка появится здесь.',
+    'chat.youPrefix': 'Вы: ', 'chat.encryptedMessage': 'Зашифрованное сообщение',
+    'chat.userNotFound': 'Пользователь с таким именем не найден.', 'chat.cantMessageSelf': 'Вы не можете отправить сообщение самому себе.',
+    'chat.e2eActive': 'Сообщения защищены сквозным шифрованием. Даже InteractInk не может их прочитать.',
+    'chat.e2ePending': 'Шифрование включится, как только @{username} откроет чат',
+    'chat.failedToSend': 'Не удалось отправить.', 'chat.typing': 'Печатает',
+    'chat.today': 'Сегодня', 'chat.yesterday': 'Вчера', 'chat.sendViaChat': 'Отправить через чат'
   }
 };
 
@@ -294,7 +367,7 @@ const I18N_DICT = {
 // hand-translated language later: add its code here, add its /<code>/
 // pages, and add the hreflang/footer links on the English pages —
 // nothing else in this file needs to change.
-const I18N_STATIC_LANGS = ['es', 'fr', 'de', 'pt', 'ja'];
+const I18N_STATIC_LANGS = ['es', 'fr', 'de', 'pt', 'ja', 'ru'];
 
 function getLang() {
   // URL is the source of truth for the language-prefixed static pages

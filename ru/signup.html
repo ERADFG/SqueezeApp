@@ -1,21 +1,21 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="ru">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>S'inscrire — InteractInk</title>
-<meta name="description" content="Créez un compte InteractInk — ça ne prend qu'une minute.">
+<title>Регистрация — InteractInk</title>
+<meta name="description" content="Создайте аккаунт InteractInk — это займёт всего минуту.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="InteractInk">
-<meta property="og:title" content="S'inscrire — InteractInk">
-<meta property="og:description" content="Créez un compte InteractInk — ça ne prend qu'une minute.">
+<meta property="og:title" content="Регистрация — InteractInk">
+<meta property="og:description" content="Создайте аккаунт InteractInk — это займёт всего минуту.">
 <meta property="og:image" content="/img/logo-light.png">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="S'inscrire — InteractInk">
-<meta name="twitter:description" content="Créez un compte InteractInk — ça ne prend qu'une minute.">
+<meta name="twitter:title" content="Регистрация — InteractInk">
+<meta name="twitter:description" content="Создайте аккаунт InteractInk — это займёт всего минуту.">
 <meta name="twitter:image" content="/img/logo-light.png">
-<link rel="canonical" href="https://interactink.vercel.app/fr/signup">
-<meta property="og:url" content="https://interactink.vercel.app/fr/signup">
+<link rel="canonical" href="https://interactink.vercel.app/ru/signup">
+<meta property="og:url" content="https://interactink.vercel.app/ru/signup">
 <link rel="alternate" hreflang="en" href="https://interactink.vercel.app/signup">
 <link rel="alternate" hreflang="es" href="https://interactink.vercel.app/es/signup">
 <link rel="alternate" hreflang="fr" href="https://interactink.vercel.app/fr/signup">
@@ -39,7 +39,7 @@
 <div class="xshell">
   <div id="hdr">
     <div class="sb-top">
-      <a class="logo" href="/fr">
+      <a class="logo" href="/ru">
         <span class="badge">
           <img class="logo-mark logo-mark-light" src="/img/logo-light.png" alt="InteractInk logo" width="36" height="36">
           <img class="logo-mark logo-mark-dark" src="/img/logo-dark.png" alt="InteractInk logo" width="36" height="36">
@@ -53,65 +53,65 @@
   <div class="auth-wrap">
   <div class="auth-shell">
     <div class="auth-card">
-      <a class="auth-card-logo" href="/fr">
+      <a class="auth-card-logo" href="/ru">
         <span class="badge">
           <img class="logo-mark logo-mark-light" src="/img/logo-light.png" alt="InteractInk logo" width="28" height="28">
           <img class="logo-mark logo-mark-dark" src="/img/logo-dark.png" alt="InteractInk logo" width="28" height="28">
         </span>
         <span class="wordmark">Interact<em>Ink</em></span>
       </a>
-      <h1 data-i18n="auth.signUp">S'inscrire</h1>
-      <p class="auth-sub" data-i18n="auth.signUpSub">Créez votre compte — ça ne prend qu'une minute.</p>
+      <h1 data-i18n="auth.signUp">Регистрация</h1>
+      <p class="auth-sub" data-i18n="auth.signUpSub">Создайте свой аккаунт — это займёт всего минуту.</p>
       <div class="auth-body">
         <div class="errmsg" id="su-err" style="display:none;"></div>
         <form id="su-form" onsubmit="doSignUp(event)">
           <div class="auth-field">
-            <label for="su-username" data-i18n="auth.username">Nom d'utilisateur</label>
+            <label for="su-username" data-i18n="auth.username">Имя пользователя</label>
             <div class="auth-input-wrap">
               <span class="auth-fi"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></span>
-              <input type="text" id="su-username" required maxlength="20" autocomplete="username" placeholder="votrenom">
+              <input type="text" id="su-username" required maxlength="20" autocomplete="username" placeholder="имяпользователя">
             </div>
-            <span class="auth-hint">3 à 20 caractères : lettres, chiffres, tiret bas.</span>
+            <span class="auth-hint">3–20 символов: буквы, цифры, нижнее подчёркивание.</span>
           </div>
           <div class="auth-field">
-            <label for="su-email" data-i18n="auth.email">E-mail</label>
+            <label for="su-email" data-i18n="auth.email">Эл. почта</label>
             <div class="auth-input-wrap">
               <span class="auth-fi"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/></svg></span>
-              <input type="email" id="su-email" required autocomplete="email" placeholder="vous@exemple.com">
+              <input type="email" id="su-email" required autocomplete="email" placeholder="you@example.com">
             </div>
           </div>
           <div class="auth-field">
-            <label for="su-age" data-i18n="auth.age">Âge</label>
+            <label for="su-age" data-i18n="auth.age">Возраст</label>
             <div class="auth-input-wrap">
               <span class="auth-fi"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span>
               <input type="number" id="su-age" required min="13" max="120" step="1" inputmode="numeric" autocomplete="off" placeholder="18">
             </div>
-            <span class="auth-hint" data-i18n="auth.ageHint">13–120 ans.</span>
+            <span class="auth-hint" data-i18n="auth.ageHint">13–120 лет.</span>
           </div>
           <div class="auth-field">
-            <label for="su-gender" data-i18n="auth.gender">Genre</label>
+            <label for="su-gender" data-i18n="auth.gender">Пол</label>
             <div class="auth-input-wrap">
               <span class="auth-fi"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></span>
               <select id="su-gender" required>
-                <option value="" disabled selected data-i18n="auth.genderSelect">Sélectionner…</option>
-                <option value="male" data-i18n="auth.genderMale">Homme</option>
-                <option value="female" data-i18n="auth.genderFemale">Femme</option>
-                <option value="other" data-i18n="auth.genderOther">Autre</option>
-                <option value="not_specified" data-i18n="auth.genderNotSpecified">Préfère ne pas préciser</option>
+                <option value="" disabled selected data-i18n="auth.genderSelect">Выбрать…</option>
+                <option value="male" data-i18n="auth.genderMale">Мужской</option>
+                <option value="female" data-i18n="auth.genderFemale">Женский</option>
+                <option value="other" data-i18n="auth.genderOther">Другое</option>
+                <option value="not_specified" data-i18n="auth.genderNotSpecified">Не указывать</option>
               </select>
             </div>
           </div>
           <div class="auth-field">
-            <label for="su-password" data-i18n="auth.password">Mot de passe</label>
+            <label for="su-password" data-i18n="auth.password">Пароль</label>
             <div class="auth-input-wrap">
               <span class="auth-fi"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
               <input type="password" id="su-password" required minlength="8" autocomplete="new-password" placeholder="••••••••">
-              <button type="button" class="pw-toggle" aria-label="Afficher le mot de passe" onclick="togglePwVis('su-password', this)">
+              <button type="button" class="pw-toggle" aria-label="Показать пароль" onclick="togglePwVis('su-password', this)">
                 <svg class="eye-on" viewBox="0 0 24 24"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>
                 <svg class="eye-off" viewBox="0 0 24 24"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/><path d="M3 3l18 18"/></svg>
               </button>
             </div>
-            <span class="auth-hint">Au moins 8 caractères.</span>
+            <span class="auth-hint">Минимум 8 символов.</span>
           </div>
           <div id="su-captcha" class="captcha-card" style="display:none;">
             <div class="captcha-card-head">
@@ -126,14 +126,14 @@
             </div>
             <div class="captcha-card-body"><div class="captcha-skeleton"></div></div>
           </div>
-          <input type="submit" id="su-btn" class="auth-submit" value="S'inscrire" data-i18n-value="auth.signUp">
+          <input type="submit" id="su-btn" class="auth-submit" value="Регистрация" data-i18n-value="auth.signUp">
         </form>
 
 
 
-        <div class="auth-switch" id="su-switch"><span data-i18n="auth.haveAccount">Vous avez déjà un compte ?</span> <a href="/fr/login" data-i18n="nav.logIn">Connexion</a></div>
-        <div class="auth-legal" id="su-legal" data-i18n="auth.legal">En vous inscrivant, vous acceptez les <a href="/fr/rules">règles</a> d'InteractInk.</div>
-        <div class="auth-legal" style="margin-top:4px;"><a href="/signup">English</a> &mdash; <a href="/es/signup">Español</a> &mdash; <a href="/de/signup">Deutsch</a> &mdash; <a href="/pt/signup">Português</a> &mdash; <a href="/ru/signup">Русский</a></div>
+        <div class="auth-switch" id="su-switch"><span data-i18n="auth.haveAccount">Уже есть аккаунт?</span> <a href="/ru/login" data-i18n="nav.logIn">Войти</a></div>
+        <div class="auth-legal" id="su-legal" data-i18n="auth.legal">Регистрируясь, вы соглашаетесь с <a href="/ru/rules">правилами</a> InteractInk.</div>
+        <div class="auth-legal" style="margin-top:4px;"><a href="/signup">English</a> &mdash; <a href="/es/signup">Español</a> &mdash; <a href="/fr/signup">Français</a> &mdash; <a href="/de/signup">Deutsch</a> &mdash; <a href="/pt/signup">Português</a> &mdash; <a href="/ja/signup">日本語</a></div>
       </div>
     </div>
   </div>

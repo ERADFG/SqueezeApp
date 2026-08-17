@@ -55,9 +55,14 @@
   --input-bg:  #FFFFFF;   /* form field / card-on-card background */
   --border-input: #CFD9DE; /* form field / outline-button border */
   --translucent-bg: rgba(255,255,255,.85); /* sticky/backdrop-blur headers */
-  --r-sm: 0px;
-  --r-md: 0px;
-  --r-lg: 0px;
+  /* Rounded across the whole app — form fields, cards, dropdowns,
+     avatars-on-square-slots, etc. all pull from these three sizes
+     instead of each having its own one-off radius, so "make the
+     corners less square" is a single token change instead of hunting
+     down every element that looks like an edit-profile text field. */
+  --r-sm: 12px;
+  --r-md: 18px;
+  --r-lg: 24px;
   --shadow-card: none;
   --shadow-card-hov: none;
   --shadow-pop:  0 12px 32px rgba(15,20,25,.18), 0 2px 8px rgba(15,20,25,.08);
@@ -532,7 +537,7 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
    picks up the accent border once expanded, so the "start typing"
    state change is felt, not just inferred from a color swap. */
 #pf-box {
-  background:var(--cream-card); border:1px solid var(--line); border-radius:18px;
+  background:var(--cream-card); border:1px solid var(--line); border-radius:22px;
   box-shadow:0 1px 2px rgba(15,20,25,.04); overflow:visible; padding:16px 18px; cursor:text;
   transition:padding .15s ease, border-color .15s ease, background-color .15s ease, box-shadow .15s ease, transform .15s ease;
 }
@@ -629,7 +634,7 @@ select {
 }
 
 .fp { margin-top:8px; }
-.fp img, .fp video { max-width:160px; max-height:120px; border:1px solid var(--line); border-radius:12px; display:block; }
+.fp img, .fp video { max-width:160px; max-height:120px; border:1px solid var(--line); border-radius:16px; display:block; }
 .rm-f { font-size:12px; color:var(--maroon); cursor:pointer; text-decoration:underline; display:inline-block; margin-top:4px; }
 
 /* ── SECTION BAR ── */
@@ -760,7 +765,7 @@ select {
 .comm-about-fact a { color:var(--link); text-decoration:none; font-weight:700; }
 .comm-about-fact a:hover { text-decoration:underline; }
 .comm-about-empty { font-size:14px; color:var(--muted); margin:0; }
-.comm-about-add { background:none; border:none; color:var(--link); font-size:13px; font-weight:700; cursor:pointer; padding:4px 6px; border-radius:6px; }
+.comm-about-add { background:none; border:none; color:var(--link); font-size:13px; font-weight:700; cursor:pointer; padding:4px 6px; border-radius:10px; }
 .comm-about-add:hover { background:var(--hover-bg); text-decoration:underline; }
 
 .comm-danger-section { border-bottom:none; }
@@ -785,7 +790,7 @@ select {
 .comm-inline-form { background:var(--hover-bg); border-radius:var(--r-md); padding:12px; margin:0 0 12px; }
 .comm-inline-form input[type="text"], .comm-inline-form textarea {
   width:100%; box-sizing:border-box; margin-bottom:8px; background:var(--bg);
-  border:1px solid var(--line); border-radius:8px; padding:8px 10px; font:inherit; color:var(--ink);
+  border:1px solid var(--line); border-radius:12px; padding:8px 10px; font:inherit; color:var(--ink);
 }
 .comm-inline-form textarea { resize:vertical; min-height:44px; }
 .comm-inline-form-actions { display:flex; justify-content:flex-end; }
@@ -803,7 +808,7 @@ select {
 .cc-modal .cc-step-body label { font-size:15px; font-weight:800; color:var(--ink); display:block; margin:0 0 8px; }
 .cc-modal .cc-step-body input[type="text"], .cc-modal .cc-step-body textarea {
   width:100%; box-sizing:border-box; margin:0 0 8px; background:var(--bg);
-  border:1px solid var(--line); border-radius:8px; padding:9px 10px; font:inherit; color:var(--ink);
+  border:1px solid var(--line); border-radius:12px; padding:9px 10px; font:inherit; color:var(--ink);
 }
 .cc-step-body textarea { resize:vertical; }
 .cc-modal .comm-inline-form input[type="text"], .cc-modal .comm-inline-form textarea { margin:0 0 8px; width:100%; }
@@ -1080,12 +1085,12 @@ select {
 /* ── write/edit article rich-text editor (js/editarticle.js) ── */
 .ea-toolbar {
   display:flex; align-items:center; gap:2px; padding:6px 12px; margin:0 16px;
-  border:1px solid var(--border-input); border-bottom:none; border-radius:10px 10px 0 0;
+  border:1px solid var(--border-input); border-bottom:none; border-radius:14px 14px 0 0;
   background:var(--hover-bg); flex-wrap:wrap;
 }
 .ea-tb-btn {
   display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px;
-  border:none; background:transparent; border-radius:6px; color:var(--ink); cursor:pointer; font-size:14px; font-weight:700;
+  border:none; background:transparent; border-radius:10px; color:var(--ink); cursor:pointer; font-size:14px; font-weight:700;
 }
 .ea-tb-btn svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; }
 .ea-tb-btn:hover { background:var(--maroon-tint); color:var(--maroon); }
@@ -1093,7 +1098,7 @@ select {
 .ea-tb-sep { width:1px; height:20px; background:var(--line); margin:0 4px; flex:none; }
 .ea-editor {
   min-height:320px; margin:0 16px; padding:14px; font-size:16px; line-height:1.6; color:var(--ink);
-  border:1px solid var(--border-input); border-radius:0 0 10px 10px; background:var(--input-bg);
+  border:1px solid var(--border-input); border-radius:0 0 14px 14px; background:var(--input-bg);
   outline:none; word-wrap:break-word;
 }
 .ea-editor:focus { border-color:var(--maroon); }
@@ -1108,7 +1113,7 @@ select {
 .ea-cover-row { display:flex; gap:8px; }
 .ea-cover-row input { flex:1; }
 .ea-cover-upload-btn {
-  flex:none; padding:0 14px; border-radius:8px; border:1px solid var(--border-input);
+  flex:none; padding:0 14px; border-radius:12px; border:1px solid var(--border-input);
   background:var(--hover-bg); color:var(--ink); font-size:13px; font-weight:700; cursor:pointer;
 }
 .ea-cover-upload-btn:hover { background:var(--maroon-tint); color:var(--maroon); border-color:var(--maroon); }
@@ -1272,7 +1277,7 @@ select {
 .pc-menu-dd {
   position:absolute; right:0; top:calc(100% + 4px); z-index:40; min-width:180px;
   max-width:min(280px, calc(100vw - 24px));
-  background:var(--cream-card); border:1px solid var(--line); border-radius:14px;
+  background:var(--cream-card); border:1px solid var(--line); border-radius:18px;
   box-shadow:var(--shadow-pop); overflow:hidden; padding:6px;
   opacity:0; visibility:hidden; pointer-events:none;
   transform:translateY(4px) scale(.97); transform-origin:top right;
@@ -1284,7 +1289,7 @@ select {
 }
 .pc-menu-dd button, .pc-menu-dd a {
   display:block; width:100%; text-align:left; background:none; border:none; cursor:pointer;
-  border-radius:9px; font-family:inherit; font-size:14px; font-weight:700; color:var(--ink);
+  border-radius:12px; font-family:inherit; font-size:14px; font-weight:700; color:var(--ink);
   padding:10px 12px; text-decoration:none; box-sizing:border-box; transition:background .1s ease;
   overflow-wrap:anywhere; word-break:break-word;
 }
@@ -1303,12 +1308,12 @@ select {
 .pm { margin:8px 0 2px; clear:both; }
 .pm .ml { font-size:10px; color:var(--muted); margin-bottom:2px; }
 .pm img  {
-  max-width:100%; max-height:380px; border:1px solid var(--line); border-radius:16px;
+  max-width:100%; max-height:380px; border:1px solid var(--line); border-radius:20px;
   cursor:pointer; display:block; transition:opacity .12s ease;
 }
 .pm img:hover { opacity:.96; }
 .pm img.exp { max-height:none; }
-.pm video { max-width:100%; max-height:380px; border:1px solid var(--line); border-radius:16px; display:block; }
+.pm video { max-width:100%; max-height:380px; border:1px solid var(--line); border-radius:20px; display:block; }
 
 /* action row: icon + count, evenly spread across the card width */
 .acts { margin-top:10px; clear:both; display:flex; align-items:center; justify-content:space-between; gap:4px; max-width:425px; }
@@ -1383,7 +1388,7 @@ a.act:hover, button.act.reply:hover, button.act.reply:active { color:var(--maroo
 .act.repost.reposted { color:var(--maroon); animation:oc-pop .28s ease; }
 .rp-menu-dd {
   position:absolute; left:0; bottom:calc(100% + 4px); z-index:40; min-width:200px;
-  background:var(--cream-card); border:1px solid var(--line); border-radius:14px;
+  background:var(--cream-card); border:1px solid var(--line); border-radius:18px;
   box-shadow:var(--shadow-pop); overflow:hidden; padding:6px;
   opacity:0; visibility:hidden; pointer-events:none;
   transform:translateY(4px) scale(.97); transform-origin:bottom left;
@@ -1395,7 +1400,7 @@ a.act:hover, button.act.reply:hover, button.act.reply:active { color:var(--maroo
 }
 .rp-menu-dd button {
   display:flex; align-items:center; gap:12px; width:100%; text-align:left; background:none; border:none; cursor:pointer;
-  border-radius:9px; font-family:inherit; font-size:14.5px; font-weight:700; color:var(--ink); padding:10px 12px;
+  border-radius:12px; font-family:inherit; font-size:14.5px; font-weight:700; color:var(--ink); padding:10px 12px;
   transition:background .1s ease;
 }
 .rp-menu-dd button svg { width:18px; height:18px; flex:none; }
@@ -1416,7 +1421,7 @@ a.act:hover, button.act.reply:hover, button.act.reply:active { color:var(--maroo
   }
   .rp-menu-dd {
     position:fixed; left:0; right:0; bottom:0; top:auto; z-index:999;
-    min-width:0; width:100%; max-width:100%; border-radius:20px 20px 0 0; border:none;
+    min-width:0; width:100%; max-width:100%; border-radius:24px 24px 0 0; border:none;
     padding:6px 8px calc(8px + env(safe-area-inset-bottom, 0px));
     transform:translateY(100%); transform-origin:bottom center;
     transition:transform .2s cubic-bezier(.2,.8,.2,1), opacity .2s ease, visibility 0s linear .2s;
@@ -1470,7 +1475,7 @@ body.oc-sheet-open { overflow:hidden; }
 .op-relevant-wrap { position:relative; }
 .op-relevant-menu {
   position:absolute; top:calc(100% + 6px); left:0; z-index:20;
-  background:var(--cream-card); border:1px solid var(--line); border-radius:12px;
+  background:var(--cream-card); border:1px solid var(--line); border-radius:16px;
   box-shadow:0 4px 18px rgba(0,0,0,.18); padding:6px; min-width:160px;
   flex-direction:column; gap:2px;
 }
@@ -1478,7 +1483,7 @@ body.oc-sheet-open { overflow:hidden; }
 .op-relevant-menu:not([hidden]) { display:flex; }
 .op-relevant-opt {
   display:block; width:100%; text-align:left; background:none; border:none; cursor:pointer;
-  font:inherit; font-size:14px; font-weight:600; color:var(--ink); padding:9px 10px; border-radius:8px;
+  font:inherit; font-size:14px; font-weight:600; color:var(--ink); padding:9px 10px; border-radius:12px;
 }
 .op-relevant-opt:hover { background:var(--hover-bg, rgba(127,127,127,.12)); }
 .op-relevant-opt.active { color:var(--maroon); }
@@ -1486,7 +1491,7 @@ body.oc-sheet-open { overflow:hidden; }
 
 /* ── quoted-post embed (shown inside a quote post's card) ── */
 .qp-embed {
-  border:1px solid var(--line); border-radius:var(--r-lg,16px); padding:10px 12px; margin-top:8px; cursor:pointer;
+  border:1px solid var(--line); border-radius:var(--r-lg,24px); padding:10px 12px; margin-top:8px; cursor:pointer;
   transition:background-color .12s ease, border-color .12s ease;
 }
 .qp-embed:hover { background:var(--hover-bg); border-color:var(--muted); }
@@ -1500,7 +1505,7 @@ body.oc-sheet-open { overflow:hidden; }
    card shape as the qp-embed above: full-bleed cover image with a
    small pill overlay, bold title + a couple lines of excerpt. ── */
 .article-embed {
-  border:1px solid var(--line); border-radius:var(--r-lg,16px); margin-top:8px; cursor:pointer;
+  border:1px solid var(--line); border-radius:var(--r-lg,24px); margin-top:8px; cursor:pointer;
   overflow:hidden; transition:background-color .12s ease, border-color .12s ease;
 }
 .article-embed:hover { border-color:var(--muted); }
@@ -1574,7 +1579,7 @@ body.oc-sheet-open { overflow:hidden; }
 .ga-btn.ga-restricted { color:var(--muted); background:var(--hover-bg); }
 .ga-dd {
   position:absolute; left:0; top:calc(100% + 4px); z-index:40; width:280px; max-width:calc(100vw - 32px);
-  background:var(--cream-card); border:1px solid var(--line); border-radius:14px;
+  background:var(--cream-card); border:1px solid var(--line); border-radius:18px;
   box-shadow:var(--shadow-pop); overflow:hidden; padding:6px;
   opacity:0; visibility:hidden; pointer-events:none;
   transform:translateY(-4px) scale(.97); transform-origin:top left;
@@ -1587,7 +1592,7 @@ body.oc-sheet-open { overflow:hidden; }
 .ga-dd-title { font-size:15px; font-weight:800; color:var(--ink); padding:8px 10px 6px; }
 .ga-opt {
   display:flex; align-items:center; gap:12px; width:100%; text-align:left; background:none; border:none; cursor:pointer;
-  border-radius:9px; font-family:inherit; padding:9px 10px; transition:background .1s ease;
+  border-radius:12px; font-family:inherit; padding:9px 10px; transition:background .1s ease;
 }
 .ga-opt:hover { background:var(--hover-bg); }
 .ga-opt-icon { width:19px; height:19px; flex:none; color:var(--maroon); }
@@ -1602,7 +1607,7 @@ body.oc-sheet-open { overflow:hidden; }
   }
   .ga-dd {
     position:fixed; left:0; right:0; bottom:0; top:auto; z-index:999;
-    width:100%; max-width:100%; border-radius:20px 20px 0 0; border:none;
+    width:100%; max-width:100%; border-radius:24px 24px 0 0; border:none;
     padding:6px 8px calc(8px + env(safe-area-inset-bottom, 0px));
     transform:translateY(100%); transform-origin:bottom center;
     transition:transform .2s cubic-bezier(.2,.8,.2,1), opacity .2s ease, visibility 0s linear .2s;
@@ -1749,7 +1754,7 @@ body.oc-sheet-open { overflow:hidden; }
 .gif-search-row input { border:none; background:none; padding:0; font-size:14px; }
 .gif-search-row input:focus { box-shadow:none; }
 .gif-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; max-height:420px; overflow-y:auto; padding:0 16px; }
-.gif-item { padding:0; border:none; border-radius:12px; overflow:hidden; cursor:pointer; background:var(--hover-bg); aspect-ratio:1/1; }
+.gif-item { padding:0; border:none; border-radius:16px; overflow:hidden; cursor:pointer; background:var(--hover-bg); aspect-ratio:1/1; }
 .gif-item img { width:100%; height:100%; object-fit:cover; display:block; }
 .gif-item:hover { outline:2px solid var(--maroon); outline-offset:-2px; }
 .gif-attrib { font-size:11px; color:var(--muted); text-align:center; padding:10px 0 0; }
@@ -1761,7 +1766,7 @@ body.oc-sheet-open { overflow:hidden; }
 .modal.emoji-modal { width:420px; max-width:92vw; padding-bottom:14px; }
 .cx-emoji-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; max-height:320px; overflow-y:auto; padding:2px 16px 0; }
 .cx-emoji-empty { grid-column:1/-1; text-align:center; font-size:12.5px; color:var(--muted); padding:14px 0; }
-.cx-emoji-item { background:none; border:none; cursor:pointer; font-size:22px; padding:7px; border-radius:10px; line-height:1; }
+.cx-emoji-item { background:none; border:none; cursor:pointer; font-size:22px; padding:7px; border-radius:14px; line-height:1; }
 .cx-emoji-item:hover { background:var(--hover-bg); }
 
 /* ── COMPOSER EXTRAS: poll builder — rounded card instead of a flat
@@ -1769,7 +1774,7 @@ body.oc-sheet-open { overflow:hidden; }
    inside the composer, and a per-option remove (×) button once a
    third/fourth choice has been added (previously the only way to
    drop back to 2 options was scrapping the whole poll). ── */
-.cx-poll { border:1px solid var(--line); border-radius:16px; padding:14px; margin:12px 0 0; background:var(--hover-bg); }
+.cx-poll { border:1px solid var(--line); border-radius:20px; padding:14px; margin:12px 0 0; background:var(--hover-bg); }
 .cx-poll-opts { display:flex; flex-direction:column; gap:8px; }
 .cx-poll-opt-row { display:flex; align-items:center; gap:8px; }
 .cx-poll-opt { font-size:14px; padding:10px 14px; border-radius:999px; flex:1; min-width:0; }
@@ -1904,7 +1909,7 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
 .skel-card { display:flex; gap:12px; padding:16px; border-bottom:1px solid var(--line); }
 .skel-avatar { width:40px; height:40px; border-radius:50%; background:var(--line); flex:none; animation:skel-pulse 1.3s ease-in-out infinite; }
 .skel-lines { flex:1; display:flex; flex-direction:column; gap:9px; padding-top:3px; }
-.skel-line { height:11px; border-radius:6px; background:var(--line); animation:skel-pulse 1.3s ease-in-out infinite; }
+.skel-line { height:11px; border-radius:10px; background:var(--line); animation:skel-pulse 1.3s ease-in-out infinite; }
 .skel-line.w20 { width:20%; }
 .skel-line.w40 { width:40%; }
 .skel-line.w60 { width:60%; }
@@ -1916,8 +1921,15 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
 
 .modal-bg { display:none; position:fixed; inset:0; background:rgba(91,112,131,0.4); z-index:1000; align-items:center; justify-content:center; }
 .modal-bg.open { display:flex; animation:oc-backdrop-in .15s ease both; }
+/* GIF and emoji pickers are sub-panels of whichever composer opened
+   them (home inline box, global "pen" compose modal, reply modal) —
+   they must always paint above that composer's own .modal-bg, so
+   they get a dedicated higher layer instead of relying purely on DOM
+   order (see the re-append-on-open comment in openGifPicker() /
+   toggleEmojiPicker() in common.js for the other half of this fix). */
+#gif-modal-bg, #emoji-modal-bg { z-index:1100; }
 @keyframes oc-backdrop-in { from { background:rgba(91,112,131,0); } to { background:rgba(91,112,131,.4); } }
-.modal { background:var(--cream-card); border:none; border-radius:20px; padding:0 0 16px; width:340px; max-width:92vw; position:relative; box-shadow:var(--shadow-pop); overflow:hidden; animation:oc-modal-in .18s cubic-bezier(.2,.8,.2,1) both; }
+.modal { background:var(--cream-card); border:none; border-radius:24px; padding:0 0 16px; width:340px; max-width:92vw; position:relative; box-shadow:var(--shadow-pop); overflow:hidden; animation:oc-modal-in .18s cubic-bezier(.2,.8,.2,1) both; }
 @keyframes oc-modal-in { from { opacity:0; transform:translateY(10px) scale(.97); } to { opacity:1; transform:translateY(0) scale(1); } }
 .modal h2 { font-family:inherit; font-size:17px; color:var(--ink); background:none; margin-bottom:12px; padding:16px 16px 0; border-bottom:none; font-weight:800; }
 
@@ -2117,7 +2129,7 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
   #m-tabbar a {
     flex:1; display:flex; align-items:center; justify-content:center;
     position:relative; overflow:hidden;
-    height:40px; padding:0; border-radius:12px;
+    height:40px; padding:0; border-radius:16px;
     color:var(--muted); text-decoration:none;
     transition:color .15s ease, background-color .15s ease;
   }
@@ -2225,7 +2237,7 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
   .m-drawer-menu a, .m-drawer-menu button {
     display:flex; align-items:center; gap:16px; width:100%; text-align:left;
     font-family:inherit; font-size:16.5px; font-weight:600; color:var(--ink);
-    background:none; border:none; padding:12px 10px; cursor:pointer; text-decoration:none; border-radius:14px;
+    background:none; border:none; padding:12px 10px; cursor:pointer; text-decoration:none; border-radius:18px;
     transition:background-color .12s ease;
   }
   .m-drawer-menu a:hover, .m-drawer-menu button:hover { background:var(--hover-bg); text-decoration:none; }
@@ -2323,7 +2335,7 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
 .auth-input-wrap { position:relative; }
 .auth-input-wrap .auth-fi { position:absolute; left:12px; top:50%; transform:translateY(-50%); width:18px; height:18px; color:var(--muted); pointer-events:none; }
 .auth-input-wrap .auth-fi svg { width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
-.auth-input-wrap input { padding-left:38px; }
+.auth-input-wrap input, .auth-input-wrap select { padding-left:38px; }
 .auth-input-wrap input[type="password"], .auth-input-wrap input[type="text"].has-pw-toggle { padding-right:40px; }
 .auth-input-wrap:focus-within .auth-fi { color:var(--maroon); }
 
@@ -2630,7 +2642,7 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 /* End-to-end encryption notice — a slim, dismissible-feeling pill
    (WhatsApp/Signal convention) sitting above the first message
    rather than a persistent banner that eats space forever. */
-.chat-e2e-banner { display:flex; align-items:center; justify-content:center; gap:6px; text-align:center; font-size:12px; line-height:1.35; color:var(--muted); background:var(--hover-bg); border-radius:12px; padding:8px 14px; margin:0 auto 14px; max-width:90%; }
+.chat-e2e-banner { display:flex; align-items:center; justify-content:center; gap:6px; text-align:center; font-size:12px; line-height:1.35; color:var(--muted); background:var(--hover-bg); border-radius:16px; padding:8px 14px; margin:0 auto 14px; max-width:90%; }
 .chat-e2e-banner svg { width:13px; height:13px; flex:none; }
 .chat-e2e-banner.pending { opacity:.8; }
 
@@ -2643,7 +2655,7 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .msg-row.g-start { margin-top:14px; }
 .chat-daydivider + .msg-row.g-start { margin-top:0; }
 .msg-row.mine { justify-content:flex-end; }
-.msg-bubble { max-width:72%; padding:9px 14px; border-radius:18px; font-size:14.5px; line-height:1.4; white-space:pre-wrap; word-wrap:break-word; box-shadow:0 1px 1px rgba(0,0,0,.04); }
+.msg-bubble { max-width:72%; padding:9px 14px; border-radius:22px; font-size:14.5px; line-height:1.4; white-space:pre-wrap; word-wrap:break-word; box-shadow:0 1px 1px rgba(0,0,0,.04); }
 .msg-row.mine .msg-bubble { background:var(--maroon); color:#fff; border-bottom-right-radius:18px; }
 .msg-row.theirs .msg-bubble { background:var(--hover-bg); color:var(--ink); border-bottom-left-radius:18px; }
 .msg-row.mine.g-end .msg-bubble { border-bottom-right-radius:4px; }
@@ -2682,7 +2694,7 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 /* font-size:16px is load-bearing, not decorative — anything smaller
    makes iOS Safari zoom the whole page in on focus, which is what
    made the composer look like it needed scrolling to reach. */
-.chat-composer textarea { flex:1; height:40px; max-height:120px; resize:none; border-radius:20px; padding:10px 16px; overflow-y:auto; transition:height .08s ease; font-size:16px; }
+.chat-composer textarea { flex:1; height:40px; max-height:120px; resize:none; border-radius:24px; padding:10px 16px; overflow-y:auto; transition:height .08s ease; font-size:16px; }
 .chat-send-btn { flex:none; width:38px; height:38px; border-radius:50%; border:none; background:var(--maroon); color:#fff; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; transition:background .12s ease, opacity .1s ease, transform .1s ease; }
 .chat-send-btn svg { width:17px; height:17px; margin-left:-1px; }
 .chat-send-btn:hover { background:var(--maroon-dk); }
@@ -2973,7 +2985,7 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
    ═══════════════════════════════════════════════════════════════ */
 .ttv {
   position:relative; display:block; width:max-content; max-width:100%;
-  border-radius:16px; overflow:hidden; background:#000; outline:none;
+  border-radius:20px; overflow:hidden; background:#000; outline:none;
   line-height:0; -webkit-tap-highlight-color:transparent;
 }
 .ttv:focus-visible { box-shadow:0 0 0 2px var(--maroon); }
@@ -3046,7 +3058,7 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .ttv-progress-preview {
   position:absolute; bottom:16px; transform:translateX(-50%);
   background:rgba(15,20,25,.9); color:#fff; font-size:12px; font-weight:700;
-  padding:3px 6px; border-radius:4px; white-space:nowrap; pointer-events:none;
+  padding:3px 6px; border-radius:6px; white-space:nowrap; pointer-events:none;
   opacity:0; transition:opacity .1s;
 }
 .ttv-progress:hover .ttv-progress-preview, .ttv-progress.ttv-dragging .ttv-progress-preview { opacity:1; }
@@ -3081,14 +3093,14 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 
 .ttv-menu {
   display:none; position:absolute; right:8px; bottom:44px; z-index:6;
-  background:rgba(21,24,28,.96); backdrop-filter:blur(6px); border-radius:12px;
+  background:rgba(21,24,28,.96); backdrop-filter:blur(6px); border-radius:16px;
   min-width:120px; padding:6px; box-shadow:0 4px 18px rgba(0,0,0,.4);
 }
 .ttv.ttv-menu-open .ttv-menu { display:block; }
 .ttv-menu-opt {
   display:flex; align-items:center; justify-content:space-between; gap:10px;
   width:100%; background:none; border:none; color:#fff; font-size:13px; font-weight:600;
-  padding:7px 10px; border-radius:8px; cursor:pointer; text-align:left; font-family:inherit;
+  padding:7px 10px; border-radius:12px; cursor:pointer; text-align:left; font-family:inherit;
 }
 .ttv-menu-opt:hover { background:rgba(255,255,255,.12); }
 .ttv-menu-opt .ck { width:14px; height:14px; opacity:0; }
@@ -3130,7 +3142,7 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 }
 .cm-modal-bg.open { display:flex; }
 .cm-modal {
-  width:100%; max-width:520px; background:#000; border-radius:var(--r-lg,16px);
+  width:100%; max-width:520px; background:#000; border-radius:var(--r-lg,24px);
   overflow:hidden; display:flex; flex-direction:column;
 }
 .cm-modal-hdr {
@@ -3168,7 +3180,7 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
   border:1px solid rgba(255,255,255,.9);
 }
 .cm-frame-square { border-radius:50%; }
-.cm-frame-wide { border-radius:6px; }
+.cm-frame-wide { border-radius:10px; }
 .cm-controls {
   display:flex; align-items:center; gap:10px; padding:14px 20px 18px; background:#000;
 }

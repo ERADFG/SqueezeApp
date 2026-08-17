@@ -215,17 +215,39 @@ function togglePwVis(inputId, btn) {
 // there's no rate limit to hit no matter how many people sign up.
 // This requires "Confirm email" to be OFF in the Supabase dashboard
 // (Authentication → Providers → Email) — see the README.
+const GENDER_VALUES = ['male', 'female', 'other', 'not_specified'];
+
 async function doSignUp(e) {
   e?.preventDefault();
   const email    = document.getElementById('su-email').value.trim();
   const username = document.getElementById('su-username').value.trim();
   const password = document.getElementById('su-password').value;
+  // Age/gender fields only exist on the signup form (not shared with
+  // login.html), so guard for their absence rather than assuming.
+  const ageEl    = document.getElementById('su-age');
+  const genderEl = document.getElementById('su-gender');
+  const ageRaw   = ageEl ? ageEl.value.trim() : '';
+  const age      = ageRaw === '' ? NaN : Number(ageRaw);
+  const gender   = genderEl ? genderEl.value : '';
   const btn = document.getElementById('su-btn');
   const errEl = document.getElementById('su-err');
   clearErr(errEl);
 
   if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
     showErr(errEl, 'Username must be 3–20 characters: letters, numbers, underscore only.');
+    return;
+  }
+  if (ageEl) {
+    // Number.isInteger rejects "18.5" etc; the range check keeps age
+    // sane (120 is the stated hard cap, 13 rejects 0/negative/typo'd
+    // values) even though a select/number spinner mostly self-limits.
+    if (!Number.isInteger(age) || age < 13 || age > 120) {
+      showErr(errEl, 'Enter a valid age between 13 and 120.');
+      return;
+    }
+  }
+  if (genderEl && !GENDER_VALUES.includes(gender)) {
+    showErr(errEl, 'Please select a gender option.');
     return;
   }
   if (password.length < 8) {
@@ -244,7 +266,21 @@ async function doSignUp(e) {
 
     if (data.session) {
       // The normal, expected path — account created and logged in
-      // immediately, nothing further needed.
+      // immediately. The handle_new_user() DB trigger has already
+      // created the profiles row by this point (that's how the
+      // session/profile exist at all), so age/gender go on as a
+      // follow-up UPDATE rather than at insert time — this also
+      // means it's covered by the ordinary "update your own profile"
+      // RLS policy instead of needing a new one. Best-effort: a
+      // failure here shouldn't block the person from being signed up
+      // and logged in, so it's logged, not surfaced as an error.
+      if (ageEl || genderEl) {
+        const patch = {};
+        if (ageEl) patch.age = age;
+        if (genderEl) patch.gender = gender;
+        const { error: profileErr } = await sb.from('profiles').update(patch).eq('id', data.user.id);
+        if (profileErr) console.error('Failed to save age/gender:', profileErr);
+      }
       location.href = 'index.html';
       return;
     }

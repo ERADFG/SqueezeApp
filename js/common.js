@@ -4502,6 +4502,18 @@ function openGifPicker(prefix) {
   if (!requireLogin()) return;
   gifPickerTarget = prefix;
   const el = gifModalEl();
+  // Re-append every time, not just on first creation: this picker is
+  // a single lazily-created element shared by every composer (home
+  // inline box, global "pen" compose modal, reply modal). Whichever
+  // composer opened it FIRST fixes its position in the DOM — so if
+  // it was ever opened from the home composer before the pen/compose
+  // modal existed, it would sit earlier in <body> than that modal and
+  // render silently behind it (same z-index, DOM order decides who
+  // paints on top) the next time you opened it from there. Moving it
+  // to the end of <body> on every open guarantees it's always the
+  // topmost layer no matter which composer asked for it or in what
+  // order they were first used.
+  document.body.appendChild(el);
   if (el.classList.contains('open')) return;
   el.classList.add('open');
   lockScroll();
@@ -4649,6 +4661,10 @@ function renderEmojiGrid(filter) {
 function toggleEmojiPicker(prefix, anchorBtn) {
   if (!requireLogin()) return;
   const el = emojiModalEl();
+  // Same re-append-on-open fix as openGifPicker() above — guarantees
+  // this shared picker always paints above whichever composer opened
+  // it, regardless of which one created it first.
+  document.body.appendChild(el);
   if (el.classList.contains('open') && emojiPickerTarget === prefix) { closeEmojiPicker(); return; }
   emojiPickerTarget = prefix;
   el.classList.add('open');

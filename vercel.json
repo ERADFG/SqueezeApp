@@ -88,6 +88,17 @@
     { "src": "^/ja/login$",           "dest": "/ja/login.html" },
     { "src": "^/ja/signup$",          "dest": "/ja/signup.html" },
     { "src": "^/ja/communities$",     "dest": "/ja/communities.html" },
+
+    { "src": "^/ru$",                 "dest": "/ru/index.html" },
+    { "src": "^/ru/home$",            "dest": "/ru/index.html" },
+    { "src": "^/ru/rules$",           "dest": "/ru/rules.html" },
+    { "src": "^/ru/about$",           "dest": "/ru/about.html" },
+    { "src": "^/ru/contact$",         "dest": "/ru/contact.html" },
+    { "src": "^/ru/privacy$",         "dest": "/ru/privacy.html" },
+    { "src": "^/ru/terms$",           "dest": "/ru/terms.html" },
+    { "src": "^/ru/login$",           "dest": "/ru/login.html" },
+    { "src": "^/ru/signup$",          "dest": "/ru/signup.html" },
+    { "src": "^/ru/communities$",     "dest": "/ru/communities.html" },
     { "src": "^/communities/(?<slug>[^/]+)$", "dest": "/api/prerender?type=community&slug=$slug" },
 
     { "src": "^/lists$",              "dest": "/lists.html" },

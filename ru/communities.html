@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Сообщества — InteractInk</title>
+<meta name="description" content="Открывайте и вступайте в сообщества на InteractInk.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="InteractInk">
+<meta property="og:title" content="Сообщества — InteractInk">
+<meta property="og:description" content="Открывайте и вступайте в сообщества на InteractInk.">
+<meta property="og:image" content="/img/logo-light.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Сообщества — InteractInk">
+<meta name="twitter:description" content="Открывайте и вступайте в сообщества на InteractInk.">
+<meta name="twitter:image" content="/img/logo-light.png">
+<link rel="canonical" href="https://interactink.vercel.app/ru/communities">
+<meta property="og:url" content="https://interactink.vercel.app/ru/communities">
+<link rel="alternate" hreflang="en" href="https://interactink.vercel.app/communities">
+<link rel="alternate" hreflang="es" href="https://interactink.vercel.app/es/communities">
+<link rel="alternate" hreflang="fr" href="https://interactink.vercel.app/fr/communities">
+<link rel="alternate" hreflang="de" href="https://interactink.vercel.app/de/communities">
+<link rel="alternate" hreflang="pt" href="https://interactink.vercel.app/pt/communities">
+<link rel="alternate" hreflang="ja" href="https://interactink.vercel.app/ja/communities">
+<link rel="alternate" hreflang="ru" href="https://interactink.vercel.app/ru/communities">
+<link rel="alternate" hreflang="x-default" href="https://interactink.vercel.app/communities">
+<base href="/">
+<link rel="icon" type="image/png" href="/img/favicon-32.png" sizes="32x32" id="fav32">
+<link rel="icon" type="image/png" href="/img/favicon.png" sizes="512x512" id="fav512">
+<link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+<meta name="theme-color" content="#1185FE">
+<script>(function(){try{var t=localStorage.getItem('oc-theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}if(t&&t!=="light"){document.documentElement.setAttribute('data-theme',t);}var a=localStorage.getItem('oc-accent');if(a&&a!=="green")document.documentElement.setAttribute('data-accent',a);}catch(e){}})();</script>
+<link rel="preconnect" href="https://pyitivzoqleukuclajrf.supabase.co">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body data-page="communities">
+
+<div class="xshell">
+  <div id="hdr">
+    <div class="sb-top">
+      <a class="logo" href="/ru">
+        <span class="badge">
+          <img class="logo-mark logo-mark-light" src="/img/logo-light.png" alt="InteractInk logo" width="36" height="36">
+          <img class="logo-mark logo-mark-dark" src="/img/logo-dark.png" alt="InteractInk logo" width="36" height="36">
+        </span>
+        <span class="wordmark">Interact<em>Ink</em></span>
+      </a>
+      <nav id="side-nav"></nav>
+    </div>
+    <span id="auth-area" class="auth-area"></span>
+  </div>
+
+  <div id="main">
+    <div id="feed">
+      <div class="sec-bar">
+        <h1>Сообщества</h1>
+        <a href="#" class="back" onclick="openCreateCommunityModal();return false;">+ Создать</a>
+      </div>
+
+      <div class="xsearch" id="comm-searchbox" style="margin:12px 16px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+        <input id="comm-search" placeholder="Поиск сообществ" autocomplete="off">
+      </div>
+
+      <div id="board-hdr">
+        <div class="xtabs" id="communities-tabs">
+          <button class="xtab active" id="ctab-all" onclick="switchCommunitiesTab('all');return false;">Все</button>
+          <button class="xtab" id="ctab-mine" onclick="switchCommunitiesTab('mine');return false;">Мои</button>
+        </div>
+      </div>
+
+      <div id="communities-list"><span class="spinner">Загрузка&hellip;</span></div>
+
+      <h2 class="comm-guide-title">Руководство по сообществам</h2>
+      <div class="comm-about comm-guide">
+        <details class="comm-guide-item" name="comm-guide">
+          <summary>Что такое сообщества?</summary>
+          <div class="comm-guide-body">
+            <p>Сообщество — это небольшая доска внутри InteractInk, посвящённая конкретной теме, фандому, хобби или интересу — сфокусированное пространство вместо общего потока главной ленты. У каждого сообщества своя лента, состоящая только из постов его участников. Так что если вы хотите внимательно следить за одной темой, а не листать всё остальное, вступление в сообщество — правильный путь. Просматривать посты сообщества может любой; чтобы вступить, постить или отвечать, нужен бесплатный аккаунт.</p>
+          </div>
+        </details>
+
+        <details class="comm-guide-item" name="comm-guide">
+          <summary>Как вступить в сообщество</summary>
+          <div class="comm-guide-body">
+            <p>Найдите или пролистайте список выше, чтобы подобрать что-то по вашим интересам, и нажмите <b>Вступить</b>. Как только вы станете участником, посты сообщества будут появляться при посещении его страницы, и вы сможете постить и отвечать там так же, как и везде на InteractInk. Передумали? Выйти так же просто — нет ни периода ожидания, ни штрафа за вступление и выход, если ваши интересы меняются.</p>
+          </div>
+        </details>
+
+        <details class="comm-guide-item" name="comm-guide">
+          <summary>Создать своё</summary>
+          <div class="comm-guide-body">
+            <p>Не нашли сообщество по своим интересам? Используйте кнопку <b>+ Создать</b> выше, чтобы начать своё. Вы выбираете название и краткое описание того, о чём оно, — чем понятнее описание, тем легче нужным людям найти его позже. После создания его сможет найти и вступить в него любой на этой странице, как и в любое другое сообщество. Создание сообщества делает вас ответственным за то, во что оно превратится, — поэтому стоит потратить минуту на размышление о том, каким оно должно быть, прежде чем публиковать первый пост.</p>
+          </div>
+        </details>
+
+        <details class="comm-guide-item" name="comm-guide">
+          <summary>Как найти нужное</summary>
+          <div class="comm-guide-body">
+            <p>Используйте поле поиска выше, чтобы искать по названию или описанию, если вы уже примерно знаете, что ищете. В противном случае вкладка <b>Все</b> перечисляет все сообщества, начиная с самых популярных, — удобно, чтобы просмотреть, что уже существует, прежде чем создавать новое. Вкладка <b>Мои</b> показывает только те сообщества, в которых состоит ваш аккаунт, чтобы быстро вернуться к тем, за которыми вы действительно следите.</p>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <div id="sidebar">
+      <div class="xsearch">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+        <input id="side-search" placeholder="Поиск по InteractInk">
+      </div>
+      <div class="who-box" id="who-to-follow"></div>
+      <div id="ftr" style="padding:0;">
+        [<a href="/ru">&larr; Назад на главную</a>] &nbsp;&mdash;&nbsp; <a href="/communities">English</a> &mdash; <a href="/es/communities">Español</a> &mdash; <a href="/fr/communities">Français</a> &mdash; <a href="/de/communities">Deutsch</a> &mdash; <a href="/pt/communities">Português</a> &mdash; <a href="/ja/communities">日本語</a>
+        <br><span style="font-size:10px;color:var(--muted);">&copy; 2026 InteractInk &mdash; <a href="/ru/about">О нас</a> &mdash; <a href="/ru/contact">Контакты</a> &mdash; <a href="/ru/privacy">Конфиденциальность</a> &mdash; <a href="/ru/terms">Условия</a></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+<script src="/js/supabase-config.js" defer></script>
+<script src="/js/i18n.js" defer></script>
+<script src="/js/common.js" defer></script>
+<script src="/js/video-player.js" defer></script>
+<script src="/js/crop-modal.js" defer></script>
+<script src="/js/auth.js" defer></script>
+<script src="/js/communities.js" defer></script>
+</body>
+</html>

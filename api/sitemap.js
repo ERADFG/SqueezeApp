@@ -29,7 +29,7 @@
 // sitemap-<n>.xml files (Google's limit is 50,000 URLs / 50MB per
 // file) — ask for that when the cap starts being an issue.
 //
-// Also includes every localized (es/fr/de/pt/ja) copy of the 9
+// Also includes every localized (es/fr/de/pt/ja/ru) copy of the 9
 // static pages that ship one, each carrying the same hreflang
 // alternates already declared in that page's own <head> (see
 // localizedStaticUrls() below) — so a crawler can discover /es/about,
@@ -106,7 +106,7 @@ function urlTag(loc, lastmod, changefreq, priority, alternates) {
 
 // ── LOCALIZED STATIC PAGES ──
 // Every one of these 9 pages already ships with its own <link
-// rel="alternate" hreflang="..."> block in <head> (en + es/fr/de/pt/ja
+// rel="alternate" hreflang="..."> block in <head> (en + es/fr/de/pt/ja/ru
 // + x-default) — see e.g. about.html's <head>. This mirrors that same
 // set of URLs into the sitemap with matching xhtml:link alternates, so
 // crawlers get the language cluster from the sitemap itself instead of
@@ -115,7 +115,7 @@ function urlTag(loc, lastmod, changefreq, priority, alternates) {
 // reach). `path: ''` is the home page, whose locale URLs are bare
 // "/es" (no trailing segment) per vercel.json's "^/es$" route rather
 // than "/es/" — every href built below follows that same shape.
-const LOCALES = ['es', 'fr', 'de', 'pt', 'ja'];
+const LOCALES = ['es', 'fr', 'de', 'pt', 'ja', 'ru'];
 const STATIC_PAGES = [
   { path: '', file: 'index.html', changefreq: 'hourly', priority: '1.0' },
   { path: 'communities', file: 'communities.html', changefreq: 'daily', priority: '0.5' },
@@ -174,7 +174,7 @@ module.exports = async function handler(req, res) {
   }
 
   const now = Date.now();
-  // 9 pages x (1 English + 5 locales) = 54 URLs, each carrying the
+  // 9 pages x (1 English + 6 locales) = 63 URLs, each carrying the
   // full hreflang alternates set.
   const staticUrls = [
     ...localizedStaticUrls(origin),
