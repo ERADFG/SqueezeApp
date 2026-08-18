@@ -153,7 +153,7 @@ async function adminSetVerification(userId, type) {
     const { error } = await sb.rpc('admin_verify_user', {
       target_user_id: userId,
       make_verified: makeVerified,
-      verification_type: makeVerified ? type : null,
+      p_verification_type: makeVerified ? type : null,
     });
     if (error) throw error;
     toast(makeVerified ? `User verified (${type}).` : 'Verification removed.');

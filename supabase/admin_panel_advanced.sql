@@ -87,8 +87,18 @@ begin
 end $$;
 
 drop function if exists public.admin_verify_user(uuid, boolean);
+-- Also drop the 3-arg version in case it already exists with a
+-- differently-named third parameter (e.g. "verification_type" instead
+-- of "p_verification_type") — create or replace cannot rename params.
+drop function if exists public.admin_verify_user(uuid, boolean, text);
 
-create or replace function public.admin_verify_user(target_user_id uuid, make_verified boolean, verification_type text default 'purple')
+-- The third parameter is named p_verification_type (not just
+-- verification_type) on purpose — plpgsql can't tell a bare
+-- parameter name apart from a same-named column inside the
+-- UPDATE below, and silently picks one, which is exactly the
+-- "column reference verification_type is ambiguous" error this
+-- avoids.
+create or replace function public.admin_verify_user(target_user_id uuid, make_verified boolean, p_verification_type text default 'purple')
 returns void
 language plpgsql
 security definer
@@ -98,15 +108,17 @@ begin
   if not public.is_admin() then
     raise exception 'not authorized';
   end if;
-  if make_verified and verification_type not in ('blue', 'gold', 'purple') then
-    raise exception 'invalid verification_type: %', verification_type;
+  if make_verified and p_verification_type not in ('blue', 'gold', 'purple') then
+    raise exception 'invalid verification_type: %', p_verification_type;
   end if;
   update public.profiles
     set verified = make_verified,
-        verification_type = case when make_verified then verification_type else null end
+        verification_type = case when make_verified then p_verification_type else null end
     where id = target_user_id;
 end;
 $$;
+
+grant execute on function public.admin_verify_user(uuid, boolean, text) to authenticated;
 
 -- until = null means an indefinite/permanent suspension (lifted only
 -- by an explicit unsuspend). A non-null timestamp auto-lifts itself —
@@ -167,7 +179,7 @@ begin
 end;
 $$;
 
-grant execute on function public.admin_verify_user(uuid, boolean)            to authenticated;
+grant execute on function public.admin_verify_user(uuid, boolean, text)      to authenticated;
 grant execute on function public.admin_suspend_user(uuid, text, timestamptz) to authenticated;
 grant execute on function public.admin_ban_user(uuid, boolean)               to authenticated;
 grant execute on function public.admin_unsuspend_user(uuid)                  to authenticated;
