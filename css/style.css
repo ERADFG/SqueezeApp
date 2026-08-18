@@ -2244,6 +2244,17 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
   html.oc-drawer-open .search-topbar,
   html.oc-drawer-open .profile-back-btn,
   html.oc-drawer-open .profile-hdr-actions,
+  /* Same bug again on the Search/Explore page (search.html), including
+     the community-scoped view (search.html?community=<slug>) reached
+     from a community's search icon: #search-tabs — the Explore/
+     Trending/News/Sports/Entertainment (or Posts/People) row rendered
+     by renderTabs() in search.js — sits directly below the now-hidden
+     .search-topbar and isn't sticky/backdrop-filter itself, but the
+     same mobile-browser compositing quirk pulls it into the same
+     leaked-above-the-drawer layer as its sticky neighbor. Left out of
+     this list, it's exactly the "tab row bleeding through on top of
+     the open menu" bug from a community search page. */
+  html.oc-drawer-open #search-tabs,
   /* Same bug again on the Followers/Following page: its tab bar
      (#fl-tabs) only carries the plain .profile-tabs class, not
      .sec-bar like the profile page's version does, so it was left

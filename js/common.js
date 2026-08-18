@@ -38,6 +38,49 @@
   } catch (e) { /* progressive enhancement only — never let this block the page */ }
 })();
 
+// ── PRERENDER-ACTIVATION REPAINT FIX — the speculation-rules prerender
+// above (and, separately, the browser's own back/forward cache) can
+// finish a page's full layout while it's sitting in a hidden
+// background tab. On some Chrome/WebView builds, elements that combine
+// `backdrop-filter` with `position:sticky` or `position:fixed` — here
+// that's #board-hdr (home's "For you/Following" bar), .sec-bar and
+// .search-topbar (their equivalents elsewhere), and #m-topbar (the
+// mobile hamburger/logo bar, injected by renderMobileChrome() below)
+// — get composited into a layer while hidden that never gets
+// re-painted once the tab is swapped to the front, so they show up as
+// a blank gap where the bar should be until something else forces a
+// repaint (a scroll, a resize, DevTools open/close). Since it's the
+// *contents* of the compositing layer that are stale, not the
+// element's box (it still takes up its normal space — hence the gap,
+// not a collapse), a class toggle that briefly takes the element out
+// of layout and back in forces the browser to recompute that layer
+// from scratch. Wired to every event that can plausibly be the first
+// paint after a hidden-tab activation: 'prerenderingchange' (fires
+// the instant a prerendered page is swapped in), 'pageshow' with
+// event.persisted (bfcache restore — doesn't fire a fresh
+// DOMContentLoaded, so nothing above would otherwise re-run), and
+// 'visibilitychange' (belt-and-suspenders for browsers that support
+// neither of the above signals cleanly).
+function repaintStickyChrome() {
+  ['board-hdr', 'm-topbar'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.display = 'none';
+    void el.offsetHeight; // force the browser to actually drop the old layer here
+    el.style.display = '';
+  });
+  document.querySelectorAll('.sec-bar, .search-topbar').forEach(el => {
+    el.style.display = 'none';
+    void el.offsetHeight;
+    el.style.display = '';
+  });
+}
+if ('prerendering' in document) {
+  document.addEventListener('prerenderingchange', repaintStickyChrome, { once: true });
+}
+window.addEventListener('pageshow', (e) => { if (e.persisted) repaintStickyChrome(); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') repaintStickyChrome(); });
+
 // ── URLS — every actual `<a href>` / `location.href = ...` in the
 // app is built through the functions below, and they now build the
 // pretty Twitter/X-style path directly (/marc, /marc/status/<id>,
