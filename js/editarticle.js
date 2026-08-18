@@ -267,7 +267,7 @@ async function submitArticle() {
         author_id: currentSession.user.id,
         body: shareBody,
         article_id: articleId
-      }).select('*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified)').single();
+      }).select('*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)').single();
       if (!postErr && post) {
         location.href = postUrl(post);
         return;

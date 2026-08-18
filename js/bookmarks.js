@@ -13,7 +13,7 @@ async function loadBookmarks() {
   await ensureFeedPrereqsLoaded();
 
   const { data, error } = await sb.from('bookmarks')
-    .select('post:posts(*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified))')
+    .select('post:posts(*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type))')
     .eq('user_id', session.user.id)
     .order('created_at', { ascending: false })
     .limit(100);

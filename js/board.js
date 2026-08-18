@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────
 // BOARD PAGE — /index.html
 // ─────────────────────────────────────────────────────────────
-const POST_SELECT = '*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified)';
+const POST_SELECT = '*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)';
 const FEED_PAGE_SIZE = 20; // per-request page size — NOT a total-feed cap; paging can continue indefinitely
 
 let activeTab = 'foryou'; // 'foryou' | 'following'
@@ -410,7 +410,7 @@ function trendListHtml(list) {
     return `
     <a class="tcard" href="${postUrl(p)}">
       <div class="tcard-row">
-        <img class="avatar tcard-avatar" src="${esc(avatarUrl(p.profile?.avatar_url))}" alt="" loading="lazy" decoding="async">
+        <img class="avatar tcard-avatar${avSqClass(p.profile)}" src="${esc(avatarUrl(p.profile?.avatar_url))}" alt="" loading="lazy" decoding="async">
         <div class="tcard-body">
           <div class="tcard-head">
             <span class="tcard-name">${esc(p.profile?.display_name || uname)}${vBadge(p.profile)}</span>

@@ -7,8 +7,8 @@
 // ─────────────────────────────────────────────────────────────
 const postId = currentStatusId();
 
-const POST_SELECT   = '*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified)';
-const REPLY_SELECT  = '*, profile:profiles(username,display_name,avatar_url,verified)';
+const POST_SELECT   = '*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)';
+const REPLY_SELECT  = '*, profile:profiles(username,display_name,avatar_url,verified,verification_type)';
 
 let allReplies = []; // flat list, kept around so inline "reply to this comment" forms can insert without a refetch
 let currentPost = null; // the OP post, kept around so hash-driven re-renders don't need to refetch it

@@ -2,7 +2,7 @@
 // SEARCH PAGE — /search.html?q=<term>[&t=posts|people]
 // With no query, shows the Explore panel instead (see EXPLORE below).
 // ─────────────────────────────────────────────────────────────
-const POST_SELECT = '*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified)';
+const POST_SELECT = '*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)';
 
 const searchParams = new URLSearchParams(location.search);
 let searchQuery = searchParams.get('q') || '';
@@ -74,7 +74,7 @@ async function searchPeople(root) {
   if (!data.length) { root.innerHTML = `<div id="feed-empty">No users found for &ldquo;${esc(searchQuery)}&rdquo;.</div>`; return; }
   root.innerHTML = data.map(profile => `
     <a class="ulrow" style="padding:12px 16px;border-bottom:1px solid var(--line);border-radius:0;" href="${profileUrl(profile.username)}">
-      <img class="avatar pfp-md" src="${esc(avatarUrl(profile.avatar_url))}" alt="" loading="lazy" decoding="async">
+      <img class="avatar pfp-md${avSqClass(profile)}" src="${esc(avatarUrl(profile.avatar_url))}" alt="" loading="lazy" decoding="async">
       <div class="ulrow-txt">
         <span class="ulrow-name">${esc(profile.display_name || profile.username)}</span>
         <span class="ulrow-handle">@${esc(profile.username)}</span>
@@ -169,7 +169,7 @@ function explorePostHtml(p) {
     <a class="expl-post" href="${postUrl(p)}">
       <div class="expl-post-title">${esc(title)}</div>
       <div class="expl-post-meta">
-        <img class="avatar" src="${esc(avatarUrl(p.profile?.avatar_url))}" alt="" loading="lazy" decoding="async">
+        <img class="avatar${avSqClass(p.profile)}" src="${esc(avatarUrl(p.profile?.avatar_url))}" alt="" loading="lazy" decoding="async">
         <span>${esc(p.profile?.display_name || p.profile?.username || 'unknown')}</span>
         <span class="dot"></span>
         <span>${timeAgo(p.created_at)}</span>

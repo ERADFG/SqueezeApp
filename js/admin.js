@@ -87,7 +87,7 @@ async function runUserSearch(q) {
   box.innerHTML = `<div class="no-t">Searching&hellip;</div>`;
 
   const { data, error } = await sb.from('profiles')
-    .select('id,username,display_name,avatar_url,verified,banned,suspend_reason,suspended_until')
+    .select('id,username,display_name,avatar_url,verified,verification_type,banned,suspend_reason,suspended_until')
     .or(`username.ilike.%${q}%,display_name.ilike.%${q}%`)
     .limit(15);
 
@@ -104,13 +104,34 @@ function suspendMetaHtml(p) {
   return `<span class="adm-row-meta">Suspended ${until}${reason}</span>`;
 }
 
+// Badge type picker shown per user row. "" = not verified; otherwise
+// one of the verification_type values the DB constraint allows
+// (see admin_verify_user() in supabase/admin_panel_advanced.sql).
+// Selecting a value calls adminSetVerification() directly from the
+// <select>'s onchange — no separate confirm step, mirroring how the
+// old single Verify/Unverify button worked.
+const VERIFY_TYPES = [
+  { value: '', label: 'Not verified' },
+  { value: 'blue', label: 'Blue' },
+  { value: 'gold', label: 'Gold' },
+  { value: 'purple', label: 'Purple' },
+];
+
+function verifySelectHtml(p) {
+  const current = p.verified ? (p.verification_type || 'purple') : '';
+  const opts = VERIFY_TYPES.map(t =>
+    `<option value="${t.value}" ${t.value === current ? 'selected' : ''}>${t.label}</option>`
+  ).join('');
+  return `<select class="adm-verify-select" aria-label="Verification badge" onchange="adminSetVerification('${p.id}', this.value)">${opts}</select>`;
+}
+
 function adminUserRowHtml(p) {
   const uname = p.username || 'unknown';
   const name = esc(p.display_name || uname);
   return `
   <div class="adm-row" id="adm-user-${p.id}">
     <a href="${profileUrl(uname)}" target="_blank" rel="noopener">
-      <img class="avatar pfp-md" src="${esc(avatarUrl(p.avatar_url))}" alt="">
+      <img class="avatar pfp-md${avSqClass(p)}" src="${esc(avatarUrl(p.avatar_url))}" alt="">
     </a>
     <div class="adm-row-txt">
       <span class="adm-row-name">${name}${vBadge(p)}${p.banned ? '<span class="adm-tag adm-tag-banned">Suspended</span>' : ''}</span>
@@ -118,7 +139,7 @@ function adminUserRowHtml(p) {
       ${suspendMetaHtml(p)}
     </div>
     <div class="adm-row-acts">
-      <button class="adm-btn ${p.verified ? 'adm-btn-active' : ''}" onclick="adminToggleVerify('${p.id}', ${!p.verified})">${p.verified ? 'Unverify' : 'Verify'}</button>
+      ${verifySelectHtml(p)}
       ${p.banned
         ? `<button class="adm-btn adm-btn-danger adm-btn-active" onclick="adminUnsuspend('${p.id}', '${esc(uname)}')">Unsuspend</button>`
         : `<button class="adm-btn adm-btn-danger" onclick="openSuspendModal('${p.id}', '${esc(uname)}')">Suspend</button>`}
@@ -126,11 +147,16 @@ function adminUserRowHtml(p) {
   </div>`;
 }
 
-async function adminToggleVerify(userId, makeVerified) {
+async function adminSetVerification(userId, type) {
+  const makeVerified = !!type;
   try {
-    const { error } = await sb.rpc('admin_verify_user', { target_user_id: userId, make_verified: makeVerified });
+    const { error } = await sb.rpc('admin_verify_user', {
+      target_user_id: userId,
+      make_verified: makeVerified,
+      verification_type: makeVerified ? type : null,
+    });
     if (error) throw error;
-    toast(makeVerified ? 'User verified.' : 'Verification removed.');
+    toast(makeVerified ? `User verified (${type}).` : 'Verification removed.');
     runUserSearch(document.getElementById('adm-user-q').value.trim());
   } catch (e) {
     toast(e.message || 'Could not update that user.', 'error');
@@ -226,7 +252,7 @@ async function loadRecentPosts() {
   const box = document.getElementById('adm-post-results');
   box.innerHTML = `<div class="no-t">Loading&hellip;</div>`;
   let query = sb.from('posts')
-    .select('id,body,created_at,author_id,is_deleted,profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified)')
+    .select('id,body,created_at,author_id,is_deleted,profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)')
     .order('created_at', { ascending: false })
     .limit(20);
   if (!postShowDeleted) query = query.eq('is_deleted', false);
@@ -239,7 +265,7 @@ async function runPostSearch(q) {
   const box = document.getElementById('adm-post-results');
   box.innerHTML = `<div class="no-t">Searching&hellip;</div>`;
   let query = sb.from('posts')
-    .select('id,body,created_at,author_id,is_deleted,profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified)')
+    .select('id,body,created_at,author_id,is_deleted,profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)')
     .order('created_at', { ascending: false })
     .limit(30);
   if (!postShowDeleted) query = query.eq('is_deleted', false);
@@ -259,7 +285,7 @@ function adminPostRowHtml(p) {
   const name = esc(p.profile?.display_name || uname);
   return `
   <div class="adm-row adm-post-row${p.is_deleted ? ' adm-row-deleted' : ''}" id="adm-post-${p.id}">
-    <img class="avatar pfp-md" src="${esc(avatarUrl(p.profile?.avatar_url))}" alt="">
+    <img class="avatar pfp-md${avSqClass(p.profile)}" src="${esc(avatarUrl(p.profile?.avatar_url))}" alt="">
     <div class="adm-row-txt">
       <span class="adm-row-name">${name}${vBadge(p.profile)} <span class="adm-row-handle">@${esc(uname)}</span> &middot; <span class="adm-row-dt">${timeAgo(p.created_at)}</span>${p.is_deleted ? '<span class="adm-tag adm-tag-banned">Deleted</span>' : ''}</span>
       <a class="adm-post-body" href="${postUrl(p)}" target="_blank" rel="noopener">${esc((p.body || '').slice(0, 200))}</a>
@@ -334,7 +360,7 @@ async function loadRecentReplies() {
   const box = document.getElementById('adm-reply-results');
   box.innerHTML = `<div class="no-t">Loading&hellip;</div>`;
   let query = sb.from('replies')
-    .select('id,body,created_at,post_id,author_id,is_deleted,profile:profiles(username,display_name,avatar_url,verified)')
+    .select('id,body,created_at,post_id,author_id,is_deleted,profile:profiles(username,display_name,avatar_url,verified,verification_type)')
     .order('created_at', { ascending: false })
     .limit(20);
   if (!replyShowDeleted) query = query.eq('is_deleted', false);
@@ -347,7 +373,7 @@ async function runReplySearch(q) {
   const box = document.getElementById('adm-reply-results');
   box.innerHTML = `<div class="no-t">Searching&hellip;</div>`;
   let query = sb.from('replies')
-    .select('id,body,created_at,post_id,author_id,is_deleted,profile:profiles(username,display_name,avatar_url,verified)')
+    .select('id,body,created_at,post_id,author_id,is_deleted,profile:profiles(username,display_name,avatar_url,verified,verification_type)')
     .order('created_at', { ascending: false })
     .limit(30);
   if (!replyShowDeleted) query = query.eq('is_deleted', false);
@@ -367,7 +393,7 @@ function adminReplyRowHtml(r) {
   const name = esc(r.profile?.display_name || uname);
   return `
   <div class="adm-row adm-post-row${r.is_deleted ? ' adm-row-deleted' : ''}" id="adm-reply-${r.id}">
-    <img class="avatar pfp-md" src="${esc(avatarUrl(r.profile?.avatar_url))}" alt="">
+    <img class="avatar pfp-md${avSqClass(r.profile)}" src="${esc(avatarUrl(r.profile?.avatar_url))}" alt="">
     <div class="adm-row-txt">
       <span class="adm-row-name">${name}${vBadge(r.profile)} <span class="adm-row-handle">@${esc(uname)}</span> &middot; <span class="adm-row-dt">${timeAgo(r.created_at)}</span>${r.is_deleted ? '<span class="adm-tag adm-tag-banned">Deleted</span>' : ''}</span>
       <a class="adm-post-body" href="${postUrlById(r.post_id)}" target="_blank" rel="noopener">${esc((r.body || '').slice(0, 200))}</a>
@@ -442,7 +468,7 @@ async function loadRecentArticles() {
   const box = document.getElementById('adm-article-results');
   box.innerHTML = `<div class="no-t">Loading&hellip;</div>`;
   let query = sb.from('articles')
-    .select('id,title,created_at,author_id,is_deleted,profile:profiles!articles_author_id_fkey(username,display_name,avatar_url,verified)')
+    .select('id,title,created_at,author_id,is_deleted,profile:profiles!articles_author_id_fkey(username,display_name,avatar_url,verified,verification_type)')
     .order('created_at', { ascending: false })
     .limit(20);
   if (!articleShowDeleted) query = query.eq('is_deleted', false);
@@ -455,7 +481,7 @@ async function runArticleSearch(q) {
   const box = document.getElementById('adm-article-results');
   box.innerHTML = `<div class="no-t">Searching&hellip;</div>`;
   let query = sb.from('articles')
-    .select('id,title,created_at,author_id,is_deleted,profile:profiles!articles_author_id_fkey(username,display_name,avatar_url,verified)')
+    .select('id,title,created_at,author_id,is_deleted,profile:profiles!articles_author_id_fkey(username,display_name,avatar_url,verified,verification_type)')
     .order('created_at', { ascending: false })
     .limit(30);
   if (!articleShowDeleted) query = query.eq('is_deleted', false);
@@ -475,7 +501,7 @@ function adminArticleRowHtml(a) {
   const name = esc(a.profile?.display_name || uname);
   return `
   <div class="adm-row adm-post-row${a.is_deleted ? ' adm-row-deleted' : ''}" id="adm-article-${a.id}">
-    <img class="avatar pfp-md" src="${esc(avatarUrl(a.profile?.avatar_url))}" alt="">
+    <img class="avatar pfp-md${avSqClass(a.profile)}" src="${esc(avatarUrl(a.profile?.avatar_url))}" alt="">
     <div class="adm-row-txt">
       <span class="adm-row-name">${name}${vBadge(a.profile)} <span class="adm-row-handle">@${esc(uname)}</span> &middot; <span class="adm-row-dt">${timeAgo(a.created_at)}</span>${a.is_deleted ? '<span class="adm-tag adm-tag-banned">Deleted</span>' : ''}</span>
       <a class="adm-post-body" href="${articleUrl(a.id)}" target="_blank" rel="noopener">${esc(a.title || '(untitled)')}</a>

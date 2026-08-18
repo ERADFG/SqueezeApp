@@ -41,7 +41,7 @@ function flRowHtml(profile, viewerId) {
   return `
   <div class="fl-row">
     <a class="ulrow" style="flex:1;min-width:0;" href="${profileUrl(uname)}">
-      <img class="avatar pfp-md" src="${esc(avatarUrl(profile?.avatar_url))}" alt="" loading="lazy" decoding="async">
+      <img class="avatar pfp-md${avSqClass(profile)}" src="${esc(avatarUrl(profile?.avatar_url))}" alt="" loading="lazy" decoding="async">
       <div class="ulrow-txt">
         <span class="ulrow-name">${esc(profile?.display_name || uname)}</span>
         <span class="ulrow-handle">@${esc(uname)}</span>
@@ -59,7 +59,7 @@ async function flLoadList() {
   const col = flTab === 'followers' ? 'followee_id' : 'follower_id';
   const wantCol = flTab === 'followers' ? 'follower_id' : 'followee_id';
   const { data, error } = await sb.from('follows')
-    .select(`${wantCol}, profile:profiles!follows_${wantCol}_fkey(id,username,display_name,avatar_url,verified)`)
+    .select(`${wantCol}, profile:profiles!follows_${wantCol}_fkey(id,username,display_name,avatar_url,verified,verification_type)`)
     .eq(col, flProfile.id)
     .order('created_at', { ascending: false })
     .limit(200);

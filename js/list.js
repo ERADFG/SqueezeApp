@@ -14,7 +14,7 @@
 // this page — same division as Twitter, where "Add to Lists" lives
 // on the profile. Following the List itself happens right here.
 // ─────────────────────────────────────────────────────────────
-const POST_SELECT = '*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified)';
+const POST_SELECT = '*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)';
 
 const listId = currentListId();
 let list = null;       // the loaded list row
@@ -331,7 +331,7 @@ async function loadListMembers() {
   const memberIds = (memberRows || []).map(r => r.member_id);
   if (!memberIds.length) { listMembers = []; return; }
   const { data: profiles } = await sb.from('profiles')
-    .select('id,username,display_name,avatar_url,verified').in('id', memberIds);
+    .select('id,username,display_name,avatar_url,verified,verification_type').in('id', memberIds);
   const byId = new Map((profiles || []).map(p => [p.id, p]));
   listMembers = memberRows.map(r => byId.get(r.member_id)).filter(Boolean);
 }
@@ -349,7 +349,7 @@ async function loadListFollowers() {
   const ids = (rows || []).map(r => r.follower_id);
   if (!ids.length) { listFollowers = []; return; }
   const { data: profiles } = await sb.from('profiles')
-    .select('id,username,display_name,avatar_url,verified').in('id', ids);
+    .select('id,username,display_name,avatar_url,verified,verification_type').in('id', ids);
   const byId = new Map((profiles || []).map(p => [p.id, p]));
   listFollowers = rows.map(r => byId.get(r.follower_id)).filter(Boolean);
 }
@@ -394,7 +394,7 @@ function listPersonRowHtml(profile, removable) {
   return `
   <div class="fl-row">
     <a class="ulrow" style="flex:1;min-width:0;" href="${profileUrl(uname)}">
-      <img class="avatar pfp-md" src="${esc(avatarUrl(profile?.avatar_url))}" alt="" loading="lazy" decoding="async">
+      <img class="avatar pfp-md${avSqClass(profile)}" src="${esc(avatarUrl(profile?.avatar_url))}" alt="" loading="lazy" decoding="async">
       <div class="ulrow-txt">
         <span class="ulrow-name">${esc(profile?.display_name || uname)}${vBadge(profile)}</span>
         <span class="ulrow-handle">@${esc(uname)}</span>

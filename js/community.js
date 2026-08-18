@@ -5,7 +5,7 @@
 // member count, Join/Leave), a composer scoped to it, and a
 // Latest/Trending filter over just its own posts.
 // ─────────────────────────────────────────────────────────────
-const POST_SELECT = '*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified)';
+const POST_SELECT = '*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)';
 
 const communitySlug = currentCommunitySlug();
 let community = null;      // the loaded community row
@@ -273,8 +273,8 @@ async function loadCommunityAbout() {
 
   const [rulesRes, modsRes, creatorRes] = await Promise.all([
     sb.from('community_rules').select('*').eq('community_id', community.id).order('position', { ascending: true }),
-    sb.from('community_moderators').select('user_id, profile:profiles!community_moderators_user_id_fkey(id,username,display_name,avatar_url,verified)').eq('community_id', community.id).order('added_at', { ascending: true }),
-    sb.from('profiles').select('id,username,display_name,avatar_url,verified').eq('id', community.created_by).maybeSingle()
+    sb.from('community_moderators').select('user_id, profile:profiles!community_moderators_user_id_fkey(id,username,display_name,avatar_url,verified,verification_type)').eq('community_id', community.id).order('added_at', { ascending: true }),
+    sb.from('profiles').select('id,username,display_name,avatar_url,verified,verification_type').eq('id', community.created_by).maybeSingle()
   ]);
 
   if (rulesRes.error) { aboutEl.innerHTML = `<div class="errmsg">Failed to load About: ${esc(rulesRes.error.message)}</div>`; return; }
@@ -496,7 +496,7 @@ function modRowHtml(profile, isOwner, canManage) {
   return `
     <div class="who-row comm-mod-row">
       <a href="${profileUrl(uname)}">
-        <img class="avatar pfp-md" src="${esc(avatarUrl(profile.avatar_url))}" alt="" loading="lazy" decoding="async">
+        <img class="avatar pfp-md${avSqClass(profile)}" src="${esc(avatarUrl(profile.avatar_url))}" alt="" loading="lazy" decoding="async">
       </a>
       <a class="who-row-txt" href="${profileUrl(uname)}">
         <span class="who-row-name">${esc(profile.display_name || uname)}${vBadge(profile)}</span>
@@ -590,14 +590,14 @@ async function runModSearch(q) {
   q = q.trim();
   if (!q) { resultsEl.innerHTML = ''; return; }
   const takenIds = new Set([community.created_by, ...communityMods.map(m => m.user_id)]);
-  const { data, error } = await sb.from('profiles').select('id,username,display_name,avatar_url,verified')
+  const { data, error } = await sb.from('profiles').select('id,username,display_name,avatar_url,verified,verification_type')
     .ilike('username', `%${q}%`).limit(6);
   if (error || !data) { resultsEl.innerHTML = ''; return; }
   const candidates = data.filter(p => !takenIds.has(p.id));
   if (!candidates.length) { resultsEl.innerHTML = `<div class="comm-about-empty">No matching members found.</div>`; return; }
   resultsEl.innerHTML = candidates.map(p => `
     <div class="who-row comm-mod-search-row">
-      <img class="avatar pfp-md" src="${esc(avatarUrl(p.avatar_url))}" alt="">
+      <img class="avatar pfp-md${avSqClass(p)}" src="${esc(avatarUrl(p.avatar_url))}" alt="">
       <span class="who-row-txt">
         <span class="who-row-name">${esc(p.display_name || p.username)}${vBadge(p)}</span>
         <span class="who-row-handle">@${esc(p.username)}</span>
@@ -612,7 +612,7 @@ async function addCommunityModerator(userId, btn) {
   try {
     const { data, error } = await sb.from('community_moderators').insert({
       community_id: community.id, user_id: userId, added_by: currentSession.user.id
-    }).select('user_id, profile:profiles!community_moderators_user_id_fkey(id,username,display_name,avatar_url,verified)').single();
+    }).select('user_id, profile:profiles!community_moderators_user_id_fkey(id,username,display_name,avatar_url,verified,verification_type)').single();
     if (error) throw error;
     communityMods.push(data);
     document.getElementById('comm-add-mod-form').innerHTML = '';

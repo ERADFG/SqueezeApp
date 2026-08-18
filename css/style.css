@@ -2276,6 +2276,11 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
   border-radius:50%; object-fit:cover; display:inline-block;
   background:var(--hover-bg); border:none; flex:none;
 }
+/* Gold-verified accounts (organizations) get a squared-off profile
+   picture instead of a circle, matching X/Twitter's gold-check
+   convention. Applied via avSqClass() next to every avatar <img>
+   that's rendered alongside a profile carrying verification_type. */
+.avatar-square { border-radius:22%; }
 .pfp-sm  { width:16px; height:16px; margin-right:4px; vertical-align:-3px; }
 .pfp-md  { width:32px; height:32px; }
 .pfp-lg  { width:96px; height:96px; border:4px solid var(--bg); box-shadow:0 0 0 1px var(--line); }

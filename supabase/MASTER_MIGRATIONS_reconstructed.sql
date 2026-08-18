@@ -1689,3 +1689,78 @@ end $$;
 
 comment on column public.profiles.age is 'Self-reported age at signup, 13-120. Collected once at signup, not editable via the app UI.';
 comment on column public.profiles.gender is 'One of: male, female, other, not_specified. Collected once at signup, not editable via the app UI.';
+
+-- ─────────────────────────────────────────────────────────────
+-- VERIFICATION TYPES — blue / gold / purple checkmarks
+--
+-- Previously "verified" was a single boolean rendered as one
+-- purple badge. This adds a second column, verification_type,
+-- so the admin panel can pick which mark a verified user gets:
+--   'purple' — the original badge (default when verified with
+--              no type set, e.g. rows verified before this
+--              migration ran)
+--   'blue'   — standard individual verification
+--   'gold'   — organization/business verification; the frontend
+--              (see avSqClass() in js/common.js) also renders
+--              that user's avatar as a rounded square instead
+--              of a circle, matching X/Twitter's convention.
+--
+-- `verified` boolean is kept in sync (true whenever
+-- verification_type is not null) so any code that only checks
+-- `profile.verified` — without knowing about types — keeps
+-- working exactly as before.
+-- ─────────────────────────────────────────────────────────────
+
+alter table public.profiles add column if not exists verification_type text;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'profiles_verification_type_valid'
+  ) then
+    alter table public.profiles
+      add constraint profiles_verification_type_valid
+      check (verification_type is null or verification_type in ('blue', 'gold', 'purple'));
+  end if;
+end $$;
+
+comment on column public.profiles.verification_type is 'One of: blue, gold, purple, or null. Null with verified=true (legacy rows) renders as purple. Set/cleared together with verified by admin_verify_user().';
+
+-- Backfill: anyone already verified before this migration gets the
+-- original purple badge so nothing visually changes for them.
+update public.profiles set verification_type = 'purple' where verified = true and verification_type is null;
+
+-- Replace admin_verify_user() to take a type instead of a plain
+-- boolean. make_verified=false always clears both columns
+-- regardless of what verification_type is passed. Passing
+-- make_verified=true with a null/omitted type defaults to 'purple'
+-- so existing callers (or a stray RPC call without the new arg)
+-- keep the old behavior instead of silently failing the check
+-- constraint.
+--
+-- The old (uuid, boolean) two-arg version is dropped first —
+-- adding a parameter makes this a different signature, so
+-- "create or replace" alone would leave both overloads in place
+-- and PostgREST would then see an ambiguous call whenever a
+-- request only supplies target_user_id + make_verified.
+drop function if exists public.admin_verify_user(uuid, boolean);
+
+create or replace function public.admin_verify_user(target_user_id uuid, make_verified boolean, verification_type text default 'purple')
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'not authorized';
+  end if;
+  if make_verified and verification_type not in ('blue', 'gold', 'purple') then
+    raise exception 'invalid verification_type: %', verification_type;
+  end if;
+  update public.profiles
+    set verified = make_verified,
+        verification_type = case when make_verified then verification_type else null end
+    where id = target_user_id;
+end;
+$$;

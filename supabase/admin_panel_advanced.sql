@@ -64,8 +64,31 @@ $$;
 grant execute on function public.is_admin() to anon, authenticated;
 
 -- ── 3. Users: verify, suspend (with reason + optional expiry), unsuspend ──
+--
+-- verification_type: which badge a verified user gets — 'blue',
+-- 'gold', or 'purple' (see supabase/MASTER_MIGRATIONS_reconstructed.sql
+-- for the column/constraint this depends on, and js/common.js's
+-- vBadge()/avSqClass() for how the app renders each type).
+-- make_verified=false always clears both columns. The old two-arg
+-- signature is dropped first so it can't linger as an ambiguous
+-- overload alongside this one.
 
-create or replace function public.admin_verify_user(target_user_id uuid, make_verified boolean)
+alter table public.profiles add column if not exists verification_type text;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'profiles_verification_type_valid'
+  ) then
+    alter table public.profiles
+      add constraint profiles_verification_type_valid
+      check (verification_type is null or verification_type in ('blue', 'gold', 'purple'));
+  end if;
+end $$;
+
+drop function if exists public.admin_verify_user(uuid, boolean);
+
+create or replace function public.admin_verify_user(target_user_id uuid, make_verified boolean, verification_type text default 'purple')
 returns void
 language plpgsql
 security definer
@@ -75,7 +98,13 @@ begin
   if not public.is_admin() then
     raise exception 'not authorized';
   end if;
-  update public.profiles set verified = make_verified where id = target_user_id;
+  if make_verified and verification_type not in ('blue', 'gold', 'purple') then
+    raise exception 'invalid verification_type: %', verification_type;
+  end if;
+  update public.profiles
+    set verified = make_verified,
+        verification_type = case when make_verified then verification_type else null end
+    where id = target_user_id;
 end;
 $$;
 

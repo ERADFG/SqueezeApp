@@ -66,7 +66,7 @@ async function renderArticles() {
   }
 
   const authorIds = [...new Set(rows.map(a => a.author_id))];
-  const { data: authors } = await sb.from('profiles').select('id,username,display_name,avatar_url,verified').in('id', authorIds);
+  const { data: authors } = await sb.from('profiles').select('id,username,display_name,avatar_url,verified,verification_type').in('id', authorIds);
   const authorById = new Map((authors || []).map(a => [a.id, a]));
 
   const totalPages = Math.max(1, Math.ceil((count || 0) / ARTICLES_PAGE_SIZE));

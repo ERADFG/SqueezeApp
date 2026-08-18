@@ -606,7 +606,7 @@ function renderMobileChrome() {
       <a class="${cur('search')}" href="search.html">${NAV_ICON.search}<span class="m-tab-label">Search</span></a>
       <a class="${cur('messages')}" href="chat.html">${NAV_ICON.chat}${chatBadge}<span class="m-tab-label">Chat</span></a>
       <a class="${cur('notifications')}" href="notifications.html">${NAV_ICON.bell}${badge}<span class="m-tab-label">Notifications</span></a>
-      <a class="${cur('profile')} m-tab-avatar" href="${ownHref}"><img class="avatar" src="${esc(avatar)}" alt=""><span class="m-tab-label">Profile</span></a>
+      <a class="${cur('profile')} m-tab-avatar" href="${ownHref}"><img class="avatar${avSqClass(currentProfile)}" src="${esc(avatar)}" alt=""><span class="m-tab-label">Profile</span></a>
     </div>
 
     ${currentSession && !onChatPage ? `<button id="m-fab" onclick="mobileCompose();return false;" aria-label="Post">${ICON_COMPOSE}</button>` : ''}
@@ -614,7 +614,7 @@ function renderMobileChrome() {
     <div class="m-drawer-bg" id="m-drawer-bg" onclick="if(event.target===this)closeMobileDrawer();">
       <div class="m-drawer">
         ${currentSession ? `
-          <a href="${ownHref}"><img class="avatar m-drawer-avatar" src="${esc(avatar)}" alt=""></a>
+          <a href="${ownHref}"><img class="avatar m-drawer-avatar${avSqClass(currentProfile)}" src="${esc(avatar)}" alt=""></a>
           <a href="${ownHref}" style="text-decoration:none;">
             <span class="m-drawer-name">${esc(currentProfile?.display_name || currentProfile?.username || 'You')}</span>
             <span class="m-drawer-handle">@${esc(currentProfile?.username || '')}</span>
@@ -974,7 +974,7 @@ async function submitGlobalCompose() {
       poll_ends_at: poll?.poll_ends_at || null,
       scheduled_at,
       reply_audience: getReplyAudience('gc')
-    }).select('*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified)').single();
+    }).select('*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)').single();
     if (error) throw error;
 
     bodyEl.value = ''; bodyEl.style.height = '';
@@ -1149,7 +1149,7 @@ async function submitReplyPopup() {
       parent_reply_id: null,
       author_id: currentSession.user.id,
       body, media_url, media_type
-    }).select('*, profile:profiles(username,display_name,avatar_url,verified)').single();
+    }).select('*, profile:profiles(username,display_name,avatar_url,verified,verification_type)').single();
     if (error) throw error;
 
     bodyEl.value = ''; bodyEl.style.height = '';
@@ -1216,7 +1216,7 @@ async function renderWhoToFollow() {
   // Pull a small pool of recently-active accounts and filter client-side —
   // simplest thing that works for a suggestions box this size, no RPC needed.
   const { data, error } = await sb.from('profiles')
-    .select('id,username,display_name,avatar_url,verified')
+    .select('id,username,display_name,avatar_url,verified,verification_type')
     .order('created_at', { ascending: false })
     .limit(20);
 
@@ -1234,7 +1234,7 @@ function whoRowHtml(profile) {
   return `
     <div class="who-row">
       <a href="${profileUrl(uname)}">
-        <img class="avatar pfp-md" src="${esc(avatarUrl(profile.avatar_url))}" alt="" loading="lazy" decoding="async">
+        <img class="avatar pfp-md${avSqClass(profile)}" src="${esc(avatarUrl(profile.avatar_url))}" alt="" loading="lazy" decoding="async">
       </a>
       <a class="who-row-txt" href="${profileUrl(uname)}">
         <span class="who-row-name">${esc(profile.display_name || uname)}${vBadge(profile)}</span>
@@ -1613,7 +1613,7 @@ async function attachQuotedPosts(posts) {
   if (ids.length) {
     try {
       const { data } = await sb.from('posts')
-        .select('id,body,media_url,media_type,created_at,is_deleted,author_id,profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified)')
+        .select('id,body,media_url,media_type,created_at,is_deleted,author_id,profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)')
         .in('id', ids);
       const byId = Object.fromEntries((data || []).map(qp => [qp.id, qp]));
       list.forEach(p => { if (p?.quote_of) p.quoted = byId[p.quote_of] || null; });
@@ -1704,7 +1704,7 @@ async function submitQuote() {
       author_id: currentSession.user.id,
       body,
       quote_of: quotingPostId
-    }).select('*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified)').single();
+    }).select('*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)').single();
     if (error) throw error;
     // We already have the quoted post in postCache (it's whatever card
     // the Quote button was clicked from) — reuse it directly instead of
@@ -1834,7 +1834,7 @@ document.addEventListener('click', (e) => {
 function pcAvatarHtml(profile, sizeClass = '') {
   const uname = profile?.username || 'unknown';
   return `<a class="pc-avatar-lnk" href="${profileUrl(uname)}">` +
-         `<img class="avatar pc-avatar ${sizeClass}" src="${esc(avatarUrl(profile?.avatar_url))}" alt="" loading="lazy" decoding="async"></a>`;
+         `<img class="avatar pc-avatar ${sizeClass}${avSqClass(profile)}" src="${esc(avatarUrl(profile?.avatar_url))}" alt="" loading="lazy" decoding="async"></a>`;
 }
 function pcNameHtml(profile) {
   const uname = profile?.username || 'unknown';
@@ -2447,7 +2447,7 @@ function renderCcStep() {
       <label>Add moderators</label>
       ${ccWiz.mods.length ? `<div class="comm-mods-list" id="cc-mods-list">${ccWiz.mods.map(m => `
         <div class="who-row comm-mod-row">
-          <img class="avatar pfp-md" src="${esc(avatarUrl(m.avatar_url))}" alt="">
+          <img class="avatar pfp-md${avSqClass(m)}" src="${esc(avatarUrl(m.avatar_url))}" alt="">
           <span class="who-row-txt">
             <span class="who-row-name">${esc(m.display_name || m.username)}</span>
             <span class="who-row-handle">@${esc(m.username)}</span>
@@ -2494,14 +2494,14 @@ async function ccRunModSearch(q) {
   q = q.trim();
   if (!q) { resultsEl.innerHTML = ''; return; }
   const takenIds = new Set([currentSession.user.id, ...ccWiz.mods.map(m => m.id)]);
-  const { data, error } = await sb.from('profiles').select('id,username,display_name,avatar_url,verified')
+  const { data, error } = await sb.from('profiles').select('id,username,display_name,avatar_url,verified,verification_type')
     .ilike('username', `%${q}%`).limit(6);
   if (error || !data) { resultsEl.innerHTML = ''; return; }
   const candidates = data.filter(p => !takenIds.has(p.id));
   if (!candidates.length) { resultsEl.innerHTML = `<div class="comm-about-empty">No matching members found.</div>`; return; }
   resultsEl.innerHTML = candidates.map(p => `
     <div class="who-row comm-mod-search-row">
-      <img class="avatar pfp-md" src="${esc(avatarUrl(p.avatar_url))}" alt="">
+      <img class="avatar pfp-md${avSqClass(p)}" src="${esc(avatarUrl(p.avatar_url))}" alt="">
       <span class="who-row-txt">
         <span class="who-row-name">${esc(p.display_name || p.username)}${vBadge(p)}</span>
         <span class="who-row-handle">@${esc(p.username)}</span>
@@ -3427,7 +3427,7 @@ function avatarUrl(url) {
 function authorHtml(profile) {
   const uname = profile?.username || 'unknown';
   return `<a class="pfl" href="${profileUrl(uname)}">` +
-         `<img class="avatar pfp-sm" src="${esc(avatarUrl(profile?.avatar_url))}" alt="" loading="lazy" decoding="async">` +
+         `<img class="avatar pfp-sm${avSqClass(profile)}" src="${esc(avatarUrl(profile?.avatar_url))}" alt="" loading="lazy" decoding="async">` +
          `${esc(profile?.display_name || uname)}${vBadge(profile)}</a>`;
 }
 
@@ -3438,34 +3438,44 @@ function esc(str) {
 }
 
 // The verified checkmark shown right after a display name. `profile`
-// is any joined `profiles` row that included the `verified` column in
-// its select() — see js/supabase-config.js's ADMIN_PANEL note. Every
+// is any joined `profiles` row that included the `verified` and
+// `verification_type` columns in its select() — see admin.js's
+// adminVerifyUserRowHtml and the admin_verify_user() RPC. Every
 // name-rendering helper below (pcNameHtml, whoRowHtml, authorHtml,
-// userRowHtml) calls this, so setting profiles.verified = true from
-// the admin panel is enough to make the badge show up everywhere.
+// userRowHtml) calls this, so setting a verification type from the
+// admin panel is enough to make the right badge show up everywhere.
 //
-// Rendered as an inline <svg><use> against a single shared <symbol>
-// (injected once by ensureBadgeDefs() below) rather than the old PNG.
-// That fixes two things the raster version couldn't: it's pixel-crisp
-// at every size/DPI instead of going soft when scaled, and the scalloped
-// seal shape is drawn from an exact vector path instead of a slightly
-// lumpy rasterized outline, so it reads as a clean, deliberate mark
-// instead of a blurry sticker.
-// The verified checkmark shown right after a display name. `profile`
-// is any joined `profiles` row that included the `verified` column in
-// its select() — see js/supabase-config.js's ADMIN_PANEL note. Every
-// name-rendering helper below (pcNameHtml, whoRowHtml, authorHtml,
-// userRowHtml) calls this, so setting profiles.verified = true from
-// the admin panel is enough to make the badge show up everywhere.
+// verification_type is 'blue' | 'gold' | 'purple'. Legacy rows that
+// have verified=true but no type (set before this column existed)
+// fall back to 'purple' so nothing changes visually for them.
 //
-// Uses the glossy 3D badge art in img/verified-badge-256.png as the
-// single source image — it's rendered ~4-16x larger than its on-screen
-// size (16-21px) so it stays crisp at any display density instead of
-// softening the way a source sized 1:1 to the CSS box would.
+// Uses the glossy 3D badge art in img/verified-badge-<type>-256.png
+// as the source image — it's rendered ~4-16x larger than its
+// on-screen size (16-21px) so it stays crisp at any display density
+// instead of softening the way a source sized 1:1 to the CSS box
+// would. All three files share the exact same crop/canvas as each
+// other, so swapping the src here is the only thing that needs to
+// change — no per-type CSS sizing.
+function badgeType(profile) {
+  if (!profile?.verified) return null;
+  const t = profile.verification_type;
+  return (t === 'blue' || t === 'gold' || t === 'purple') ? t : 'purple';
+}
+
 function vBadge(profile) {
-  return profile?.verified
-    ? `<img class="verified-badge" src="img/verified-badge-256.png" alt="Verified" title="Verified">`
+  const type = badgeType(profile);
+  return type
+    ? `<img class="verified-badge" src="img/verified-badge-${type}-256.png" alt="Verified" title="Verified">`
     : '';
+}
+
+// Gold verification (organizations/businesses) gets a squared-off
+// profile picture instead of a circle, matching X/Twitter's
+// convention for gold-badge accounts — see .avatar-square in
+// css/style.css. Drop this into any avatar <img>'s class list
+// alongside avatarUrl(profile.avatar_url) for that same profile.
+function avSqClass(profile) {
+  return badgeType(profile) === 'gold' ? ' avatar-square' : '';
 }
 
 // Renders body text with basic greentext (> lines) support, plus
@@ -4279,7 +4289,7 @@ function renderLbSidebar(owner) {
     ${actions}
     <div class="op-detail-divider"></div>
     <a class="lb-sb-replybox" href="${href}">
-      <img class="avatar pfp-sm" src="${esc(avatarUrl(currentProfile?.avatar_url))}" alt="">
+      <img class="avatar pfp-sm${avSqClass(currentProfile)}" src="${esc(avatarUrl(currentProfile?.avatar_url))}" alt="">
       <span>${t('compose.reply')}</span>
     </a>
     <a class="lb-sb-viewall" href="${href}">View full conversation &rsaquo;</a>`;
@@ -4893,7 +4903,7 @@ function userRowHtml(profile) {
   const uname = profile?.username || 'unknown';
   return `
   <a class="ulrow" href="${profileUrl(uname)}">
-    <img class="avatar pfp-md" src="${esc(avatarUrl(profile?.avatar_url))}" alt="" loading="lazy" decoding="async">
+    <img class="avatar pfp-md${avSqClass(profile)}" src="${esc(avatarUrl(profile?.avatar_url))}" alt="" loading="lazy" decoding="async">
     <div class="ulrow-txt">
       <span class="ulrow-name">${esc(profile?.display_name || uname)}${vBadge(profile)}</span>
       <span class="ulrow-handle">@${esc(uname)}</span>

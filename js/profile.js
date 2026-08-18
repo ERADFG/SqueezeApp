@@ -9,7 +9,7 @@ const viewUsername = currentProfileUsername();
 let viewedProfile = null;
 let isOwnProfile = false;
 
-const POST_SELECT = '*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified)';
+const POST_SELECT = '*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)';
 
 async function loadProfile() {
   const root = document.getElementById('profile-root');
@@ -63,7 +63,7 @@ async function loadProfile() {
     <div class="profile-hdr" id="profile-hdr" style="${profile.banner_url ? `--banner-img:url('${esc(profile.banner_url)}')` : ''}">
       <a class="profile-back-btn" href="index.html" aria-label="Back to home">${ICON_BACK}</a>
       <div class="profile-hdr-top">
-        <img class="avatar pfp-lg" id="pv-avatar" src="${esc(avatarUrl(profile.avatar_url))}" alt="">
+        <img class="avatar pfp-lg${avSqClass(profile)}" id="pv-avatar" src="${esc(avatarUrl(profile.avatar_url))}" alt="">
         <div class="profile-hdr-actions">
           ${!isOwnProfile && session ? `
             <a class="profile-icon-btn" href="${messagesUrl(profile.username)}" title="Message" aria-label="Message">${ICON_MESSAGE}</a>
@@ -390,7 +390,7 @@ async function cancelScheduledPost(postId) {
   }
 }
 
-const REPLY_SELECT = '*, profile:profiles(username,display_name,avatar_url,verified)';
+const REPLY_SELECT = '*, profile:profiles(username,display_name,avatar_url,verified,verification_type)';
 
 async function loadUserReplies(userId) {
   const el = document.getElementById('profile-posts');
@@ -415,9 +415,9 @@ async function loadUserReplies(userId) {
   const postIds = [...new Set(replies.map(r => r.post_id))];
   const parentIds = [...new Set(replies.filter(r => r.parent_reply_id).map(r => r.parent_reply_id))];
   const [postsRes, parentsRes] = await Promise.all([
-    sb.from('posts').select('id,author_id,profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified)').in('id', postIds),
+    sb.from('posts').select('id,author_id,profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)').in('id', postIds),
     parentIds.length
-      ? sb.from('replies').select('id,profile:profiles(username,display_name,avatar_url,verified)').in('id', parentIds)
+      ? sb.from('replies').select('id,profile:profiles(username,display_name,avatar_url,verified,verification_type)').in('id', parentIds)
       : Promise.resolve({ data: [] })
   ]);
   const postById = new Map((postsRes.data || []).map(p => [p.id, p]));

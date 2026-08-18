@@ -3,7 +3,7 @@
 // Rows are created server-side by triggers (see schema.sql) — this
 // page only ever reads + marks-read, never inserts.
 // ─────────────────────────────────────────────────────────────
-const NOTIF_SELECT = '*, actor:profiles!notifications_actor_id_fkey(username,display_name,avatar_url,verified), post:posts(id,body,is_deleted,profile:profiles!posts_author_id_fkey(username))';
+const NOTIF_SELECT = '*, actor:profiles!notifications_actor_id_fkey(username,display_name,avatar_url,verified,verification_type), post:posts(id,body,is_deleted,profile:profiles!posts_author_id_fkey(username))';
 
 const NOTIF_ICON = {
   like:    ICON.heart,
@@ -37,7 +37,7 @@ function notifItemHtml(n) {
   return `
   <a class="notif-item${n.read ? '' : ' unread'}" href="${notifHref(n)}">
     <span class="notif-icon ${n.type}">${NOTIF_ICON[n.type] || ''}</span>
-    <img class="avatar pfp-sm" style="width:20px;height:20px;margin-top:2px;" src="${esc(actorAvatar)}" alt="" loading="lazy" decoding="async">
+    <img class="avatar pfp-sm${avSqClass(n.actor)}" style="width:20px;height:20px;margin-top:2px;" src="${esc(actorAvatar)}" alt="" loading="lazy" decoding="async">
     <div class="notif-body">
       <div class="notif-time">${timeAgo(n.created_at)}</div>
       <div class="notif-txt">${notifText(n)}</div>

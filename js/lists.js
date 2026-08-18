@@ -62,7 +62,7 @@ async function loadDiscover() {
   const ownerIds = [...new Set(discoverLists.map(l => l.owner_id))];
   const listIds = discoverLists.map(l => l.id);
   const [{ data: owners }, { data: followerRows }] = await Promise.all([
-    sb.from('profiles').select('id,username,display_name,avatar_url,verified').in('id', ownerIds),
+    sb.from('profiles').select('id,username,display_name,avatar_url,verified,verification_type').in('id', ownerIds),
     sb.from('list_followers').select('list_id, follower:profiles(id,username,avatar_url)')
       .in('list_id', listIds).order('followed_at', { ascending: true }).limit(200)
   ]);
@@ -160,7 +160,7 @@ async function renderLists() {
     let ownerById = new Map();
     const pageFollowedOwnerIds = [...new Set(pageRows.filter(r => r.following).map(r => r.l.owner_id))];
     if (pageFollowedOwnerIds.length) {
-      const { data: owners } = await sb.from('profiles').select('id,username,display_name,verified').in('id', pageFollowedOwnerIds);
+      const { data: owners } = await sb.from('profiles').select('id,username,display_name,verified,verification_type').in('id', pageFollowedOwnerIds);
       ownerById = new Map((owners || []).map(o => [o.id, o]));
     }
     listEl.innerHTML = `<div class="list-list">` +
@@ -203,7 +203,7 @@ async function renderLists() {
 
   const totalPages = Math.max(1, Math.ceil(totalCount / LISTS_PAGE_SIZE));
   const ownerIds = [...new Set(list.map(l => l.owner_id))];
-  const { data: owners } = await sb.from('profiles').select('id,username,display_name,verified').in('id', ownerIds);
+  const { data: owners } = await sb.from('profiles').select('id,username,display_name,verified,verification_type').in('id', ownerIds);
   const ownerById = new Map((owners || []).map(o => [o.id, o]));
   listEl.innerHTML = `<div class="list-list">` +
     list.map(l => listRowHtml(l, ownerById.get(l.owner_id))).join('') +

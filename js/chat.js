@@ -88,8 +88,8 @@ async function loadConversationList(session, root) {
   subscribeConversationListRealtime(session, root);
 
   const { data, error } = await sb.from('messages')
-    .select(`*, sender:profiles!messages_sender_id_fkey(id,username,display_name,avatar_url,verified,pubkey),
-                recipient:profiles!messages_recipient_id_fkey(id,username,display_name,avatar_url,verified,pubkey)`)
+    .select(`*, sender:profiles!messages_sender_id_fkey(id,username,display_name,avatar_url,verified,verification_type,pubkey),
+                recipient:profiles!messages_recipient_id_fkey(id,username,display_name,avatar_url,verified,verification_type,pubkey)`)
     .or(`sender_id.eq.${session.user.id},recipient_id.eq.${session.user.id}`)
     .order('created_at', { ascending: false })
     .limit(300);
@@ -150,7 +150,7 @@ async function loadConversationList(session, root) {
     }
     return `
     <a class="conv-row${unread ? ' unread' : ''}" href="${messagesUrl(uname)}">
-      <img class="avatar" src="${esc(avatarUrl(other?.avatar_url))}" alt="" loading="lazy" decoding="async">
+      <img class="avatar${avSqClass(other)}" src="${esc(avatarUrl(other?.avatar_url))}" alt="" loading="lazy" decoding="async">
       <div class="conv-txt">
         <div class="conv-top">
           <span class="conv-name">${esc(other?.display_name || uname)}</span>
@@ -247,7 +247,7 @@ async function loadThread(session, root) {
     <div class="chat-thread">
       <div class="chat-hdr">
         <a class="chat-hdr-back" href="chat.html" aria-label="${esc(t('chat.back'))}">${ICON_BACK}</a>
-        <a href="${profileUrl(other.username)}"><img class="avatar" src="${esc(avatarUrl(other.avatar_url))}" alt="" loading="lazy" decoding="async"></a>
+        <a href="${profileUrl(other.username)}"><img class="avatar${avSqClass(other)}" src="${esc(avatarUrl(other.avatar_url))}" alt="" loading="lazy" decoding="async"></a>
         <div>
           <a class="nm" href="${profileUrl(other.username)}">${esc(other.display_name || other.username)}</a>
           <span class="pc-handle">@${esc(other.username)}</span>
