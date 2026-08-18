@@ -5018,9 +5018,14 @@ function resolveOcConfirm(result) {
 // ── REPORT MODAL (shared across board + thread pages) ──
 let reportTarget = null; // { postId, replyId } or { userId }
 
+function setReportModalTitle(text) {
+  const el = document.getElementById('report-modal-title');
+  if (el) el.textContent = text;
+}
 function openReport(postId, replyId = null) {
   if (typeof requireLogin === 'function' && !requireLogin()) return;
   reportTarget = { postId, replyId };
+  setReportModalTitle(replyId ? 'Report Reply' : 'Report Post');
   document.getElementById('modal-report').classList.add('open');
 }
 // Reports a profile itself (the "···" menu on a profile page), rather
@@ -5028,6 +5033,15 @@ function openReport(postId, replyId = null) {
 function openReportUser(userId) {
   if (typeof requireLogin === 'function' && !requireLogin()) return;
   reportTarget = { userId };
+  setReportModalTitle('Report User');
+  document.getElementById('modal-report').classList.add('open');
+}
+// Reports a community itself (the "···" menu next to Join on a
+// community page), rather than one specific post/reply/member of it.
+function openReportCommunity(communityId) {
+  if (typeof requireLogin === 'function' && !requireLogin()) return;
+  reportTarget = { communityId };
+  setReportModalTitle('Report Community');
   document.getElementById('modal-report').classList.add('open');
 }
 function closeReport() {
@@ -5076,6 +5090,7 @@ async function submitReport() {
       post_id: reportTarget.postId || null,
       reply_id: reportTarget.replyId || null,
       reported_user_id: reportTarget.userId || null,
+      community_id: reportTarget.communityId || null,
       reporter_id: currentSession?.user?.id,
       reason,
       details

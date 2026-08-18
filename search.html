@@ -48,13 +48,14 @@
     <div id="feed" style="max-width:600px;">
       <h1 id="page-h1" class="sr-only">Search InteractInk</h1>
       <div class="search-topbar">
-        <form onsubmit="location.href='search.html?q='+encodeURIComponent(document.getElementById('sp-input').value.trim());return false;">
+        <form onsubmit="submitSearchForm();return false;">
           <div class="xsearch">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
             <input id="sp-input" placeholder="Search InteractInk" autocomplete="off">
           </div>
         </form>
       </div>
+      <div id="search-scope"></div>
       <div id="search-tabs" class="xtabs" style="border-bottom:1px solid var(--line);"></div>
       <div id="search-root"><span class="spinner">Type something to search&hellip;</span></div>
     </div>
@@ -73,7 +74,7 @@
 <div class="modal-bg" id="modal-report">
   <div class="modal">
     <a class="modal-close" href="#" onclick="closeReport();return false;">&#10005;</a>
-    <h2>Report Post</h2>
+    <h2 id="report-modal-title">Report Post</h2>
     <label>Reason</label>
     <select id="report-reason">
       <option value="illegal">Illegal content</option>

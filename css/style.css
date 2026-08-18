@@ -2206,6 +2206,14 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
      into the same compositing layer as the sticky bars above. */
   html.oc-drawer-open .profile-hdr-top,
   html.oc-drawer-open #pv-avatar { z-index:auto !important; }
+  /* Same bug, same fix, on the community page: tapping the hamburger
+     there left the community's avatar/•••/Search/Join row (and the
+     card behind it) bleeding through on top of the open drawer. That
+     row is body[data-page="community"] .community-hero-top, which
+     gets position:relative + z-index:1 (see the community-page rules
+     below) for the exact same reason .profile-hdr-top does — so it
+     needs the same neutralization while the drawer's open. */
+  html.oc-drawer-open .community-hero-top { z-index:auto !important; }
   .m-drawer-bg.open { background:rgba(91,112,131,.4); pointer-events:auto; }
   .m-drawer {
     position:absolute; top:0; left:0; bottom:0; width:80vw; max-width:308px;
@@ -2554,6 +2562,16 @@ html[data-theme="dim"] .auth-ok, html[data-theme="dark"] .auth-ok { background:r
    SEARCH PAGE
    ═══════════════════════════════════════════════════════════════ */
 .search-topbar { padding:10px 16px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--translucent-bg); backdrop-filter:blur(8px); z-index:5; }
+/* Community-scoped search banner (search.html?community=<slug>) —
+   set by renderSearchScope() in search.js. Empty/no markup when the
+   search isn't scoped to a community, so it costs nothing otherwise. */
+.search-scope {
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:10px 16px; font-size:13px; color:var(--muted); border-bottom:1px solid var(--line);
+}
+.search-scope b { color:var(--ink); }
+.search-scope a { color:var(--link); text-decoration:none; flex:none; }
+.search-scope a:hover { text-decoration:underline; }
 .search-topbar .xsearch { margin:0; }
 .search-topbar form { display:contents; }
 

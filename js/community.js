@@ -73,15 +73,40 @@ function updateComposerVisibility() {
   }
 }
 
-// "•••" icon next to Join — copies this community's URL, same idea
-// as a native share sheet's "Copy Link" entry.
-function copyCommunityLink() {
+// "•••" icon next to Join — opens a small dropdown (same .pc-menu-wrap
+// pattern as postMenuHtml/profileMenuItemsHtml) with Share/Report,
+// instead of a single hardcoded "copy link" action.
+function communityMenuItemsHtml() {
+  return `
+    <button onclick="communityMenuShare(event)">Share community</button>
+    <button onclick="communityMenuReport(event)">Report community</button>`;
+}
+
+function closeCommunityMenu(ev) {
+  if (ev) ev.stopPropagation();
+  document.querySelectorAll('.pc-menu-wrap.open').forEach(w => w.classList.remove('open'));
+}
+
+// Native share sheet when available (mobile), falling back to the old
+// copy-link behavior everywhere else — same fallback chain profile.js
+// uses for profileMenuShare().
+function communityMenuShare(ev) {
+  closeCommunityMenu(ev);
+  if (!community) return;
   const url = location.href;
-  if (navigator.clipboard && navigator.clipboard.writeText) {
+  if (navigator.share) {
+    navigator.share({ title: community.name, url }).catch(() => {});
+  } else if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(url).then(() => toast('Link copied')).catch(() => toast('Could not copy link', 'error'));
   } else {
     toast('Could not copy link', 'error');
   }
+}
+
+function communityMenuReport(ev) {
+  closeCommunityMenu(ev);
+  if (!community) return;
+  openReportCommunity(community.id);
 }
 
 function renderHero() {
@@ -116,8 +141,11 @@ function renderHero() {
       <div class="community-hero-top">
         <span class="comm-avatar-wrap">${avatarInner}</span>
         <div class="community-hero-actions">
-          <button type="button" class="profile-icon-btn" title="Copy link" aria-label="Copy link to this community" onclick="copyCommunityLink()">${ICON.menu}</button>
-          <a class="profile-icon-btn" href="search.html" title="Search" aria-label="Search InteractInk">${NAV_ICON.search}</a>
+          <div class="pc-menu-wrap" id="pmenu-community">
+            <button type="button" class="pc-menu-btn profile-icon-btn" title="More" aria-label="More options" onclick="togglePostMenu('community', event)">${ICON.menu}</button>
+            <div class="pc-menu-dd">${communityMenuItemsHtml()}</div>
+          </div>
+          <a class="profile-icon-btn" href="search.html?community=${encodeURIComponent(community.slug)}" title="Search posts in this community" aria-label="Search posts in this community">${NAV_ICON.search}</a>
           ${actionBtn}
         </div>
       </div>

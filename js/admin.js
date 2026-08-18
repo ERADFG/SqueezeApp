@@ -570,15 +570,20 @@ async function loadReports() {
 
 function adminReportRowHtml(r) {
   // Whoever's actually responsible: a direct user report, or the
-  // author of the reported post/reply.
+  // author of the reported post/reply. A community report has no
+  // single person behind it, so targetId stays unset for those (no
+  // Suspend button — see below).
   const targetId = r.reported_user_id || r.post_author_id || r.reply_author_id;
-  const targetUname = r.reported_username || r.post_author_username || r.reply_author_username || 'unknown';
+  const targetUname = r.reported_username || r.post_author_username || r.reply_author_username || (r.community_id ? null : 'unknown');
+  const reportedLabel = r.community_id ? `Reported: ${esc(r.community_name || 'a community')}` : `Reported: @${esc(targetUname)}`;
 
   let contentLine = '';
   if (r.post_id) {
     contentLine = `<a class="adm-post-body" href="${postUrlById(r.post_id, r.post_author_username)}" target="_blank" rel="noopener">Post: ${esc((r.post_body || '').slice(0, 160))}</a>`;
   } else if (r.reply_id) {
     contentLine = `<a class="adm-post-body" href="${postUrlById(r.reply_id)}" target="_blank" rel="noopener">Reply: ${esc((r.reply_body || '').slice(0, 160))}</a>`;
+  } else if (r.community_id) {
+    contentLine = `<a class="adm-post-body" href="${communityUrl(r.community_slug || '')}" target="_blank" rel="noopener">Community: ${esc(r.community_name || 'unknown')}</a>`;
   }
 
   const tagClass = r.status === 'open' ? 'adm-tag-open' : r.status === 'actioned' ? 'adm-tag-actioned' : 'adm-tag-dismissed';
@@ -586,7 +591,7 @@ function adminReportRowHtml(r) {
   return `
   <div class="adm-row adm-post-row" id="adm-report-${r.id}">
     <div class="adm-row-txt">
-      <span class="adm-row-name">Reported: @${esc(targetUname)}<span class="adm-tag ${tagClass}">${esc(r.status)}</span></span>
+      <span class="adm-row-name">${reportedLabel}<span class="adm-tag ${tagClass}">${esc(r.status)}</span></span>
       <span class="adm-row-meta">Reason: ${esc(r.reason || '(none given)')}${r.details ? ' &mdash; ' + esc(r.details) : ''}</span>
       <span class="adm-row-meta">Reported by @${esc(r.reporter_username || 'unknown')} &middot; ${timeAgo(r.created_at)}</span>
       ${contentLine}

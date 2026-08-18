@@ -6,8 +6,44 @@ const POST_SELECT = '*, profile:profiles!posts_author_id_fkey(username,display_n
 
 const searchParams = new URLSearchParams(location.search);
 let searchQuery = searchParams.get('q') || '';
-let searchTab = searchParams.get('t') === 'people' ? 'people' : 'posts';
+
+// ── COMMUNITY-SCOPED SEARCH — search.html?community=<slug>, reached
+// from the search icon on a community page's hero (see community.js
+// renderHero()). Only scopes the Posts tab (there's no per-community
+// "People" to search) — resolved once and cached, same slug→row
+// lookup community.js itself does in loadCommunity(). Forces the
+// People tab off since a community only has posts to search.
+const searchCommunitySlug = searchParams.get('community') || '';
+let searchTab = (!searchCommunitySlug && searchParams.get('t') === 'people') ? 'people' : 'posts';
 let exploreTab = 'explore'; // 'explore' | 'trending' | 'news' | 'sports' | 'entertainment'
+
+let searchCommunity = null; // {id,name,slug} once resolved, or false if it doesn't exist
+async function resolveSearchCommunity() {
+  if (!searchCommunitySlug || searchCommunity) return searchCommunity;
+  const { data } = await sb.from('communities').select('id,name,slug').eq('slug', searchCommunitySlug).maybeSingle();
+  searchCommunity = data || false;
+  return searchCommunity;
+}
+// Keeps the community filter attached across a re-search (typing a new
+// term) or a tab switch, instead of the plain inline onsubmit in
+// search.html silently dropping it.
+function submitSearchForm() {
+  const q = document.getElementById('sp-input').value.trim();
+  const params = new URLSearchParams();
+  if (q) params.set('q', q);
+  if (searchCommunitySlug) params.set('community', searchCommunitySlug);
+  if (searchTab === 'people') params.set('t', 'people');
+  location.href = 'search.html' + (params.toString() ? `?${params.toString()}` : '');
+}
+function renderSearchScope(root) {
+  if (!searchCommunitySlug) { root.innerHTML = ''; return; }
+  const name = searchCommunity ? esc(searchCommunity.name) : esc(searchCommunitySlug);
+  root.innerHTML = `
+    <div class="search-scope">
+      Searching posts in <b>${name}</b>
+      <a href="search.html${searchQuery ? `?q=${encodeURIComponent(searchQuery)}` : ''}">Search everywhere instead</a>
+    </div>`;
+}
 
 function renderTabs() {
   const el = document.getElementById('search-tabs');
@@ -16,9 +52,10 @@ function renderTabs() {
       <button class="xtab${exploreTab === t ? ' active' : ''}" onclick="setExploreTab('${t}')">${t[0].toUpperCase()}${t.slice(1)}</button>`).join('');
     return;
   }
-  el.innerHTML = `
-    <button class="xtab${searchTab === 'posts' ? ' active' : ''}" onclick="setSearchTab('posts')">Posts</button>
-    <button class="xtab${searchTab === 'people' ? ' active' : ''}" onclick="setSearchTab('people')">People</button>`;
+  el.innerHTML = searchCommunitySlug
+    ? `<button class="xtab active">Posts</button>`
+    : `<button class="xtab${searchTab === 'posts' ? ' active' : ''}" onclick="setSearchTab('posts')">Posts</button>
+       <button class="xtab${searchTab === 'people' ? ' active' : ''}" onclick="setSearchTab('people')">People</button>`;
 }
 
 function setSearchTab(tab) {
@@ -37,7 +74,21 @@ function setExploreTab(tab) {
 
 async function runSearch() {
   document.getElementById('sp-input').value = searchQuery;
+  const scopeEl = document.getElementById('search-scope');
   const root = document.getElementById('search-root');
+
+  if (searchCommunitySlug) {
+    const comm = await resolveSearchCommunity();
+    if (scopeEl) renderSearchScope(scopeEl);
+    if (comm === false) { root.innerHTML = `<div id="feed-empty">This community doesn't exist.</div>`; return; }
+    document.title = `${searchQuery ? `${searchQuery} — ` : ''}${comm.name} — Search — InteractInk`;
+    setPageH1(`Search ${comm.name}`);
+    if (!searchQuery.trim()) { root.innerHTML = `<div id="feed-empty">Type something to search posts in ${esc(comm.name)}.</div>`; return; }
+    root.innerHTML = skeletonFeedHtml();
+    return searchPosts(root);
+  }
+  if (scopeEl) scopeEl.innerHTML = '';
+
   if (!searchQuery.trim()) {
     document.title = 'Explore — InteractInk';
     setPageH1('Explore InteractInk');
@@ -52,14 +103,13 @@ async function runSearch() {
 
 async function searchPosts(root) {
   await ensureFeedPrereqsLoaded();
-  const { data, error } = await sb.from('posts').select(POST_SELECT)
-    .eq('is_deleted', false)
-    .ilike('body', `%${searchQuery}%`)
-    .order('created_at', { ascending: false })
-    .limit(50);
+  let query = sb.from('posts').select(POST_SELECT).eq('is_deleted', false);
+  if (searchCommunitySlug && searchCommunity) query = query.eq('community_id', searchCommunity.id);
+  if (searchQuery.trim()) query = query.ilike('body', `%${searchQuery}%`);
+  const { data, error } = await query.order('created_at', { ascending: false }).limit(50);
 
   if (error) { root.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
-  if (!data.length) { root.innerHTML = `<div id="feed-empty">No posts found for &ldquo;${esc(searchQuery)}&rdquo;.</div>`; return; }
+  if (!data.length) { root.innerHTML = `<div id="feed-empty">No posts found${searchQuery ? ` for &ldquo;${esc(searchQuery)}&rdquo;` : ''}.</div>`; return; }
   await attachQuotedPosts(data);
   root.innerHTML = data.map(p => postCardHtml(p)).join('');
 }
