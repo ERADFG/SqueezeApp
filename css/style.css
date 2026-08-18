@@ -500,6 +500,18 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
   transition:color .18s ease;
 }
 .xtab:hover { color:var(--ink); }
+/* Explore/Search tab row has 5 items (Explore/Trending/News/Sports/
+   Entertainment) instead of the usual 2-3, so the shared flex:1 sizing
+   above squeezes every label into an equal-width slot and "Entertainment"
+   overflows straight past the pill's rounded edge on anything narrower
+   than ~650px (mobile in particular). Give this one row content-sized,
+   non-wrapping tabs inside a horizontally-scrollable track instead, so
+   labels stay intact and reachable by a swipe rather than clipping. */
+#search-tabs.xtabs {
+  overflow-x:auto; scrollbar-width:none; -ms-overflow-style:none;
+}
+#search-tabs.xtabs::-webkit-scrollbar { display:none; }
+#search-tabs .xtab { flex:none; padding:9px 14px; white-space:nowrap; }
 /* Fallback fill for the active tab — the sliding maroon pill
    (.xtabs-indicator) only exists in the DOM on the home page
    (index.html) and is only ever positioned by board.js's
