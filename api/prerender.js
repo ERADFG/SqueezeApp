@@ -200,7 +200,7 @@ async function renderHome(origin) {
   html = injectHead(html, jsonLdScriptTag(jsonLd));
 
   html = insertHiddenSeoBlock(html,
-    '<div id="feed-posts"><span class="spinner">Loading posts&hellip;</span></div>',
+    '<div id="feed-posts">',
     postsHtml || '<p>No posts yet.</p>');
 
   return { status: 200, html };
