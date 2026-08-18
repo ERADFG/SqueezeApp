@@ -1742,11 +1742,23 @@ update public.profiles set verification_type = 'purple' where verified = true an
 -- "create or replace" alone would leave both overloads in place
 -- and PostgREST would then see an ambiguous call whenever a
 -- request only supplies target_user_id + make_verified.
-drop function if exists public.admin_verify_user(uuid, boolean);
--- Also drop the 3-arg version in case it already exists with a
--- differently-named third parameter (e.g. "verification_type" instead
--- of "p_verification_type") — create or replace cannot rename params.
-drop function if exists public.admin_verify_user(uuid, boolean, text);
+-- Drop every existing overload of admin_verify_user, whatever its
+-- signature or parameter names — create or replace cannot rename
+-- params or resolve overload ambiguity, so a plain "drop if exists"
+-- with one guessed signature isn't reliable enough here.
+do $$
+declare
+  r record;
+begin
+  for r in
+    select oid::regprocedure as sig
+    from pg_proc
+    where proname = 'admin_verify_user'
+      and pronamespace = 'public'::regnamespace
+  loop
+    execute format('drop function %s', r.sig);
+  end loop;
+end $$;
 
 -- The third parameter is named p_verification_type (not just
 -- verification_type) on purpose — plpgsql can't tell a bare
@@ -1775,3 +1787,4 @@ end;
 $$;
 
 grant execute on function public.admin_verify_user(uuid, boolean, text) to authenticated;
+notify pgrst, 'reload schema';
