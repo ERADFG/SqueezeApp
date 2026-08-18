@@ -2,6 +2,42 @@
 // COMMON HELPERS — shared by board.js and thread.js
 // ─────────────────────────────────────────────────────────────
 
+// ── SPECULATIVE PRERENDERING — this is a plain multi-page app (every
+// internal link is a real full navigation, no SPA router), so the
+// single biggest lever for making clicks feel instant is starting the
+// next page's load before the click even happens. The Speculation
+// Rules API tells supporting browsers (Chrome/Edge 121+) to prerender
+// same-origin links the moment the user hovers/touches them — by the
+// time the click registers, the destination is often already fully
+// rendered in a hidden background tab, so navigation is a swap, not a
+// load. Unsupported browsers just ignore the tag and get normal
+// navigation, so this is pure upside. Kept to "moderate" eagerness
+// (hover/touchstart, not viewport-wide) to avoid over-fetching, and
+// explicitly excludes logout/destructive/auth links, external hosts,
+// and anything with a query string (?u=, ?id=, etc. legacy links can
+// carry side-effecting params we don't want speculatively loaded).
+(function initSpeculationRules() {
+  try {
+    if (!HTMLScriptElement.supports || !HTMLScriptElement.supports('speculationrules')) return;
+    const script = document.createElement('script');
+    script.type = 'speculationrules';
+    script.textContent = JSON.stringify({
+      prerender: [{
+        where: {
+          and: [
+            { href_matches: '/*' },
+            { not: { href_matches: '/*\\?*' } },
+            { not: { href_matches: '/logout*' } },
+            { not: { selector_matches: '[data-no-prerender], [download], [target=_blank]' } },
+          ],
+        },
+        eagerness: 'moderate',
+      }],
+    });
+    document.head.appendChild(script);
+  } catch (e) { /* progressive enhancement only — never let this block the page */ }
+})();
+
 // ── URLS — every actual `<a href>` / `location.href = ...` in the
 // app is built through the functions below, and they now build the
 // pretty Twitter/X-style path directly (/marc, /marc/status/<id>,

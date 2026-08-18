@@ -3213,9 +3213,12 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
        bold stat row, solid black pill CTAs/active tabs.
    ═══════════════════════════════════════════════════════════════ */
 
-/* ── PROFILE: avatar stays circular (per reference) — just made
-   larger and pulled further up over the banner to match the
-   photo's proportions. Only the avatar itself overlaps the banner
+/* ── PROFILE: avatar is circular by default, matching the small
+   avatars elsewhere — except gold-verified accounts, which get the
+   squared-off treatment here too via .avatar-square (see badgeType()/
+   avSqClass() in js/common.js), same as posts/replies/search results.
+   Just made larger and pulled further up over the banner to match
+   the photo's proportions. Only the avatar itself overlaps the banner
    (via its own negative margin) — .profile-hdr-top stays in normal
    flow so the Follow/Edit profile button next to it always sits
    clear of the banner instead of getting dragged up onto it. ── */
@@ -3224,6 +3227,7 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
   border:4px solid var(--bg); box-shadow:0 1px 3px rgba(15,20,25,.15);
   margin-top:-62px;
 }
+.profile-hdr .avatar.pfp-lg.avatar-square { border-radius:22%; }
 .profile-hdr-top { margin-top:14px; }
 .profile-hdr::before { height:220px; }
 @media (max-width:480px) {
