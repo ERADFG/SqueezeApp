@@ -500,7 +500,24 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
   transition:color .18s ease;
 }
 .xtab:hover { color:var(--ink); }
-.xtab.active { color:#fff; }
+/* Fallback fill for the active tab — the sliding maroon pill
+   (.xtabs-indicator) only exists in the DOM on the home page
+   (index.html) and is only ever positioned by board.js's
+   positionTabIndicator(), which targets that one element by id.
+   Every other page that reuses the plain .xtabs/.xtab markup
+   (Explore/Search, Lists, Followers/Following, a List's
+   Posts/Members/Followers) never got an indicator element or any
+   JS wiring for one, so .xtab.active previously only set
+   `color:#fff` with nothing behind it — white text on the plain
+   light-mode track, invisible. Giving the active tab its own
+   background directly fixes every one of those pages regardless
+   of whether an indicator is present; on the home page (which DOES
+   have a working sliding indicator) the more specific
+   `body[data-page="home"] #board-hdr .xtab.active` rule further
+   down still wins and switches this back off in favor of the
+   underline treatment, so nothing changes there. */
+.xtab.active { color:#fff; background:var(--maroon); }
+.xtab.active:hover { background:var(--maroon-dk); }
 .xtabs-plus {
   flex:none; width:38px; height:38px; display:flex; align-items:center; justify-content:center;
   background:var(--hover-bg); border:1px solid var(--line); border-radius:999px;
@@ -544,7 +561,19 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
 #pf-box:not(.pf-expanded):hover {
   border-color:color-mix(in srgb, var(--maroon) 35%, var(--line));
   box-shadow:0 4px 16px rgba(15,20,25,.08);
-  transform:translateY(-1px);
+  /* No `transform` here (was translateY(-1px)) — a transform on this
+     box makes it a CSS containing block for any position:fixed
+     descendant, which includes the reply-audience picker's mobile
+     bottom sheet (.ga-dd, see its @media(max-width:520px) rules).
+     Mobile browsers apply :hover on tap and keep it "stuck" until the
+     next tap elsewhere, so tapping the "Who can reply?" pill inside
+     this card triggered this rule and left the sheet + its dark
+     backdrop resolving position:fixed against this small card instead
+     of the real viewport — landing it as a stray floating box under
+     the tab bar rather than a full-screen sheet pinned to the bottom.
+     Same failure mode already fixed for .pc's entrance animation
+     above; the box-shadow/border-color lift alone is enough feedback
+     without needing transform. */
 }
 #pf-box.pf-expanded {
   border-color:var(--maroon); padding:18px 18px 12px;
@@ -2087,6 +2116,22 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
   #main { margin-left:0; padding-top:53px; padding-bottom:calc(66px + env(safe-area-inset-bottom)); }
   #sidebar, .xright { display:none; }
 
+  /* Every in-page sticky header (#board-hdr's "For you / Following"
+     tabs, .sec-bar's back-button/title bars, .search-topbar) sticks
+     at top:0 by default, which is correct on desktop but on mobile
+     that's the exact same 53px strip #m-topbar (the fixed hamburger
+     + logo bar) already occupies. Once one of these bars scrolls up
+     and locks into place it lands directly on top of #m-topbar
+     instead of below it — and on some mobile browsers the sticky
+     bar's own backdrop-filter layer even gets composited above the
+     fixed bar despite its lower z-index, which is what produces the
+     "logo/hamburger gets swallowed mid-scroll" glitch. Sticking these
+     at top:53px instead of top:0 seats them right below #m-topbar so
+     the two never occupy the same space in the first place — more
+     robust than trying to win a z-index fight against a browser
+     compositing quirk. */
+  #board-hdr, .sec-bar, .search-topbar { top:53px; }
+
   #m-topbar {
     display:flex; align-items:center; justify-content:space-between;
     position:fixed; top:0; left:0; right:0; height:53px;
@@ -2198,7 +2243,13 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
   html.oc-drawer-open .sec-bar,
   html.oc-drawer-open .search-topbar,
   html.oc-drawer-open .profile-back-btn,
-  html.oc-drawer-open .profile-hdr-actions { display:none !important; }
+  html.oc-drawer-open .profile-hdr-actions,
+  /* Same bug again on the Followers/Following page: its tab bar
+     (#fl-tabs) only carries the plain .profile-tabs class, not
+     .sec-bar like the profile page's version does, so it was left
+     out of the list above and kept bleeding "Followers / Following"
+     through on top of the open drawer. */
+  html.oc-drawer-open .profile-tabs { display:none !important; }
   /* Extra safety net for the same leak: #pv-avatar and .profile-hdr-top
      each open their own local stacking context (position:relative +
      z-index:1) so the avatar can sit over the banner photo — neutralize
@@ -2425,6 +2476,14 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
   width:100%; font-family:inherit; font-size:15px; font-weight:700;
   background:var(--maroon); color:#fff; border:none; border-radius:999px; padding:12px 10px; cursor:pointer;
   margin-top:10px; transition:background .12s ease, filter .12s ease, transform .05s ease;
+  /* Explicit (not just inherited-default) overflow/white-space —
+     this class is also reused on a plain <a> (e.g. the Contact page's
+     "Email ..." button), and an anchor's box model behaves slightly
+     differently from a <button>'s. Spelling these out here removes
+     any chance of the label getting clipped or collapsed to nothing
+     inside the pill on a browser that resolves the inline-block/
+     max-width combination differently. */
+  overflow:visible; white-space:normal; line-height:1.3;
 }
 .auth-submit:hover { background:var(--maroon-dk); }
 .auth-submit:active { transform:translateY(1px); }
@@ -2488,6 +2547,18 @@ html[data-theme="dim"] .auth-ok, html[data-theme="dark"] .auth-ok { background:r
    profile button always sits clear of the banner instead of getting
    pulled up onto it. */
 .profile-hdr-top { display:flex; align-items:flex-end; justify-content:space-between; gap:10px; margin-top:14px; position:relative; z-index:1; }
+/* The "···" profile menu (.pc-menu-dd) is position:fixed with real
+   viewport coordinates (see positionMenuDd() in common.js), so it
+   paints in the right x/y spot — but it's still a DOM descendant of
+   this z-index:1 box, so its stacking is scoped inside that local
+   context. #profile-tabs (the sticky Posts/Replies bar) is a sibling
+   of .profile-hdr with its own z-index:5, compared at the outer
+   level — which beat this whole subtree's z-index:1, so the tab bar
+   painted straight through the middle of the open menu. Bumping this
+   above 5 only while the menu is open (same targeted-escalation
+   trick as .pc:has(.pc-menu-wrap.open) above) fixes it without
+   touching the tab bar or affecting normal layout. */
+.profile-hdr-top:has(.pc-menu-wrap.open) { z-index:6; }
 #pv-avatar { position:relative; z-index:1; }
 
 /* ── header action row: message + "···" menu + follow/edit ── */
