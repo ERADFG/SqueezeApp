@@ -840,12 +840,23 @@ select {
 
 /* Create-community modal — same .modal shell as the delete/quote/gif
    modals above, just a little wider to fit the description textarea. */
-.modal.cc-modal { width:420px; padding-bottom:0; }
-.cc-dots { display:flex; justify-content:center; gap:6px; margin:0 0 12px; }
+/* max-height + flex column: without this the modal (which inherits
+   `overflow:hidden` from the base .modal rule, not a scrollbar) just
+   grows as tall as its content — fine for the name/description steps,
+   but the rules step's list is unbounded (up to 20 rules), so once
+   there are enough of them the whole dialog becomes taller than the
+   viewport and, because nothing scrolls, the "Next"/"Create
+   community" button in .cc-nav is pushed out of the visible/tappable
+   area with no way to reach it. Capping the modal's own height and
+   letting only .cc-step-body scroll internally (below) keeps the
+   dots/header and the nav buttons always on-screen regardless of how
+   many rules or moderators have been added. */
+.modal.cc-modal { width:420px; padding-bottom:0; max-height:88vh; display:flex; flex-direction:column; }
+.cc-dots { display:flex; justify-content:center; gap:6px; margin:0 0 12px; flex:none; }
 .cc-dot { width:6px; height:6px; border-radius:50%; background:var(--line); transition:background-color .15s ease, transform .15s ease; }
 .cc-dot.active { background:var(--maroon); transform:scale(1.3); }
 .cc-dot.done { background:var(--muted); }
-.cc-step-body { padding:0 16px; min-height:120px; }
+.cc-step-body { padding:0 16px; min-height:120px; flex:1 1 auto; overflow-y:auto; overflow-x:hidden; }
 .cc-modal .cc-step-body label { font-size:15px; font-weight:800; color:var(--ink); display:block; margin:0 0 8px; }
 .cc-modal .cc-step-body input[type="text"], .cc-modal .cc-step-body textarea {
   width:100%; box-sizing:border-box; margin:0 0 8px; background:var(--bg);
@@ -854,7 +865,8 @@ select {
 .cc-step-body textarea { resize:vertical; }
 .cc-modal .comm-inline-form input[type="text"], .cc-modal .comm-inline-form textarea { margin:0 0 8px; width:100%; }
 .cc-step-hint { font-size:12.5px; color:var(--muted); margin:6px 0 0; line-height:1.4; }
-.cc-nav { display:flex; align-items:center; gap:10px; padding:16px; border-top:1px solid var(--line); margin-top:16px; }
+.cc-nav { display:flex; align-items:center; gap:10px; padding:16px; border-top:1px solid var(--line); margin-top:16px; flex:none; }
+.cc-modal > h2, .cc-modal > .errmsg { flex:none; }
 .cc-nav-back { background:none; border:1px solid var(--line); color:var(--ink); border-radius:999px; padding:8px 16px; font-weight:700; cursor:pointer; }
 .cc-nav-back:hover { background:var(--hover-bg); }
 .cc-nav-next { flex:1; margin:0 !important; width:auto !important; }
@@ -1192,6 +1204,19 @@ select {
   background:var(--cream-card); border:none; border-bottom:1px solid var(--line); border-radius:0;
   margin-bottom:0; padding:12px 16px; box-shadow:none; cursor:pointer;
   transition:background-color .12s ease;
+  /* The whole card navigates on tap via a JS onclick (cardClick() in
+     common.js), not a real <a href>. Without these, a tap that lands on
+     any text inside the card (post body, name, timestamp) is ambiguous
+     to a touchscreen — it reads as the start of a text selection, so a
+     quick tap highlights the word/line (and on iOS pops the Copy/Look Up
+     callout) instead of just navigating like the rest of the card
+     already does. touch-action:manipulation also removes the ~300ms
+     tap delay some mobile browsers add. Selection stays off for the
+     whole card since none of it is meant to be press-and-hold text —
+     the actual link/@mention/#hashtag/button children inside still get
+     their own tap handling via cardClick()'s target check. */
+  -webkit-touch-callout:none; -webkit-user-select:none; user-select:none;
+  touch-action:manipulation;
   /* fill-mode intentionally omitted (was `both`) — with `both`/`forwards`,
      the animation's final `transform:translateY(0)` keyframe stays applied
      to this element forever after the .2s entrance finishes. A transform
@@ -1794,6 +1819,20 @@ body.oc-sheet-open { overflow:hidden; }
 .gif-search-row svg { width:16px; height:16px; color:var(--muted); flex:none; }
 .gif-search-row input { border:none; background:none; padding:0; font-size:14px; }
 .gif-search-row input:focus { box-shadow:none; }
+/* The generic `.modal input[type="text"]` rule above (meant for
+   plain stacked form fields directly inside a modal) also matches
+   this input since it's still a descendant of `.modal` — its
+   `margin:0 16px 12px; width:calc(100% - 32px)` fights the pill's
+   own flex layout (padding + gap already handle spacing here),
+   shoving the input out of the rounded search pill so it overlaps
+   the magnifying-glass icon and placeholder text. Needs to win over
+   that rule (same specificity, so scoped one level deeper here to
+   be safely more specific) rather than just override the two
+   properties, in case anything else generic targets input[type=text]
+   later. */
+.modal .gif-search-row input[type="text"], .modal .cx-emoji-search-row input[type="text"] {
+  margin:0; width:auto; flex:1; min-width:0; color:var(--ink);
+}
 .gif-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; max-height:420px; overflow-y:auto; padding:0 16px; }
 .gif-item { padding:0; border:none; border-radius:16px; overflow:hidden; cursor:pointer; background:var(--hover-bg); aspect-ratio:1/1; }
 .gif-item img { width:100%; height:100%; object-fit:cover; display:block; }
@@ -2296,6 +2335,10 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
     transform:translateX(-100%); transition:transform .26s cubic-bezier(.2,.8,.2,1);
   }
   .m-drawer-bg.open .m-drawer { transform:translateX(0); }
+  /* Set by common.js right before a drawer link navigates away, so
+     the drawer snaps shut instantly instead of mid-slide — see the
+     closeMobileDrawer() call wired to drawer link clicks for why. */
+  .m-drawer-bg.no-anim, .m-drawer-bg.no-anim .m-drawer { transition:none !important; }
   .m-drawer .m-drawer-avatar { width:52px; height:52px; display:block; margin-bottom:10px; }
   .m-drawer .m-drawer-name { display:block; font-size:17px; font-weight:800; color:var(--ink); }
   .m-drawer .m-drawer-handle { display:block; font-size:14px; color:var(--muted); margin-bottom:10px; }

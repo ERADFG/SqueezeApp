@@ -62,7 +62,7 @@
 // 'visibilitychange' (belt-and-suspenders for browsers that support
 // neither of the above signals cleanly).
 function repaintStickyChrome() {
-  ['board-hdr', 'm-topbar'].forEach(id => {
+  ['board-hdr', 'm-topbar', 'm-tabbar', 'm-fab'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     el.style.display = 'none';
@@ -80,6 +80,34 @@ if ('prerendering' in document) {
 }
 window.addEventListener('pageshow', (e) => { if (e.persisted) repaintStickyChrome(); });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') repaintStickyChrome(); });
+// Belt-and-suspenders for a plain, ordinary navigation (not a
+// prerender activation or bfcache restore) into a page whose
+// backdrop-filter + position:fixed bars (#m-topbar/#m-tabbar/#m-fab,
+// #board-hdr, .sec-bar) paint stale on first frame — seen on some
+// in-app WebViews (Instagram/Facebook/TikTok/Line's built-in browser)
+// where the native cross-document view transition below finishes
+// compositing the incoming page's fixed chrome as a leftover
+// translucent layer instead of the real, current content. Cheap and
+// idempotent, so running it unconditionally shortly after every load
+// costs nothing on browsers that never had the bug.
+document.addEventListener('DOMContentLoaded', () => { requestAnimationFrame(() => requestAnimationFrame(repaintStickyChrome)); });
+
+// ── IN-APP BROWSER VIEW-TRANSITION GUARD — Instagram/Facebook/TikTok/
+// Line/WeChat's built-in in-app browsers are Chromium-based (so they
+// report native cross-document View Transition support, same as the
+// 'onpageswap' in window check wirePageLeaveFade() uses below) but a
+// number of them mis-composite `backdrop-filter` + `position:fixed`
+// elements while the transition runs — the incoming page's #m-topbar
+// (hamburger/logo bar) and whatever composer UI was on the outgoing
+// page get left behind as a stuck, semi-transparent ghost layer on
+// top of the real, fully-loaded page underneath, instead of cleanly
+// resolving. Skipping the native transition specifically for these
+// UAs avoids the glitch entirely; wirePageLeaveFade()'s simple JS
+// fade (opacity, no fixed-position bars involved) is used instead. */
+const IN_APP_BROWSER_UA = /Instagram|FBAN|FBAV|Line\/|MicroMessenger|TikTok|BytedanceWebview|Snapchat/i.test(navigator.userAgent || '');
+if (IN_APP_BROWSER_UA) {
+  window.addEventListener('pagereveal', (e) => { e.viewTransition?.skipTransition(); });
+}
 
 // ── URLS — every actual `<a href>` / `location.href = ...` in the
 // app is built through the functions below, and they now build the
@@ -234,7 +262,10 @@ document.addEventListener('DOMContentLoaded', wireLinkPrefetch);
 // removed above), made the fixed nav bars briefly double up. Now
 // exactly one of the two ever runs.
 function wirePageLeaveFade() {
-  if ('onpageswap' in window) return; // native cross-document transition handles it
+  // Native support is skipped outright for IN_APP_BROWSER_UA above (see
+  // the pagereveal listener), so those UAs need this plain fade too —
+  // 'onpageswap' in window alone isn't a safe signal for them.
+  if ('onpageswap' in window && !IN_APP_BROWSER_UA) return;
   document.addEventListener('click', (e) => {
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     const a = e.target.closest && e.target.closest('a[href]');
@@ -764,6 +795,10 @@ function renderMobileChrome() {
 // bars occasionally compositing above the drawer overlay despite its much
 // higher z-index (see .m-drawer-bg comment in style.css).
 function openMobileDrawer() {
+  // Clear a leftover no-anim (set right before a drawer-link
+  // navigation — see below) in case this page was bfcache-restored
+  // with it still applied, so re-opening the drawer slides in normally.
+  document.getElementById('m-drawer-bg')?.classList.remove('no-anim');
   document.getElementById('m-drawer-bg')?.classList.add('open');
   document.documentElement.classList.add('oc-drawer-open');
 }
@@ -771,6 +806,27 @@ function closeMobileDrawer() {
   document.getElementById('m-drawer-bg')?.classList.remove('open');
   document.documentElement.classList.remove('oc-drawer-open');
 }
+// The drawer's own links (Home, Chat, Settings, etc.) are plain
+// `<a href>`s that navigate immediately on click — none of them
+// call closeMobileDrawer() first. On a normal click that's harmless
+// (the whole document unloads a moment later anyway), but the native
+// cross-document view transition (see @view-transition in style.css)
+// captures a *snapshot of the page exactly as it looked* right before
+// navigation as its "old" frame — with the drawer still wide open —
+// and crossfades that into the next page. The result is the drawer
+// appearing to hang open, floating over the new page's real content,
+// for the whole transition instead of just vanishing. Closing it
+// synchronously (transition-free, so the snapshot reflects "closed"
+// rather than a half-finished slide) the instant a drawer link is
+// clicked — before the browser hands off to navigation — fixes that
+// without touching the click/navigation itself.
+document.addEventListener('click', (e) => {
+  const bg = document.getElementById('m-drawer-bg');
+  if (!bg || !bg.classList.contains('open')) return;
+  if (!e.target.closest || !e.target.closest('.m-drawer a')) return;
+  bg.classList.add('no-anim');
+  closeMobileDrawer();
+});
 
 // ─────────────────────────────────────────────────────────────
 // GLOBAL COMPOSE MODAL — the sidebar "Post" button, mobile top-bar
