@@ -685,6 +685,20 @@ function mchrome() {
 
 function renderMobileChrome() {
   const el = mchrome();
+  // If the drawer was open at the moment this re-render fires — auth
+  // state/unread counts resolving right after initial load is the
+  // classic case, but any of the several renderMobileChrome() calls
+  // in auth.js can land here — innerHTML below throws away the old
+  // #m-drawer-bg and builds a brand-new one in its default *closed*
+  // state. <html class="oc-drawer-open"> (which hides the topbar/
+  // tabbar/FAB and locks scroll — see style.css) stays set the whole
+  // time, so without this the person is left staring at a screen with
+  // no visible drawer, no visible chrome, and no scrolling: looks
+  // exactly like a frozen page. Carrying the open state onto the new
+  // element (no-anim so it doesn't visibly slide open again) keeps
+  // the drawer's actual DOM state in sync with <html>'s class the
+  // whole time, on every page that calls this.
+  const wasOpen = document.getElementById('m-drawer-bg')?.classList.contains('open');
   const here = currentNavKey();
   const cur = key => key === here ? ' cur' : '';
   const badge = unreadNotifCount > 0 ? `<span class="navbadge">${unreadNotifCount > 99 ? '99+' : unreadNotifCount}</span>` : '';
@@ -787,6 +801,10 @@ function renderMobileChrome() {
         `}
       </div>
     </div>`;
+
+  if (wasOpen) {
+    document.getElementById('m-drawer-bg')?.classList.add('no-anim', 'open');
+  }
 }
 
 // oc-drawer-open on <html> both locks page scroll behind the drawer and
@@ -4476,10 +4494,13 @@ function lbEl() {
     <div class="lb-body">
       <div class="lb-stage" id="lb-stage">
         <div class="lb-media-wrap" id="lb-media-wrap"></div>
+        <div class="lb-bottom-dock">
+          <div class="lb-caption-overlay" id="lb-caption-overlay" hidden></div>
+          <div class="lb-mobile-bar" id="lb-mobile-bar"></div>
+        </div>
       </div>
       <aside class="lb-sidebar" id="lb-sidebar"></aside>
-    </div>
-    <div class="lb-mobile-bar" id="lb-mobile-bar"></div>`;
+    </div>`;
   document.body.appendChild(el);
   el.addEventListener('click', e => { if (e.target === el || e.target.id === 'lb-stage') closeLightbox(); });
   wireLightboxGestures();
@@ -4498,6 +4519,7 @@ function openLightbox(idx) {
     : `<img src="${esc(item.url)}" alt="">`;
   renderLbSidebar(item.owner);
   renderLbMobileBar(item.owner);
+  renderLbCaptionOverlay(item.owner);
   el.classList.add('open');
   lockScroll();
   document.addEventListener('keydown', lbKeyHandler);
@@ -4591,6 +4613,64 @@ function renderLbMobileBar(owner) {
   bar.hidden = false;
   const isReply = lbIsReply(owner);
   bar.innerHTML = postActionsHtml(owner, { replyHref: lbOwnerHref(owner), bookmarkable: !isReply, repostable: !isReply, isReply });
+}
+
+// Floating attribution card overlaid on the media itself (mobile
+// only — see .lb-caption-overlay), same idea as X's fullscreen video
+// view: avatar/name/handle/Follow riding right on top of the media,
+// with the post body as a short caption underneath. Follow starts
+// hidden until we know the real follow state (a stale "Follow" on an
+// account you already follow reads as broken), then swaps in once
+// isFollowing() resolves.
+async function renderLbCaptionOverlay(owner) {
+  const el = document.getElementById('lb-caption-overlay');
+  if (!el) return;
+  if (!owner) { el.innerHTML = ''; el.hidden = true; return; }
+  const uname = owner.profile?.username || 'unknown';
+  const authorId = owner.author_id || owner.profile?.id;
+  const isSelf = currentProfile && authorId === currentProfile.id;
+  const showFollow = !isSelf && !!currentSession && !!authorId;
+  el.hidden = false;
+  el.innerHTML = `
+    <div class="lb-cap-row">
+      ${pcAvatarHtml(owner.profile)}
+      <div class="lb-cap-names">
+        <a class="nm" href="${profileUrl(uname)}">${esc(owner.profile?.display_name || uname)}${vBadge(owner.profile)}</a>
+        <a class="handle" href="${profileUrl(uname)}">@${esc(uname)}</a>
+      </div>
+      ${showFollow ? `<button type="button" class="lb-cap-follow" id="lb-cap-follow-btn" onclick="lbToggleFollow('${authorId}', this)">${t('action.follow')}</button>` : ''}
+    </div>
+    ${owner.body ? `<div class="lb-cap-text">${esc(owner.body)}</div>` : ''}`;
+  if (showFollow) {
+    try {
+      const following = await isFollowing(authorId);
+      const btn = document.getElementById('lb-cap-follow-btn');
+      if (btn && following) { btn.classList.add('following'); btn.textContent = t('action.following'); }
+    } catch {}
+  }
+}
+
+async function lbToggleFollow(userId, btn) {
+  if (!requireLogin()) return;
+  const following = btn.classList.contains('following');
+  btn.disabled = true;
+  try {
+    if (following) {
+      const { error } = await unfollowUser(userId);
+      if (error) throw error;
+      btn.classList.remove('following');
+      btn.textContent = t('action.follow');
+    } else {
+      const { error } = await followUser(userId);
+      if (error) throw error;
+      btn.classList.add('following');
+      btn.textContent = t('action.following');
+    }
+  } catch (e) {
+    alert(e.message || 'Could not update follow status.');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // ── ZOOM / PAN ──

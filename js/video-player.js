@@ -36,15 +36,15 @@ function ttvHtml(url, opts = {}) {
     </div>
     <div class="ttv-row">
       <button type="button" class="ttv-btn ttv-play" aria-label="Play">${TTV_ICON.play}</button>
+      <span class="ttv-time"><span class="ttv-remain">-0:00</span></span>
+      <span class="ttv-spacer"></span>
+      <button type="button" class="ttv-btn ttv-speed" aria-label="Playback speed">1x</button>
       <div class="ttv-vol-wrap">
         <button type="button" class="ttv-btn ttv-mute" aria-label="Mute">${TTV_ICON.volHigh}</button>
         <input type="range" class="ttv-vol-slider" min="0" max="1" step="0.05" value="1" aria-label="Volume">
       </div>
-      <span class="ttv-time"><span class="ttv-cur">0:00</span> / <span class="ttv-dur">0:00</span></span>
-      <span class="ttv-spacer"></span>
-      <button type="button" class="ttv-btn ttv-speed" aria-label="Playback speed">1x</button>
-      <button type="button" class="ttv-btn ttv-pip" aria-label="Picture in picture">${TTV_ICON.pip}</button>
       <button type="button" class="ttv-btn ttv-fs" aria-label="Fullscreen">${TTV_ICON.fsEnter}</button>
+      <button type="button" class="ttv-btn ttv-pip" aria-label="Picture in picture">${TTV_ICON.pip}</button>
     </div>
     <div class="ttv-menu">
       ${TTV_SPEEDS.map(s => `<button type="button" class="ttv-menu-opt${s === 1 ? ' active' : ''}" data-speed="${s}">${TTV_ICON.check}<span>${s === 1 ? 'Normal' : s + 'x'}</span></button>`).join('')}
@@ -98,8 +98,8 @@ function ttvUpdateProgress(root, previewFrac = null) {
   const frac = dur ? v.currentTime / dur : 0;
   root.querySelector('.ttv-progress-played').style.width = `${frac * 100}%`;
   root.querySelector('.ttv-progress-handle').style.left = `${frac * 100}%`;
-  root.querySelector('.ttv-cur').textContent = ttvFmt(v.currentTime);
-  root.querySelector('.ttv-dur').textContent = ttvFmt(dur);
+  const remainEl = root.querySelector('.ttv-remain');
+  if (remainEl) remainEl.textContent = dur ? `-${ttvFmt(Math.max(0, dur - v.currentTime))}` : '-0:00';
   try {
     if (v.buffered.length) {
       const end = v.buffered.end(v.buffered.length - 1);

@@ -1996,6 +1996,52 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
 .skel-line.w90 { width:90%; }
 .skel-op .skel-avatar { width:48px; height:48px; }
 .skel-op .skel-line.tall { height:16px; }
+.skel-line.w30 { width:30%; }
+.skel-line.w50 { width:50%; }
+.skel-line.w70 { width:70%; }
+.skel-avatar.skel-avatar-sm { width:34px; height:34px; }
+.skel-avatar.skel-avatar-md { width:50px; height:50px; }
+.skel-avatar.skel-avatar-sq { border-radius:var(--r-md); }
+.skel-pill { width:84px; height:32px; border-radius:999px; background:var(--line); flex:none; animation:skel-pulse 1.3s ease-in-out infinite; }
+.skel-pill.sm { width:64px; height:30px; }
+
+/* ── skeleton: profile-style hero (banner + overlapping avatar), used
+   while profile.html/community.html/list.html headers load. Mirrors
+   .profile-hdr's own dimensions so there's no layout jump when the
+   real header swaps in. ── */
+.skel-profile-hdr { padding:0 16px 14px; border-bottom:1px solid var(--line); }
+.skel-profile-hdr .skel-banner { height:220px; margin:0 -16px 0; background:var(--line); animation:skel-pulse 1.3s ease-in-out infinite; }
+.skel-profile-hdr .skel-avatar-xl {
+  width:112px; height:112px; border-radius:50%; border:4px solid var(--bg);
+  background:var(--line); animation:skel-pulse 1.3s ease-in-out infinite;
+  margin-top:-62px; position:relative; z-index:1;
+}
+.skel-profile-hdr-top { display:flex; align-items:flex-end; justify-content:space-between; gap:10px; margin-top:14px; }
+.skel-profile-hdr-lines { margin-top:16px; display:flex; flex-direction:column; gap:10px; }
+@media (max-width:480px) {
+  .skel-profile-hdr .skel-banner { height:180px; }
+  .skel-profile-hdr .skel-avatar-xl { width:88px; height:88px; margin-top:-46px; }
+}
+
+/* ── skeleton: compact hero row (community.html / list.html), which
+   use a smaller square/rounded avatar next to name+desc+meta instead
+   of a full banner. ── */
+.skel-hero { display:flex; gap:14px; align-items:flex-start; padding:16px; border-bottom:1px solid var(--line); }
+.skel-hero .skel-avatar { width:56px; height:56px; border-radius:var(--r-md); }
+.skel-hero .skel-lines { flex:1; padding-top:2px; gap:10px; }
+
+/* ── skeleton: single-article content page (article.html) — cover
+   image + title + body paragraph lines, no avatar row. ── */
+.skel-article { padding:16px; display:flex; flex-direction:column; gap:12px; }
+.skel-article .skel-cover { height:200px; border-radius:var(--r-md); background:var(--line); animation:skel-pulse 1.3s ease-in-out infinite; }
+.skel-article .skel-line.title { height:22px; margin-top:6px; }
+
+/* ── skeleton: settings/form pages (editprofile.html, settings.html)
+   — a label bar + input-height bar, repeated per field. ── */
+.skel-form { padding:16px; display:flex; flex-direction:column; gap:20px; }
+.skel-field { display:flex; flex-direction:column; gap:8px; }
+.skel-field .skel-line.label { height:11px; }
+.skel-field .skel-line.input { height:38px; border-radius:var(--r-sm); }
 .errmsg { background:#FEECEE; border:1px solid var(--like); color:#B0192B; border-radius:var(--r-sm); font-size:13px; padding:8px 12px; margin:10px 16px; }
 #feed-empty { text-align:center; padding:48px 16px; font-size:15px; color:var(--muted); }
 
@@ -3227,7 +3273,7 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .lb-sb-viewall:hover { text-decoration:underline; }
 
 .lb-mobile-bar {
-  display:none; position:absolute; left:0; right:0; bottom:0; z-index:5;
+  display:none;
   padding:10px 16px calc(10px + env(safe-area-inset-bottom));
   background:linear-gradient(to top, rgba(0,0,0,.75), rgba(0,0,0,0));
 }
@@ -3237,6 +3283,42 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .lb-mobile-bar .act.liked { color:var(--like); }
 .lb-mobile-bar .act.share:hover, .lb-mobile-bar .act.share:active { color:var(--share); }
 .lb-mobile-bar .act.bookmarked, .lb-mobile-bar .act.bookmark:hover, .lb-mobile-bar .act.bookmark:active { color:var(--save); }
+
+/* Wraps the caption overlay + action bar together at the foot of the
+   stage so they stack (caption above actions) instead of both
+   independently pinning to bottom:0 and overlapping. */
+.lb-bottom-dock { position:absolute; left:0; right:0; bottom:0; z-index:4; display:flex; flex-direction:column; }
+
+/* ── floating attribution card, overlaid directly on the media
+   itself (mobile only) — avatar/name/handle/Follow + caption, same
+   idea as X's fullscreen video view. Sits just above the action bar
+   with its own gradient so it stays legible over any image/video. ── */
+.lb-caption-overlay {
+  display:none; padding:34px 14px 10px; pointer-events:none;
+  background:linear-gradient(to top, rgba(0,0,0,.78), rgba(0,0,0,.35) 60%, rgba(0,0,0,0));
+}
+.lb-caption-overlay[hidden] { display:none !important; }
+.lb-cap-row { display:flex; align-items:center; gap:8px; pointer-events:auto; }
+.lb-cap-row .avatar { width:32px; height:32px; flex:none; }
+.lb-cap-names { min-width:0; flex:1; display:flex; flex-direction:column; line-height:1.2; }
+.lb-cap-names .nm { color:#fff; font-weight:800; font-size:14.5px; text-decoration:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.lb-cap-names .verified-badge { width:14px; height:14px; vertical-align:-2.5px; margin-left:3px; }
+.lb-cap-names .handle { color:rgba(255,255,255,.75); font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.lb-cap-follow {
+  flex:none; font-family:inherit; font-size:13px; font-weight:800; color:#fff; cursor:pointer;
+  background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.5); border-radius:999px;
+  padding:6px 14px;
+}
+.lb-cap-follow.following { background:rgba(255,255,255,.05); }
+.lb-cap-follow:disabled { opacity:.6; }
+.lb-cap-text {
+  color:#fff; font-size:14px; line-height:1.35; margin-top:8px; pointer-events:auto;
+  white-space:pre-wrap; overflow:hidden; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical;
+}
+
+@media (max-width:700px) {
+  .lb-caption-overlay { display:block; }
+}
 
 @media (max-width:700px) {
   .lb-sidebar, .lb-panel-toggle { display:none !important; }
