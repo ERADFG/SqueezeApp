@@ -75,7 +75,12 @@ const I18N_DICT = {
     'chat.e2eActive': 'Messages are end-to-end encrypted. Not even InteractInk can read them.',
     'chat.e2ePending': 'Encryption turns on once @{username} opens a chat',
     'chat.failedToSend': 'Failed to send.', 'chat.typing': 'Typing',
-    'chat.today': 'Today', 'chat.yesterday': 'Yesterday', 'chat.sendViaChat': 'Send via Chat'
+    'chat.today': 'Today', 'chat.yesterday': 'Yesterday', 'chat.sendViaChat': 'Send via Chat',
+    'chat.attachMedia': 'Add photo or video', 'chat.recordVoice': 'Record voice message',
+    'chat.stopRecording': 'Stop recording', 'chat.cancelRecording': 'Cancel recording',
+    'chat.removeAttachment': 'Remove', 'chat.photo': 'Photo', 'chat.video': 'Video',
+    'chat.voiceMessage': 'Voice message', 'chat.uploading': 'Uploading\\u2026',
+    'chat.micPermissionDenied': "Couldn't access your microphone."
   },
   es: {
     'nav.home': 'Inicio', 'nav.explore': 'Explorar', 'nav.notifications': 'Notificaciones',
@@ -122,7 +127,12 @@ const I18N_DICT = {
     'chat.e2eActive': 'Los mensajes están cifrados de extremo a extremo. Ni siquiera InteractInk puede leerlos.',
     'chat.e2ePending': 'El cifrado se activará cuando @{username} abra un chat',
     'chat.failedToSend': 'No se pudo enviar.', 'chat.typing': 'Escribiendo',
-    'chat.today': 'Hoy', 'chat.yesterday': 'Ayer', 'chat.sendViaChat': 'Enviar por chat'
+    'chat.today': 'Hoy', 'chat.yesterday': 'Ayer', 'chat.sendViaChat': 'Enviar por chat',
+    'chat.attachMedia': 'Añadir foto o vídeo', 'chat.recordVoice': 'Grabar mensaje de voz',
+    'chat.stopRecording': 'Detener grabación', 'chat.cancelRecording': 'Cancelar grabación',
+    'chat.removeAttachment': 'Quitar', 'chat.photo': 'Foto', 'chat.video': 'Vídeo',
+    'chat.voiceMessage': 'Mensaje de voz', 'chat.uploading': 'Subiendo\\u2026',
+    'chat.micPermissionDenied': 'No se pudo acceder al micrófono.'
   },
   fr: {
     'nav.home': 'Accueil', 'nav.explore': 'Explorer', 'nav.notifications': 'Notifications',
@@ -169,7 +179,12 @@ const I18N_DICT = {
     'chat.e2eActive': 'Les messages sont chiffrés de bout en bout. Même InteractInk ne peut pas les lire.',
     'chat.e2ePending': "Le chiffrement s'activera une fois que @{username} aura ouvert une discussion",
     'chat.failedToSend': "Échec de l'envoi.", 'chat.typing': "En train d'écrire",
-    'chat.today': "Aujourd'hui", 'chat.yesterday': 'Hier', 'chat.sendViaChat': 'Envoyer par chat'
+    'chat.today': "Aujourd'hui", 'chat.yesterday': 'Hier', 'chat.sendViaChat': 'Envoyer par chat',
+    'chat.attachMedia': 'Ajouter une photo ou une vidéo', 'chat.recordVoice': 'Enregistrer un message vocal',
+    'chat.stopRecording': "Arrêter l'enregistrement", 'chat.cancelRecording': "Annuler l'enregistrement",
+    'chat.removeAttachment': 'Retirer', 'chat.photo': 'Photo', 'chat.video': 'Vidéo',
+    'chat.voiceMessage': 'Message vocal', 'chat.uploading': 'Envoi en cours\\u2026',
+    'chat.micPermissionDenied': "Impossible d'accéder au microphone."
   },
   de: {
     'nav.home': 'Start', 'nav.explore': 'Entdecken', 'nav.notifications': 'Benachrichtigungen',
@@ -216,7 +231,12 @@ const I18N_DICT = {
     'chat.e2eActive': 'Nachrichten sind Ende-zu-Ende-verschlüsselt. Nicht einmal InteractInk kann sie lesen.',
     'chat.e2ePending': 'Die Verschlüsselung wird aktiviert, sobald @{username} einen Chat öffnet',
     'chat.failedToSend': 'Senden fehlgeschlagen.', 'chat.typing': 'Schreibt gerade',
-    'chat.today': 'Heute', 'chat.yesterday': 'Gestern', 'chat.sendViaChat': 'Per Chat senden'
+    'chat.today': 'Heute', 'chat.yesterday': 'Gestern', 'chat.sendViaChat': 'Per Chat senden',
+    'chat.attachMedia': 'Foto oder Video hinzufügen', 'chat.recordVoice': 'Sprachnachricht aufnehmen',
+    'chat.stopRecording': 'Aufnahme stoppen', 'chat.cancelRecording': 'Aufnahme abbrechen',
+    'chat.removeAttachment': 'Entfernen', 'chat.photo': 'Foto', 'chat.video': 'Video',
+    'chat.voiceMessage': 'Sprachnachricht', 'chat.uploading': 'Wird hochgeladen\\u2026',
+    'chat.micPermissionDenied': 'Zugriff auf das Mikrofon nicht möglich.'
   },
   pt: {
     'nav.home': 'Início', 'nav.explore': 'Explorar', 'nav.notifications': 'Notificações',
@@ -263,7 +283,12 @@ const I18N_DICT = {
     'chat.e2eActive': 'As mensagens são criptografadas de ponta a ponta. Nem o InteractInk pode lê-las.',
     'chat.e2ePending': 'A criptografia será ativada quando @{username} abrir um chat',
     'chat.failedToSend': 'Falha ao enviar.', 'chat.typing': 'Digitando',
-    'chat.today': 'Hoje', 'chat.yesterday': 'Ontem', 'chat.sendViaChat': 'Enviar por chat'
+    'chat.today': 'Hoje', 'chat.yesterday': 'Ontem', 'chat.sendViaChat': 'Enviar por chat',
+    'chat.attachMedia': 'Adicionar foto ou vídeo', 'chat.recordVoice': 'Gravar mensagem de voz',
+    'chat.stopRecording': 'Parar gravação', 'chat.cancelRecording': 'Cancelar gravação',
+    'chat.removeAttachment': 'Remover', 'chat.photo': 'Foto', 'chat.video': 'Vídeo',
+    'chat.voiceMessage': 'Mensagem de voz', 'chat.uploading': 'Enviando\\u2026',
+    'chat.micPermissionDenied': 'Não foi possível acessar o microfone.'
   },
   ja: {
     'nav.home': 'ホーム', 'nav.explore': '話題を検索', 'nav.notifications': '通知',
@@ -310,7 +335,12 @@ const I18N_DICT = {
     'chat.e2eActive': 'メッセージはエンドツーエンドで暗号化されています。InteractInkでも読むことはできません。',
     'chat.e2ePending': '@{username}がチャットを開くと暗号化が有効になります',
     'chat.failedToSend': '送信に失敗しました。', 'chat.typing': '入力中',
-    'chat.today': '今日', 'chat.yesterday': '昨日', 'chat.sendViaChat': 'チャットで送信'
+    'chat.today': '今日', 'chat.yesterday': '昨日', 'chat.sendViaChat': 'チャットで送信',
+    'chat.attachMedia': '写真や動画を追加', 'chat.recordVoice': '音声メッセージを録音',
+    'chat.stopRecording': '録音を停止', 'chat.cancelRecording': '録音をキャンセル',
+    'chat.removeAttachment': '削除', 'chat.photo': '写真', 'chat.video': '動画',
+    'chat.voiceMessage': '音声メッセージ', 'chat.uploading': 'アップロード中\\u2026',
+    'chat.micPermissionDenied': 'マイクにアクセスできませんでした。'
   },
   ru: {
     'nav.home': 'Главная', 'nav.explore': 'Обзор', 'nav.notifications': 'Уведомления',
@@ -357,7 +387,12 @@ const I18N_DICT = {
     'chat.e2eActive': 'Сообщения защищены сквозным шифрованием. Даже InteractInk не может их прочитать.',
     'chat.e2ePending': 'Шифрование включится, как только @{username} откроет чат',
     'chat.failedToSend': 'Не удалось отправить.', 'chat.typing': 'Печатает',
-    'chat.today': 'Сегодня', 'chat.yesterday': 'Вчера', 'chat.sendViaChat': 'Отправить через чат'
+    'chat.today': 'Сегодня', 'chat.yesterday': 'Вчера', 'chat.sendViaChat': 'Отправить через чат',
+    'chat.attachMedia': 'Добавить фото или видео', 'chat.recordVoice': 'Записать голосовое сообщение',
+    'chat.stopRecording': 'Остановить запись', 'chat.cancelRecording': 'Отменить запись',
+    'chat.removeAttachment': 'Удалить', 'chat.photo': 'Фото', 'chat.video': 'Видео',
+    'chat.voiceMessage': 'Голосовое сообщение', 'chat.uploading': 'Загрузка\\u2026',
+    'chat.micPermissionDenied': 'Не удалось получить доступ к микрофону.'
   }
 };
 

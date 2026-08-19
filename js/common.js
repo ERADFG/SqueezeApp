@@ -3856,6 +3856,7 @@ async function unblockUser(blockedId) {
 function mediaTypeFor(file) {
   if (file.type.startsWith('image/')) return 'image';
   if (file.type.startsWith('video/')) return 'video';
+  if (file.type.startsWith('audio/')) return 'audio'; // voice notes (chat.js) — not offered in the post composer's file picker
   return null;
 }
 

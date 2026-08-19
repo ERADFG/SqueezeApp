@@ -2892,6 +2892,57 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .chat-send-btn:active { transform:scale(.92); }
 .chat-send-btn:disabled { opacity:.4; cursor:default; }
 
+/* ── attach / mic toolbar buttons — same visual language as .pf-ic
+   in the post composer (js/common.js), duplicated rather than shared
+   since chat's toolbar sits in a different stylesheet section and
+   has its own disabled state (mid-recording). ── */
+.chat-tool-btn { flex:none; width:36px; height:36px; border-radius:50%; border:none; background:transparent; color:var(--maroon); display:inline-flex; align-items:center; justify-content:center; cursor:pointer; transition:background .12s ease; }
+.chat-tool-btn svg { width:19px; height:19px; display:block; }
+.chat-tool-btn:hover:not(:disabled) { background:var(--maroon-tint); }
+.chat-tool-btn:disabled { color:#9EC8DE; cursor:default; }
+
+/* ── pending-attachment preview, shown above the composer between
+   picking/recording a file and actually hitting send ── */
+.chat-attach-preview { padding:8px 16px 0; flex:none; }
+.chat-attach-thumb { position:relative; display:inline-block; max-width:200px; max-height:160px; border-radius:14px; overflow:hidden; border:1px solid var(--line); }
+.chat-attach-thumb img, .chat-attach-thumb video { display:block; max-width:200px; max-height:160px; object-fit:cover; }
+.chat-attach-remove { position:absolute; top:6px; right:6px; width:26px; height:26px; border-radius:50%; border:none; background:rgba(0,0,0,.55); color:#fff; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; }
+.chat-attach-remove svg { width:14px; height:14px; }
+.chat-attach-voice { position:relative; display:inline-flex; align-items:center; gap:10px; background:var(--hover-bg); border-radius:22px; padding:6px 40px 6px 6px; }
+.chat-attach-voice .chat-attach-remove { position:static; margin-left:2px; background:transparent; color:var(--muted); }
+.chat-attach-uploading { font-size:13px; color:var(--muted); padding:6px 2px; }
+
+/* ── voice-note recording bar — replaces the composer row while
+   MediaRecorder is active ── */
+.chat-record-bar { display:flex; align-items:center; gap:10px; padding:10px 16px; border-top:1px solid var(--line); flex:none; background:var(--cream-card); }
+.chat-record-dot { width:10px; height:10px; border-radius:50%; background:#e0245e; animation:oc-record-pulse 1.2s infinite ease-in-out; flex:none; }
+@keyframes oc-record-pulse { 0%,100% { opacity:1; } 50% { opacity:.35; } }
+.chat-record-time { font-variant-numeric:tabular-nums; font-weight:600; }
+.chat-record-hint { color:var(--muted); font-size:13px; flex:1; }
+.chat-record-cancel, .chat-record-stop { flex:none; width:34px; height:34px; border-radius:50%; border:none; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; }
+.chat-record-cancel { background:transparent; color:var(--muted); }
+.chat-record-cancel svg { width:17px; height:17px; }
+.chat-record-stop { background:var(--maroon); color:#fff; }
+.chat-record-stop svg { width:14px; height:14px; }
+
+/* ── media inside a message bubble ── */
+.msg-bubble .pm { margin:0 0 6px; border-radius:14px; overflow:hidden; max-width:260px; }
+.msg-bubble .pm img.chat-media-img { display:block; max-width:100%; max-height:320px; object-fit:cover; cursor:pointer; }
+.msg-bubble .pm .ttv { max-width:260px; border-radius:14px; }
+.msg-bubble-bare-media { background:transparent !important; padding:0 !important; box-shadow:none !important; }
+.msg-bubble-bare-media .pm { margin:0; }
+
+/* ── compact voice-note player (used both in the pending-attachment
+   preview and in sent/received bubbles) ── */
+.voice-msg { display:inline-flex; align-items:center; gap:8px; min-width:170px; }
+.voice-play-btn { flex:none; width:30px; height:30px; border-radius:50%; border:none; background:rgba(255,255,255,.22); color:inherit; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; }
+.msg-row.theirs .voice-play-btn { background:var(--maroon-tint); color:var(--maroon); }
+.voice-play-btn svg { width:14px; height:14px; margin-left:1px; }
+.voice-track { flex:1; height:3px; border-radius:2px; background:rgba(255,255,255,.35); overflow:hidden; }
+.msg-row.theirs .voice-track { background:var(--line); }
+.voice-track-fill { display:block; height:100%; width:0%; background:currentColor; }
+.voice-time { flex:none; font-size:11.5px; font-variant-numeric:tabular-nums; opacity:.85; }
+
 /* ── mobile: full-screen immersive thread ──
    Below 700px, an open thread (.chat-thread) takes over the whole
    screen — same convention as X/WhatsApp/iMessage on mobile web —

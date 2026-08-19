@@ -470,7 +470,20 @@ their own post or reply shortly after posting it:
   it shows)
 - Chat: `js/chat.js` — flat `messages` table, RLS-scoped to sender/recipient,
   realtime subscription per open thread; who's allowed to start a thread
-  with you is controlled by `user_settings.dm_privacy`
+  with you is controlled by `user_settings.dm_privacy`. Messages can carry
+  an image, video, or recorded voice note (`messages.media_url`/`media_type`)
+  alongside or instead of text — media is uploaded through the same
+  `uploadMedia()` helper and public `media` bucket that posts use, and is
+  **not** end-to-end encrypted (only the text caption is, via the existing
+  per-pair ECDH scheme in `js/chat-crypto.js`). Voice notes are recorded
+  client-side with `MediaRecorder` and rendered with a small custom player
+  (`voicePlayerHtml()` in `js/chat.js`); images/video reuse the feed's
+  lightbox and `ttv` player. Full DB setup — media, sharing a post into a
+  chat (`messages.shared_post_id`), and group/channel messaging
+  (`conversations` / `conversation_members`, `messages.conversation_id`) —
+  is one script: `supabase/chat_full_setup.sql`. Group/channel messages are
+  plain text server-side (not E2E — pairwise ECDH doesn't extend to a
+  group); frontend for sharing/groups/channels isn't built yet, schema only.
 - Settings: `js/settings.js` — email/password changes via `sb.auth.updateUser()`,
   plus notification toggles and DM privacy, both read/written against
   `user_settings` (see `supabase/settings.sql`)

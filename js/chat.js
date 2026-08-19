@@ -18,11 +18,35 @@ let chatOther = null;   // the other user's profile, once a thread is open
 let chatChannel = null;
 let chatKey = null;     // this thread's derived AES-GCM key, or null if not (yet) encrypted
 
+// ── MEDIA / VOICE-NOTE COMPOSER STATE ──
+// At most one pending attachment at a time (image, video, or a
+// recorded voice note) — picked/recorded, previewed, then uploaded
+// only once the person actually hits send. `chatAttachment.file` is
+// the raw File/Blob; `previewUrl` is a local object URL for the
+// preview thumbnail/player, revoked as soon as it's no longer needed.
+let chatAttachment = null; // { file, type: 'image'|'video'|'audio', previewUrl }
+let chatRecorder = null;   // active MediaRecorder while recording a voice note
+let chatRecorderChunks = [];
+let chatRecorderStream = null;
+let chatRecordStartedAt = 0;
+let chatRecordTimerHandle = null;
+let chatActiveVoiceAudio = null; // the <audio> element currently playing, if any (only one at a time)
+
 const ICON_SEND = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 20V4l18 8-18 8Zm2-3 12.85-5L5 7v3.83L11 12l-6 1.17V17Z"/></svg>';
 const ICON_CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';
 const ICON_CHAT_EMPTY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5.5h16v11H9.5L5 20.5v-4H4Z"/><path d="M8 10h8M8 13h5" stroke-linecap="round"/></svg>';
 const ICON_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>';
 const CHAT_ICON_LOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+// Attach / voice-note UI — kept as separate constants from the post
+// composer's icon set (js/common.js) even though a couple overlap
+// visually, since chat's toolbar lives in a different file and has
+// no reason to depend on common.js's internal icon names.
+const ICON_ATTACH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10.5" r="1.6"/><path d="m4 17 5-5 3.5 3.5L17 11l3 3"/></svg>';
+const ICON_MIC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>';
+const ICON_STOP = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
+const ICON_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m-9 0 1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/></svg>';
+const ICON_VOICE_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72c0 .6.66.96 1.17.65l10.9-6.86a.75.75 0 0 0 0-1.28L9.17 4.49A.75.75 0 0 0 8 5.14z"/></svg>';
+const ICON_VOICE_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5.5A1.5 1.5 0 0 1 8.5 4h1A1.5 1.5 0 0 1 11 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-1A1.5 1.5 0 0 1 7 18.5v-13zM13 5.5A1.5 1.5 0 0 1 14.5 4h1A1.5 1.5 0 0 1 17 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-1a1.5 1.5 0 0 1-1.5-1.5v-13z"/></svg>';
 // WhatsApp-style receipts: one check = sent, still unread; two checks
 // (tinted with the accent colour) = the recipient has opened the
 // thread and read this particular message.
@@ -145,6 +169,10 @@ async function loadConversationList(session, root) {
       const key = other?.id ? await getChatKey(session.user.id, other.id, other.pubkey) : null;
       const plain = await decryptForDisplay(key, last.body, last.iv);
       snip = plain != null ? esc(plain.slice(0, 80)) : `${CHAT_ICON_LOCK}<span>${esc(t('chat.encryptedMessage'))}</span>`;
+    } else if (last.media_url && !last.body) {
+      // Caption-less attachment — show what kind instead of a blank snippet.
+      const label = last.media_type === 'video' ? t('chat.video') : last.media_type === 'audio' ? t('chat.voiceMessage') : t('chat.photo');
+      snip = esc(label);
     } else {
       snip = esc((last.body || '').slice(0, 80));
     }
@@ -254,7 +282,18 @@ async function loadThread(session, root) {
         </div>
       </div>
       <div class="chat-msgs" id="chat-msgs">${encBanner}${renderMsgsHtml(msgs || [], session.user.id)}</div>
+      <div id="chat-attach-preview" class="chat-attach-preview" hidden></div>
+      <div id="chat-record-bar" class="chat-record-bar" hidden>
+        <span class="chat-record-dot"></span>
+        <span id="chat-record-time" class="chat-record-time">0:00</span>
+        <span class="chat-record-hint">${esc(t('chat.recordVoice'))}</span>
+        <button type="button" class="chat-record-cancel" title="${esc(t('chat.cancelRecording'))}" aria-label="${esc(t('chat.cancelRecording'))}" onclick="cancelVoiceRecording()">${ICON_TRASH}</button>
+        <button type="button" class="chat-record-stop" title="${esc(t('chat.stopRecording'))}" aria-label="${esc(t('chat.stopRecording'))}" onclick="stopVoiceRecording()">${ICON_STOP}</button>
+      </div>
       <div class="chat-composer">
+        <input type="file" id="chat-file" accept="image/*,video/*" style="display:none;" onchange="onChatFileChosen(this)">
+        <button type="button" class="chat-tool-btn" id="chat-attach-btn" title="${esc(t('chat.attachMedia'))}" aria-label="${esc(t('chat.attachMedia'))}" onclick="document.getElementById('chat-file').click()">${ICON_ATTACH}</button>
+        <button type="button" class="chat-tool-btn" id="chat-mic-btn" title="${esc(t('chat.recordVoice'))}" aria-label="${esc(t('chat.recordVoice'))}" onclick="startVoiceRecording()">${ICON_MIC}</button>
         <textarea id="chat-body" maxlength="2000" placeholder="${esc(t('chat.startMessagePlaceholder'))}" rows="1"
           oninput="autoGrowChatInput(this)"
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"></textarea>
@@ -304,10 +343,20 @@ function applyChatPrefill() {
 function autoGrowChatInput(el) {
   el.style.height = 'auto';
   el.style.height = `${el.scrollHeight}px`;
-  const btn = document.getElementById('chat-send-btn');
   const hasText = !!el.value.trim();
-  if (btn) btn.disabled = !hasText;
+  updateChatSendBtn();
   if (hasText) notifyTyping();
+}
+
+// Send is enabled once there's text OR a pending attachment (image/
+// video/voice note) — a caption isn't required to send media, same
+// as every other chat app.
+function updateChatSendBtn() {
+  const btn = document.getElementById('chat-send-btn');
+  if (!btn) return;
+  const bodyEl = document.getElementById('chat-body');
+  const hasText = !!(bodyEl && bodyEl.value.trim());
+  btn.disabled = !hasText && !chatAttachment;
 }
 
 // ── TYPING INDICATOR ──
@@ -392,17 +441,40 @@ function msgBubbleHtml(m, myId, group = { start: true, end: true }) {
   const cls = ['msg-row', mine ? 'mine' : 'theirs'];
   if (group.start) cls.push('g-start');
   if (group.end) cls.push('g-end');
+  // An attachment's iv/body only cover the caption — the message can
+  // have media with no caption at all, in which case m._plain is ''
+  // (never null, since '' never went through encryption/decryption
+  // to begin with) and no text bubble content is rendered for it.
+  const hasCaption = m._plain != null && m._plain !== '';
   const bodyHtml = m._plain != null
-    ? renderBody(m._plain)
+    ? (hasCaption ? renderBody(m._plain) : '')
     : `<span class="msg-undecryptable">${CHAT_ICON_LOCK}<em>Can't decrypt this message on this device</em></span>`;
+  const mediaHtml = chatMediaHtml(m);
   const ticksHtml = mine
     ? `<span class="msg-ticks${m.read ? ' read' : ''}">${m.read ? ICON_TICK2 : ICON_TICK1}</span>`
     : '';
+  // A media-only bubble (no caption) drops the usual chat-bubble
+  // background/padding for images & video — same visual treatment
+  // WhatsApp/Telegram use, so a photo isn't sitting in a maroon box
+  // with padding around it. Voice notes always render inside a
+  // normal bubble since they're compact either way.
+  const bareMedia = mediaHtml && !hasCaption && m.media_type !== 'audio';
+  const bubbleInner = mediaHtml + bodyHtml;
   return `
   <div class="${cls.join(' ')}" id="msg-${m.id}" data-day="${esc(chatDayLabel(m.created_at))}" data-sender="${esc(m.sender_id)}" data-ts="${esc(m.created_at)}">
-    <div class="msg-bubble">${bodyHtml}</div>
+    <div class="msg-bubble${bareMedia ? ' msg-bubble-bare-media' : ''}">${bubbleInner}</div>
     <span class="msg-time-inline">${chatClockTime(m.created_at)}</span>${ticksHtml}
   </div>`;
+}
+
+// Renders a message row's attachment, if any. Images/video reuse the
+// exact same helpers the feed uses (renderMedia() -> lightbox, ttv
+// player) so tapping a photo/video in a DM behaves identically to
+// tapping one in a post. Voice notes get the compact player above.
+function chatMediaHtml(m) {
+  if (!m.media_url) return '';
+  if (m.media_type === 'audio') return voicePlayerHtml(m.media_url);
+  return renderMedia(m.media_url, m.media_type, 'chat-media-img');
 }
 
 // Appends one new message (from sendMessage() or the realtime
@@ -464,21 +536,205 @@ function sizeChatThread() {
 window.addEventListener('resize', sizeChatThread);
 if (window.visualViewport) window.visualViewport.addEventListener('resize', sizeChatThread);
 
+// ── ATTACHMENTS: PICK A FILE ──
+function onChatFileChosen(input) {
+  const file = input.files[0];
+  input.value = ''; // so picking the exact same file again still fires 'change'
+  if (!file) return;
+  if (!validateFile(file, null)) return; // validateFile() alert()s its own error when passed no errEl
+  cancelVoiceRecording(); // file and voice-note are mutually exclusive, same as post composer's file/GIF
+  if (chatAttachment) URL.revokeObjectURL(chatAttachment.previewUrl);
+  chatAttachment = { file, type: mediaTypeFor(file), previewUrl: URL.createObjectURL(file) };
+  renderChatAttachPreview();
+  updateChatSendBtn();
+}
+
+function clearChatAttachment() {
+  if (chatAttachment) URL.revokeObjectURL(chatAttachment.previewUrl);
+  chatAttachment = null;
+  renderChatAttachPreview();
+  updateChatSendBtn();
+}
+
+// Shows a small thumbnail/player above the composer for whatever's
+// about to be sent, with a way to back out before it uploads.
+function renderChatAttachPreview() {
+  const box = document.getElementById('chat-attach-preview');
+  if (!box) return;
+  if (!chatAttachment) { box.hidden = true; box.innerHTML = ''; return; }
+  box.hidden = false;
+  const rmBtn = `<button type="button" class="chat-attach-remove" title="${esc(t('chat.removeAttachment'))}" aria-label="${esc(t('chat.removeAttachment'))}" onclick="clearChatAttachment()">${ICON_TRASH}</button>`;
+  if (chatAttachment.type === 'image') {
+    box.innerHTML = `<div class="chat-attach-thumb"><img src="${esc(chatAttachment.previewUrl)}" alt="">${rmBtn}</div>`;
+  } else if (chatAttachment.type === 'video') {
+    box.innerHTML = `<div class="chat-attach-thumb"><video src="${esc(chatAttachment.previewUrl)}" muted></video>${rmBtn}</div>`;
+  } else { // audio (recorded voice note, played back for confirmation before sending)
+    box.innerHTML = `<div class="chat-attach-voice">${voicePlayerHtml(chatAttachment.previewUrl)}${rmBtn}</div>`;
+  }
+}
+
+// ── VOICE NOTES: RECORD ──
+async function startVoiceRecording() {
+  if (chatRecorder) return; // already recording
+  if (chatAttachment) clearChatAttachment(); // voice-note and file are mutually exclusive
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (e) {
+    toast(t('chat.micPermissionDenied'), 'error');
+    return;
+  }
+  chatRecorderStream = stream;
+  chatRecorderChunks = [];
+  const mimeType = ['audio/webm', 'audio/mp4', 'audio/ogg'].find(m => window.MediaRecorder?.isTypeSupported?.(m)) || '';
+  chatRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+  chatRecorder.ondataavailable = e => { if (e.data && e.data.size) chatRecorderChunks.push(e.data); };
+  chatRecorder.onstop = () => {
+    stream.getTracks().forEach(tr => tr.stop());
+    chatRecorderStream = null;
+    const blob = new Blob(chatRecorderChunks, { type: chatRecorder.mimeType || 'audio/webm' });
+    chatRecorder = null;
+    if (chatRecordCancelled) { chatRecordCancelled = false; return; }
+    if (!blob.size) return;
+    const ext = (blob.type.split('/')[1] || 'webm').split(';')[0];
+    const file = new File([blob], `voice-note.${ext}`, { type: blob.type });
+    chatAttachment = { file, type: 'audio', previewUrl: URL.createObjectURL(blob) };
+    renderChatAttachPreview();
+    updateChatSendBtn();
+  };
+  chatRecorder.start();
+  chatRecordStartedAt = Date.now();
+  document.getElementById('chat-record-bar').hidden = false;
+  document.getElementById('chat-attach-btn').disabled = true;
+  document.getElementById('chat-mic-btn').disabled = true;
+  chatRecordTimerHandle = setInterval(updateChatRecordTimer, 250);
+  updateChatRecordTimer();
+}
+
+let chatRecordCancelled = false;
+function updateChatRecordTimer() {
+  const el = document.getElementById('chat-record-time');
+  if (!el) return;
+  const secs = Math.floor((Date.now() - chatRecordStartedAt) / 1000);
+  el.textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+}
+function stopChatRecordUi() {
+  if (chatRecordTimerHandle) { clearInterval(chatRecordTimerHandle); chatRecordTimerHandle = null; }
+  const bar = document.getElementById('chat-record-bar');
+  if (bar) bar.hidden = true;
+  const attachBtn = document.getElementById('chat-attach-btn');
+  const micBtn = document.getElementById('chat-mic-btn');
+  if (attachBtn) attachBtn.disabled = false;
+  if (micBtn) micBtn.disabled = false;
+}
+function stopVoiceRecording() {
+  if (!chatRecorder) return;
+  stopChatRecordUi();
+  chatRecorder.stop(); // triggers onstop above, which turns the recording into chatAttachment
+}
+function cancelVoiceRecording() {
+  if (!chatRecorder) return;
+  chatRecordCancelled = true;
+  stopChatRecordUi();
+  chatRecorder.stop();
+}
+
+// ── VOICE NOTES: COMPACT PLAYBACK BUBBLE ──
+// Used both for the pre-send preview and for rendering a received/
+// sent voice note in the thread. Backed by a plain <audio> element
+// (hidden) with a small custom play/pause + progress bar on top of
+// it, matching the rest of the app's hand-rolled player (js/video-
+// player.js) rather than pulling in a dependency for something this
+// small.
+function voicePlayerHtml(url) {
+  return `
+  <span class="voice-msg">
+    <button type="button" class="voice-play-btn" onclick="toggleVoicePlay(this)">${ICON_VOICE_PLAY}</button>
+    <span class="voice-track"><span class="voice-track-fill"></span></span>
+    <span class="voice-time">0:00</span>
+    <audio preload="metadata" src="${esc(url)}"></audio>
+  </span>`;
+}
+function fmtVoiceTime(secs) {
+  if (!isFinite(secs) || secs < 0) secs = 0;
+  return `${Math.floor(secs / 60)}:${String(Math.floor(secs % 60)).padStart(2, '0')}`;
+}
+function toggleVoicePlay(btn) {
+  const wrap = btn.closest('.voice-msg');
+  const audio = wrap.querySelector('audio');
+  const fill = wrap.querySelector('.voice-track-fill');
+  const timeEl = wrap.querySelector('.voice-time');
+  if (chatActiveVoiceAudio && chatActiveVoiceAudio !== audio) {
+    chatActiveVoiceAudio.pause(); // only one voice note plays at a time
+  }
+  if (audio.paused) {
+    audio.play().catch(() => {});
+    chatActiveVoiceAudio = audio;
+    btn.innerHTML = ICON_VOICE_PAUSE;
+  } else {
+    audio.pause();
+    btn.innerHTML = ICON_VOICE_PLAY;
+    return;
+  }
+  audio.ontimeupdate = () => {
+    fill.style.width = `${audio.duration ? (audio.currentTime / audio.duration) * 100 : 0}%`;
+    timeEl.textContent = fmtVoiceTime(audio.currentTime);
+  };
+  audio.onpause = () => { btn.innerHTML = ICON_VOICE_PLAY; };
+  audio.onended = () => {
+    btn.innerHTML = ICON_VOICE_PLAY;
+    fill.style.width = '0%';
+    timeEl.textContent = fmtVoiceTime(audio.duration);
+    if (chatActiveVoiceAudio === audio) chatActiveVoiceAudio = null;
+  };
+}
+
 async function sendMessage() {
   const bodyEl = document.getElementById('chat-body');
   const body = bodyEl.value.trim();
-  if (!body || !chatOther || !currentSession) return;
+  const attachment = chatAttachment;
+  if ((!body && !attachment) || !chatOther || !currentSession) return;
   bodyEl.value = '';
   autoGrowChatInput(bodyEl);
   hideTypingBubble();
+  const sendBtn = document.getElementById('chat-send-btn');
+  if (sendBtn) sendBtn.disabled = true;
 
-  const insertRow = { sender_id: currentSession.user.id, recipient_id: chatOther.id };
-  if (chatKey) {
+  // Media uploads first (unencrypted — see supabase/chat_media.sql),
+  // then the row is inserted with whatever caption came with it.
+  // Clearing chatAttachment right away (rather than after upload)
+  // means a second message can't accidentally reuse the same file
+  // while this one is still in flight.
+  chatAttachment = null;
+  let media_url = null, media_type = null;
+  if (attachment) {
+    document.getElementById('chat-attach-preview').innerHTML = `<div class="chat-attach-uploading">${esc(t('chat.uploading'))}</div>`;
+    try {
+      const uploaded = await uploadMedia(attachment.file, status => {
+        const box = document.getElementById('chat-attach-preview');
+        if (box) box.innerHTML = `<div class="chat-attach-uploading">${esc(status)}</div>`;
+      });
+      media_url = uploaded.media_url;
+      media_type = attachment.type; // trust our own picker/recorder over uploadMedia()'s guess (it doesn't know 'audio')
+    } catch (e) {
+      alert(e.message || t('chat.failedToSend'));
+      chatAttachment = attachment; // put it back so nothing's lost
+      renderChatAttachPreview();
+      updateChatSendBtn();
+      return;
+    } finally {
+      URL.revokeObjectURL(attachment.previewUrl);
+    }
+  }
+  renderChatAttachPreview();
+
+  const insertRow = { sender_id: currentSession.user.id, recipient_id: chatOther.id, media_url, media_type };
+  if (chatKey && body) {
     const enc = await chatEncrypt(chatKey, body);
     insertRow.body = enc.body;
     insertRow.iv = enc.iv;
   } else {
-    insertRow.body = body;
+    insertRow.body = body; // '' when it's a caption-less attachment
   }
 
   const { data, error } = await sb.from('messages').insert(insertRow).select('*').single();
