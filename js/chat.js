@@ -226,7 +226,7 @@ async function loadConversationList(session, root) {
       <img class="avatar${avSqClass(other)}" src="${esc(avatarUrl(other?.avatar_url))}" alt="" loading="lazy" decoding="async">
       <div class="conv-txt">
         <div class="conv-top">
-          <span class="conv-name">${esc(other?.display_name || uname)}</span>
+          <span class="conv-name">${esc(other?.display_name || uname)}${vBadge(other)}</span>
           <span class="conv-handle">@${esc(uname)}</span>
           <span class="conv-time">${timeAgo(last.created_at)}</span>
         </div>
@@ -392,24 +392,24 @@ function openCreateConversationModal(kind) {
   bg.innerHTML = `
     <div class="modal gcv-modal" role="dialog" aria-modal="true">
       <a class="modal-close" href="#" onclick="event.preventDefault();closeCreateConversationModal();">${ICON_CLOSE}</a>
-      <h2>New ${kind === 'channel' ? 'channel' : 'group'}</h2>
-      <p class="dc-desc">${kind === 'channel'
+      <h2 id="gcv-title">New ${kind === 'channel' ? 'channel' : 'group'}</h2>
+      <p class="dc-desc" id="gcv-desc-text">${kind === 'channel'
         ? 'Only you (and any admins you add) can post. Everyone else just reads — like a broadcast list.'
         : 'Everyone you add can post and see the conversation.'}</p>
       <div class="gcv-kind-tabs" role="tablist">
-        <button type="button" class="${kind !== 'channel' ? 'cur' : ''}" onclick="openCreateConversationModal('group')">${ICON_GROUP} Group</button>
-        <button type="button" class="${kind === 'channel' ? 'cur' : ''}" onclick="openCreateConversationModal('channel')">${ICON_CHANNEL} Channel</button>
+        <button type="button" id="gcv-tab-group" class="${kind !== 'channel' ? 'cur' : ''}" onclick="gcvSwitchKind('group')">${ICON_GROUP} Group</button>
+        <button type="button" id="gcv-tab-channel" class="${kind === 'channel' ? 'cur' : ''}" onclick="gcvSwitchKind('channel')">${ICON_CHANNEL} Channel</button>
       </div>
       <div class="gcv-field">
         <label for="gcv-name">Name</label>
-        <input type="text" id="gcv-name" maxlength="60" placeholder="${kind === 'channel' ? 'e.g. Announcements' : 'e.g. Weekend plans'}">
+        <input type="text" id="gcv-name" maxlength="60" placeholder="${kind === 'channel' ? 'e.g. Announcements' : 'e.g. Weekend plans'}" oninput="gcvUpdateCreateBtn()">
       </div>
       <div class="gcv-field">
         <label for="gcv-desc">Description <span style="font-weight:400;">(optional)</span></label>
         <textarea id="gcv-desc" rows="2" maxlength="200" placeholder="What's this ${kind} about?"></textarea>
       </div>
       <div class="gcv-toggle-row">
-        <span class="gcv-toggle-txt">Public ${kind}<small>Anyone can find and join without an invite</small></span>
+        <span class="gcv-toggle-txt" id="gcv-toggle-txt">Public ${kind}<small>Anyone can find and join without an invite</small></span>
         <label class="toggle"><input type="checkbox" id="gcv-public"><span class="toggle-track"></span></label>
       </div>
       <div class="gcv-field">
@@ -423,13 +423,52 @@ function openCreateConversationModal(kind) {
       </div>
       <div class="errmsg" id="gcv-err" style="display:none;"></div>
       <input type="hidden" id="gcv-kind" value="${esc(kind)}">
-      <button type="button" class="gcv-create-btn" id="gcv-create-btn" onclick="createConversation()">Create ${kind === 'channel' ? 'channel' : 'group'}</button>
+      <button type="button" class="gcv-create-btn" id="gcv-create-btn" onclick="createConversation()" disabled>Create ${kind === 'channel' ? 'channel' : 'group'}</button>
     </div>`;
   document.body.appendChild(bg);
   requestAnimationFrame(() => bg.classList.add('open'));
   setTimeout(() => document.getElementById('gcv-name')?.focus(), 50);
 }
 function closeCreateConversationModal() { document.getElementById('gcv-modal-bg')?.remove(); }
+
+// Switches between Group/Channel without rebuilding the modal, so
+// whatever the person already typed (name, description, public
+// toggle, picked members) survives the switch instead of getting
+// wiped — the old openCreateConversationModal(kind) re-call used to
+// blow all of that away just to swap a couple of labels.
+function gcvSwitchKind(kind) {
+  const kindInput = document.getElementById('gcv-kind');
+  if (!kindInput || kindInput.value === kind) return;
+  kindInput.value = kind;
+  const isChannel = kind === 'channel';
+  document.getElementById('gcv-tab-group')?.classList.toggle('cur', !isChannel);
+  document.getElementById('gcv-tab-channel')?.classList.toggle('cur', isChannel);
+  const titleEl = document.getElementById('gcv-title');
+  if (titleEl) titleEl.textContent = `New ${isChannel ? 'channel' : 'group'}`;
+  const descEl = document.getElementById('gcv-desc-text');
+  if (descEl) descEl.textContent = isChannel
+    ? 'Only you (and any admins you add) can post. Everyone else just reads — like a broadcast list.'
+    : 'Everyone you add can post and see the conversation.';
+  const nameEl = document.getElementById('gcv-name');
+  if (nameEl) nameEl.placeholder = isChannel ? 'e.g. Announcements' : 'e.g. Weekend plans';
+  const descField = document.getElementById('gcv-desc');
+  if (descField) descField.placeholder = `What's this ${kind} about?`;
+  const toggleTxt = document.getElementById('gcv-toggle-txt');
+  if (toggleTxt) toggleTxt.innerHTML = `Public ${kind}<small>Anyone can find and join without an invite</small>`;
+  const btn = document.getElementById('gcv-create-btn');
+  if (btn) btn.textContent = `Create ${isChannel ? 'channel' : 'group'}`;
+}
+
+// Create is only enabled once a name is typed — matches the same
+// "disable until valid" pattern used elsewhere in the app, instead of
+// letting the person tap Create and only then finding out it needs a
+// name.
+function gcvUpdateCreateBtn() {
+  const nameEl = document.getElementById('gcv-name');
+  const btn = document.getElementById('gcv-create-btn');
+  if (!nameEl || !btn) return;
+  btn.disabled = !nameEl.value.trim();
+}
 
 let gcvSearchDebounce = null;
 function gcvSearchMembers(q) {
@@ -438,21 +477,25 @@ function gcvSearchMembers(q) {
   if (!resultsEl) return;
   if (!q.trim()) { resultsEl.innerHTML = ''; return; }
   gcvSearchDebounce = setTimeout(async () => {
-    const { data } = await sb.from('profiles').select('id,username,display_name,avatar_url')
+    const { data } = await sb.from('profiles').select('id,username,display_name,avatar_url,verified,verification_type')
       .or(`username.ilike.%${q.trim()}%,display_name.ilike.%${q.trim()}%`)
       .neq('id', currentSession?.user?.id || '')
       .limit(8);
+    gcvSearchResults = new Map((data || []).map(p => [p.username, p]));
     resultsEl.innerHTML = (data || [])
       .filter(p => !gcvPickedMembers.has(p.username))
       .map(p => `
-        <div class="gcv-member-row" onclick="gcvPickMember('${esc(p.id)}','${esc(p.username)}','${esc((p.display_name || p.username).replace(/'/g, "\\'"))}','${esc(p.avatar_url || '')}')">
+        <div class="gcv-member-row" onclick="gcvPickMember('${esc(p.username)}')">
           <img src="${esc(avatarUrl(p.avatar_url))}" alt="">
-          <div class="ulrow-txt"><span class="ulrow-name">${esc(p.display_name || p.username)}</span><span class="ulrow-handle">@${esc(p.username)}</span></div>
+          <div class="ulrow-txt"><span class="ulrow-name">${esc(p.display_name || p.username)}${vBadge(p)}</span><span class="ulrow-handle">@${esc(p.username)}</span></div>
         </div>`).join('');
   }, 250);
 }
-function gcvPickMember(id, username, displayName, avatarUrlRaw) {
-  gcvPickedMembers.set(username, { id, username, display_name: displayName, avatar_url: avatarUrlRaw });
+let gcvSearchResults = new Map(); // username -> full profile row from the last search, so gcvPickMember() can carry verified status through without cramming it into an inline-handler string
+function gcvPickMember(username) {
+  const p = gcvSearchResults.get(username);
+  if (!p) return;
+  gcvPickedMembers.set(username, p);
   document.getElementById('gcv-member-search').value = '';
   document.getElementById('gcv-member-results').innerHTML = '';
   renderGcvPicked();
@@ -464,7 +507,7 @@ function renderGcvPicked() {
   el.innerHTML = [...gcvPickedMembers.values()].map(p => `
     <span class="gcv-chip">
       <img src="${esc(avatarUrl(p.avatar_url))}" alt="">
-      ${esc(p.display_name)}
+      ${esc(p.display_name || p.username)}${vBadge(p)}
       <button type="button" onclick="gcvRemoveMember('${esc(p.username)}')" aria-label="Remove">${ICON_CLOSE}</button>
     </span>`).join('');
 }
@@ -538,7 +581,7 @@ async function loadThread(session, root) {
         <a class="chat-hdr-back" href="chat.html" aria-label="${esc(t('chat.back'))}">${ICON_BACK}</a>
         <a href="${profileUrl(other.username)}"><img class="avatar${avSqClass(other)}" src="${esc(avatarUrl(other.avatar_url))}" alt="" loading="lazy" decoding="async"></a>
         <div>
-          <a class="nm" href="${profileUrl(other.username)}">${esc(other.display_name || other.username)}</a>
+          <a class="nm" href="${profileUrl(other.username)}">${esc(other.display_name || other.username)}${vBadge(other)}</a>
           <span class="pc-handle">@${esc(other.username)}</span>
         </div>
       </div>
@@ -551,7 +594,7 @@ async function loadThread(session, root) {
         <button type="button" class="chat-record-cancel" title="${esc(t('chat.cancelRecording'))}" aria-label="${esc(t('chat.cancelRecording'))}" onclick="cancelVoiceRecording()">${ICON_TRASH}</button>
         <button type="button" class="chat-record-stop" title="${esc(t('chat.stopRecording'))}" aria-label="${esc(t('chat.stopRecording'))}" onclick="stopVoiceRecording()">${ICON_STOP}</button>
       </div>
-      <div class="chat-composer">
+      <div class="chat-composer" id="chat-composer">
         <input type="file" id="chat-file" accept="image/*,video/*" style="display:none;" onchange="onChatFileChosen(this)">
         <button type="button" class="chat-tool-btn" id="chat-attach-btn" title="${esc(t('chat.attachMedia'))}" aria-label="${esc(t('chat.attachMedia'))}" onclick="document.getElementById('chat-file').click()">${ICON_ATTACH}</button>
         <button type="button" class="chat-tool-btn" id="chat-mic-btn" title="${esc(t('chat.recordVoice'))}" aria-label="${esc(t('chat.recordVoice'))}" onclick="startVoiceRecording()">${ICON_MIC}</button>
@@ -866,8 +909,8 @@ async function startVoiceRecording() {
   chatRecorder.start();
   chatRecordStartedAt = Date.now();
   document.getElementById('chat-record-bar').hidden = false;
-  document.getElementById('chat-attach-btn').disabled = true;
-  document.getElementById('chat-mic-btn').disabled = true;
+  const composerEl = document.getElementById('chat-composer');
+  if (composerEl) composerEl.hidden = true; // recording replaces the composer entirely (record bar only) instead of showing both at once
   chatRecordTimerHandle = setInterval(updateChatRecordTimer, 250);
   updateChatRecordTimer();
 }
@@ -883,10 +926,8 @@ function stopChatRecordUi() {
   if (chatRecordTimerHandle) { clearInterval(chatRecordTimerHandle); chatRecordTimerHandle = null; }
   const bar = document.getElementById('chat-record-bar');
   if (bar) bar.hidden = true;
-  const attachBtn = document.getElementById('chat-attach-btn');
-  const micBtn = document.getElementById('chat-mic-btn');
-  if (attachBtn) attachBtn.disabled = false;
-  if (micBtn) micBtn.disabled = false;
+  const composerEl = document.getElementById('chat-composer');
+  if (composerEl) composerEl.hidden = false;
 }
 function stopVoiceRecording() {
   if (!chatRecorder) return;
@@ -1100,7 +1141,7 @@ async function loadGroupThread(session, root) {
         <button type="button" class="chat-record-cancel" title="${esc(t('chat.cancelRecording'))}" aria-label="${esc(t('chat.cancelRecording'))}" onclick="cancelVoiceRecording()">${ICON_TRASH}</button>
         <button type="button" class="chat-record-stop" title="${esc(t('chat.stopRecording'))}" aria-label="${esc(t('chat.stopRecording'))}" onclick="stopVoiceRecording()">${ICON_STOP}</button>
       </div>
-      <div class="chat-composer">
+      <div class="chat-composer" id="chat-composer">
         <input type="file" id="chat-file" accept="image/*,video/*" style="display:none;" onchange="onChatFileChosen(this)">
         <button type="button" class="chat-tool-btn" id="chat-attach-btn" title="${esc(t('chat.attachMedia'))}" aria-label="${esc(t('chat.attachMedia'))}" onclick="document.getElementById('chat-file').click()">${ICON_ATTACH}</button>
         <button type="button" class="chat-tool-btn" id="chat-mic-btn" title="${esc(t('chat.recordVoice'))}" aria-label="${esc(t('chat.recordVoice'))}" onclick="startVoiceRecording()">${ICON_MIC}</button>
@@ -1167,7 +1208,7 @@ function groupMsgBubbleHtml(m, myId, group = { start: true, end: true }) {
   const mediaHtml = chatMediaHtml(m);
   const bareMedia = mediaHtml && !hasCaption && m.media_type !== 'audio';
   const sender = groupSenderProfile(m.sender_id);
-  const nameHtml = (!mine && group.start && sender) ? `<div class="gm-sender-name">${esc(sender.display_name || sender.username)}</div>` : '';
+  const nameHtml = (!mine && group.start && sender) ? `<div class="gm-sender-name">${esc(sender.display_name || sender.username)}${vBadge(sender)}</div>` : '';
   const bubbleInner = mediaHtml + bodyHtml;
   return `
   <div class="${cls.join(' ')}" id="msg-${m.id}" data-day="${esc(chatDayLabel(m.created_at))}" data-sender="${esc(m.sender_id)}" data-ts="${esc(m.created_at)}">
@@ -1268,7 +1309,7 @@ function openGroupInfo() {
     .map(m => `
       <div class="gi-member-row">
         <img src="${esc(avatarUrl(m.profile?.avatar_url))}" alt="">
-        <span>${esc(m.profile?.display_name || m.profile?.username || 'Unknown')}</span>
+        <span>${esc(m.profile?.display_name || m.profile?.username || 'Unknown')}${vBadge(m.profile)}</span>
         <span class="gi-member-role">${esc(m.role)}</span>
       </div>`).join('');
   bg.innerHTML = `
@@ -1311,7 +1352,7 @@ function giSearchAddMembers(q) {
   if (!q.trim()) { resultsEl.innerHTML = ''; return; }
   giSearchDebounce = setTimeout(async () => {
     const existingIds = new Set(chatGroupMembers.map(m => m.user_id));
-    const { data } = await sb.from('profiles').select('id,username,display_name,avatar_url')
+    const { data } = await sb.from('profiles').select('id,username,display_name,avatar_url,verified,verification_type')
       .or(`username.ilike.%${q.trim()}%,display_name.ilike.%${q.trim()}%`)
       .limit(8);
     resultsEl.innerHTML = (data || [])
@@ -1319,7 +1360,7 @@ function giSearchAddMembers(q) {
       .map(p => `
         <div class="gcv-member-row" onclick="giAddMember('${esc(p.id)}')">
           <img src="${esc(avatarUrl(p.avatar_url))}" alt="">
-          <div class="ulrow-txt"><span class="ulrow-name">${esc(p.display_name || p.username)}</span><span class="ulrow-handle">@${esc(p.username)}</span></div>
+          <div class="ulrow-txt"><span class="ulrow-name">${esc(p.display_name || p.username)}${vBadge(p)}</span><span class="ulrow-handle">@${esc(p.username)}</span></div>
         </div>`).join('');
   }, 250);
 }

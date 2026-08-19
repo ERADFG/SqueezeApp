@@ -15,7 +15,7 @@ const NOTIF_ICON = {
 };
 
 function notifText(n) {
-  const who = `<b>${esc(n.actor?.display_name || n.actor?.username || 'Someone')}</b>`;
+  const who = `<b>${esc(n.actor?.display_name || n.actor?.username || 'Someone')}${vBadge(n.actor)}</b>`;
   if (n.type === 'like') return `${who} liked your post`;
   if (n.type === 'reply') return `${who} replied to your post`;
   if (n.type === 'repost') return `${who} reposted your post`;

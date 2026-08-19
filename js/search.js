@@ -126,7 +126,7 @@ async function searchPeople(root) {
     <a class="ulrow" style="padding:12px 16px;border-bottom:1px solid var(--line);border-radius:0;" href="${profileUrl(profile.username)}">
       <img class="avatar pfp-md${avSqClass(profile)}" src="${esc(avatarUrl(profile.avatar_url))}" alt="" loading="lazy" decoding="async">
       <div class="ulrow-txt">
-        <span class="ulrow-name">${esc(profile.display_name || profile.username)}</span>
+        <span class="ulrow-name">${esc(profile.display_name || profile.username)}${vBadge(profile)}</span>
         <span class="ulrow-handle">@${esc(profile.username)}</span>
       </div>
     </a>`).join('');
@@ -220,7 +220,7 @@ function explorePostHtml(p) {
       <div class="expl-post-title">${esc(title)}</div>
       <div class="expl-post-meta">
         <img class="avatar${avSqClass(p.profile)}" src="${esc(avatarUrl(p.profile?.avatar_url))}" alt="" loading="lazy" decoding="async">
-        <span>${esc(p.profile?.display_name || p.profile?.username || 'unknown')}</span>
+        <span>${esc(p.profile?.display_name || p.profile?.username || 'unknown')}${vBadge(p.profile)}</span>
         <span class="dot"></span>
         <span>${timeAgo(p.created_at)}</span>
         <span class="dot"></span>

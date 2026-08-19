@@ -3120,6 +3120,14 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 /* ── voice-note recording bar — replaces the composer row while
    MediaRecorder is active ── */
 .chat-record-bar { display:flex; align-items:center; gap:10px; padding:10px 16px; border-top:1px solid var(--line); flex:none; background:var(--cream-card); }
+/* Both of the above set display:flex directly on the class, which (being
+   author CSS) otherwise wins over the hidden attribute's UA-stylesheet
+   display:none — same gotcha already worked around for .op-relevant-menu,
+   .cx-sched/.cx-poll, .lb-panel-toggle, .lb-mobile-bar and .ttv-spinner
+   above. Without this, toggling .hidden in JS (startVoiceRecording() /
+   stopChatRecordUi() in chat.js) silently did nothing and the record bar
+   rendered permanently open regardless of recording state. */
+.chat-composer[hidden], .chat-record-bar[hidden] { display:none; }
 .chat-record-dot { width:10px; height:10px; border-radius:50%; background:#e0245e; animation:oc-record-pulse 1.2s infinite ease-in-out; flex:none; }
 @keyframes oc-record-pulse { 0%,100% { opacity:1; } 50% { opacity:.35; } }
 .chat-record-time { font-variant-numeric:tabular-nums; font-weight:600; }

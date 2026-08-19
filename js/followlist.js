@@ -43,7 +43,7 @@ function flRowHtml(profile, viewerId) {
     <a class="ulrow" style="flex:1;min-width:0;" href="${profileUrl(uname)}">
       <img class="avatar pfp-md${avSqClass(profile)}" src="${esc(avatarUrl(profile?.avatar_url))}" alt="" loading="lazy" decoding="async">
       <div class="ulrow-txt">
-        <span class="ulrow-name">${esc(profile?.display_name || uname)}</span>
+        <span class="ulrow-name">${esc(profile?.display_name || uname)}${vBadge(profile)}</span>
         <span class="ulrow-handle">@${esc(uname)}</span>
       </div>
     </a>
