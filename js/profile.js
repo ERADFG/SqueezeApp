@@ -30,6 +30,31 @@ async function loadProfile() {
   viewedProfile = profile;
   isOwnProfile = session && session.user.id === profile.id;
   document.title = `@${profile.username} — InteractInk`;
+
+  // SUSPENDED — same behavior as X: the profile itself, everyone's
+  // posts/replies quoting it, and the username stay put (nothing is
+  // freed up for someone else to register — the row, and the unique
+  // constraint on its username, are untouched), but visiting the
+  // profile shows this notice instead of their timeline, for any
+  // viewer including the account's own owner. Every post/reply of
+  // theirs was already soft-deleted the moment they got suspended
+  // (see admin_suspend_user() in supabase/admin_panel_advanced.sql),
+  // so there's no feed to load underneath this anyway.
+  if (profile.banned) {
+    setPageDescription(`This account has been suspended.`);
+    setCanonical(prettyProfileUrl(profile.username));
+    root.innerHTML = `
+      <div class="sec-bar" id="susp-hdr">
+        <a class="ep-back" href="index.html" aria-label="Back" onclick="if(history.length>1){history.back();return false;}">${ICON_BACK}</a>
+        <div><b>Profile</b></div>
+      </div>
+      <div class="susp-notice">
+        <h1>Account suspended</h1>
+        <p>InteractInk suspends accounts which violate the <a href="rules.html">Rules</a>.</p>
+      </div>`;
+    return;
+  }
+
   setPageH1(profile.display_name ? `${profile.display_name} (@${profile.username})` : `@${profile.username}`);
   setPageDescription(profile.bio || `@${profile.username}'s posts on InteractInk.`);
   // Canonicalize casing (usernames are matched case-insensitively

@@ -1722,7 +1722,21 @@ function repostMenuHtml(p) {
 let quotingPostId = null;
 
 function quotedPostHtml(qp) {
-  if (!qp || qp.is_deleted) return `<div class="qp-embed-gone">Original post is no longer available.</div>`;
+  if (!qp) return `<div class="qp-embed-gone">Original post is no longer available.</div>`;
+  // A post that was auto-removed because its author got suspended
+  // (see admin_suspend_user() in supabase/admin_panel_advanced.sql,
+  // which soft-deletes every post/reply of theirs and sets
+  // deleted_by_suspension so this can be told apart from an ordinary
+  // self/mod deletion) gets Twitter's own wording instead of the
+  // generic "no longer available" — same idea whether the profile
+  // itself got suspended after this embed was cached (qp.profile
+  // .banned) or the post row already reflects it (qp.deleted_by_suspension).
+  if (qp.is_deleted || qp.profile?.banned) {
+    if (qp.deleted_by_suspension || qp.profile?.banned) {
+      return `<div class="qp-embed-gone">This post is from a suspended account.</div>`;
+    }
+    return `<div class="qp-embed-gone">Original post is no longer available.</div>`;
+  }
   return `
   <div class="qp-embed" onclick="event.stopPropagation();location.href='${postUrl(qp)}'">
     <div class="ph">${pcNameHtml(qp.profile)}<span class="dt">${timeAgo(qp.created_at)}</span></div>
@@ -1748,7 +1762,7 @@ async function attachQuotedPosts(posts) {
   if (ids.length) {
     try {
       const { data } = await sb.from('posts')
-        .select('id,body,media_url,media_type,created_at,is_deleted,author_id,profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)')
+        .select('id,body,media_url,media_type,created_at,is_deleted,deleted_by_suspension,author_id,profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type,banned)')
         .in('id', ids);
       const byId = Object.fromEntries((data || []).map(qp => [qp.id, qp]));
       list.forEach(p => { if (p?.quote_of) p.quoted = byId[p.quote_of] || null; });

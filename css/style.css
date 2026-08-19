@@ -3018,6 +3018,15 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .ep-back:hover { background:var(--hover-bg); text-decoration:none; }
 .ep-back:active { transform:scale(.9); background:var(--hover-bg); }
 
+/* ── SUSPENDED ACCOUNT NOTICE — shown in place of a profile's normal
+   header/timeline when profiles.banned is true (see loadProfile() in
+   js/profile.js). Matches X's own "Account suspended" screen. ── */
+.susp-notice { padding:40px 16px 0; }
+.susp-notice h1 { font-size:23px; font-weight:800; color:var(--ink); margin:0 0 8px; }
+.susp-notice p { font-size:15px; color:var(--muted); line-height:1.4; margin:0; }
+.susp-notice p a { color:var(--link); text-decoration:none; }
+.susp-notice p a:hover { text-decoration:underline; }
+
 /* ── EDIT PROFILE PAGE ── */
 .ep-banner-wrap {
   position:relative; height:150px; background:var(--banner-img, linear-gradient(135deg,#BEE3F8,#E6D9F7)) center/cover no-repeat;

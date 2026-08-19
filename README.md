@@ -239,18 +239,27 @@ build already sets up for you, and what's still on you:
   suspend/ban flow below covers enforcement once you've decided.
 
 ## Admin panel
-Run `supabase/admin_panel_advanced.sql` in the SQL Editor (additive/
-idempotent like the others) to enable `/admin` — a real moderation
-console, not just the original verify/ban/delete-post page:
+Run `supabase/admin_panel_advanced.sql`, then `supabase/suspend_deletes_content.sql`,
+in the SQL Editor (both additive/idempotent like the others) to enable
+`/admin` — a real moderation console, not just the original
+verify/ban/delete-post page:
 - **Users** — verify/unverify, and Twitter-style **Suspend**: pick a
   reason and a duration (1/3/7/30 days, or Permanent) and the account
-  is signed out immediately and blocked from posting, replying, or
-  writing Articles until it's unsuspended. A timed suspension lifts
+  is signed out immediately, blocked from posting, replying, or
+  writing Articles until it's unsuspended, and every post/reply of
+  theirs is auto-removed (see `suspend_deletes_content.sql`) — a
+  suspended profile shows an "Account suspended" notice instead of
+  their timeline to every visitor, other posts that quote one of
+  theirs now show "This post is from a suspended account" instead of
+  the content, and their username is never freed up for anyone else
+  to register. A timed suspension lifts
   itself automatically — `clear_expired_suspension()` runs the moment
   that account next loads the site (see `js/auth.js`), backed up by a
   best-effort `pg_cron` sweep every 5 minutes so the admin panel's
   suspended list doesn't go stale even if they never come back.
-  **Unsuspend** reverses it immediately either way.
+  **Unsuspend** reverses it immediately either way, restoring exactly
+  the posts/replies the suspension itself took down (anything the
+  user or a mod had already deleted beforehand stays deleted).
 - **Posts / Replies / Articles** — each has its own tab: recent feed
   by default, search by body/title text or `@username`, and a Delete
   button (soft delete, same `is_deleted` mechanism the site already
