@@ -183,6 +183,7 @@
     </select>
     <label for="adm-suspend-reason">Reason (optional)</label>
     <textarea id="adm-suspend-reason" rows="3" maxlength="500" placeholder="Shown to the user, if you want them to know why&hellip;"></textarea>
+    <div id="adm-suspend-ips" style="font-size:12px;color:var(--muted);margin:6px 2px 0;"></div>
     <div class="adm-suspend-actions">
       <button class="dc-btn dc-btn-cancel" onclick="closeSuspendModal()">Cancel</button>
       <button class="dc-btn dc-btn-delete" id="adm-suspend-confirm" onclick="confirmSuspend()">Suspend</button>

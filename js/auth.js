@@ -29,6 +29,25 @@ async function getProfile(userId) {
   return data || null;
 }
 
+// Calls api/ip.js, which reads the caller's real IP server-side (not
+// anything the browser could fake) and checks/records it against
+// supabase/ip_ban.sql's ban list. Passing an access token also
+// records the IP against that account for next time an admin
+// suspends it. Fails open (returns false) on any network hiccup, same
+// as this app's other best-effort checks.
+async function isClientIpBanned(accessToken) {
+  try {
+    const res = await fetch('/api/ip', {
+      method: 'POST',
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {}
+    });
+    const out = await res.json();
+    return out?.banned === true;
+  } catch (e) {
+    return false;
+  }
+}
+
 // Renders whatever should sit in the header's #auth-area — either
 // [Log in] [Sign up], or the avatar + username dropdown menu.
 async function renderAuthArea() {
@@ -50,6 +69,26 @@ async function renderAuthArea() {
   }
 
   currentProfile = await getProfile(session.user.id);
+
+  // IP ban check — records this device/network's IP against the
+  // account (api/ip.js reads the real IP server-side; see
+  // supabase/ip_ban.sql) and signs the person out if that IP is on
+  // the ban list, even if this particular account was never itself
+  // suspended (e.g. it was made from the same device/network as a
+  // suspended one). Best-effort: a failed/slow check never blocks
+  // normal use of the site.
+  if (await isClientIpBanned(session.access_token)) {
+    await sb.auth.signOut();
+    currentSession = null;
+    currentProfile = null;
+    unreadNotifCount = 0;
+    unreadChatCount = 0;
+    renderSideNav(); renderMobileChrome();
+    if (el) el.innerHTML = `<div class="auth-cta"><a class="cta-primary" href="signup.html">Sign up</a><a class="cta-ghost" href="login.html">Log in</a></div>`;
+    refreshPostGates();
+    alert('This device/network has been banned from InteractInk.');
+    return;
+  }
 
   // A timed suspension (admin_suspend_user with a duration, rather
   // than permanent) lifts itself the moment its expiry has passed —
@@ -256,6 +295,11 @@ async function doSignUp(e) {
   }
   if (!(await verifyHuman('su-captcha', errEl))) return;
 
+  if (await isClientIpBanned()) {
+    showErr(errEl, 'This device/network has been banned from InteractInk.');
+    return;
+  }
+
   btn.disabled = true; btn.value = 'Creating account…';
   try {
     const { data, error } = await sb.auth.signUp({
@@ -265,6 +309,10 @@ async function doSignUp(e) {
     if (error) throw error;
 
     if (data.session) {
+      // Record this IP against the brand-new account right away, so
+      // it's already on file the moment an admin ever needs to
+      // suspend them (see supabase/ip_ban.sql).
+      isClientIpBanned(data.session.access_token);
       // The normal, expected path — account created and logged in
       // immediately. The handle_new_user() DB trigger has already
       // created the profiles row by this point (that's how the
@@ -333,8 +381,19 @@ async function doLogIn(e) {
 
   btn.disabled = true; btn.value = 'Logging in…';
   try {
-    const { error } = await sb.auth.signInWithPassword({ email, password });
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
     if (error) throw error;
+
+    // Same IP-ban check renderAuthArea() does on every load, but here
+    // so a banned device/network is refused right at the login form
+    // instead of bouncing them straight back out after a flash of
+    // being signed in.
+    if (await isClientIpBanned(data.session?.access_token)) {
+      await sb.auth.signOut();
+      showErr(errEl, 'This device/network has been banned from InteractInk.');
+      btn.disabled = false; btn.value = 'Log In';
+      return;
+    }
     location.href = 'index.html';
   } catch (err) {
     showErr(errEl, err.message === 'Invalid login credentials'

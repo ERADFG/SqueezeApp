@@ -167,13 +167,27 @@ async function adminSetVerification(userId, type) {
 
 let suspendTarget = null; // { userId, uname }
 
-function openSuspendModal(userId, uname) {
+async function openSuspendModal(userId, uname) {
   suspendTarget = { userId, uname };
   document.getElementById('adm-suspend-title').textContent = `Suspend @${uname}?`;
   document.getElementById('adm-suspend-duration').value = 'permanent';
   document.getElementById('adm-suspend-reason').value = '';
+  const ipsEl = document.getElementById('adm-suspend-ips');
+  if (ipsEl) ipsEl.textContent = '';
   document.getElementById('adm-suspend-bg').classList.add('open');
   lockScroll();
+
+  // Known IPs for this account (see supabase/ip_ban.sql) — suspending
+  // bans every one of these, not just the account itself.
+  if (ipsEl) {
+    const { data } = await sb.rpc('admin_get_user_ips', { target_user_id: userId });
+    if (suspendTarget?.userId !== userId) return; // modal moved on already
+    if (data?.length) {
+      ipsEl.textContent = `Suspending will also ban ${data.length} known IP${data.length === 1 ? '' : 's'} for this account.`;
+    } else {
+      ipsEl.textContent = 'No IPs on file for this account yet.';
+    }
+  }
 }
 function closeSuspendModal() {
   document.getElementById('adm-suspend-bg').classList.remove('open');

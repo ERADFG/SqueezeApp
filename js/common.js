@@ -3884,41 +3884,23 @@ function clearErr(el) {
   el.classList.remove('auth-ok');
 }
 
-// ── "I'm not a robot" CAPTCHA (Cloudflare Turnstile) ──
+// ── "I'm not a robot" CAPTCHA (homemade, not a third-party service) ──
 // Gates sign up, log in, and every posting action (new post, community
 // post, top-level reply, inline comment reply). Shared across all of
 // them instead of duplicated per-page so there's exactly one place
-// that knows how to render/verify a widget and one place to update if
-// the site ever swaps providers.
+// that knows how to render/verify the checkbox.
 //
-// Was Google reCAPTCHA v2 — switched to Turnstile because privacy
-// extensions/blockers (Privacy Badger, uBlock Origin's privacy lists,
-// etc.) commonly block Google's recaptcha/api.js and its tracking
-// cookie, which left the checkbox never rendering and the person
-// stuck unable to post. Turnstile is privacy-first (no tracking
-// cookie, doesn't fingerprint across sites) so it isn't caught by the
-// same blocklists, and it's a near drop-in: same "tick a box" UX, same
-// render/getResponse/reset widget API, same secret+siteverify
-// server-side check.
+// This is NOT Turnstile/reCAPTCHA/hCaptcha — it's a self-hosted
+// checkbox backed by api/verify-captcha.js: a signed time-trap (you
+// can't have clicked a box you were shown less than ~0.7s ago) plus a
+// honeypot field bots tend to fill and people never see. See that
+// file for the full writeup, including its documented limits.
 //
-// SETUP REQUIRED — this ships disabled-safe (fails OPEN, not closed)
-// until you fill in a real site key here, so the site keeps working
-// out of the box:
-//   1. Create a Turnstile widget (Managed / "checkbox" mode) at
-//      https://dash.cloudflare.com/?to=/:account/turnstile for your
-//      domain(s) — free, no Cloudflare-hosted DNS required.
-//   2. Paste the SITE key below.
-//   3. Set the SECRET key as the TURNSTILE_SECRET_KEY environment
-//      variable in your Vercel project (Settings → Environment
-//      Variables) — see api/verify-captcha.js. Never put the secret
-//      key in client code.
-// Until both are done, renderCaptchaIfNeeded()/verifyHuman() silently
-// no-op (widgets stay hidden, checks pass) so nothing breaks — but
-// posting/signup/login are NOT actually bot-protected yet.
-const TURNSTILE_SITE_KEY = 'YOUR_TURNSTILE_SITE_KEY';
-function captchaConfigured() {
-  return !!TURNSTILE_SITE_KEY && !TURNSTILE_SITE_KEY.startsWith('YOUR_');
-}
+// Needs no setup/API keys — unlike the old Turnstile version this
+// ships fully enabled out of the box. captchaConfigured() is kept as
+// a single on/off switch in case you ever want to disable the check
+// entirely (e.g. while developing locally).
+function captchaConfigured() { return true; }
 
 // Passing one checkbox re-verifies the person for a little while
 // instead of demanding a fresh checkbox on every single post/reply —
@@ -3935,9 +3917,9 @@ function markHumanVerified() {
 }
 
 // Markup for the captcha "card" — a shield icon + label header over a
-// shimmer placeholder that renderCaptchaIfNeeded() swaps for the real
-// Turnstile checkbox once it's ready (see below). Used both for the
-// static containers baked into signup/login/index/community's HTML
+// shimmer placeholder that loadCaptchaChallenge() swaps for the
+// homemade checkbox once the challenge loads (see below). Used both
+// for the static containers baked into signup/login/index/community's HTML
 // and for the reply composers thread.js builds at runtime (one per
 // reply-to-reply box), so there's a single template for the look.
 function captchaCardHtml(containerId) {
@@ -3956,72 +3938,79 @@ function captchaCardHtml(containerId) {
   </div>`;
 }
 
-const _captchaWidgets = {}; // containerId -> turnstile widget id
+const _captchaState = {}; // containerId -> { nonce, ts, sig, ticked }
 
-// #<containerId> is the *card* (see captchaCardHtml() below) — the
-// checkbox itself mounts into a child slot we create on first render,
-// so the shimmer placeholder that ships in the card's initial markup
-// stays put until Turnstile is actually ready to draw into it.
-function captchaSlotId(containerId) { return `${containerId}-slot`; }
-
-// Matches the Turnstile widget's theme to whichever of the app's own
-// themes (Default/Dim/Lights out) is currently active, so the
-// checkbox iframe doesn't look like a stray light-mode box dropped
-// onto a dark page.
-function currentCaptchaTheme() {
-  const t = document.documentElement.getAttribute('data-theme');
-  return (t === 'dim' || t === 'dark') ? 'dark' : 'light';
+// Fetches a fresh signed challenge from api/verify-captcha.js (GET)
+// and wires up the checkbox for containerId to arm it on click.
+async function loadCaptchaChallenge(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  try {
+    const res = await fetch('/api/verify-captcha');
+    const challenge = await res.json();
+    if (!challenge?.nonce) throw new Error('bad challenge');
+    _captchaState[containerId] = { ...challenge, ticked: false };
+  } catch (e) {
+    _captchaState[containerId] = null;
+    return;
+  }
+  const body = el.querySelector('.captcha-card-body');
+  if (!body) return;
+  body.innerHTML = `
+    <label class="captcha-check" for="${containerId}-box">
+      <span class="captcha-box" id="${containerId}-box" role="checkbox" aria-checked="false" tabindex="0">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 9.5 17 19 7"/></svg>
+      </span>
+      <span class="captcha-check-label">I'm not a robot</span>
+      <span class="captcha-spinner" aria-hidden="true"></span>
+    </label>
+    <input type="text" class="captcha-hp" name="url" tabindex="-1" autocomplete="off" aria-hidden="true">
+  `;
+  const box = body.querySelector('.captcha-box');
+  const arm = () => {
+    const state = _captchaState[containerId];
+    if (!state || state.ticked) return;
+    body.classList.add('is-checking');
+    setTimeout(() => {
+      state.ticked = true;
+      body.classList.remove('is-checking');
+      box.setAttribute('aria-checked', 'true');
+      el.classList.remove('is-error');
+      el.classList.add('is-verified');
+    }, 550 + Math.random() * 300);
+  };
+  box.addEventListener('click', arm);
+  box.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); arm(); } });
 }
 
 // Renders (once) the checkbox into the card at #<containerId> if a
 // check is actually still needed right now; hides/no-ops otherwise.
 // Safe to call every time a composer opens.
-function renderCaptchaIfNeeded(containerId, _attempt = 0) {
+function renderCaptchaIfNeeded(containerId) {
   const el = document.getElementById(containerId);
   if (!el) return;
   if (!captchaConfigured() || isHumanVerified()) { el.style.display = 'none'; el.classList.remove('is-error'); return; }
   el.style.display = '';
-  if (_captchaWidgets[containerId] != null) return;
-  if (window.turnstile?.render) {
-    const body = el.querySelector('.captcha-card-body');
-    if (body) body.innerHTML = `<div id="${captchaSlotId(containerId)}"></div>`;
-    _captchaWidgets[containerId] = turnstile.render(`#${captchaSlotId(containerId)}`, {
-      sitekey: TURNSTILE_SITE_KEY,
-      theme: currentCaptchaTheme(),
-      size: 'flexible',
-      callback: () => { el.classList.remove('is-error'); el.classList.add('is-verified'); },
-      'error-callback': () => {
-        el.classList.add('is-error');
-        setTimeout(() => el.classList.remove('is-error'), 500);
-      },
-      'expired-callback': () => { el.classList.remove('is-verified'); }
-    });
-  } else if (_attempt < 20) {
-    // turnstile's script loads async — it may not be ready yet the
-    // first time a composer/auth form appears, so retry briefly
-    // (the shimmer placeholder in the card covers this wait).
-    setTimeout(() => renderCaptchaIfNeeded(containerId, _attempt + 1), 250);
-  }
+  el.classList.remove('is-verified');
+  if (_captchaState[containerId] !== undefined) return;
+  _captchaState[containerId] = null; // claim it so a second call doesn't double-fetch
+  loadCaptchaChallenge(containerId);
 }
-// Passed as ?onload=initAllCaptchas to the turnstile <script> tag on
-// every page that has one or more containers below — each call is a
-// no-op for any id not present on the current page.
 function initAllCaptchas() {
   ['su-captcha', 'li-captcha', 'pf-captcha', 'cf-captcha', 'rf-captcha'].forEach(renderCaptchaIfNeeded);
 }
 
 // Resolves true once the person is verified human (already verified
-// recently, or just solved the checkbox in containerId and it passed
+// recently, or just ticked the box in containerId and it passes
 // server-side verification). Shows an error in errEl and returns
 // false otherwise. Call this right before the network request a
 // captcha is meant to gate (sign up, log in, submit post/reply).
 async function verifyHuman(containerId, errEl) {
   if (!captchaConfigured() || isHumanVerified()) return true;
-  renderCaptchaIfNeeded(containerId);
   const cardEl = document.getElementById(containerId);
-  const widgetId = _captchaWidgets[containerId];
-  const token = widgetId != null && window.turnstile ? turnstile.getResponse(widgetId) : '';
-  if (!token) {
+  const state = _captchaState[containerId];
+  const hp = cardEl?.querySelector('.captcha-hp')?.value || '';
+  if (!state || !state.ticked) {
     cardEl?.classList.add('is-error');
     setTimeout(() => cardEl?.classList.remove('is-error'), 500);
     showErr(errEl, "Please check the box to confirm you're not a robot.");
@@ -4031,32 +4020,34 @@ async function verifyHuman(containerId, errEl) {
     const res = await fetch('/api/verify-captcha', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token })
+      body: JSON.stringify({ nonce: state.nonce, ts: state.ts, sig: state.sig, hp })
     });
     const out = await res.json();
     if (!out.success) {
-      showErr(errEl, 'Captcha check failed — please try again.');
+      showErr(errEl, 'Bot check failed — please try again.');
       cardEl?.classList.remove('is-verified');
       cardEl?.classList.add('is-error');
-      if (widgetId != null) turnstile.reset(widgetId);
+      delete _captchaState[containerId];
+      renderCaptchaIfNeeded(containerId);
       return false;
     }
     markHumanVerified();
     cardEl?.classList.add('is-verified');
     return true;
   } catch (e) {
-    showErr(errEl, 'Could not verify the captcha right now — please try again.');
+    showErr(errEl, 'Could not run the bot check right now — please try again.');
     return false;
   }
 }
+document.addEventListener('DOMContentLoaded', initAllCaptchas);
 
-// ── 30s POSTING COOLDOWN — client-side spam brake shared by every
+// ── 100s POSTING COOLDOWN — client-side spam brake shared by every
 // "create a post/reply" action. Kept in localStorage (not a JS
 // variable) so it survives this site's real full-page navigations —
 // see supabase/post_cooldown.sql for the server-side trigger that
 // actually enforces this (client-side alone can always be bypassed by
 // someone calling the Supabase API directly). ──
-const POST_COOLDOWN_MS = 30000;
+const POST_COOLDOWN_MS = 100000;
 function postCooldownRemainingMs() {
   try {
     const rem = POST_COOLDOWN_MS - (Date.now() - (+localStorage.getItem('oc-last-post-at') || 0));

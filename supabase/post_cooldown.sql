@@ -1,5 +1,5 @@
 -- ============================================================
--- POST COOLDOWN — server-side enforcement of the 30s "wait between
+-- POST COOLDOWN — server-side enforcement of the 100s "wait between
 -- posts" spam brake.
 --
 -- WHY THIS FILE EXISTS: js/common.js already throttles posting on the
@@ -16,7 +16,7 @@
 -- HOW: a BEFORE INSERT trigger on both public.posts and
 -- public.replies checks the author's most recent row (across BOTH
 -- tables, since a reply-flood is just as much spam as a post-flood)
--- and rejects the insert if it's within 30 seconds of their last one.
+-- and rejects the insert if it's within 100 seconds of their last one.
 --
 -- TO APPLY: run this once in the Supabase SQL editor (or via the CLI)
 -- for your project. Safe to re-run — it replaces the function and
@@ -31,7 +31,7 @@ set search_path = public
 as $$
 declare
   last_at timestamptz;
-  cooldown interval := interval '30 seconds';
+  cooldown interval := interval '100 seconds';
 begin
   select max(created_at) into last_at
   from (
