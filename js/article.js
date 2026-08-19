@@ -95,6 +95,7 @@ function openShareArticleModal() {
   document.getElementById('sa-preview').innerHTML = articleCardHtml(article);
   const avEl = document.getElementById('sa-avatar');
   if (avEl) avEl.innerHTML = `<img src="${esc(avatarUrl(currentProfile?.avatar_url))}" alt="">`;
+  renderCaptchaIfNeeded('sa-captcha');
   modal.classList.add('open');
   bodyEl.focus();
 }
@@ -117,6 +118,7 @@ async function submitShareArticle() {
   const btn = document.getElementById('sa-btn');
   const body = bodyEl.value.trim();
   if (body.length > 250) { showErr(errEl, 'Comment too long (max 250 chars).'); return; }
+  if (!(await verifyHuman('sa-captcha', errEl))) return;
   btn.disabled = true;
   try {
     const { error } = await sb.from('posts').insert({

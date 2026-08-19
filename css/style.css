@@ -1801,7 +1801,7 @@ body.oc-sheet-open { overflow:hidden; }
    pill/rounded card (same treatment as #pf-box above) instead of a
    flush, edge-to-edge bar — margin on all sides, its own shadow, no
    straight divider lines. */
-.rfm { background:var(--cream-card); border:1px solid var(--line); border-radius:0; box-shadow:none; padding:12px 18px; margin:10px 12px; overflow:hidden; display:flex; gap:12px; align-items:flex-start; }
+.rfm { background:var(--cream-card); border:1px solid var(--line); border-radius:22px; box-shadow:0 1px 2px rgba(15,20,25,.04); padding:12px 18px; margin:10px 12px; overflow:hidden; display:flex; gap:12px; align-items:flex-start; }
 .rfm-locked { align-items:center; justify-content:center; gap:10px; color:var(--muted); font-size:14px; font-weight:600; padding:18px 16px; }
 .rfm-locked svg { width:18px; height:18px; flex:none; }
 .rfm-col { flex:1; min-width:0; }
@@ -2534,29 +2534,46 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
 }
 @keyframes captchaShimmer { 0% { background-position:100% 0; } 100% { background-position:0 0; } }
 
-/* ── homemade "I'm not a robot" checkbox (see api/verify-captcha.js) ── */
-.captcha-check {
-  display:flex; align-items:center; gap:10px; cursor:pointer; user-select:none;
-  width:100%; max-width:300px; padding:10px 14px; border:1px solid var(--border-input);
-  border-radius:var(--r-sm); background:var(--card-bg, var(--bg));
+/* ── homemade drag-to-fit puzzle slider (see api/verify-captcha.js) ──
+   Replaced a plain click-to-tick checkbox: now a puzzle-piece handle
+   has to be DRAGGED into a randomised target zone (a fresh, different
+   spot every time the challenge loads) before the check can pass.
+   Still purely a client-side friction/UX layer — see loadCaptchaChallenge()
+   in js/common.js for what this is (and isn't) actually gating. ── */
+.cs-wrap { display:flex; flex-direction:column; gap:8px; width:100%; max-width:300px; }
+.cs-label {
+  font-size:12px; font-weight:600; color:var(--muted); text-align:center;
+  transition:color .15s ease;
 }
-.captcha-box {
-  flex:none; width:22px; height:22px; border-radius:5px; border:2px solid var(--muted);
-  display:flex; align-items:center; justify-content:center; color:transparent;
-  transition:background-color .15s ease, border-color .15s ease, color .15s ease;
+.cs-track {
+  position:relative; height:44px; border-radius:var(--r-sm);
+  background:var(--card-bg, var(--bg)); border:1px solid var(--border-input);
+  overflow:hidden; touch-action:none;
 }
-.captcha-box svg { width:14px; height:14px; }
-.captcha-check-label { font-size:13.5px; font-weight:600; color:var(--ink); }
-.captcha-card-body.is-checking .captcha-box { border-color:var(--maroon); }
-.captcha-card-body.is-checking .captcha-check-label { opacity:.6; }
-.captcha-spinner { display:none; }
-.captcha-card-body.is-checking .captcha-spinner {
-  display:block; width:15px; height:15px; border-radius:50%;
-  border:2px solid var(--line); border-top-color:var(--maroon);
-  animation:captchaSpin .7s linear infinite; margin-left:auto;
+.cs-fill {
+  position:absolute; top:0; left:0; bottom:0; width:36px;
+  background:var(--maroon-tint); transition:background-color .15s ease;
 }
-@keyframes captchaSpin { to { transform:rotate(360deg); } }
-.captcha-card.is-verified .captcha-box { background:var(--green); border-color:var(--green); color:#fff; }
+.cs-target {
+  position:absolute; top:4px; width:36px; height:36px; border-radius:9px;
+  border:2px dashed var(--muted); opacity:.55; pointer-events:none;
+  transition:border-color .2s ease, opacity .2s ease;
+}
+.cs-handle {
+  position:absolute; top:4px; left:0; width:36px; height:36px; border-radius:9px;
+  background:var(--maroon); color:#fff; display:flex; align-items:center; justify-content:center;
+  cursor:grab; box-shadow:0 2px 6px rgba(0,0,0,.25); touch-action:none;
+  transition:background-color .15s ease, box-shadow .15s ease, left .18s ease;
+}
+.cs-handle.dragging { cursor:grabbing; box-shadow:0 3px 10px rgba(0,0,0,.35); transition:background-color .15s ease, box-shadow .15s ease; }
+.cs-handle svg { width:17px; height:17px; }
+.cs-track.is-shake { animation:captchaShake .4s ease; }
+.cs-track.is-shake .cs-target { border-color:var(--like); }
+.cs-track.is-checking .cs-handle { background:var(--maroon-dk, var(--maroon)); }
+.cs-track.is-ok .cs-fill { background:rgba(0,186,124,.22); }
+.cs-track.is-ok .cs-target { border-color:var(--green); opacity:1; }
+.cs-track.is-ok .cs-handle { background:var(--green); }
+.captcha-card.is-verified .cs-label { color:var(--green); }
 /* Honeypot — present in the DOM for bots that fill every field, but
    never visible or reachable for a real person (off-screen, not just
    opacity:0, and pulled out of tab order). */

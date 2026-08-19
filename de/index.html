@@ -200,6 +200,19 @@
     </div>
     <div class="qm-preview-wrap" id="qm-preview"></div>
     <div class="qm-foot"><span class="qm-count" id="qm-count">500</span></div>
+    <div id="qm-captcha" class="captcha-card" style="display:none;margin:0 16px 10px;">
+      <div class="captcha-card-head">
+        <span class="captcha-card-icon">
+          <svg class="cci-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+          <svg class="cci-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 9.5 17 19 7"/></svg>
+        </span>
+        <span class="captcha-card-text">
+          <span class="captcha-card-title">Quick security check</span>
+          <span class="captcha-card-sub">Confirm you're human to continue</span>
+        </span>
+      </div>
+      <div class="captcha-card-body"><div class="captcha-skeleton"></div></div>
+    </div>
     <button class="modal-btn" id="qm-btn" onclick="submitQuote()">Posten</button>
   </div>
 </div>

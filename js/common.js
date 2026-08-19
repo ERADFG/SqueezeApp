@@ -990,6 +990,7 @@ function gcModalEl() {
             <input type="datetime-local" id="gc-sched-input">
             <button type="button" class="cx-sched-remove" title="Remove" aria-label="Remove" onclick="removeSchedule('gc');return false;">&#10005;</button>
           </div>
+          ${captchaCardHtml('gc-captcha')}
         </div>
       </div>
       ${replyAudienceMenuHtml('gc')}
@@ -1054,6 +1055,7 @@ function openGlobalCompose(prefillText) {
   const avEl = document.getElementById('gc-avatar');
   if (avEl) avEl.innerHTML = `<img src="${esc(avatarUrl(currentProfile?.avatar_url))}" alt="">`;
   resetReplyAudience('gc');
+  renderCaptchaIfNeeded('gc-captcha');
   el.classList.add('open');
   lockScroll();
   const bodyEl = document.getElementById('gc-body');
@@ -1086,6 +1088,7 @@ async function submitGlobalCompose() {
   if (!body) { showErr(errEl, "Post can't be empty."); return; }
   if (body.length > 500) { showErr(errEl, 'Post too long (max 500 chars).'); return; }
   if (!validatePollAndSchedule('gc', errEl)) return;
+  if (!(await verifyHuman('gc-captcha', errEl))) return;
 
   btn.disabled = true;
   stEl.textContent = 'Posting…';
@@ -1175,6 +1178,7 @@ function rpcModalEl() {
         <div class="pf-col">
           <textarea id="rpc-body" maxlength="500" placeholder="${t('compose.reply')}"></textarea>
           <div id="rpc-fp" class="fp"></div>
+          ${captchaCardHtml('rpc-captcha')}
         </div>
       </div>
       <div class="gc-spacer" aria-hidden="true"></div>
@@ -1237,6 +1241,7 @@ function openReplyPopup(postId) {
   if (avEl) avEl.innerHTML = `<img src="${esc(avatarUrl(currentProfile?.avatar_url))}" alt="">`;
   const errEl = document.getElementById('rpc-err');
   clearErr(errEl);
+  renderCaptchaIfNeeded('rpc-captcha');
   if (el.classList.contains('open')) return; // already open — ignore a double tap
   el.classList.add('open');
   lockScroll();
@@ -1265,6 +1270,7 @@ async function submitReplyPopup() {
   const body = bodyEl.value.trim();
   if (!body) { showErr(errEl, "Reply can't be empty."); return; }
   if (body.length > 500) { showErr(errEl, 'Reply too long (max 500 chars).'); return; }
+  if (!(await verifyHuman('rpc-captcha', errEl))) return;
 
   btn.disabled = true;
   stEl.textContent = 'Posting…';
@@ -1816,6 +1822,7 @@ function openQuoteModal(postId, ev) {
   document.getElementById('qm-preview').innerHTML = p ? quotedPostHtml(p) : '<div class="qp-embed-gone">Loading…</div>';
   const avEl = document.getElementById('qm-avatar');
   if (avEl) avEl.innerHTML = `<img src="${esc(avatarUrl(currentProfile?.avatar_url))}" alt="">`;
+  renderCaptchaIfNeeded('qm-captcha');
   modal.classList.add('open');
   bodyEl.focus();
 }
@@ -1847,6 +1854,7 @@ async function submitQuote() {
   const body = bodyEl.value.trim();
   if (!body) { showErr(errEl, 'Add a comment before posting.'); return; }
   if (body.length > 500) { showErr(errEl, 'Comment too long (max 500 chars).'); return; }
+  if (!(await verifyHuman('qm-captcha', errEl))) return;
   btn.disabled = true;
   try {
     const { data, error } = await sb.from('posts').insert({
@@ -3939,10 +3947,19 @@ function captchaCardHtml(containerId) {
   </div>`;
 }
 
-const _captchaState = {}; // containerId -> { nonce, ts, sig, ticked }
+const _captchaState = {}; // containerId -> { nonce, ts, sig, ticked, target }
 
 // Fetches a fresh signed challenge from api/verify-captcha.js (GET)
-// and wires up the checkbox for containerId to arm it on click.
+// and wires up a drag-to-fit puzzle-piece slider for containerId that
+// arms on a successful drag. This replaced a plain "tap this box"
+// checkbox — a script can fire one click event against a selector in
+// a fraction of a second, but landing a drag within a few px of a
+// randomised target (never the same spot twice, generated fresh with
+// every challenge) takes an actual pointer path, which is meaningfully
+// more work for a basic/scripted bot to fake. Still layered on top of
+// (not a replacement for) the real server-side check in
+// api/verify-captcha.js — the slider is a friction/UX upgrade, the
+// signed time-trap + honeypot is what actually gets verified.
 async function loadCaptchaChallenge(containerId) {
   const el = document.getElementById(containerId);
   if (!el) return;
@@ -3950,7 +3967,10 @@ async function loadCaptchaChallenge(containerId) {
     const res = await fetch('/api/verify-captcha');
     const challenge = await res.json();
     if (!challenge?.nonce) throw new Error('bad challenge');
-    _captchaState[containerId] = { ...challenge, ticked: false };
+    // Target kept away from both edges (18%-82%) so there's always
+    // real travel distance on either side of it.
+    const target = 0.18 + Math.random() * 0.64;
+    _captchaState[containerId] = { ...challenge, ticked: false, target };
   } catch (e) {
     _captchaState[containerId] = null;
     return;
@@ -3958,30 +3978,150 @@ async function loadCaptchaChallenge(containerId) {
   const body = el.querySelector('.captcha-card-body');
   if (!body) return;
   body.innerHTML = `
-    <label class="captcha-check" for="${containerId}-box">
-      <span class="captcha-box" id="${containerId}-box" role="checkbox" aria-checked="false" tabindex="0">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 9.5 17 19 7"/></svg>
-      </span>
-      <span class="captcha-check-label">I'm not a robot</span>
-      <span class="captcha-spinner" aria-hidden="true"></span>
-    </label>
+    <div class="cs-wrap">
+      <div class="cs-label" id="${containerId}-label">Drag the piece into the slot</div>
+      <div class="cs-track" id="${containerId}-track">
+        <div class="cs-fill" id="${containerId}-fill"></div>
+        <div class="cs-target" id="${containerId}-tgt" aria-hidden="true"></div>
+        <div class="cs-handle" id="${containerId}-handle" role="slider" tabindex="0"
+             aria-label="Drag to complete the puzzle and confirm you're human"
+             aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 3h4a2 2 0 0 0 4 0h4a1 1 0 0 1 1 1v4a2 2 0 0 0 0 4v4a1 1 0 0 1-1 1h-4a2 2 0 0 0-4 0H6a1 1 0 0 1-1-1v-4a2 2 0 0 0 0-4V4a1 1 0 0 1 1-1Z"/>
+          </svg>
+        </div>
+      </div>
+    </div>
     <input type="text" class="captcha-hp" name="url" tabindex="-1" autocomplete="off" aria-hidden="true">
   `;
-  const box = body.querySelector('.captcha-box');
-  const arm = () => {
-    const state = _captchaState[containerId];
-    if (!state || state.ticked) return;
-    body.classList.add('is-checking');
+  wireCaptchaSlider(containerId, el, body);
+}
+
+// Pointer + keyboard drag logic for the puzzle slider. Kept separate
+// from loadCaptchaChallenge() so the markup-building and the
+// interaction wiring don't have to be re-read together.
+function wireCaptchaSlider(containerId, el, body) {
+  const state  = _captchaState[containerId];
+  const track  = body.querySelector('.cs-track');
+  const handle = body.querySelector('.cs-handle');
+  const fill   = body.querySelector('.cs-fill');
+  const tgt    = body.querySelector('.cs-target');
+  const label  = body.querySelector('.cs-label');
+  if (!state || !track || !handle) return;
+
+  const HANDLE = 36; // must match .cs-handle width in css/style.css
+
+  function metrics() {
+    const tw = track.clientWidth || 260;
+    return { tw, max: Math.max(1, tw - HANDLE) };
+  }
+  function placeTarget() {
+    const { tw } = metrics();
+    tgt.style.left = `${Math.round(state.target * tw - HANDLE / 2)}px`;
+  }
+  function setHandle(px) {
+    const { max } = metrics();
+    const clamped = Math.min(max, Math.max(0, px));
+    handle.style.left = `${clamped}px`;
+    fill.style.width = `${clamped + HANDLE}px`;
+    handle.setAttribute('aria-valuenow', String(Math.round((clamped / max) * 100)));
+    return clamped;
+  }
+  placeTarget();
+  setHandle(0);
+
+  function resolveAt(px) {
+    if (state.ticked) return;
+    const { tw, max } = metrics();
+    const targetPx = Math.min(max, Math.max(0, state.target * tw - HANDLE / 2));
+    const tolerance = Math.max(12, HANDLE * 0.55);
+    if (Math.abs(px - targetPx) <= tolerance) {
+      succeed(targetPx);
+    } else {
+      fail(px);
+    }
+  }
+  function succeed(px) {
+    setHandle(px);
+    track.classList.add('is-checking');
+    label.textContent = 'Checking…';
     setTimeout(() => {
       state.ticked = true;
-      body.classList.remove('is-checking');
-      box.setAttribute('aria-checked', 'true');
+      track.classList.remove('is-checking');
+      track.classList.add('is-ok');
+      label.textContent = "You're verified.";
+      handle.setAttribute('aria-checked', 'true');
       el.classList.remove('is-error');
       el.classList.add('is-verified');
-    }, 550 + Math.random() * 300);
-  };
-  box.addEventListener('click', arm);
-  box.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); arm(); } });
+    }, 500 + Math.random() * 250);
+  }
+  function fail(px) {
+    setHandle(px);
+    track.classList.add('is-shake');
+    label.textContent = 'Not quite — try again';
+    setTimeout(() => {
+      track.classList.remove('is-shake');
+      setHandle(0);
+      label.textContent = 'Drag the piece into the slot';
+    }, 420);
+  }
+
+  let dragging = false;
+  let originLeft = 0;
+  let pointerId = null;
+
+  function currentLeft() { return parseFloat(handle.style.left || '0') || 0; }
+
+  function onMove(clientX) {
+    if (!dragging) return;
+    setHandle(originLeft + (clientX - dragging));
+  }
+  handle.addEventListener('pointerdown', (e) => {
+    if (state.ticked) return;
+    e.preventDefault();
+    dragging = e.clientX;
+    originLeft = currentLeft();
+    pointerId = e.pointerId;
+    handle.setPointerCapture(pointerId);
+    handle.classList.add('dragging');
+  });
+  handle.addEventListener('pointermove', (e) => {
+    if (!dragging || e.pointerId !== pointerId) return;
+    onMove(e.clientX);
+  });
+  function endDrag(e) {
+    if (!dragging) return;
+    dragging = false;
+    handle.classList.remove('dragging');
+    try { handle.releasePointerCapture(pointerId); } catch (err) {}
+    resolveAt(currentLeft());
+  }
+  handle.addEventListener('pointerup', endDrag);
+  handle.addEventListener('pointercancel', endDrag);
+
+  // Keyboard fallback: arrow keys nudge the piece freely; Enter/Space
+  // commits the current position (same "did it land in the zone?"
+  // check a released drag gets).
+  handle.addEventListener('keydown', (e) => {
+    if (state.ticked) return;
+    const { max } = metrics();
+    const step = Math.max(6, max * 0.06);
+    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHandle(currentLeft() + step);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHandle(currentLeft() - step);
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      setHandle(0);
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      resolveAt(currentLeft());
+    }
+  });
+
+  window.addEventListener('resize', () => { placeTarget(); if (!state.ticked) setHandle(0); });
 }
 
 // Renders (once) the checkbox into the card at #<containerId> if a
@@ -3998,7 +4138,12 @@ function renderCaptchaIfNeeded(containerId) {
   loadCaptchaChallenge(containerId);
 }
 function initAllCaptchas() {
-  ['su-captcha', 'li-captcha', 'pf-captcha', 'cf-captcha', 'rf-captcha'].forEach(renderCaptchaIfNeeded);
+  // gc-captcha (global "pen" compose modal) and rpc-captcha (comment-
+  // icon reply popup) aren't in the DOM at load time — those modals
+  // are built lazily the first time they're opened (gcModalEl() /
+  // rpcModalEl()), so they're rendered from openGlobalCompose() /
+  // openReplyPopup() instead of here.
+  ['su-captcha', 'li-captcha', 'pf-captcha', 'cf-captcha', 'rf-captcha', 'ea-captcha', 'qm-captcha', 'sa-captcha'].forEach(renderCaptchaIfNeeded);
 }
 
 // Resolves true once the person is verified human (already verified

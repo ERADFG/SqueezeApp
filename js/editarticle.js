@@ -66,6 +66,12 @@ async function initEditArticle() {
   // published, from a blank form.
   const shareWrap = document.getElementById('ea-share-wrap');
   if (shareWrap) shareWrap.remove();
+  // The bot check gates *publishing new* content, same as every other
+  // posting surface — saving edits to an article you already own and
+  // already passed the check for isn't a fresh piece of content a bot
+  // would be spamming, so don't make an owner re-solve it just to fix a typo.
+  const captchaWrap = document.getElementById('ea-captcha-wrap');
+  if (captchaWrap) captchaWrap.remove();
 }
 
 // ── TOOLBAR ──────────────────────────────────────────────────
@@ -240,6 +246,7 @@ async function submitArticle() {
   if (title.length > 120) { showErr(errEl, 'Title is too long (max 120 characters).'); return; }
   if (!body) { showErr(errEl, 'Your article needs some body text.'); return; }
   if (cover_url && !/^https?:\/\//i.test(cover_url)) { showErr(errEl, 'Cover image must be a valid https:// URL.'); return; }
+  if (!eaEditingId && !(await verifyHuman('ea-captcha', errEl))) return;
 
   btn.disabled = true;
   btn.textContent = eaEditingId ? 'Saving…' : 'Publishing…';
