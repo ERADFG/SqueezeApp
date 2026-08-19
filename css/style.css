@@ -1322,6 +1322,24 @@ select {
 .verified-badge { width:16px; height:16px; margin:0 5px 0 0; vertical-align:-3.2px; flex:none; display:inline-block; align-self:center; }
 .op-detail-names .verified-badge { width:18px; height:18px; margin-left:0; vertical-align:-3.5px; flex:none; }
 .uname-row .verified-badge { width:20px; height:20px; margin-left:3px; vertical-align:-3.8px; }
+
+/* Contextual sizing for every other spot the badge got added to (chat,
+   notifications, search/follow lists, group-creation modal) — each of
+   these appends the badge straight after plain name text with no
+   flex+gap wrapper, so unlike .op-detail-names/.uname-row above, the
+   badge's own left margin is what has to create the breathing room.
+   Without a per-context size the base 16px badge also reads oversized
+   next to the smaller text these rows actually use (12–15px), which is
+   what made it look "off" — sitting too big and too close to the name. */
+.notif-txt .verified-badge { width:14px; height:14px; margin-left:3px; vertical-align:-2.4px; }
+.conv-name .verified-badge { width:14px; height:14px; margin-left:3px; vertical-align:-2.4px; }
+.nm .verified-badge { margin-left:3px; }
+.gm-sender-name .verified-badge { width:12px; height:12px; margin-left:3px; vertical-align:-2px; }
+.ulrow-name .verified-badge { width:14px; height:14px; margin-left:3px; vertical-align:-2.4px; }
+.gi-member-row .verified-badge { width:14px; height:14px; margin-left:3px; vertical-align:-2.4px; }
+.gcv-chip .verified-badge { width:13px; height:13px; margin:0 0 0 2px; vertical-align:-2.2px; }
+.expl-post-meta .verified-badge { width:13px; height:13px; margin-left:3px; vertical-align:-2.2px; }
+.who-row-handle .verified-badge { width:13px; height:13px; margin-left:3px; vertical-align:-2.2px; }
 .ph .nm:hover { text-decoration:underline; }
 .ph .pc-handle {
   color:var(--muted); font-weight:400; margin-right:5px;
@@ -1690,17 +1708,22 @@ body.oc-sheet-open { overflow:hidden; }
      the screen — instead of everything just sitting in normal flow
      inside a height:100% box, which left a dead, disconnected-looking
      gap of empty space between the textarea and the toolbar.
-     Height comes off --vvh (kept in sync with window.visualViewport
-     by common.js) instead of a flat 100% — 100%/100vh doesn't shrink
-     when the on-screen keyboard opens on a lot of mobile browsers, so
-     the flex:none toolbar at the bottom of this column would end up
-     sitting under the keyboard instead of right above it like X's
-     compose screen. --vvh tracks the part of the screen actually
-     still visible, so the modal (and the toolbar pinned to its end)
-     shrinks to match as the keyboard opens and closes. */
+     Height comes off 100dvh (the dynamic viewport unit — shrinks on
+     its own when the on-screen keyboard opens, no JS needed) with
+     --vvh (kept in sync with window.visualViewport by common.js) as
+     a finer-grained override for browsers where it fires. Plain
+     100%/100vh doesn't shrink when the keyboard opens on a lot of
+     mobile browsers/WebViews, so the flex:none toolbar at the bottom
+     of this column would end up sitting under the keyboard — reachable
+     only by scrolling, if at all — instead of right above it like X's
+     compose screen. This used to be --vvh-only, which left the icon
+     row (and the whole toolbar) invisible under the keyboard on any
+     browser where the visualViewport 'resize' listener never fired;
+     100dvh as the guaranteed first-line fallback fixes that. */
   .modal.gc-modal {
     width:100%; max-width:100%; border-radius:0; padding-top:52px;
-    height:100%; height:var(--vvh, 100%); max-height:100vh; max-height:var(--vvh, 100vh);
+    height:100%; height:100dvh; height:var(--vvh, 100dvh);
+    max-height:100vh; max-height:100dvh; max-height:var(--vvh, 100dvh);
     display:flex; flex-direction:column; overflow:hidden;
   }
   #gc-modal-bg.open { align-items:stretch; justify-content:stretch; }
