@@ -221,7 +221,7 @@ async function renderProfile(origin, username) {
       '<meta name="description" content="No user found with that username.">');
     html = injectHead(html, '<meta name="robots" content="noindex">');
     html = insertHiddenSeoBlock(html,
-      '<div id="profile-root"><span class="spinner">Loading profile&hellip;</span></div>',
+      '<div id="profile-root">',
       '<p>No user found with that username.</p>');
     return { status: 404, html };
   }
@@ -288,7 +288,7 @@ async function renderProfile(origin, username) {
   html = injectHead(html, jsonLdScriptTag(jsonLd));
 
   html = insertHiddenSeoBlock(html,
-    '<div id="profile-root"><span class="spinner">Loading profile&hellip;</span></div>',
+    '<div id="profile-root">',
     profileRootHtml);
 
   return { status: 200, html };
@@ -309,7 +309,7 @@ async function renderCommunity(origin, slug) {
       '<meta name="description" content="No community found with that slug.">');
     html = injectHead(html, '<meta name="robots" content="noindex">');
     html = insertHiddenSeoBlock(html,
-      '<div id="community-hero"><span class="spinner">Loading&hellip;</span></div>',
+      '<div id="community-hero">',
       '<p>No community found with that slug.</p>');
     return { status: 404, html };
   }
@@ -386,7 +386,7 @@ ${postsHtml}`;
   html = injectHead(html, jsonLdScriptTag(jsonLd));
 
   html = insertHiddenSeoBlock(html,
-    '<div id="community-hero"><span class="spinner">Loading&hellip;</span></div>',
+    '<div id="community-hero">',
     communityRootHtml);
 
   return { status: 200, html };
@@ -411,7 +411,7 @@ async function renderList(origin, id) {
       '<meta name="description" content="No List found with that id, or it&#39;s private.">');
     html = injectHead(html, '<meta name="robots" content="noindex">');
     html = insertHiddenSeoBlock(html,
-      '<div id="list-hero"><span class="spinner">Loading&hellip;</span></div>',
+      '<div id="list-hero">',
       "<p>No List found with that id, or it's private.</p>");
     return { status: 404, html };
   }
@@ -494,7 +494,7 @@ ${postsHtml}`;
   html = injectHead(html, jsonLdScriptTag(jsonLd));
 
   html = insertHiddenSeoBlock(html,
-    '<div id="list-hero"><span class="spinner">Loading&hellip;</span></div>',
+    '<div id="list-hero">',
     listRootHtml);
 
   return { status: 200, html };
@@ -515,7 +515,7 @@ async function renderArticle(origin, id) {
       '<meta name="description" content="No Article found with that id.">');
     html = injectHead(html, '<meta name="robots" content="noindex">');
     html = insertHiddenSeoBlock(html,
-      '<div id="article-content"><span class="spinner">Loading&hellip;</span></div>',
+      '<div id="article-content">',
       "<p>No Article found with that id.</p>");
     return { status: 404, html };
   }
@@ -572,7 +572,7 @@ async function renderArticle(origin, id) {
   html = injectHead(html, jsonLdScriptTag(jsonLd));
 
   html = insertHiddenSeoBlock(html,
-    '<div id="article-content"><span class="spinner">Loading&hellip;</span></div>',
+    '<div id="article-content">',
     articleRootHtml);
 
   return { status: 200, html };
@@ -593,7 +593,7 @@ async function renderThread(origin, username, id) {
       '<meta name="description" content="This post was not found or has been removed.">');
     html = injectHead(html, '<meta name="robots" content="noindex">');
     html = insertHiddenSeoBlock(html,
-      '<div id="thread-root"><span class="spinner">Loading&hellip;</span></div>',
+      '<div id="thread-root">',
       '<p>This post was not found or has been removed.</p>');
     return { status: 404, html };
   }
@@ -666,7 +666,7 @@ async function renderThread(origin, username, id) {
   html = injectHead(html, jsonLdScriptTag(jsonLd));
 
   html = insertHiddenSeoBlock(html,
-    '<div id="thread-root"><span class="spinner">Loading&hellip;</span></div>',
+    '<div id="thread-root">',
     threadRootHtml);
 
   return { status: 200, html };

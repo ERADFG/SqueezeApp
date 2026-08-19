@@ -246,6 +246,7 @@ async function submitArticle() {
   if (title.length > 120) { showErr(errEl, 'Title is too long (max 120 characters).'); return; }
   if (!body) { showErr(errEl, 'Your article needs some body text.'); return; }
   if (cover_url && !/^https?:\/\//i.test(cover_url)) { showErr(errEl, 'Cover image must be a valid https:// URL.'); return; }
+  if (!eaEditingId && !ensureCaptchaRevealed('ea-captcha')) return;
   if (!eaEditingId && !(await verifyHuman('ea-captcha', errEl))) return;
 
   btn.disabled = true;

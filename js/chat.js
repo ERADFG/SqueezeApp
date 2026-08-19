@@ -9,14 +9,32 @@
 // never sees plaintext. Older/legacy rows (iv is null) still render
 // as plain text.
 // ─────────────────────────────────────────────────────────────
-const chatWithUsername = (() => {
+// Group/channel thread route: /messages/g/<id> (pretty, added to
+// vercel.json alongside the existing /messages/<username> rewrite),
+// or the legacy chat.html?g=<id> query form for local dev without
+// Vercel's rewrite engine — same fallback pattern chatWithUsername
+// already uses for the 1:1 case just below.
+const chatGroupId = (() => {
+  const m = location.pathname.match(/^\/messages\/g\/([^/]+)\/?$/);
+  if (m) return decodeURIComponent(m[1]);
+  return new URLSearchParams(location.search).get('g');
+})();
+const chatWithUsername = chatGroupId ? null : (() => {
   const m = location.pathname.match(/^\/messages\/([^/]+)\/?$/);
   if (m) return decodeURIComponent(m[1]);
   return new URLSearchParams(location.search).get('u');
 })();
+function groupMessagesUrl(id) { return `/messages/g/${encodeURIComponent(id)}`; }
 let chatOther = null;   // the other user's profile, once a thread is open
 let chatChannel = null;
 let chatKey = null;     // this thread's derived AES-GCM key, or null if not (yet) encrypted
+
+// ── GROUP/CHANNEL STATE ──
+let chatGroup = null;        // the conversations row, once a group/channel thread is open
+let chatGroupMembers = [];   // conversation_members rows, joined with profiles
+let chatGroupMyRole = null;  // 'owner' | 'admin' | 'member' | null (not a member)
+let chatGroupRealtimeChannel = null;
+const gcvPickedMembers = new Map(); // username -> profile, for the create-group/channel modal
 
 // ── MEDIA / VOICE-NOTE COMPOSER STATE ──
 // At most one pending attachment at a time (image, video, or a
@@ -37,6 +55,16 @@ const ICON_CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
 const ICON_CHAT_EMPTY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5.5h16v11H9.5L5 20.5v-4H4Z"/><path d="M8 10h8M8 13h5" stroke-linecap="round"/></svg>';
 const ICON_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>';
 const CHAT_ICON_LOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+// ── group/channel icon set — kept alongside the rest of chat.js's own
+// icons (see the ICON_ATTACH comment above for why this file doesn't
+// borrow from common.js's ICON/NAV_ICON objects). ──
+const ICON_PLUS_CIRCLE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>';
+const ICON_MSG_ONE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.75c-4.97 0-9 3.5-9 7.9 0 2.55 1.35 4.82 3.46 6.28.1.85-.16 1.9-.82 3.02a.4.4 0 0 0 .43.59c1.53-.32 2.83-.92 3.7-1.5.7.15 1.44.23 2.23.23 4.97 0 9-3.55 9-7.9 0-4.4-4.03-8.9-9-8.9z"/></svg>';
+const ICON_GROUP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.3" r="3.3"/><path d="M2.8 20c.9-3.7 3.2-5.6 6.2-5.6s5.3 1.9 6.2 5.6"/><path d="M15.6 5.3a3.2 3.2 0 0 1 0 6.1"/><path d="M16.2 14.8c2.4.5 4.1 2.2 4.9 5.2"/></svg>';
+const ICON_CHANNEL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 19 4l-2.2 16-6-4.3L7 19v-5.1z"/><path d="M10.8 14.6 19 4"/></svg>';
+const ICON_INFO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg>';
+const ICON_GLOBE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 6 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-6-3.8-9s1.3-6.3 3.8-9Z"/></svg>';
+const ICON_LOCK_SMALL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
 // Attach / voice-note UI — kept as separate constants from the post
 // composer's icon set (js/common.js) even though a couple overlap
 // visually, since chat's toolbar lives in a different file and has
@@ -74,6 +102,9 @@ async function loadChat() {
     return;
   }
 
+  if (chatGroupId) {
+    return loadGroupThread(session, root);
+  }
   if (chatWithUsername) {
     return loadThread(session, root);
   }
@@ -111,12 +142,15 @@ async function loadConversationList(session, root) {
   if (chatCryptoSupported()) ensureMyKeypair(session.user.id); // fire-and-forget: publishes my pubkey so others can start encrypting to me
   subscribeConversationListRealtime(session, root);
 
-  const { data, error } = await sb.from('messages')
-    .select(`*, sender:profiles!messages_sender_id_fkey(id,username,display_name,avatar_url,verified,verification_type,pubkey),
-                recipient:profiles!messages_recipient_id_fkey(id,username,display_name,avatar_url,verified,verification_type,pubkey)`)
-    .or(`sender_id.eq.${session.user.id},recipient_id.eq.${session.user.id}`)
-    .order('created_at', { ascending: false })
-    .limit(300);
+  const [{ data, error }, groupRows] = await Promise.all([
+    sb.from('messages')
+      .select(`*, sender:profiles!messages_sender_id_fkey(id,username,display_name,avatar_url,verified,verification_type,pubkey),
+                  recipient:profiles!messages_recipient_id_fkey(id,username,display_name,avatar_url,verified,verification_type,pubkey)`)
+      .or(`sender_id.eq.${session.user.id},recipient_id.eq.${session.user.id}`)
+      .order('created_at', { ascending: false })
+      .limit(300),
+    loadMyGroupRows(session),
+  ]);
 
   if (error) { root.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
 
@@ -127,13 +161,15 @@ async function loadConversationList(session, root) {
     const mine = m.sender_id === session.user.id;
     const otherId = mine ? m.recipient_id : m.sender_id;
     if (!seen.has(otherId)) {
-      seen.set(otherId, { other: mine ? m.recipient : m.sender, last: m, mine });
+      seen.set(otherId, { other: mine ? m.recipient : m.sender, last: m, mine, when: m.created_at });
     }
   });
 
   // Compose is collapsed behind a single pill by default (Twitter-
   // style) instead of a bar that permanently eats space above the
-  // list — toggled open/closed by toggleNewChat().
+  // list — toggled open/closed by toggleNewChat(). The floating "+"
+  // (#chat-fab, Bluesky-style) opens a small sheet offering this same
+  // 1:1 flow plus New group / New channel.
   const newMsgBox = `
     <button type="button" class="chat-new-trigger" id="chat-new-trigger" onclick="toggleNewChat(true)">
       ${ICON_COMPOSE}<span>${t('chat.newMessage')}</span>
@@ -148,12 +184,19 @@ async function loadConversationList(session, root) {
     </div>
     <div class="errmsg" id="chat-new-err" style="display:none;margin:0 16px 10px;"></div>`;
 
-  if (!seen.size) {
+  const groupItems = groupRows.map(g => ({ kind: 'group', row: g, when: g.lastAt }));
+  const dmItems = [...seen.values()].map(v => ({ kind: 'dm', row: v, when: v.when }));
+  const merged = [...groupItems, ...dmItems].sort((a, b) => new Date(b.when) - new Date(a.when));
+
+  renderChatFab(root);
+
+  if (!merged.length) {
     root.innerHTML = newMsgBox + `
       <div class="chat-empty">
         ${ICON_CHAT_EMPTY}
         <h3>${esc(t('chat.noMessagesTitle'))}</h3>
         <p>${esc(t('chat.noMessagesSub'))}</p>
+        <button type="button" class="chat-empty-fab-btn" onclick="openNewChatSheet()">${ICON_PLUS_CIRCLE}<span>New chat</span></button>
       </div>`;
     return;
   }
@@ -161,7 +204,9 @@ async function loadConversationList(session, root) {
   // Snippet preview needs decrypting for encrypted rows — done in
   // parallel across every conversation up front rather than blocking
   // row-by-row.
-  const rows = await Promise.all([...seen.values()].map(async ({ other, last, mine }) => {
+  const rows = await Promise.all(merged.map(async item => {
+    if (item.kind === 'group') return groupConvRowHtml(item.row);
+    const { other, last, mine } = item.row;
     const unread = !mine && !last.read;
     const uname = other?.username || 'unknown';
     let snip;
@@ -193,6 +238,102 @@ async function loadConversationList(session, root) {
 
   root.innerHTML = newMsgBox + rows.join('');
 }
+
+// ── GROUPS/CHANNELS: conversation-list rows ──
+// Fetches every group/channel the person belongs to, plus (in one
+// follow-up query) the single most recent message in each, so the
+// list can be merged with the 1:1 rows above and sorted by whichever
+// is more recent — group or DM.
+async function loadMyGroupRows(session) {
+  const { data: memberRows, error } = await sb.from('conversation_members')
+    .select('conversation_id, role, last_read_at, conversation:conversations(id,kind,name,description,avatar_url,is_public,created_by)')
+    .eq('user_id', session.user.id);
+  if (error || !memberRows?.length) return [];
+
+  const ids = memberRows.map(r => r.conversation_id);
+  const { data: msgs } = await sb.from('messages')
+    .select('id, conversation_id, sender_id, body, media_type, created_at, sender:profiles!messages_sender_id_fkey(username,display_name)')
+    .in('conversation_id', ids)
+    .order('created_at', { ascending: false })
+    .limit(500);
+
+  const lastByGroup = new Map();
+  (msgs || []).forEach(m => { if (!lastByGroup.has(m.conversation_id)) lastByGroup.set(m.conversation_id, m); });
+
+  return memberRows.filter(r => r.conversation).map(r => {
+    const last = lastByGroup.get(r.conversation_id);
+    return {
+      id: r.conversation_id, role: r.role, lastReadAt: r.last_read_at,
+      conv: r.conversation, last,
+      lastAt: last?.created_at || r.conversation.created_at || new Date(0).toISOString(),
+    };
+  });
+}
+
+function groupAvatarHtml(conv) {
+  if (conv.avatar_url) return `<div class="conv-group-avatar"><img src="${esc(avatarUrl(conv.avatar_url))}" alt=""></div>`;
+  return `<div class="conv-group-avatar">${esc((conv.name || '?').slice(0, 1).toUpperCase())}</div>`;
+}
+
+function groupConvRowHtml(g) {
+  const unread = g.last && g.lastReadAt ? new Date(g.last.created_at) > new Date(g.lastReadAt) : !!(g.last && !g.lastReadAt);
+  let snip = '';
+  if (g.last) {
+    const who = g.last.sender ? `${g.last.sender.display_name || g.last.sender.username}: ` : '';
+    if (g.last.media_type) snip = esc(who) + esc(g.last.media_type === 'video' ? t('chat.video') : g.last.media_type === 'audio' ? t('chat.voiceMessage') : t('chat.photo'));
+    else snip = esc(who) + esc((g.last.body || '').slice(0, 70));
+  } else {
+    snip = g.conv.kind === 'channel' ? 'Channel created' : 'Group created';
+  }
+  return `
+  <a class="conv-row${unread ? ' unread' : ''}" href="${groupMessagesUrl(g.id)}" style="position:relative;">
+    ${groupAvatarHtml(g.conv)}
+    <span class="conv-kind-badge">${g.conv.kind === 'channel' ? ICON_CHANNEL : ICON_GROUP}</span>
+    <div class="conv-txt">
+      <div class="conv-top">
+        <span class="conv-name">${esc(g.conv.name)}</span>
+        <span class="conv-time">${g.last ? timeAgo(g.last.created_at) : ''}</span>
+      </div>
+      <div class="conv-snip">${snip}</div>
+    </div>
+    ${unread ? '<span class="conv-dot"></span>' : ''}
+  </a>`;
+}
+
+// ── FLOATING "+" BUTTON — Bluesky-style circular FAB pinned to the
+// conversation list, opening a small sheet with New message / New
+// group / New channel. Only rendered on the list view. ──
+function renderChatFab(root) {
+  document.getElementById('chat-fab')?.remove();
+  document.getElementById('chat-fab-sheet-bg')?.remove();
+  const fab = document.createElement('button');
+  fab.id = 'chat-fab';
+  fab.type = 'button';
+  fab.setAttribute('aria-label', 'New chat');
+  fab.innerHTML = ICON_PLUS_CIRCLE;
+  fab.onclick = () => openNewChatSheet();
+  document.body.appendChild(fab);
+
+  const sheetBg = document.createElement('div');
+  sheetBg.id = 'chat-fab-sheet-bg';
+  sheetBg.className = 'chat-fab-sheet-bg';
+  sheetBg.onclick = e => { if (e.target === sheetBg) closeNewChatSheet(); };
+  sheetBg.innerHTML = `
+    <div class="chat-fab-sheet" role="menu" aria-label="New chat">
+      <button type="button" onclick="closeNewChatSheet();toggleNewChat(true);">
+        ${ICON_MSG_ONE}<span>New message<span class="chat-fab-sheet-sub">Direct message someone</span></span>
+      </button>
+      <button type="button" onclick="closeNewChatSheet();openCreateConversationModal('group');">
+        ${ICON_GROUP}<span>New group<span class="chat-fab-sheet-sub">Chat with several people</span></span>
+      </button>
+      <button type="button" onclick="closeNewChatSheet();openCreateConversationModal('channel');">
+        ${ICON_CHANNEL}<span>New channel<span class="chat-fab-sheet-sub">Broadcast to followers</span></span>
+      </button>
+    </div>`;
+  document.body.appendChild(sheetBg);
+}
+function openNewChatSheet() { document.getElementById('chat-fab-sheet-bg')?.classList.add('open'); document.body.classList.add('oc-sheet-open'); }
+function closeNewChatSheet() { document.getElementById('chat-fab-sheet-bg')?.classList.remove('open'); document.body.classList.remove('oc-sheet-open'); }
 
 // Keeps the inbox list itself live, not just the sidebar badge.
 // subscribeChatBadge() (auth.js) already bumps the unread count from
@@ -233,6 +374,126 @@ async function startChat() {
   const { data: profile, error } = await sb.from('profiles').select('username').ilike('username', uname).maybeSingle();
   if (error || !profile) { showErr(errEl, t('chat.userNotFound')); return; }
   location.href = messagesUrl(profile.username);
+}
+
+// ── CREATE GROUP / CHANNEL ──
+// Reuses the app's generic .modal-bg/.modal shell (see the delete-
+// post confirm modal / edit-post modal in common.js for the same
+// pattern). 'group' = anyone in it can post; 'channel' = only the
+// owner/admin can post, everyone else just reads — matches the
+// kind check constraint in supabase/chat_full_setup.sql.
+function openCreateConversationModal(kind) {
+  gcvPickedMembers.clear();
+  document.getElementById('gcv-modal-bg')?.remove();
+  const bg = document.createElement('div');
+  bg.id = 'gcv-modal-bg';
+  bg.className = 'modal-bg';
+  bg.onclick = e => { if (e.target === bg) closeCreateConversationModal(); };
+  bg.innerHTML = `
+    <div class="modal gcv-modal" role="dialog" aria-modal="true">
+      <a class="modal-close" href="#" onclick="event.preventDefault();closeCreateConversationModal();">${ICON_CLOSE}</a>
+      <h2>New ${kind === 'channel' ? 'channel' : 'group'}</h2>
+      <p class="dc-desc">${kind === 'channel'
+        ? 'Only you (and any admins you add) can post. Everyone else just reads — like a broadcast list.'
+        : 'Everyone you add can post and see the conversation.'}</p>
+      <div class="gcv-kind-tabs" role="tablist">
+        <button type="button" class="${kind !== 'channel' ? 'cur' : ''}" onclick="openCreateConversationModal('group')">${ICON_GROUP} Group</button>
+        <button type="button" class="${kind === 'channel' ? 'cur' : ''}" onclick="openCreateConversationModal('channel')">${ICON_CHANNEL} Channel</button>
+      </div>
+      <div class="gcv-field">
+        <label for="gcv-name">Name</label>
+        <input type="text" id="gcv-name" maxlength="60" placeholder="${kind === 'channel' ? 'e.g. Announcements' : 'e.g. Weekend plans'}">
+      </div>
+      <div class="gcv-field">
+        <label for="gcv-desc">Description <span style="font-weight:400;">(optional)</span></label>
+        <textarea id="gcv-desc" rows="2" maxlength="200" placeholder="What's this ${kind} about?"></textarea>
+      </div>
+      <div class="gcv-toggle-row">
+        <span class="gcv-toggle-txt">Public ${kind}<small>Anyone can find and join without an invite</small></span>
+        <label class="toggle"><input type="checkbox" id="gcv-public"><span class="toggle-track"></span></label>
+      </div>
+      <div class="gcv-field">
+        <label for="gcv-member-search">Add members</label>
+        <div class="xsearch" style="margin:0;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+          <input id="gcv-member-search" placeholder="Search by username" oninput="gcvSearchMembers(this.value)">
+        </div>
+        <div class="gcv-member-results" id="gcv-member-results"></div>
+        <div class="gcv-members-picked" id="gcv-members-picked"></div>
+      </div>
+      <div class="errmsg" id="gcv-err" style="display:none;"></div>
+      <input type="hidden" id="gcv-kind" value="${esc(kind)}">
+      <button type="button" class="gcv-create-btn" id="gcv-create-btn" onclick="createConversation()">Create ${kind === 'channel' ? 'channel' : 'group'}</button>
+    </div>`;
+  document.body.appendChild(bg);
+  requestAnimationFrame(() => bg.classList.add('open'));
+  setTimeout(() => document.getElementById('gcv-name')?.focus(), 50);
+}
+function closeCreateConversationModal() { document.getElementById('gcv-modal-bg')?.remove(); }
+
+let gcvSearchDebounce = null;
+function gcvSearchMembers(q) {
+  clearTimeout(gcvSearchDebounce);
+  const resultsEl = document.getElementById('gcv-member-results');
+  if (!resultsEl) return;
+  if (!q.trim()) { resultsEl.innerHTML = ''; return; }
+  gcvSearchDebounce = setTimeout(async () => {
+    const { data } = await sb.from('profiles').select('id,username,display_name,avatar_url')
+      .or(`username.ilike.%${q.trim()}%,display_name.ilike.%${q.trim()}%`)
+      .neq('id', currentSession?.user?.id || '')
+      .limit(8);
+    resultsEl.innerHTML = (data || [])
+      .filter(p => !gcvPickedMembers.has(p.username))
+      .map(p => `
+        <div class="gcv-member-row" onclick="gcvPickMember('${esc(p.id)}','${esc(p.username)}','${esc((p.display_name || p.username).replace(/'/g, "\\'"))}','${esc(p.avatar_url || '')}')">
+          <img src="${esc(avatarUrl(p.avatar_url))}" alt="">
+          <div class="ulrow-txt"><span class="ulrow-name">${esc(p.display_name || p.username)}</span><span class="ulrow-handle">@${esc(p.username)}</span></div>
+        </div>`).join('');
+  }, 250);
+}
+function gcvPickMember(id, username, displayName, avatarUrlRaw) {
+  gcvPickedMembers.set(username, { id, username, display_name: displayName, avatar_url: avatarUrlRaw });
+  document.getElementById('gcv-member-search').value = '';
+  document.getElementById('gcv-member-results').innerHTML = '';
+  renderGcvPicked();
+}
+function gcvRemoveMember(username) { gcvPickedMembers.delete(username); renderGcvPicked(); }
+function renderGcvPicked() {
+  const el = document.getElementById('gcv-members-picked');
+  if (!el) return;
+  el.innerHTML = [...gcvPickedMembers.values()].map(p => `
+    <span class="gcv-chip">
+      <img src="${esc(avatarUrl(p.avatar_url))}" alt="">
+      ${esc(p.display_name)}
+      <button type="button" onclick="gcvRemoveMember('${esc(p.username)}')" aria-label="Remove">${ICON_CLOSE}</button>
+    </span>`).join('');
+}
+
+async function createConversation() {
+  const errEl = document.getElementById('gcv-err');
+  clearErr(errEl);
+  const kind = document.getElementById('gcv-kind').value;
+  const name = document.getElementById('gcv-name').value.trim();
+  const description = document.getElementById('gcv-desc').value.trim();
+  const isPublic = document.getElementById('gcv-public').checked;
+  if (!name) { showErr(errEl, 'Give it a name first.'); return; }
+  if (!currentSession) return;
+
+  const btn = document.getElementById('gcv-create-btn');
+  btn.disabled = true;
+  const { data: conv, error } = await sb.from('conversations')
+    .insert({ kind, name, description: description || null, is_public: isPublic })
+    .select('id').single();
+  if (error || !conv) { showErr(errEl, error?.message || 'Could not create it — try again.'); btn.disabled = false; return; }
+
+  const extraMembers = [...gcvPickedMembers.values()];
+  if (extraMembers.length) {
+    await sb.from('conversation_members').insert(
+      extraMembers.map(p => ({ conversation_id: conv.id, user_id: p.id, role: 'member' }))
+    );
+  }
+  closeCreateConversationModal();
+  location.href = groupMessagesUrl(conv.id);
 }
 
 // ── ONE-ON-ONE THREAD ──
@@ -781,6 +1042,301 @@ function subscribeChatRealtime(myId, otherId) {
       typingHideTimer = setTimeout(hideTypingBubble, 3000);
     })
     .subscribe();
+}
+
+// ── GROUP / CHANNEL THREAD ──
+// Same composer/attachment machinery as the 1:1 thread above (voice
+// notes, image/video attach, auto-grow textarea) — all of that is
+// already keyed off the generic `chatAttachment` global rather than
+// `chatOther`, so it works here unchanged. Group/channel messages
+// aren't end-to-end encrypted (see the PART 3 comment in
+// supabase/chat_full_setup.sql) — sendGroupMessage() below just never
+// touches chat-crypto.js.
+async function loadGroupThread(session, root) {
+  const { data: conv, error: convErr } = await sb.from('conversations').select('*').eq('id', chatGroupId).maybeSingle();
+  if (convErr || !conv) { root.innerHTML = `<div class="errmsg">${esc(t('chat.userNotFound') || "This chat doesn't exist.")}</div>`; return; }
+
+  const { data: members } = await sb.from('conversation_members')
+    .select('user_id, role, joined_at, profile:profiles(id,username,display_name,avatar_url,verified,verification_type)')
+    .eq('conversation_id', conv.id);
+
+  chatGroup = conv;
+  chatGroupMembers = members || [];
+  const mine = chatGroupMembers.find(m => m.user_id === session.user.id);
+  chatGroupMyRole = mine ? mine.role : null;
+
+  if (!chatGroupMyRole && !conv.is_public) {
+    root.innerHTML = `<div class="errmsg">You're not a member of this ${conv.kind}.</div>`;
+    return;
+  }
+
+  document.body.classList.add('chat-thread-open');
+  document.getElementById('chat-sec-bar').innerHTML = `<a class="back" href="chat.html" style="margin:0 10px 0 0;">&larr;</a> ${esc(conv.name)}`;
+
+  // Public conversation, not yet a member — auto-join like subscribing
+  // to a Telegram channel (RLS: conversation_members_insert_self_public).
+  if (!chatGroupMyRole && conv.is_public) {
+    const { error: joinErr } = await sb.from('conversation_members').insert({ conversation_id: conv.id, user_id: session.user.id, role: 'member' });
+    if (!joinErr) {
+      chatGroupMyRole = 'member';
+      chatGroupMembers.push({ user_id: session.user.id, role: 'member', joined_at: new Date().toISOString(), profile: currentProfile });
+    }
+  }
+
+  const { data: msgs, error } = await sb.from('messages').select('*')
+    .eq('conversation_id', conv.id)
+    .order('created_at', { ascending: true })
+    .limit(500);
+  if (error) { root.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
+  (msgs || []).forEach(m => { m._plain = m.body; }); // never encrypted — see comment above
+
+  const canPost = conv.kind === 'group' || chatGroupMyRole === 'owner' || chatGroupMyRole === 'admin';
+  const composerHtml = canPost ? `
+      <div id="chat-attach-preview" class="chat-attach-preview" hidden></div>
+      <div id="chat-record-bar" class="chat-record-bar" hidden>
+        <span class="chat-record-dot"></span>
+        <span id="chat-record-time" class="chat-record-time">0:00</span>
+        <span class="chat-record-hint">${esc(t('chat.recordVoice'))}</span>
+        <button type="button" class="chat-record-cancel" title="${esc(t('chat.cancelRecording'))}" aria-label="${esc(t('chat.cancelRecording'))}" onclick="cancelVoiceRecording()">${ICON_TRASH}</button>
+        <button type="button" class="chat-record-stop" title="${esc(t('chat.stopRecording'))}" aria-label="${esc(t('chat.stopRecording'))}" onclick="stopVoiceRecording()">${ICON_STOP}</button>
+      </div>
+      <div class="chat-composer">
+        <input type="file" id="chat-file" accept="image/*,video/*" style="display:none;" onchange="onChatFileChosen(this)">
+        <button type="button" class="chat-tool-btn" id="chat-attach-btn" title="${esc(t('chat.attachMedia'))}" aria-label="${esc(t('chat.attachMedia'))}" onclick="document.getElementById('chat-file').click()">${ICON_ATTACH}</button>
+        <button type="button" class="chat-tool-btn" id="chat-mic-btn" title="${esc(t('chat.recordVoice'))}" aria-label="${esc(t('chat.recordVoice'))}" onclick="startVoiceRecording()">${ICON_MIC}</button>
+        <textarea id="chat-body" maxlength="2000" placeholder="${conv.kind === 'channel' ? 'Post to this channel' : esc(t('chat.startMessagePlaceholder'))}" rows="1"
+          oninput="autoGrowChatInput(this)"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendGroupMessage();}"></textarea>
+        <button class="chat-send-btn" id="chat-send-btn" title="${esc(t('chat.send'))}" aria-label="${esc(t('chat.send'))}" disabled onclick="sendGroupMessage()">${ICON_SEND}</button>
+      </div>` : `
+      <div class="chat-channel-notice">${ICON_LOCK_SMALL}<span>Only the owner and admins can post in this channel.</span></div>`;
+
+  root.innerHTML = `
+    <div class="chat-thread">
+      <div class="chat-hdr">
+        <a class="chat-hdr-back" href="chat.html" aria-label="${esc(t('chat.back'))}">${ICON_BACK}</a>
+        <a href="#" onclick="event.preventDefault();openGroupInfo();">${groupAvatarHtml(conv)}</a>
+        <div>
+          <a class="nm" href="#" onclick="event.preventDefault();openGroupInfo();">${esc(conv.name)}</a>
+          <span class="chat-hdr-sub">${conv.kind === 'channel' ? 'Channel' : 'Group'} &middot; ${chatGroupMembers.length} member${chatGroupMembers.length === 1 ? '' : 's'}${conv.is_public ? ' &middot; Public' : ''}</span>
+        </div>
+        <button type="button" class="chat-hdr-info-btn" aria-label="Chat info" onclick="openGroupInfo()">${ICON_INFO}</button>
+      </div>
+      <div class="chat-msgs" id="chat-msgs">${renderGroupMsgsHtml(msgs || [], session.user.id)}</div>
+      ${composerHtml}
+    </div>`;
+
+  sizeChatThread();
+  scrollChatToBottom();
+
+  if (mine) {
+    await sb.from('conversation_members').update({ last_read_at: new Date().toISOString() }).eq('conversation_id', conv.id).eq('user_id', session.user.id);
+  }
+
+  subscribeGroupRealtime(conv.id, session.user.id);
+}
+
+function groupSenderProfile(senderId) {
+  return chatGroupMembers.find(m => m.user_id === senderId)?.profile || null;
+}
+
+function renderGroupMsgsHtml(msgs, myId) {
+  let html = '';
+  let lastDay = null;
+  msgs.forEach((m, i) => {
+    const day = chatDayLabel(m.created_at);
+    if (day !== lastDay) { html += `<div class="chat-daydivider">${esc(day)}</div>`; lastDay = day; }
+    const prev = msgs[i - 1];
+    const next = msgs[i + 1];
+    const groupsWithPrev = prev && prev.sender_id === m.sender_id && day === chatDayLabel(prev.created_at)
+      && (new Date(m.created_at) - new Date(prev.created_at)) < GROUP_GAP_MS;
+    const groupsWithNext = next && next.sender_id === m.sender_id && day === chatDayLabel(next.created_at)
+      && (new Date(next.created_at) - new Date(m.created_at)) < GROUP_GAP_MS;
+    html += groupMsgBubbleHtml(m, myId, { start: !groupsWithPrev, end: !groupsWithNext });
+  });
+  return html;
+}
+
+function groupMsgBubbleHtml(m, myId, group = { start: true, end: true }) {
+  const mine = m.sender_id === myId;
+  const cls = ['msg-row', mine ? 'mine' : 'theirs'];
+  if (group.start) cls.push('g-start');
+  if (group.end) cls.push('g-end');
+  const hasCaption = !!(m._plain);
+  const bodyHtml = hasCaption ? renderBody(m._plain) : '';
+  const mediaHtml = chatMediaHtml(m);
+  const bareMedia = mediaHtml && !hasCaption && m.media_type !== 'audio';
+  const sender = groupSenderProfile(m.sender_id);
+  const nameHtml = (!mine && group.start && sender) ? `<div class="gm-sender-name">${esc(sender.display_name || sender.username)}</div>` : '';
+  const bubbleInner = mediaHtml + bodyHtml;
+  return `
+  <div class="${cls.join(' ')}" id="msg-${m.id}" data-day="${esc(chatDayLabel(m.created_at))}" data-sender="${esc(m.sender_id)}" data-ts="${esc(m.created_at)}">
+    ${nameHtml}
+    <div class="msg-bubble${bareMedia ? ' msg-bubble-bare-media' : ''}">${bubbleInner}</div>
+    <span class="msg-time-inline">${chatClockTime(m.created_at)}</span>
+  </div>`;
+}
+
+async function sendGroupMessage() {
+  const bodyEl = document.getElementById('chat-body');
+  const body = bodyEl.value.trim();
+  const attachment = chatAttachment;
+  if ((!body && !attachment) || !chatGroup || !currentSession) return;
+  bodyEl.value = '';
+  autoGrowChatInput(bodyEl);
+  const sendBtn = document.getElementById('chat-send-btn');
+  if (sendBtn) sendBtn.disabled = true;
+
+  chatAttachment = null;
+  let media_url = null, media_type = null;
+  if (attachment) {
+    document.getElementById('chat-attach-preview').innerHTML = `<div class="chat-attach-uploading">${esc(t('chat.uploading'))}</div>`;
+    try {
+      const uploaded = await uploadMedia(attachment.file, status => {
+        const box = document.getElementById('chat-attach-preview');
+        if (box) box.innerHTML = `<div class="chat-attach-uploading">${esc(status)}</div>`;
+      });
+      media_url = uploaded.media_url;
+      media_type = attachment.type;
+    } catch (e) {
+      alert(e.message || t('chat.failedToSend'));
+      chatAttachment = attachment;
+      renderChatAttachPreview();
+      updateChatSendBtn();
+      return;
+    } finally {
+      URL.revokeObjectURL(attachment.previewUrl);
+    }
+  }
+  renderChatAttachPreview();
+
+  const insertRow = { conversation_id: chatGroup.id, sender_id: currentSession.user.id, body, media_url, media_type };
+  const { data, error } = await sb.from('messages').insert(insertRow).select('*').single();
+  if (error) { alert(error.message || t('chat.failedToSend')); return; }
+  data._plain = body;
+  if (!document.getElementById(`msg-${data.id}`)) {
+    appendGroupChatMsg(data, currentSession.user.id);
+    scrollChatToBottom();
+  }
+  sb.from('conversation_members').update({ last_read_at: new Date().toISOString() }).eq('conversation_id', chatGroup.id).eq('user_id', currentSession.user.id);
+}
+
+function appendGroupChatMsg(m, myId) {
+  const container = document.getElementById('chat-msgs');
+  if (!container) return;
+  const day = chatDayLabel(m.created_at);
+  const rows = container.querySelectorAll('.msg-row');
+  const lastRow = rows.length ? rows[rows.length - 1] : null;
+  const lastDay = lastRow ? lastRow.dataset.day : null;
+  const groupsWithLast = lastRow && lastRow.dataset.sender === m.sender_id && day === lastDay
+    && (new Date(m.created_at) - new Date(lastRow.dataset.ts)) < GROUP_GAP_MS;
+  if (groupsWithLast) lastRow.classList.remove('g-end');
+  let html = '';
+  if (day !== lastDay) html += `<div class="chat-daydivider">${esc(day)}</div>`;
+  html += groupMsgBubbleHtml(m, myId, { start: !groupsWithLast, end: true });
+  container.insertAdjacentHTML('beforeend', html);
+}
+
+function subscribeGroupRealtime(conversationId, myId) {
+  if (chatGroupRealtimeChannel) sb.removeChannel(chatGroupRealtimeChannel);
+  chatGroupRealtimeChannel = sb.channel(`group-${conversationId}`)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` }, payload => {
+      const m = payload.new;
+      if (m.sender_id === myId) return; // already appended optimistically by sendGroupMessage()
+      if (document.getElementById(`msg-${m.id}`)) return;
+      m._plain = m.body;
+      appendGroupChatMsg(m, myId);
+      scrollChatToBottom();
+      sb.from('conversation_members').update({ last_read_at: new Date().toISOString() }).eq('conversation_id', conversationId).eq('user_id', myId);
+    })
+    .subscribe();
+}
+
+// ── GROUP INFO PANEL — avatar/name/description, member list with
+// roles, "Add members" for owner/admin, and a way to leave. ──
+function openGroupInfo() {
+  if (!chatGroup) return;
+  document.getElementById('gi-modal-bg')?.remove();
+  const canManage = chatGroupMyRole === 'owner' || chatGroupMyRole === 'admin';
+  const bg = document.createElement('div');
+  bg.id = 'gi-modal-bg';
+  bg.className = 'modal-bg';
+  bg.onclick = e => { if (e.target === bg) bg.remove(); };
+  const membersHtml = chatGroupMembers
+    .slice()
+    .sort((a, b) => (a.role === 'owner' ? -1 : b.role === 'owner' ? 1 : 0))
+    .map(m => `
+      <div class="gi-member-row">
+        <img src="${esc(avatarUrl(m.profile?.avatar_url))}" alt="">
+        <span>${esc(m.profile?.display_name || m.profile?.username || 'Unknown')}</span>
+        <span class="gi-member-role">${esc(m.role)}</span>
+      </div>`).join('');
+  bg.innerHTML = `
+    <div class="modal gi-modal" role="dialog" aria-modal="true">
+      <a class="modal-close" href="#" onclick="event.preventDefault();this.closest('.modal-bg').remove();">${ICON_CLOSE}</a>
+      <div class="gi-hdr">
+        ${groupAvatarHtml(chatGroup)}
+        <h2>${esc(chatGroup.name)}</h2>
+        <p>${chatGroup.kind === 'channel' ? 'Channel' : 'Group'}${chatGroup.is_public ? ' &middot; Public' : ' &middot; Private'}${chatGroup.description ? ' &middot; ' + esc(chatGroup.description) : ''}</p>
+      </div>
+      <div class="gi-section-label">${chatGroupMembers.length} member${chatGroupMembers.length === 1 ? '' : 's'}</div>
+      <div id="gi-member-list">${membersHtml}</div>
+      <div class="gi-actions">
+        ${canManage ? `<button type="button" class="gi-add-btn" onclick="giShowAddMembers()">${ICON_PLUS_CIRCLE} Add members</button>` : ''}
+        <div id="gi-add-box" style="display:none;">
+          <div class="xsearch" style="margin:8px 0 0;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+            <input id="gi-add-search" placeholder="Search by username" oninput="giSearchAddMembers(this.value)">
+          </div>
+          <div class="gcv-member-results" id="gi-add-results"></div>
+        </div>
+        <button type="button" class="gi-leave-btn" onclick="leaveGroup()">Leave ${chatGroup.kind === 'channel' ? 'channel' : 'group'}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(bg);
+  requestAnimationFrame(() => bg.classList.add('open'));
+}
+
+function giShowAddMembers() {
+  const box = document.getElementById('gi-add-box');
+  if (!box) return;
+  box.style.display = box.style.display === 'none' ? 'block' : 'none';
+  if (box.style.display === 'block') document.getElementById('gi-add-search')?.focus();
+}
+let giSearchDebounce = null;
+function giSearchAddMembers(q) {
+  clearTimeout(giSearchDebounce);
+  const resultsEl = document.getElementById('gi-add-results');
+  if (!resultsEl) return;
+  if (!q.trim()) { resultsEl.innerHTML = ''; return; }
+  giSearchDebounce = setTimeout(async () => {
+    const existingIds = new Set(chatGroupMembers.map(m => m.user_id));
+    const { data } = await sb.from('profiles').select('id,username,display_name,avatar_url')
+      .or(`username.ilike.%${q.trim()}%,display_name.ilike.%${q.trim()}%`)
+      .limit(8);
+    resultsEl.innerHTML = (data || [])
+      .filter(p => !existingIds.has(p.id))
+      .map(p => `
+        <div class="gcv-member-row" onclick="giAddMember('${esc(p.id)}')">
+          <img src="${esc(avatarUrl(p.avatar_url))}" alt="">
+          <div class="ulrow-txt"><span class="ulrow-name">${esc(p.display_name || p.username)}</span><span class="ulrow-handle">@${esc(p.username)}</span></div>
+        </div>`).join('');
+  }, 250);
+}
+async function giAddMember(userId) {
+  if (!chatGroup) return;
+  const { error } = await sb.from('conversation_members').insert({ conversation_id: chatGroup.id, user_id: userId, role: 'member' });
+  if (error) { toast(error.message || 'Could not add that member.', 'error'); return; }
+  document.getElementById('gi-modal-bg')?.remove();
+  toast('Member added.');
+  loadGroupThread(currentSession, document.getElementById('chat-root'));
+}
+
+async function leaveGroup() {
+  if (!chatGroup || !currentSession) return;
+  if (!confirm(`Leave this ${chatGroup.kind}?`)) return;
+  await sb.from('conversation_members').delete().eq('conversation_id', chatGroup.id).eq('user_id', currentSession.user.id);
+  location.href = 'chat.html';
 }
 
 document.addEventListener('DOMContentLoaded', loadChat);

@@ -463,15 +463,22 @@ function currentProfileUsername() {
 
 
 // ── ICONS + tweet-style post card rendering ──
+// Bluesky-style action-row glyphs — softer, more rounded strokes than
+// the old Twitter-ish set (gentler bezier curves, no sharp elbows),
+// so the reply/repost/like/bookmark row reads as smooth outline icons
+// at 19px the way Bluesky's own action bar does. Still pure stroke
+// (fill:none via .act svg in style.css) except the two that render
+// solid — views (bars) and the liked/reposted/bookmarked filled
+// states, both handled the same as before in CSS.
 const ICON = {
-  reply:    '<svg viewBox="0 0 24 24"><path d="M12 3.5C7.03 3.5 3 6.96 3 11.2c0 2.35 1.24 4.46 3.2 5.88-.13.98-.55 2.5-1.6 3.9 1.72-.2 3.29-.98 4.4-1.76.94.3 1.96.46 3 .46 4.97 0 9-3.46 9-7.72s-4.03-8.46-9-8.46z"/></svg>',
-  heart:    '<svg viewBox="0 0 24 24"><path d="M12 20.8s-6.9-4.2-9.5-8.4C.9 9.5 1.5 6 4.3 4.5c2.2-1.2 4.6-.5 6 1.3L12 8l1.7-2.2c1.4-1.8 3.8-2.5 6-1.3 2.8 1.5 3.4 5 1.8 7.9-2.6 4.2-9.5 8.4-9.5 8.4z"/></svg>',
+  reply:    '<svg viewBox="0 0 24 24"><path d="M12 3.75c-4.97 0-9 3.5-9 7.9 0 2.55 1.35 4.82 3.46 6.28.1.85-.16 1.9-.82 3.02a.4.4 0 0 0 .43.59c1.53-.32 2.83-.92 3.7-1.5.7.15 1.44.23 2.23.23 4.97 0 9-3.55 9-7.9 0-4.4-4.03-8.9-9-8.9z" stroke-linejoin="round"/></svg>',
+  heart:    '<svg viewBox="0 0 24 24"><path d="M12 6.24C10.4 4.4 7.85 3.9 5.8 5.1 3.4 6.5 2.66 9.6 4.24 12.15c1.9 3.06 4.9 5.5 7.76 7.6 2.86-2.1 5.86-4.54 7.76-7.6 1.58-2.55.84-5.65-1.56-7.05-2.05-1.2-4.6-.7-6.2 1.14z" stroke-linejoin="round"/></svg>',
   views:    '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M8.75 21V3h2v18h-2zM18 21V8.5h2V21h-2zM4 21l.004-10h2L6 21H4z"/></svg>',
-  share:    '<svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>',
+  share:    '<svg viewBox="0 0 24 24"><path d="M12 3v13" stroke-linecap="round"/><path d="m7.2 7.6 4.8-4.8 4.8 4.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 15v3.5A2.5 2.5 0 0 0 7.5 21h9a2.5 2.5 0 0 0 2.5-2.5V15"/></svg>',
   menu:     '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>',
-  bookmark: '<svg viewBox="0 0 24 24"><path d="M6.5 3.5h11a1 1 0 0 1 1 1V21l-6.5-4.5L5.5 21V4.5a1 1 0 0 1 1-1Z"/></svg>',
-  repost:   '<svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>',
-  quote:    '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M7 6c-2.5 1.4-4 3.6-4 6.3 0 2.6 1.7 4.2 3.8 4.2 1.9 0 3.3-1.4 3.3-3.2 0-1.7-1.2-3-2.8-3-.3 0-.6 0-.8.1.2-1.6 1.5-3.2 3.3-4.1L7 6Zm9 0c-2.5 1.4-4 3.6-4 6.3 0 2.6 1.7 4.2 3.8 4.2 1.9 0 3.3-1.4 3.3-3.2 0-1.7-1.2-3-2.8-3-.3 0-.6 0-.8.1.2-1.6 1.5-3.2 3.3-4.1L16 6Z"/></svg>'
+  bookmark: '<svg viewBox="0 0 24 24"><path d="M7 4.75h10a1.25 1.25 0 0 1 1.25 1.25v13.5a.6.6 0 0 1-.95.48L12 15.9l-5.3 4.08a.6.6 0 0 1-.95-.48V6a1.25 1.25 0 0 1 1.25-1.25Z" stroke-linejoin="round"/></svg>',
+  repost:   '<svg viewBox="0 0 24 24"><path d="M17 1.5 21 5.5l-4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 11.5v-2a4 4 0 0 1 4-4h14" stroke-linecap="round"/><path d="M7 22.5 3 18.5l4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12.5v2a4 4 0 0 1-4 4H3" stroke-linecap="round"/></svg>',
+  quote:    '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M6.5 6.2c-2.3 1.4-3.7 3.5-3.7 6 0 2.4 1.6 3.9 3.5 3.9 1.75 0 3-1.3 3-2.95 0-1.55-1.1-2.75-2.6-2.75-.25 0-.5 0-.75.1.2-1.5 1.4-3 3-3.85L6.5 6.2Zm9 0c-2.3 1.4-3.7 3.5-3.7 6 0 2.4 1.6 3.9 3.5 3.9 1.75 0 3-1.3 3-2.95 0-1.55-1.1-2.75-2.6-2.75-.25 0-.5 0-.75.1.2-1.5 1.4-3 3-3.85l-2.45-2.3Z"/></svg>'
 };
 
 // ── SIDEBAR NAV — rendered into <nav id="side-nav"></nav> on every
@@ -483,7 +490,7 @@ const NAV_ICON = {
   home:     '<svg viewBox="0 0 24 24"><path d="M4 12.3 11.15 5.7a1.3 1.3 0 0 1 1.7 0L20 12.3"/><path d="M6.3 10.6V18a1.6 1.6 0 0 0 1.6 1.6h8.2A1.6 1.6 0 0 0 17.7 18v-7.4"/><path d="M10 19.5v-4.2c0-.75.65-1.3 1.4-1.3h1.2c.75 0 1.4.55 1.4 1.3v4.2"/></svg>',
   search:   '<svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.75"/><path d="m20 20-4.55-4.55"/></svg>',
   bell:     '<svg viewBox="0 0 24 24"><path d="M12 3.25a5.75 5.75 0 0 0-5.75 5.75v2.6c0 .85-.32 1.67-.9 2.3l-1.05 1.13c-.9.97-.2 2.57 1.13 2.57h13.14c1.33 0 2.03-1.6 1.13-2.57l-1.05-1.13a3.4 3.4 0 0 1-.9-2.3V9A5.75 5.75 0 0 0 12 3.25Z"/><path d="M9.6 19.3a2.4 2.4 0 0 0 4.8 0"/></svg>',
-  chat:     '<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="11" rx="4"/><path d="M8.2 16v3.1a.5.5 0 0 0 .82.38L13.4 16"/></svg>',
+  chat:     '<svg viewBox="0 0 24 24"><path d="M12 3.75c-4.97 0-9 3.5-9 7.9 0 2.55 1.35 4.82 3.46 6.28.1.85-.16 1.9-.82 3.02a.4.4 0 0 0 .43.59c1.53-.32 2.83-.92 3.7-1.5.7.15 1.44.23 2.23.23 4.97 0 9-3.55 9-7.9 0-4.4-4.03-8.9-9-8.9z" stroke-linejoin="round"/></svg>',
   bookmark: '<svg viewBox="0 0 24 24"><path d="M7 4.5h10a1 1 0 0 1 1 1V20a.6.6 0 0 1-.95.48L12 16.3l-5.05 4.18A.6.6 0 0 1 6 20V5.5a1 1 0 0 1 1-1Z"/></svg>',
   user:     '<svg viewBox="0 0 24 24"><circle cx="12" cy="8.2" r="3.75"/><path d="M4.5 19.6c1.1-4.15 3.9-6.15 7.5-6.15s6.4 2 7.5 6.15"/></svg>',
   gear:     '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.15"/><path d="M8.55 6.02 9.16 3.25h5.68l.61 2.77 2.71-.86L21 10.09 18.9 12l2.1 1.91-2.84 4.93-2.71-.86-.61 2.77H9.16l-.61-2.77-2.71.86L3 13.91 5.1 12 3 10.09l2.84-4.93 2.71.86Z"/></svg>',
@@ -1073,7 +1080,6 @@ function openGlobalCompose(prefillText) {
   const avEl = document.getElementById('gc-avatar');
   if (avEl) avEl.innerHTML = `<img src="${esc(avatarUrl(currentProfile?.avatar_url))}" alt="">`;
   resetReplyAudience('gc');
-  renderCaptchaIfNeeded('gc-captcha');
   el.classList.add('open');
   lockScroll();
   const bodyEl = document.getElementById('gc-body');
@@ -1106,6 +1112,7 @@ async function submitGlobalCompose() {
   if (!body) { showErr(errEl, "Post can't be empty."); return; }
   if (body.length > 500) { showErr(errEl, 'Post too long (max 500 chars).'); return; }
   if (!validatePollAndSchedule('gc', errEl)) return;
+  if (!ensureCaptchaRevealed('gc-captcha')) return;
   if (!(await verifyHuman('gc-captcha', errEl))) return;
 
   btn.disabled = true;
@@ -1259,7 +1266,6 @@ function openReplyPopup(postId) {
   if (avEl) avEl.innerHTML = `<img src="${esc(avatarUrl(currentProfile?.avatar_url))}" alt="">`;
   const errEl = document.getElementById('rpc-err');
   clearErr(errEl);
-  renderCaptchaIfNeeded('rpc-captcha');
   if (el.classList.contains('open')) return; // already open — ignore a double tap
   el.classList.add('open');
   lockScroll();
@@ -1288,6 +1294,7 @@ async function submitReplyPopup() {
   const body = bodyEl.value.trim();
   if (!body) { showErr(errEl, "Reply can't be empty."); return; }
   if (body.length > 500) { showErr(errEl, 'Reply too long (max 500 chars).'); return; }
+  if (!ensureCaptchaRevealed('rpc-captcha')) return;
   if (!(await verifyHuman('rpc-captcha', errEl))) return;
 
   btn.disabled = true;
@@ -1840,7 +1847,6 @@ function openQuoteModal(postId, ev) {
   document.getElementById('qm-preview').innerHTML = p ? quotedPostHtml(p) : '<div class="qp-embed-gone">Loading…</div>';
   const avEl = document.getElementById('qm-avatar');
   if (avEl) avEl.innerHTML = `<img src="${esc(avatarUrl(currentProfile?.avatar_url))}" alt="">`;
-  renderCaptchaIfNeeded('qm-captcha');
   modal.classList.add('open');
   bodyEl.focus();
 }
@@ -1872,6 +1878,7 @@ async function submitQuote() {
   const body = bodyEl.value.trim();
   if (!body) { showErr(errEl, 'Add a comment before posting.'); return; }
   if (body.length > 500) { showErr(errEl, 'Comment too long (max 500 chars).'); return; }
+  if (!ensureCaptchaRevealed('qm-captcha')) return;
   if (!(await verifyHuman('qm-captcha', errEl))) return;
   btn.disabled = true;
   try {
@@ -4156,12 +4163,31 @@ function renderCaptchaIfNeeded(containerId) {
   loadCaptchaChallenge(containerId);
 }
 function initAllCaptchas() {
-  // gc-captcha (global "pen" compose modal) and rpc-captcha (comment-
-  // icon reply popup) aren't in the DOM at load time — those modals
-  // are built lazily the first time they're opened (gcModalEl() /
-  // rpcModalEl()), so they're rendered from openGlobalCompose() /
-  // openReplyPopup() instead of here.
-  ['su-captcha', 'li-captcha', 'pf-captcha', 'cf-captcha', 'rf-captcha', 'ea-captcha', 'qm-captcha', 'sa-captcha'].forEach(renderCaptchaIfNeeded);
+  // Only the login/signup checks render eagerly — those pages exist
+  // for that one action, so showing the box right away is normal.
+  // Every "post/reply/publish" captcha (pf, cf, rf, ea, sa, gc, rpc,
+  // qm) instead stays hidden until the person actually taps
+  // Post/Reply/Publish — see ensureCaptchaRevealed() — so composers
+  // open clean instead of leading with a security check.
+  ['su-captcha', 'li-captcha'].forEach(renderCaptchaIfNeeded);
+}
+
+// First tap of Post/Reply/Publish on a form whose captcha hasn't been
+// shown yet: reveals the check (loading it if needed) and scrolls it
+// into view, but does NOT let that same tap go on to submit — the
+// person taps again once they've ticked it. Returns true once the
+// card is already visible (so the caller can proceed straight to
+// verifyHuman()), false the first time (caller should stop there).
+function ensureCaptchaRevealed(containerId) {
+  if (!captchaConfigured() || isHumanVerified()) return true;
+  const el = document.getElementById(containerId);
+  const alreadyShown = !!el && el.style.display !== 'none';
+  renderCaptchaIfNeeded(containerId);
+  if (!alreadyShown) {
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return false;
+  }
+  return true;
 }
 
 // Resolves true once the person is verified human (already verified
@@ -4422,10 +4448,18 @@ async function uploadMedia(file, onStatus) {
       notify('Compressing image…');
       file = await compressImageFile(file);
     }
-  } else if (type === 'video') {
-    notify('Compressing video…');
-    file = await compressVideoFile(file);
   }
+  // Video is intentionally NOT re-encoded client-side before upload.
+  // It used to be run through ffmpeg.wasm here, but that's a full
+  // software video encode running single-threaded in the browser —
+  // it could take a minute or more per clip, and since it's already
+  // near-lossless it frequently didn't even shrink the file (the old
+  // code fell back to the original whenever the re-encode wasn't
+  // smaller). That made "post a video" feel broken. Uploading the
+  // original file straight away is dramatically faster and is what
+  // makes video posting fast; compressVideoFile() is kept below,
+  // unused, in case server-side/background transcoding is wired up
+  // later.
   notify('Uploading…');
   const ext = file.name.split('.').pop().toLowerCase();
   const path = `${crypto.randomUUID()}.${ext}`;

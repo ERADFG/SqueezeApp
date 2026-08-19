@@ -1397,7 +1397,7 @@ select {
   transition:background .15s ease, color .15s ease, transform .1s cubic-bezier(.2,.8,.2,1);
 }
 .act:active { transform:scale(.90); }
-.act svg { width:19px; height:19px; flex:none; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; transition:transform .18s cubic-bezier(.34,1.56,.64,1); }
+.act svg { width:19px; height:19px; flex:none; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; shape-rendering:geometricPrecision; transition:transform .18s cubic-bezier(.34,1.56,.64,1); }
 .act:hover { text-decoration:none; }
 .act:active svg { transform:scale(.86); }
 
@@ -2864,6 +2864,148 @@ html[data-theme="dim"] .auth-ok, html[data-theme="dark"] .auth-ok { background:r
 .chat-empty svg { width:52px; height:52px; color:var(--maroon); opacity:.5; margin-bottom:14px; }
 .chat-empty h3 { font-size:17px; color:var(--ink); margin:0 0 6px; }
 .chat-empty p { font-size:14px; margin:0; }
+.chat-empty .chat-empty-fab-btn {
+  margin-top:18px; border:none; border-radius:999px; background:var(--maroon); color:#fff;
+  font-family:inherit; font-size:14.5px; font-weight:800; padding:10px 20px; cursor:pointer;
+  display:inline-flex; align-items:center; gap:8px; transition:background-color .15s ease, transform .1s ease;
+}
+.chat-empty .chat-empty-fab-btn:hover { background:var(--maroon-dk); }
+.chat-empty .chat-empty-fab-btn:active { transform:scale(.96); }
+.chat-empty .chat-empty-fab-btn svg { width:17px; height:17px; color:#fff; opacity:1; margin:0; }
+
+/* ── chat FAB — a floating circular "new chat" button pinned to the
+   bottom-right corner of the conversation list, Bluesky-style,
+   visible on every breakpoint (unlike #m-fab, which is mobile-only
+   and reserved for the post composer). Only rendered on the list
+   view — loadThread()/loadGroupThread() remove it via
+   .chat-thread-open, same switch the mobile FAB/tab bar already use. */
+#chat-fab {
+  position:fixed; right:24px; bottom:28px; z-index:60;
+  width:56px; height:56px; border-radius:999px; border:none; cursor:pointer;
+  background:var(--maroon); color:#fff; display:flex; align-items:center; justify-content:center;
+  box-shadow:0 6px 18px rgba(15,20,25,.22); transition:background-color .15s ease, transform .15s cubic-bezier(.34,1.56,.64,1);
+}
+#chat-fab:hover { background:var(--maroon-dk); transform:scale(1.05); }
+#chat-fab:active { transform:scale(.92); }
+#chat-fab svg { width:25px; height:25px; fill:none; stroke:#fff; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
+@media (max-width:600px) {
+  #chat-fab { right:16px; bottom:calc(76px + env(safe-area-inset-bottom, 0px)); width:52px; height:52px; }
+}
+body.chat-thread-open #chat-fab { display:none; }
+
+/* ── "new chat" sheet — opened by #chat-fab (or the existing
+   chat-new-trigger pill). Same popover/bottom-sheet shell as
+   .rp-menu-dd (repost menu) for visual consistency: a small anchored
+   card on desktop, a full-width sheet sliding up from the bottom on
+   mobile. */
+.chat-fab-sheet-bg { display:none; position:fixed; inset:0; z-index:1000; background:rgba(91,112,131,0); transition:background-color .2s ease; }
+.chat-fab-sheet-bg.open { display:block; background:rgba(91,112,131,.4); }
+.chat-fab-sheet {
+  position:fixed; right:24px; bottom:96px; z-index:1001; width:250px;
+  background:var(--cream-card); border:1px solid var(--line); border-radius:18px; box-shadow:var(--shadow-pop);
+  overflow:hidden; padding:6px; opacity:0; visibility:hidden; pointer-events:none;
+  transform:translateY(6px) scale(.97); transform-origin:bottom right;
+  transition:opacity .15s ease, transform .15s cubic-bezier(.2,.8,.2,1), visibility 0s linear .15s;
+}
+.chat-fab-sheet-bg.open .chat-fab-sheet {
+  opacity:1; visibility:visible; pointer-events:auto; transform:translateY(0) scale(1);
+  transition:opacity .16s ease, transform .16s cubic-bezier(.2,.8,.2,1);
+}
+.chat-fab-sheet button {
+  display:flex; align-items:center; gap:12px; width:100%; text-align:left; background:none; border:none; cursor:pointer;
+  border-radius:12px; font-family:inherit; font-size:14.5px; font-weight:700; color:var(--ink); padding:11px 12px;
+  transition:background .1s ease;
+}
+.chat-fab-sheet button:hover { background:var(--hover-bg); }
+.chat-fab-sheet button svg { width:19px; height:19px; flex:none; fill:none; stroke:var(--maroon); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.chat-fab-sheet-sub { font-size:11.5px; font-weight:500; color:var(--muted); display:block; margin-top:1px; }
+@media (max-width:600px) {
+  #chat-fab, .chat-fab-sheet { right:16px; }
+  .chat-fab-sheet {
+    right:0; left:0; bottom:0; width:auto; border-radius:20px 20px 0 0;
+    padding-bottom:calc(10px + env(safe-area-inset-bottom, 0px));
+    transform:translateY(100%); transform-origin:bottom center;
+  }
+  .chat-fab-sheet-bg.open .chat-fab-sheet { transform:translateY(0); }
+  .chat-fab-sheet::before { content:""; display:block; width:36px; height:4px; border-radius:99px; background:var(--div); margin:8px auto 6px; }
+  .chat-fab-sheet button { padding:13px 16px; font-size:15px; }
+}
+
+/* ── create group/channel modal ── */
+.gcv-modal { width:400px; max-width:92vw; padding:18px 18px 16px; text-align:left; }
+.gcv-modal h2 { padding:0; margin:0 0 4px; }
+.gcv-modal .dc-desc { text-align:left; margin-bottom:14px; }
+.gcv-kind-tabs { display:flex; gap:8px; margin-bottom:14px; background:var(--hover-bg); border-radius:999px; padding:4px; }
+.gcv-kind-tabs button {
+  flex:1; border:none; background:none; padding:8px 10px; border-radius:999px; font-family:inherit;
+  font-size:13.5px; font-weight:700; color:var(--muted); cursor:pointer; transition:background .12s ease, color .12s ease;
+}
+.gcv-kind-tabs button.cur { background:var(--cream-card); color:var(--ink); box-shadow:0 1px 3px rgba(15,20,25,.12); }
+.gcv-field { margin-bottom:12px; }
+.gcv-field label { display:block; font-size:12px; font-weight:700; color:var(--muted); margin-bottom:5px; }
+.gcv-field input[type="text"], .gcv-field textarea {
+  width:100%; font:inherit; font-size:14.5px; padding:9px 12px; border-radius:var(--r-sm);
+  border:1px solid var(--div); background:var(--bg); color:var(--ink); resize:none;
+}
+.gcv-field input[type="text"]:focus, .gcv-field textarea:focus { outline:none; border-color:var(--maroon); }
+.gcv-toggle-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:2px 0 12px; }
+.gcv-toggle-txt { font-size:13.5px; color:var(--ink); }
+.gcv-toggle-txt small { display:block; font-size:11.5px; color:var(--muted); font-weight:500; margin-top:1px; }
+.gcv-members-picked { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.gcv-chip { display:inline-flex; align-items:center; gap:6px; background:var(--hover-bg); border-radius:999px; padding:4px 6px 4px 4px; font-size:12.5px; font-weight:700; }
+.gcv-chip img { width:20px; height:20px; border-radius:50%; }
+.gcv-chip button { border:none; background:none; color:var(--muted); cursor:pointer; width:16px; height:16px; display:flex; align-items:center; justify-content:center; padding:0; }
+.gcv-chip button svg { width:12px; height:12px; }
+.gcv-member-results { max-height:150px; overflow-y:auto; border:1px solid var(--div); border-radius:var(--r-sm); margin-top:6px; }
+.gcv-member-results:empty { display:none; }
+.gcv-member-row { display:flex; align-items:center; gap:8px; padding:8px 10px; cursor:pointer; transition:background .1s ease; }
+.gcv-member-row:hover { background:var(--hover-bg); }
+.gcv-member-row img { width:26px; height:26px; border-radius:50%; }
+.gcv-member-row .ulrow-txt { min-width:0; }
+.gcv-create-btn { width:100%; padding:11px 14px; border-radius:999px; font-size:15px; font-weight:800; border:none; cursor:pointer; background:var(--maroon); color:#fff; transition:background-color .12s ease, opacity .12s ease; }
+.gcv-create-btn:hover { background:var(--maroon-dk); }
+.gcv-create-btn:disabled { opacity:.55; cursor:default; }
+.gcv-modal .errmsg { margin:0 0 10px; }
+
+/* ── group/channel row in the conversation list — same .conv-row
+   shell, plus a small kind badge over the group avatar. ── */
+.conv-row .conv-kind-badge {
+  position:absolute; left:36px; top:32px; width:18px; height:18px; border-radius:50%;
+  background:var(--maroon); color:#fff; display:flex; align-items:center; justify-content:center;
+  box-shadow:0 0 0 2px var(--cream-card);
+}
+.conv-row .conv-kind-badge svg { width:11px; height:11px; fill:none; stroke:#fff; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; }
+.conv-group-avatar {
+  width:50px; height:50px; border-radius:50%; flex:none; display:flex; align-items:center; justify-content:center;
+  background:var(--maroon-tint); color:var(--maroon); font-weight:800; font-size:17px; overflow:hidden;
+}
+.conv-group-avatar img { width:100%; height:100%; object-fit:cover; }
+
+/* ── group/channel thread header extras ── */
+.chat-hdr-sub { font-size:12px; color:var(--muted); display:block; }
+.chat-hdr-info-btn { margin-left:auto; flex:none; width:34px; height:34px; border-radius:50%; border:none; background:none; color:var(--muted); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background .12s ease; }
+.chat-hdr-info-btn:hover { background:var(--hover-bg); }
+.chat-hdr-info-btn svg { width:19px; height:19px; }
+.chat-channel-notice { display:flex; align-items:center; gap:8px; justify-content:center; padding:12px 16px; margin:0 16px 10px; border-radius:var(--r-sm); background:var(--hover-bg); color:var(--muted); font-size:13px; text-align:center; }
+.chat-channel-notice svg { width:16px; height:16px; flex:none; }
+.gm-sender-name { font-size:12px; font-weight:700; color:var(--maroon); margin:0 0 2px 2px; }
+
+/* ── group info panel ── */
+.gi-modal { width:380px; max-width:92vw; padding:0 0 16px; text-align:left; }
+.gi-hdr { padding:20px 18px 14px; text-align:center; border-bottom:1px solid var(--line); }
+.gi-hdr img, .gi-hdr .conv-group-avatar { width:64px; height:64px; margin:0 auto 10px; font-size:22px; }
+.gi-hdr h2 { margin:0 0 3px; }
+.gi-hdr p { font-size:12.5px; color:var(--muted); margin:0; }
+.gi-section-label { font-size:11.5px; font-weight:800; letter-spacing:.3px; text-transform:uppercase; color:var(--muted); padding:14px 18px 4px; }
+.gi-member-row { display:flex; align-items:center; gap:10px; padding:8px 18px; }
+.gi-member-row img { width:32px; height:32px; border-radius:50%; }
+.gi-member-role { margin-left:auto; font-size:11px; font-weight:800; color:var(--muted); text-transform:uppercase; }
+.gi-actions { padding:12px 18px 0; display:flex; flex-direction:column; gap:8px; }
+.gi-add-btn { display:flex; align-items:center; gap:8px; width:100%; background:none; border:1px dashed var(--div); border-radius:999px; padding:9px 14px; font-family:inherit; font-size:13.5px; font-weight:700; color:var(--maroon); cursor:pointer; }
+.gi-add-btn:hover { background:var(--maroon-tint); }
+.gi-add-btn svg { width:16px; height:16px; }
+.gi-leave-btn { width:100%; background:none; border:none; padding:9px 14px; font-family:inherit; font-size:13.5px; font-weight:700; color:var(--like); cursor:pointer; text-align:left; border-radius:var(--r-sm); }
+.gi-leave-btn:hover { background:rgba(225,29,72,.08); }
 
 /* ── one-on-one thread ── */
 /* .chat-thread is a fixed-height flex column (height set from JS —

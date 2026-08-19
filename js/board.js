@@ -314,6 +314,7 @@ async function submitPost() {
   if (body.length > 500) { showErr(errEl, 'Comment too long (max 500 chars).'); return; }
   if (!validatePollAndSchedule('pf', errEl)) return;
   if (!enforceCooldown(errEl)) return;
+  if (!ensureCaptchaRevealed('pf-captcha')) return;
   if (!(await verifyHuman('pf-captcha', errEl))) return;
 
   btn.disabled = true;

@@ -681,6 +681,7 @@ async function submitCommunityPost() {
   if (!body) { showErr(errEl, "Comment can't be empty."); return; }
   if (body.length > 500) { showErr(errEl, 'Comment too long (max 500 chars).'); return; }
   if (!enforceCooldown(errEl)) return;
+  if (!ensureCaptchaRevealed('cf-captcha')) return;
   if (!(await verifyHuman('cf-captcha', errEl))) return;
 
   btn.disabled = true;

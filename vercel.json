@@ -118,6 +118,7 @@
     { "src": "^/i/articles/(?<id>[^/]+)$", "dest": "/api/prerender?type=article&id=$id" },
 
     { "src": "^/messages$",           "dest": "/chat.html" },
+    { "src": "^/messages/g/(?<gid>[^/]+)$", "dest": "/chat.html" },
     { "src": "^/messages/(?<username>[^/]+)$", "dest": "/chat.html" },
 
     { "src": "^/(?<username>[^/]+)/followers$", "dest": "/followlist.html" },

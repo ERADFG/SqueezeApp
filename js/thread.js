@@ -350,7 +350,6 @@ function renderConversation() {
       <div class="rw" id="replies-list">
         ${renderReplyTree()}
       </div>`;
-    renderCaptchaIfNeeded('rf-captcha');
     return;
   }
 
@@ -383,7 +382,6 @@ function renderConversation() {
     <div class="rw" id="replies-list">
       ${kids.length ? kids.map(k => replyHtml(k, 0)).join('') : '<div class="no-t">No replies yet. Be the first to reply.</div>'}
     </div>`;
-  renderCaptchaIfNeeded('rf-captcha');
 }
 
 // Fills in the reply composer's avatar once we know who's logged in
@@ -497,7 +495,6 @@ function toggleReplyBox(replyId) {
       wireFilePreview(`rf-inline-file-${replyId}`, `rf-inline-fp-${replyId}`, null);
       box.dataset.wired = '1';
     }
-    renderCaptchaIfNeeded(`rf-inline-captcha-${replyId}`);
     box.querySelector('textarea')?.focus();
   }
 }
@@ -522,6 +519,7 @@ async function submitReply(parentReplyId = currentFocusedReplyId()) {
   if (body.length > 500) { showErr(errEl, 'Reply too long (max 500 chars).'); return; }
   if (!enforceCooldown(errEl)) return;
   const captchaId = parentReplyId ? `rf-inline-captcha-${parentReplyId}` : 'rf-captcha';
+  if (!ensureCaptchaRevealed(captchaId)) return;
   if (!(await verifyHuman(captchaId, errEl))) return;
 
   btn.disabled = true;
