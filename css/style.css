@@ -3601,7 +3601,7 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .ttv:focus-visible { box-shadow:0 0 0 2px var(--maroon); }
 .ttv-video { display:block; max-width:100%; max-height:380px; width:auto; height:auto; background:#000; }
 .rc .ttv-video, .qp-embed .ttv-video { max-height:280px; }
-.lb-media-wrap .ttv { width:auto; max-width:none; border-radius:0; }
+.lb-media-wrap .ttv { max-width:none; border-radius:0; }
 .lb-media-wrap .ttv-video { max-height:calc(100vh - 40px); max-width:calc(100vw - 40px); }
 
 .ttv-overlay {
