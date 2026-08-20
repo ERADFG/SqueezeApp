@@ -227,12 +227,17 @@ async function renderProfile(origin, username) {
   }
 
   const canonical = `${origin}/${encodeURIComponent(profile.username)}`;
-  const posts = await sbGet('posts',
-    `author_id=eq.${profile.id}&is_deleted=eq.false&select=id,body,created_at&order=created_at.desc&limit=20`) || [];
   // "Posts" counts replies too (see loadReplyCountIntoStat() in
   // js/profile.js) — profiles.posts_count only tracks top-level posts,
   // so add the reply count here for the same total the live page shows.
-  const replyCount = await sbCount('replies', `author_id=eq.${profile.id}&is_deleted=eq.false`);
+  // Both queries only depend on profile.id, not on each other, so they
+  // run concurrently instead of as two sequential round-trips to
+  // Supabase — this was previously adding a full extra RTT (~100-300ms)
+  // to every profile page's TTFB for no reason.
+  const [posts, replyCount] = await Promise.all([
+    sbGet('posts', `author_id=eq.${profile.id}&is_deleted=eq.false&select=id,body,created_at&order=created_at.desc&limit=20`).then(r => r || []),
+    sbCount('replies', `author_id=eq.${profile.id}&is_deleted=eq.false`),
+  ]);
   const totalPostsCount = (profile.posts_count || 0) + replyCount;
 
   const titleText = `${profile.display_name || profile.username} (@${profile.username}) — InteractInk`;
@@ -583,7 +588,16 @@ async function renderArticle(origin, id) {
 async function renderThread(origin, username, id) {
   let html = readTemplate('thread.html');
 
-  const posts = await sbGet('posts', `id=eq.${encodeURIComponent(id)}&is_deleted=eq.false&select=*,profile:profiles!posts_author_id_fkey(username,display_name,avatar_url)`);
+  // `replies` is keyed off the route's `id` param directly, same as
+  // `posts` below — it doesn't depend on the post fetch resolving
+  // first, so run both concurrently instead of sequentially. (If the
+  // post turns out not to exist, the replies result is just discarded
+  // below — cheap, and still a net win since most requests are for
+  // posts that DO exist.)
+  const [posts, replies] = await Promise.all([
+    sbGet('posts', `id=eq.${encodeURIComponent(id)}&is_deleted=eq.false&select=*,profile:profiles!posts_author_id_fkey(username,display_name,avatar_url)`),
+    sbGet('replies', `post_id=eq.${encodeURIComponent(id)}&is_deleted=eq.false&select=body,created_at,profile:profiles(username,display_name)&order=created_at.asc&limit=50`).then(r => r || []),
+  ]);
   const post = posts && posts[0];
 
   if (!post) {
@@ -601,9 +615,6 @@ async function renderThread(origin, username, id) {
   const uname = post.profile?.username || username;
   const canonicalPath = `/${encodeURIComponent(uname)}/status/${encodeURIComponent(post.id)}`;
   const canonical = origin + canonicalPath;
-
-  const replies = await sbGet('replies',
-    `post_id=eq.${encodeURIComponent(id)}&is_deleted=eq.false&select=body,created_at,profile:profiles(username,display_name)&order=created_at.asc&limit=50`) || [];
 
   const titleText = `${post.profile?.display_name || uname} on InteractInk: "${(post.body || '').slice(0, 60)}"`;
   const descText = (post.body || 'A post on InteractInk.').slice(0, 200);

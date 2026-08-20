@@ -67,6 +67,11 @@ const ICON_CHANNEL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 const ICON_INFO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg>';
 const ICON_GLOBE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 6 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-6-3.8-9s1.3-6.3 3.8-9Z"/></svg>';
 const ICON_LOCK_SMALL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+// Group/channel name & description limits — enforced client-side via
+// maxlength + these constants (used for the live counters below) and
+// server-side via check constraints in supabase/chat_group_manage.sql.
+const GCV_NAME_MAX = 14;
+const GCV_DESC_MAX = 50;
 // Camera glyph for the group/channel avatar picker overlay — mirrors
 // the .cc-avatar-pick / .cc-banner-pick icon used for community/List
 // pictures (js/common.js's createCommunity wizard), kept local here
@@ -417,12 +422,14 @@ function openCreateConversationModal(kind) {
         </span>
         <div class="gcv-field gcv-name-field">
           <label for="gcv-name">Name</label>
-          <input type="text" id="gcv-name" maxlength="60" placeholder="${kind === 'channel' ? 'e.g. Announcements' : 'e.g. Weekend plans'}" oninput="gcvUpdateCreateBtn()">
+          <input type="text" id="gcv-name" maxlength="${GCV_NAME_MAX}" placeholder="${kind === 'channel' ? 'e.g. Announcements' : 'e.g. Weekend plans'}" oninput="gcvUpdateCreateBtn();gcvUpdateCharCount('gcv-name','gcv-name-count',${GCV_NAME_MAX})">
+          <span class="gcv-charcount" id="gcv-name-count">0/${GCV_NAME_MAX}</span>
         </div>
       </div>
       <div class="gcv-field">
         <label for="gcv-desc">Description <span style="font-weight:400;">(optional)</span></label>
-        <textarea id="gcv-desc" rows="2" maxlength="200" placeholder="What's this ${kind} about?"></textarea>
+        <textarea id="gcv-desc" rows="2" maxlength="${GCV_DESC_MAX}" placeholder="What's this ${kind} about?" oninput="gcvUpdateCharCount('gcv-desc','gcv-desc-count',${GCV_DESC_MAX})"></textarea>
+        <span class="gcv-charcount" id="gcv-desc-count">0/${GCV_DESC_MAX}</span>
       </div>
       <div class="gcv-toggle-row">
         <span class="gcv-toggle-txt" id="gcv-toggle-txt">Public ${kind}<small>Anyone can find and join without an invite</small></span>
@@ -515,6 +522,21 @@ function gcvUpdateCreateBtn() {
   btn.disabled = !nameEl.value.trim();
 }
 
+// Shared live character counter for the name/description fields in
+// both the create modal (gcv-*) and the group-info edit form
+// (gi-edit-*) — same "N/max" pattern, just parameterized by ids so
+// one function covers both. Turns red once the field is full (still
+// valid, just a heads-up the limit's been hit) rather than only once
+// it's over, since maxlength makes "over" impossible by typing.
+function gcvUpdateCharCount(inputId, countId, max) {
+  const input = document.getElementById(inputId);
+  const countEl = document.getElementById(countId);
+  if (!input || !countEl) return;
+  const len = input.value.length;
+  countEl.textContent = `${len}/${max}`;
+  countEl.classList.toggle('gcv-charcount-limit', len >= max);
+}
+
 let gcvSearchDebounce = null;
 function gcvSearchMembers(q) {
   clearTimeout(gcvSearchDebounce);
@@ -565,6 +587,8 @@ async function createConversation() {
   const description = document.getElementById('gcv-desc').value.trim();
   const isPublic = document.getElementById('gcv-public').checked;
   if (!name) { showErr(errEl, 'Give it a name first.'); return; }
+  if (name.length > GCV_NAME_MAX) { showErr(errEl, `Name must be ${GCV_NAME_MAX} characters or less.`); return; }
+  if (description.length > GCV_DESC_MAX) { showErr(errEl, `Description must be ${GCV_DESC_MAX} characters or less.`); return; }
   if (!currentSession) return;
 
   const btn = document.getElementById('gcv-create-btn');
@@ -1356,6 +1380,7 @@ function openGroupInfo() {
   if (!chatGroup) return;
   document.getElementById('gi-modal-bg')?.remove();
   const canManage = chatGroupMyRole === 'owner' || chatGroupMyRole === 'admin';
+  const isCreator = !!currentSession && chatGroup.created_by === currentSession.user.id;
   const bg = document.createElement('div');
   bg.id = 'gi-modal-bg';
   bg.className = 'modal-bg';
@@ -1363,12 +1388,20 @@ function openGroupInfo() {
   const membersHtml = chatGroupMembers
     .slice()
     .sort((a, b) => (a.role === 'owner' ? -1 : b.role === 'owner' ? 1 : 0))
-    .map(m => `
+    .map(m => {
+      // Owner can't be removed here (they'd need to delete the whole
+      // conversation instead), and removing yourself is "Leave"
+      // below, not this button — so it only ever shows for other
+      // non-owner members, and only to someone who can manage.
+      const canRemove = canManage && m.role !== 'owner' && m.user_id !== currentSession?.user?.id;
+      return `
       <div class="gi-member-row">
         <img src="${esc(avatarUrl(m.profile?.avatar_url))}" alt="">
         <span>${esc(m.profile?.display_name || m.profile?.username || 'Unknown')}${vBadge(m.profile)}</span>
         <span class="gi-member-role">${esc(m.role)}</span>
-      </div>`).join('');
+        ${canRemove ? `<button type="button" class="gi-member-remove" onclick="giRemoveMember('${esc(m.user_id)}')" title="Remove from ${chatGroup.kind}">${ICON_CLOSE}</button>` : ''}
+      </div>`;
+    }).join('');
   bg.innerHTML = `
     <div class="modal gi-modal" role="dialog" aria-modal="true">
       <a class="modal-close" href="#" onclick="event.preventDefault();this.closest('.modal-bg').remove();">${ICON_CLOSE}</a>
@@ -1386,11 +1419,17 @@ function openGroupInfo() {
         <div id="gi-details-edit" style="display:none;">
           <div class="gcv-field" style="text-align:left;">
             <label for="gi-edit-name">Name</label>
-            <input type="text" id="gi-edit-name" maxlength="60" value="${esc(chatGroup.name)}">
+            <input type="text" id="gi-edit-name" maxlength="${GCV_NAME_MAX}" value="${esc(chatGroup.name)}" oninput="gcvUpdateCharCount('gi-edit-name','gi-edit-name-count',${GCV_NAME_MAX})">
+            <span class="gcv-charcount" id="gi-edit-name-count">${chatGroup.name.length}/${GCV_NAME_MAX}</span>
           </div>
           <div class="gcv-field" style="text-align:left;">
             <label for="gi-edit-desc">Description <span style="font-weight:400;">(optional)</span></label>
-            <textarea id="gi-edit-desc" rows="2" maxlength="200" placeholder="What's this ${chatGroup.kind} about?">${esc(chatGroup.description || '')}</textarea>
+            <textarea id="gi-edit-desc" rows="2" maxlength="${GCV_DESC_MAX}" placeholder="What's this ${chatGroup.kind} about?" oninput="gcvUpdateCharCount('gi-edit-desc','gi-edit-desc-count',${GCV_DESC_MAX})">${esc(chatGroup.description || '')}</textarea>
+            <span class="gcv-charcount" id="gi-edit-desc-count">${(chatGroup.description || '').length}/${GCV_DESC_MAX}</span>
+          </div>
+          <div class="gcv-toggle-row">
+            <span class="gcv-toggle-txt">Public ${chatGroup.kind}<small>Anyone can find and join without an invite</small></span>
+            <label class="toggle"><input type="checkbox" id="gi-edit-public"${chatGroup.is_public ? ' checked' : ''}><span class="toggle-track"></span></label>
           </div>
           <div class="errmsg" id="gi-edit-err" style="display:none;"></div>
           <div class="gi-edit-actions">
@@ -1411,6 +1450,7 @@ function openGroupInfo() {
           <div class="gcv-member-results" id="gi-add-results"></div>
         </div>
         <button type="button" class="gi-leave-btn" onclick="leaveGroup()">Leave ${chatGroup.kind === 'channel' ? 'channel' : 'group'}</button>
+        ${isCreator ? `<button type="button" class="gi-delete-btn" onclick="deleteGroupOrChannel()">Delete ${chatGroup.kind === 'channel' ? 'channel' : 'group'}</button>` : ''}
       </div>
     </div>`;
   document.body.appendChild(bg);
@@ -1448,11 +1488,15 @@ async function giSaveDetails() {
   clearErr(errEl);
   const name = document.getElementById('gi-edit-name').value.trim();
   const description = document.getElementById('gi-edit-desc').value.trim();
+  const is_public = !!document.getElementById('gi-edit-public')?.checked;
   if (!name) { showErr(errEl, 'Give it a name first.'); return; }
-  const { error } = await sb.from('conversations').update({ name, description: description || null }).eq('id', chatGroup.id);
+  if (name.length > GCV_NAME_MAX) { showErr(errEl, `Name must be ${GCV_NAME_MAX} characters or less.`); return; }
+  if (description.length > GCV_DESC_MAX) { showErr(errEl, `Description must be ${GCV_DESC_MAX} characters or less.`); return; }
+  const { error } = await sb.from('conversations').update({ name, description: description || null, is_public }).eq('id', chatGroup.id);
   if (error) { showErr(errEl, error.message || 'Could not save changes.'); return; }
   chatGroup.name = name;
   chatGroup.description = description || null;
+  chatGroup.is_public = is_public;
   document.getElementById('gi-modal-bg')?.remove();
   toast('Saved.');
   loadGroupThread(currentSession, document.getElementById('chat-root'));
@@ -1515,10 +1559,45 @@ async function giAddMember(userId) {
   loadGroupThread(currentSession, document.getElementById('chat-root'));
 }
 
+// Owner/admin removing someone else from the group/channel (RLS:
+// conversation_members_delete_admin — same "am I owner/admin of this
+// conversation" check the add/rename policies use). The owner can
+// never be removed this way; see the canRemove computation in
+// openGroupInfo() above.
+async function giRemoveMember(userId) {
+  if (!chatGroup) return;
+  const m = chatGroupMembers.find(x => x.user_id === userId);
+  const label = m?.profile?.display_name || m?.profile?.username || 'this person';
+  if (!confirm(`Remove ${label} from this ${chatGroup.kind}?`)) return;
+  const { error } = await sb.from('conversation_members').delete()
+    .eq('conversation_id', chatGroup.id).eq('user_id', userId);
+  if (error) { toast(error.message || 'Could not remove that member.', 'error'); return; }
+  document.getElementById('gi-modal-bg')?.remove();
+  toast('Member removed.');
+  loadGroupThread(currentSession, document.getElementById('chat-root'));
+}
+
 async function leaveGroup() {
   if (!chatGroup || !currentSession) return;
   if (!confirm(`Leave this ${chatGroup.kind}?`)) return;
   await sb.from('conversation_members').delete().eq('conversation_id', chatGroup.id).eq('user_id', currentSession.user.id);
+  location.href = 'chat.html';
+}
+
+// Deletes the whole group/channel — RLS (conversations_delete_creator,
+// see supabase/chat_group_manage.sql) restricts this to created_by =
+// auth.uid(), so only the person who originally created it can ever
+// succeed here, regardless of what this button's visibility does;
+// the isCreator check in openGroupInfo() just keeps the button from
+// being shown to people it would fail for anyway. Cascades to
+// conversation_members and every message in it (on delete cascade).
+async function deleteGroupOrChannel() {
+  if (!chatGroup || !currentSession) return;
+  const kind = chatGroup.kind === 'channel' ? 'channel' : 'group';
+  if (!confirm(`Delete this ${kind} for everyone? This permanently deletes all its messages and can't be undone.`)) return;
+  const { error } = await sb.from('conversations').delete().eq('id', chatGroup.id);
+  if (error) { toast(error.message || `Could not delete this ${kind}.`, 'error'); return; }
+  toast(`${kind === 'channel' ? 'Channel' : 'Group'} deleted.`);
   location.href = 'chat.html';
 }
 
