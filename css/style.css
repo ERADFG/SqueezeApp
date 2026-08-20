@@ -3061,10 +3061,15 @@ body.chat-thread-open #chat-fab { display:none; }
 .gi-hdr img, .gi-hdr .conv-group-avatar { width:64px; height:64px; margin:0 auto 10px; font-size:22px; }
 .gi-hdr h2 { margin:0 0 3px; }
 .gi-hdr p { font-size:12.5px; color:var(--muted); margin:0; }
-.gi-avatar-wrap { position:relative; display:inline-block; }
+/* Explicit 64x64 box (matches .gi-hdr img/.conv-group-avatar) so this
+   is a real positioning context — a plain inline-block with no
+   intrinsic size is what let the camera badge drift below/off the
+   avatar instead of docking to its corner (same fix already applied
+   to .gcv-avatar-wrap above). */
+.gi-avatar-wrap { position:relative; display:inline-block; width:64px; height:64px; }
 .gi-avatar-editable .conv-group-avatar, .gi-avatar-editable img { cursor:pointer; }
 .gi-avatar-pick {
-  position:absolute; right:-2px; bottom:8px; width:24px; height:24px; border-radius:50%;
+  position:absolute; right:-2px; bottom:-2px; width:24px; height:24px; border-radius:50%;
   background:var(--maroon); color:#fff; display:flex; align-items:center; justify-content:center;
   cursor:pointer; box-shadow:0 0 0 2px var(--cream-card); transition:background .12s ease;
 }
@@ -3081,6 +3086,13 @@ body.chat-thread-open #chat-fab { display:none; }
   border:1px solid var(--div); background:var(--bg); color:var(--ink); resize:none;
 }
 #gi-details-edit input[type="text"]:focus, #gi-details-edit textarea:focus { outline:none; border-color:var(--maroon); }
+/* .gcv-field's default spacing was tuned for the compact "new
+   group" modal — reused here the Name box, its char count, and the
+   Description box all sat right on top of each other. Widen the
+   gaps in this panel only, so the create-group modal is untouched. */
+#gi-details-edit .gcv-field { margin-bottom:20px; }
+#gi-details-edit .gcv-charcount { margin-top:6px; }
+#gi-details-edit .gcv-toggle-row { padding-top:8px; }
 .gi-edit-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:6px; }
 .gi-edit-cancel, .gi-edit-save {
   border:none; border-radius:999px; padding:7px 14px; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer;
