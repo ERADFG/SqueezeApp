@@ -3627,7 +3627,7 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
   transition:background .15s, transform .15s;
 }
 .ttv-big-play:hover { background:rgba(15,20,25,.78); transform:translate(-50%,-50%) scale(1.05); }
-.ttv-big-play svg { width:28px; height:28px; margin-left:3px; }
+.ttv-big-play svg { width:28px; height:28px; }
 .ttv.ttv-playing .ttv-big-play { display:none; }
 .ttv.ttv-buffering .ttv-big-play { display:none; }
 
