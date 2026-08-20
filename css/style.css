@@ -3632,6 +3632,8 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
   clip-path:polygon(0% 0%, 100% 50%, 0% 100%);
   background:#fff;
   display:block;
+  margin-left:3px;
+  margin-left:-2px;
 }
 .ttv.ttv-playing .ttv-big-play { display:none; }
 .ttv.ttv-buffering .ttv-big-play { display:none; }
@@ -3745,7 +3747,7 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
   width:80px !important; height:80px !important;
 }
 .ttv:fullscreen .ttv-play-tri, .ttv:-webkit-full-screen .ttv-play-tri {
-  width:30px !important; height:30px !important;
+  width:30px !important; height:30px !important; margin-left:-3px !important;
 }
 
 /* ── CROP MODAL — shared "Edit media" step (crop-modal.js) used
