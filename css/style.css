@@ -1319,9 +1319,9 @@ select {
    (post cards, reply headers, profile header, who-to-follow, follower
    lists). Sits inline right after the name text — see vBadge() in
    js/common.js, which is the single place this <img> gets built. */
-.verified-badge { width:16px; height:16px; margin:0 5px 0 0; vertical-align:-3.2px; flex:none; display:inline-block; align-self:center; }
-.op-detail-names .verified-badge { width:18px; height:18px; margin-left:0; vertical-align:-3.5px; flex:none; }
-.uname-row .verified-badge { width:20px; height:20px; margin-left:3px; vertical-align:-3.8px; }
+.verified-badge { width:16px; height:16px; margin:0 5px 0 0; vertical-align:middle; flex:none; display:inline-block; align-self:center; }
+.op-detail-names .verified-badge { width:18px; height:18px; margin-left:0; vertical-align:middle; flex:none; }
+.uname-row .verified-badge { width:20px; height:20px; margin-left:3px; vertical-align:middle; }
 
 /* Contextual sizing for every other spot the badge got added to (chat,
    notifications, search/follow lists, group-creation modal) — each of
@@ -1331,15 +1331,15 @@ select {
    Without a per-context size the base 16px badge also reads oversized
    next to the smaller text these rows actually use (12–15px), which is
    what made it look "off" — sitting too big and too close to the name. */
-.notif-txt .verified-badge { width:14px; height:14px; margin-left:3px; vertical-align:-2.4px; }
-.conv-name .verified-badge { width:14px; height:14px; margin-left:3px; vertical-align:-2.4px; }
+.notif-txt .verified-badge { width:14px; height:14px; margin-left:3px; vertical-align:middle; }
+.conv-name .verified-badge { width:14px; height:14px; margin-left:3px; vertical-align:middle; }
 .nm .verified-badge { margin-left:3px; }
-.gm-sender-name .verified-badge { width:12px; height:12px; margin-left:3px; vertical-align:-2px; }
-.ulrow-name .verified-badge { width:14px; height:14px; margin-left:3px; vertical-align:-2.4px; }
-.gi-member-row .verified-badge { width:14px; height:14px; margin-left:3px; vertical-align:-2.4px; }
-.gcv-chip .verified-badge { width:13px; height:13px; margin:0 0 0 2px; vertical-align:-2.2px; }
-.expl-post-meta .verified-badge { width:13px; height:13px; margin-left:3px; vertical-align:-2.2px; }
-.who-row-handle .verified-badge { width:13px; height:13px; margin-left:3px; vertical-align:-2.2px; }
+.gm-sender-name .verified-badge { width:12px; height:12px; margin-left:3px; vertical-align:middle; }
+.ulrow-name .verified-badge { width:14px; height:14px; margin-left:3px; vertical-align:middle; }
+.gi-member-row .verified-badge { width:14px; height:14px; margin-left:3px; vertical-align:middle; }
+.gcv-chip .verified-badge { width:13px; height:13px; margin:0 0 0 2px; vertical-align:middle; }
+.expl-post-meta .verified-badge { width:13px; height:13px; margin-left:3px; vertical-align:middle; }
+.who-row-handle .verified-badge { width:13px; height:13px; margin-left:3px; vertical-align:middle; }
 .ph .nm:hover { text-decoration:underline; }
 .ph .pc-handle {
   color:var(--muted); font-weight:400; margin-right:5px;
@@ -2964,6 +2964,23 @@ body.chat-thread-open #chat-fab { display:none; }
   font-size:13.5px; font-weight:700; color:var(--muted); cursor:pointer; transition:background .12s ease, color .12s ease;
 }
 .gcv-kind-tabs button.cur { background:var(--cream-card); color:var(--ink); box-shadow:0 1px 3px rgba(15,20,25,.12); }
+/* ── create group/channel modal: avatar + name row ── */
+.gcv-identity-row { display:flex; align-items:flex-start; gap:12px; margin-bottom:12px; }
+.gcv-avatar-wrap { position:relative; flex:none; width:64px; height:64px; }
+.gcv-avatar-preview {
+  width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  background:var(--maroon-tint); color:var(--maroon); overflow:hidden; box-shadow:inset 0 0 0 1px var(--div);
+}
+.gcv-avatar-preview svg { width:26px; height:26px; }
+.gcv-avatar-preview img { width:100%; height:100%; object-fit:cover; }
+.gcv-avatar-pick {
+  position:absolute; right:-2px; bottom:-2px; width:24px; height:24px; border-radius:50%;
+  background:var(--maroon); color:#fff; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; box-shadow:0 0 0 2px var(--cream-card); transition:background .12s ease;
+}
+.gcv-avatar-pick:hover { background:var(--maroon-dk); }
+.gcv-avatar-pick svg { width:13px; height:13px; }
+.gcv-identity-row .gcv-name-field { flex:1; min-width:0; margin-bottom:0; }
 .gcv-field { margin-bottom:12px; }
 .gcv-field label { display:block; font-size:12px; font-weight:700; color:var(--muted); margin-bottom:5px; }
 .gcv-field input[type="text"], .gcv-field textarea {
@@ -3019,6 +3036,34 @@ body.chat-thread-open #chat-fab { display:none; }
 .gi-hdr img, .gi-hdr .conv-group-avatar { width:64px; height:64px; margin:0 auto 10px; font-size:22px; }
 .gi-hdr h2 { margin:0 0 3px; }
 .gi-hdr p { font-size:12.5px; color:var(--muted); margin:0; }
+.gi-avatar-wrap { position:relative; display:inline-block; }
+.gi-avatar-editable .conv-group-avatar, .gi-avatar-editable img { cursor:pointer; }
+.gi-avatar-pick {
+  position:absolute; right:-2px; bottom:8px; width:24px; height:24px; border-radius:50%;
+  background:var(--maroon); color:#fff; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; box-shadow:0 0 0 2px var(--cream-card); transition:background .12s ease;
+}
+.gi-avatar-pick:hover { background:var(--maroon-dk); }
+.gi-avatar-pick svg { width:13px; height:13px; }
+.gi-edit-details-btn {
+  border:none; background:none; color:var(--maroon); font-family:inherit; font-size:12.5px; font-weight:700;
+  cursor:pointer; padding:4px 0 0; margin:0;
+}
+.gi-edit-details-btn:hover { text-decoration:underline; }
+#gi-details-edit { text-align:left; margin-top:10px; }
+#gi-details-edit input[type="text"], #gi-details-edit textarea {
+  width:100%; font:inherit; font-size:14px; padding:8px 11px; border-radius:var(--r-sm);
+  border:1px solid var(--div); background:var(--bg); color:var(--ink); resize:none;
+}
+#gi-details-edit input[type="text"]:focus, #gi-details-edit textarea:focus { outline:none; border-color:var(--maroon); }
+.gi-edit-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:6px; }
+.gi-edit-cancel, .gi-edit-save {
+  border:none; border-radius:999px; padding:7px 14px; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer;
+}
+.gi-edit-cancel { background:none; color:var(--muted); }
+.gi-edit-cancel:hover { background:var(--hover-bg); }
+.gi-edit-save { background:var(--maroon); color:#fff; }
+.gi-edit-save:hover { background:var(--maroon-dk); }
 .gi-section-label { font-size:11.5px; font-weight:800; letter-spacing:.3px; text-transform:uppercase; color:var(--muted); padding:14px 18px 4px; }
 .gi-member-row { display:flex; align-items:center; gap:10px; padding:8px 18px; }
 .gi-member-row img { width:32px; height:32px; border-radius:50%; }
@@ -3428,7 +3473,7 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .lb-sb-head .pc-avatar { width:40px; height:40px; }
 .lb-sb-head .op-detail-names { padding-top:2px; }
 .lb-sb-head .op-detail-names .nm { font-size:15px; }
-.lb-sb-head .op-detail-names .verified-badge { width:16px; height:16px; margin-left:0; vertical-align:-3.2px; flex:none; }
+.lb-sb-head .op-detail-names .verified-badge { width:16px; height:16px; margin-left:0; vertical-align:middle; flex:none; }
 .lb-sb-head .op-detail-names .pc-handle { font-size:14px; }
 .lb-sidebar .op-detail-body { padding:0 16px; margin-top:12px; font-size:17px; }
 .lb-sidebar .op-detail-meta { padding:0 16px 12px; margin-top:12px; }
@@ -3475,7 +3520,7 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .lb-cap-row .avatar { width:32px; height:32px; flex:none; }
 .lb-cap-names { min-width:0; flex:1; display:flex; flex-direction:column; line-height:1.2; }
 .lb-cap-names .nm { color:#fff; font-weight:800; font-size:14.5px; text-decoration:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.lb-cap-names .verified-badge { width:14px; height:14px; vertical-align:-2.5px; margin-left:3px; }
+.lb-cap-names .verified-badge { width:14px; height:14px; vertical-align:middle; margin-left:3px; }
 .lb-cap-names .handle { color:rgba(255,255,255,.75); font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .lb-cap-follow {
   flex:none; font-family:inherit; font-size:13px; font-weight:800; color:#fff; cursor:pointer;

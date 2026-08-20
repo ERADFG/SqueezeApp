@@ -35,6 +35,8 @@ let chatGroupMembers = [];   // conversation_members rows, joined with profiles
 let chatGroupMyRole = null;  // 'owner' | 'admin' | 'member' | null (not a member)
 let chatGroupRealtimeChannel = null;
 const gcvPickedMembers = new Map(); // username -> profile, for the create-group/channel modal
+let gcvAvatarBlob = null;       // cropped File staged for the group/channel picture, until Create is pressed
+let gcvAvatarPreviewUrl = null; // local object URL for the picker preview, revoked on close/create
 
 // ── MEDIA / VOICE-NOTE COMPOSER STATE ──
 // At most one pending attachment at a time (image, video, or a
@@ -65,6 +67,12 @@ const ICON_CHANNEL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 const ICON_INFO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg>';
 const ICON_GLOBE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 6 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-6-3.8-9s1.3-6.3 3.8-9Z"/></svg>';
 const ICON_LOCK_SMALL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+// Camera glyph for the group/channel avatar picker overlay — mirrors
+// the .cc-avatar-pick / .cc-banner-pick icon used for community/List
+// pictures (js/common.js's createCommunity wizard), kept local here
+// since chat.js doesn't share an icon set with common.js (see the
+// ICON_ATTACH comment above).
+const ICON_CAMERA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h3l2-2h6l2 2h3v12H4V7Z"/><circle cx="12" cy="13" r="3.5"/></svg>';
 // Attach / voice-note UI — kept as separate constants from the post
 // composer's icon set (js/common.js) even though a couple overlap
 // visually, since chat's toolbar lives in a different file and has
@@ -384,6 +392,7 @@ async function startChat() {
 // kind check constraint in supabase/chat_full_setup.sql.
 function openCreateConversationModal(kind) {
   gcvPickedMembers.clear();
+  gcvResetAvatarState();
   document.getElementById('gcv-modal-bg')?.remove();
   const bg = document.createElement('div');
   bg.id = 'gcv-modal-bg';
@@ -400,9 +409,16 @@ function openCreateConversationModal(kind) {
         <button type="button" id="gcv-tab-group" class="${kind !== 'channel' ? 'cur' : ''}" onclick="gcvSwitchKind('group')">${ICON_GROUP} Group</button>
         <button type="button" id="gcv-tab-channel" class="${kind === 'channel' ? 'cur' : ''}" onclick="gcvSwitchKind('channel')">${ICON_CHANNEL} Channel</button>
       </div>
-      <div class="gcv-field">
-        <label for="gcv-name">Name</label>
-        <input type="text" id="gcv-name" maxlength="60" placeholder="${kind === 'channel' ? 'e.g. Announcements' : 'e.g. Weekend plans'}" oninput="gcvUpdateCreateBtn()">
+      <div class="gcv-identity-row">
+        <span class="gcv-avatar-wrap" id="gcv-avatar-wrap">
+          <span class="gcv-avatar-preview" id="gcv-avatar-preview">${kind === 'channel' ? ICON_CHANNEL : ICON_GROUP}</span>
+          <label class="gcv-avatar-pick" for="gcv-avatar-file" title="Choose a picture">${ICON_CAMERA}</label>
+          <input type="file" id="gcv-avatar-file" accept="image/*" style="display:none;">
+        </span>
+        <div class="gcv-field gcv-name-field">
+          <label for="gcv-name">Name</label>
+          <input type="text" id="gcv-name" maxlength="60" placeholder="${kind === 'channel' ? 'e.g. Announcements' : 'e.g. Weekend plans'}" oninput="gcvUpdateCreateBtn()">
+        </div>
       </div>
       <div class="gcv-field">
         <label for="gcv-desc">Description <span style="font-weight:400;">(optional)</span></label>
@@ -428,8 +444,30 @@ function openCreateConversationModal(kind) {
   document.body.appendChild(bg);
   requestAnimationFrame(() => bg.classList.add('open'));
   setTimeout(() => document.getElementById('gcv-name')?.focus(), 50);
+  document.getElementById('gcv-avatar-file').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    const errEl = document.getElementById('gcv-err');
+    if (!file || !validateFile(file, errEl)) return;
+    clearErr(errEl);
+    openCropModal(file, 'square', (cropped) => {
+      gcvAvatarBlob = cropped;
+      if (gcvAvatarPreviewUrl) URL.revokeObjectURL(gcvAvatarPreviewUrl);
+      gcvAvatarPreviewUrl = URL.createObjectURL(cropped);
+      const prev = document.getElementById('gcv-avatar-preview');
+      if (prev) prev.innerHTML = `<img src="${gcvAvatarPreviewUrl}" alt="">`;
+    });
+  });
 }
-function closeCreateConversationModal() { document.getElementById('gcv-modal-bg')?.remove(); }
+function gcvResetAvatarState() {
+  if (gcvAvatarPreviewUrl) { URL.revokeObjectURL(gcvAvatarPreviewUrl); }
+  gcvAvatarPreviewUrl = null;
+  gcvAvatarBlob = null;
+}
+function closeCreateConversationModal() {
+  document.getElementById('gcv-modal-bg')?.remove();
+  gcvResetAvatarState();
+}
 
 // Switches between Group/Channel without rebuilding the modal, so
 // whatever the person already typed (name, description, public
@@ -457,6 +495,13 @@ function gcvSwitchKind(kind) {
   if (toggleTxt) toggleTxt.innerHTML = `Public ${kind}<small>Anyone can find and join without an invite</small>`;
   const btn = document.getElementById('gcv-create-btn');
   if (btn) btn.textContent = `Create ${isChannel ? 'channel' : 'group'}`;
+  // Only swap the avatar placeholder glyph if no picture has been
+  // chosen yet — once someone's picked a real image, switching
+  // Group<->Channel shouldn't wipe it back to the generic icon.
+  if (!gcvAvatarBlob) {
+    const prev = document.getElementById('gcv-avatar-preview');
+    if (prev) prev.innerHTML = isChannel ? ICON_CHANNEL : ICON_GROUP;
+  }
 }
 
 // Create is only enabled once a name is typed — matches the same
@@ -524,8 +569,20 @@ async function createConversation() {
 
   const btn = document.getElementById('gcv-create-btn');
   btn.disabled = true;
+
+  let avatar_url = null;
+  if (gcvAvatarBlob) {
+    try {
+      avatar_url = await uploadAvatar(gcvAvatarBlob, currentSession.user.id);
+    } catch (e) {
+      showErr(errEl, e.message || 'Could not upload the picture — try again.');
+      btn.disabled = false;
+      return;
+    }
+  }
+
   const { data: conv, error } = await sb.from('conversations')
-    .insert({ kind, name, description: description || null, is_public: isPublic })
+    .insert({ kind, name, description: description || null, is_public: isPublic, avatar_url })
     .select('id').single();
   if (error || !conv) { showErr(errEl, error?.message || 'Could not create it — try again.'); btn.disabled = false; return; }
 
@@ -1316,9 +1373,31 @@ function openGroupInfo() {
     <div class="modal gi-modal" role="dialog" aria-modal="true">
       <a class="modal-close" href="#" onclick="event.preventDefault();this.closest('.modal-bg').remove();">${ICON_CLOSE}</a>
       <div class="gi-hdr">
-        ${groupAvatarHtml(chatGroup)}
-        <h2>${esc(chatGroup.name)}</h2>
-        <p>${chatGroup.kind === 'channel' ? 'Channel' : 'Group'}${chatGroup.is_public ? ' &middot; Public' : ' &middot; Private'}${chatGroup.description ? ' &middot; ' + esc(chatGroup.description) : ''}</p>
+        <span class="gi-avatar-wrap${canManage ? ' gi-avatar-editable' : ''}" id="gi-avatar-wrap">
+          ${groupAvatarHtml(chatGroup)}
+          ${canManage ? `<label class="gi-avatar-pick" for="gi-avatar-file" title="Change picture">${ICON_CAMERA}</label><input type="file" id="gi-avatar-file" accept="image/*" style="display:none;">` : ''}
+        </span>
+        <div id="gi-details-view">
+          <h2 id="gi-name-display">${esc(chatGroup.name)}</h2>
+          <p id="gi-desc-display">${chatGroup.kind === 'channel' ? 'Channel' : 'Group'}${chatGroup.is_public ? ' &middot; Public' : ' &middot; Private'}${chatGroup.description ? ' &middot; ' + esc(chatGroup.description) : ''}</p>
+          ${canManage ? `<button type="button" class="gi-edit-details-btn" onclick="giToggleEditDetails()">Edit name &amp; description</button>` : ''}
+        </div>
+        ${canManage ? `
+        <div id="gi-details-edit" style="display:none;">
+          <div class="gcv-field" style="text-align:left;">
+            <label for="gi-edit-name">Name</label>
+            <input type="text" id="gi-edit-name" maxlength="60" value="${esc(chatGroup.name)}">
+          </div>
+          <div class="gcv-field" style="text-align:left;">
+            <label for="gi-edit-desc">Description <span style="font-weight:400;">(optional)</span></label>
+            <textarea id="gi-edit-desc" rows="2" maxlength="200" placeholder="What's this ${chatGroup.kind} about?">${esc(chatGroup.description || '')}</textarea>
+          </div>
+          <div class="errmsg" id="gi-edit-err" style="display:none;"></div>
+          <div class="gi-edit-actions">
+            <button type="button" class="gi-edit-cancel" onclick="giToggleEditDetails()">Cancel</button>
+            <button type="button" class="gi-edit-save" onclick="giSaveDetails()">Save</button>
+          </div>
+        </div>` : ''}
       </div>
       <div class="gi-section-label">${chatGroupMembers.length} member${chatGroupMembers.length === 1 ? '' : 's'}</div>
       <div id="gi-member-list">${membersHtml}</div>
@@ -1336,6 +1415,69 @@ function openGroupInfo() {
     </div>`;
   document.body.appendChild(bg);
   requestAnimationFrame(() => bg.classList.add('open'));
+  if (canManage) {
+    document.getElementById('gi-avatar-file')?.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      e.target.value = '';
+      if (!file) return;
+      if (!validateFile(file, null)) { toast('Unsupported file, or too large.', 'error'); return; }
+      openCropModal(file, 'square', (cropped) => { giSaveAvatar(cropped); });
+    });
+  }
+}
+
+// Swaps the header between the read-only name/description and the
+// inline edit form — same show/hide pattern as giShowAddMembers()
+// just below, kept as two separate blocks rather than a shared modal
+// so a half-typed rename doesn't get lost if someone taps "Add
+// members" first.
+function giToggleEditDetails() {
+  const view = document.getElementById('gi-details-view');
+  const edit = document.getElementById('gi-details-edit');
+  if (!view || !edit) return;
+  const showEdit = edit.style.display === 'none';
+  view.style.display = showEdit ? 'none' : '';
+  edit.style.display = showEdit ? 'block' : 'none';
+  if (showEdit) document.getElementById('gi-edit-name')?.focus();
+  else clearErr(document.getElementById('gi-edit-err'));
+}
+
+async function giSaveDetails() {
+  if (!chatGroup || !currentSession) return;
+  const errEl = document.getElementById('gi-edit-err');
+  clearErr(errEl);
+  const name = document.getElementById('gi-edit-name').value.trim();
+  const description = document.getElementById('gi-edit-desc').value.trim();
+  if (!name) { showErr(errEl, 'Give it a name first.'); return; }
+  const { error } = await sb.from('conversations').update({ name, description: description || null }).eq('id', chatGroup.id);
+  if (error) { showErr(errEl, error.message || 'Could not save changes.'); return; }
+  chatGroup.name = name;
+  chatGroup.description = description || null;
+  document.getElementById('gi-modal-bg')?.remove();
+  toast('Saved.');
+  loadGroupThread(currentSession, document.getElementById('chat-root'));
+}
+
+// Uploads a newly-cropped picture and immediately reflects it in
+// both the open info panel and the thread header behind it, without
+// needing a full reload — loadGroupThread() only gets re-run for the
+// name/description case above, where the header markup (member
+// count text etc.) also needs rebuilding.
+async function giSaveAvatar(file) {
+  if (!chatGroup || !currentSession) return;
+  try {
+    const avatar_url = await uploadAvatar(file, currentSession.user.id);
+    const { error } = await sb.from('conversations').update({ avatar_url }).eq('id', chatGroup.id);
+    if (error) throw error;
+    chatGroup.avatar_url = avatar_url;
+    const giHolder = document.querySelector('#gi-avatar-wrap .conv-group-avatar');
+    if (giHolder) giHolder.outerHTML = groupAvatarHtml(chatGroup);
+    const hdrHolder = document.querySelector('.chat-hdr .conv-group-avatar');
+    if (hdrHolder) hdrHolder.outerHTML = groupAvatarHtml(chatGroup);
+    toast('Picture updated.');
+  } catch (e) {
+    toast(e.message || 'Could not update the picture.', 'error');
+  }
 }
 
 function giShowAddMembers() {
