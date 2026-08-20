@@ -28,6 +28,8 @@
             { href_matches: '/*' },
             { not: { href_matches: '/*\\?*' } },
             { not: { href_matches: '/logout*' } },
+            { not: { href_matches: 'mailto:*' } },
+            { not: { href_matches: 'tel:*' } },
             { not: { selector_matches: '[data-no-prerender], [download], [target=_blank]' } },
           ],
         },
@@ -105,6 +107,17 @@ function recoverFromBackgroundResume() {
   b.style.display = 'none';
   void b.offsetHeight;
   b.style.display = '';
+  // Belt-and-suspenders on top of the body-level toggle above: anchor
+  // buttons styled with .auth-submit (e.g. the Contact page's "Email
+  // us" link) are the control most consistently seen losing their
+  // label after a mailto:/tel: handoff, so give them their own
+  // explicit reflow too rather than relying solely on the body toggle
+  // to cascade down to them.
+  document.querySelectorAll('.auth-submit').forEach(el => {
+    el.style.display = 'none';
+    void el.offsetHeight;
+    el.style.display = '';
+  });
   // Some Chrome/WebView builds drop the in-flight network request for
   // an <img> outright when the tab is backgrounded rather than just
   // stale-painting it — that shows up as a genuinely broken image
@@ -123,7 +136,26 @@ function recoverFromBackgroundResume() {
 if ('prerendering' in document) {
   document.addEventListener('prerenderingchange', recoverFromBackgroundResume, { once: true });
 }
-window.addEventListener('pageshow', (e) => { if (e.persisted) recoverFromBackgroundResume(); });
+// Note: we no longer gate this on event.persisted — on some Android
+// Custom Tab / WebView builds, resuming from a backgrounded mailto:/
+// tel: handoff fires a plain (non-persisted) pageshow rather than a
+// bfcache restore, so gating on persisted silently skipped the exact
+// case this function exists for. The repaint work is cheap, so
+// running it unconditionally on every pageshow is harmless.
+window.addEventListener('pageshow', recoverFromBackgroundResume);
+// 'focus' on window is a second, independent signal for the same
+// "we just came back from another app" moment (some builds fire this
+// reliably even when neither pageshow nor visibilitychange do after a
+// mailto:/tel: handoff), and blurring whatever element still thinks
+// it's mid-touch clears any stuck :active/transition state left over
+// from the interrupted touchend (e.g. the Contact page's email
+// button).
+window.addEventListener('focus', () => {
+  if (document.activeElement && document.activeElement !== document.body) {
+    document.activeElement.blur();
+  }
+  recoverFromBackgroundResume();
+});
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') recoverFromBackgroundResume(); });
 // Belt-and-suspenders for a plain, ordinary navigation (not a
 // prerender activation or bfcache restore) into a page whose

@@ -213,11 +213,12 @@ async function fetchTopPostsToday(limit = 3) {
 }
 
 function explorePostHtml(p) {
-  const title = (p.body || '').trim().slice(0, 140) || '(no text)';
+  const title = (p.body || '').trim().slice(0, 140) || (p.media_url ? '' : '(no text)');
   const engagement = (p.reply_count || 0) + (p.like_count || 0);
   return `
     <a class="expl-post" href="${postUrl(p)}">
-      <div class="expl-post-title">${esc(title)}</div>
+      ${title ? `<div class="expl-post-title">${esc(title)}</div>` : ''}
+      ${explorePostThumbHtml(p)}
       <div class="expl-post-meta">
         <img class="avatar${avSqClass(p.profile)}" src="${esc(avatarUrl(p.profile?.avatar_url))}" alt="" loading="lazy" decoding="async">
         <span>${esc(p.profile?.display_name || p.profile?.username || 'unknown')}${vBadge(p.profile)}</span>
@@ -228,6 +229,27 @@ function explorePostHtml(p) {
       </div>
     </a>`;
 }
+
+// Compact, non-interactive thumbnail for a post's attached media on
+// the Explore page's "Today's Posts"/Trending cards. Deliberately NOT
+// the full renderMedia()/ttvHtml() treatment used in the feed — that
+// wires up its own click-to-play and lightbox handlers, which would
+// fight with the fact that the whole card here is already one big
+// <a> navigating to the post. A video gets a muted, non-interactive
+// <video> (renders its first frame same as a poster image would,
+// without needing a separately-stored poster URL) with a small play
+// badge so it doesn't look static, an image/gif gets a plain <img>.
+function explorePostThumbHtml(p) {
+  if (!p.media_url) return '';
+  if (p.media_type === 'video') {
+    return `<div class="expl-post-thumb expl-post-thumb-video">
+      <video src="${esc(p.media_url)}" muted playsinline preload="metadata"></video>
+      <span class="expl-post-thumb-play">${ICON_PLAY_MINI}</span>
+    </div>`;
+  }
+  return `<div class="expl-post-thumb"><img src="${esc(p.media_url)}" alt="" loading="lazy" decoding="async"></div>`;
+}
+const ICON_PLAY_MINI = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72c0 .6.66.96 1.17.65l10.9-6.86a.75.75 0 000-1.28L9.17 4.49A.75.75 0 008 5.14z"/></svg>';
 
 function trendRowHtml([word, count], label = 'Trending') {
   return `

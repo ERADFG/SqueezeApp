@@ -14,6 +14,19 @@
 -- ═══════════════════════════════════════════════════════════════
 
 -- ───────────────────────────────────────────────────────────────
+-- FROM: supabase/fix_messages_body_check.sql
+-- ───────────────────────────────────────────────────────────────
+-- Drops a stale pre-existing `messages_body_check` constraint (not
+-- created by any file in this repo — left over from the table's
+-- original creation) that rejects the empty-string body the app
+-- sends for a caption-less photo/video/voice-note attachment. See
+-- that file for the full explanation. Run this early, before the
+-- PART 1 media-attachment block below, so uploading media never hits
+-- it even mid-migration.
+alter table public.messages alter column body drop not null;
+alter table public.messages drop constraint if exists messages_body_check;
+
+-- ───────────────────────────────────────────────────────────────
 -- FROM: supabase/chat_full_setup.sql
 -- ───────────────────────────────────────────────────────────────
 -- ============================================================

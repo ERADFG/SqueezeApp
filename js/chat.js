@@ -195,11 +195,12 @@ async function loadConversationList(session, root) {
     <div class="chat-new" id="chat-new" style="display:none;">
       <div class="xsearch">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
-        <input id="chat-new-user" placeholder="${esc(t('chat.messageUsernamePlaceholder'))}" onkeydown="if(event.key==='Enter'){startChat();}if(event.key==='Escape'){toggleNewChat(false);}">
+        <input id="chat-new-user" placeholder="${esc(t('chat.messageUsernamePlaceholder'))}" oninput="chatNewSearchUsers(this.value)" onkeydown="if(event.key==='Enter'){startChat();}if(event.key==='Escape'){toggleNewChat(false);}">
       </div>
       <button type="button" class="chat-send-btn" title="${esc(t('chat.send'))}" aria-label="${esc(t('chat.send'))}" onclick="startChat()">${ICON_SEND}</button>
       <button type="button" class="chat-new-close" title="${esc(t('compose.cancel'))}" aria-label="${esc(t('compose.cancel'))}" onclick="toggleNewChat(false)">${ICON_CLOSE}</button>
     </div>
+    <div class="gcv-member-results" id="chat-new-results" style="margin:0 16px 8px;"></div>
     <div class="errmsg" id="chat-new-err" style="display:none;margin:0 16px 10px;"></div>`;
 
   const groupItems = groupRows.map(g => ({ kind: 'group', row: g, when: g.lastAt }));
@@ -380,7 +381,46 @@ function toggleNewChat(open) {
   panel.style.display = open ? 'flex' : 'none';
   trigger.style.display = open ? 'none' : 'flex';
   if (open) document.getElementById('chat-new-user')?.focus();
-  else clearErr(document.getElementById('chat-new-err'));
+  else {
+    clearErr(document.getElementById('chat-new-err'));
+    const resultsEl = document.getElementById('chat-new-results');
+    if (resultsEl) resultsEl.innerHTML = '';
+    const input = document.getElementById('chat-new-user');
+    if (input) input.value = '';
+  }
+}
+
+// Live results as you type — mirrors gcvSearchMembers()'s pattern
+// (debounced ilike on username/display_name) so "New message" is an
+// actual user search, not just an exact-username lookup that only
+// resolves on Enter/Send.
+let chatNewSearchDebounce = null;
+let chatNewSearchResults = new Map();
+function chatNewSearchUsers(q) {
+  clearTimeout(chatNewSearchDebounce);
+  const resultsEl = document.getElementById('chat-new-results');
+  const errEl = document.getElementById('chat-new-err');
+  if (!resultsEl) return;
+  clearErr(errEl);
+  if (!q.trim()) { resultsEl.innerHTML = ''; return; }
+  chatNewSearchDebounce = setTimeout(async () => {
+    const uname = q.trim().replace(/^@/, '');
+    const { data } = await sb.from('profiles').select('id,username,display_name,avatar_url,verified,verification_type')
+      .or(`username.ilike.%${uname}%,display_name.ilike.%${uname}%`)
+      .neq('id', currentSession?.user?.id || '')
+      .limit(8);
+    chatNewSearchResults = new Map((data || []).map(p => [p.username, p]));
+    resultsEl.innerHTML = (data || []).map(p => `
+      <div class="gcv-member-row" onclick="chatNewPickUser('${esc(p.username)}')">
+        <img src="${esc(avatarUrl(p.avatar_url))}" alt="">
+        <div class="ulrow-txt"><span class="ulrow-name">${esc(p.display_name || p.username)}${vBadge(p)}</span><span class="ulrow-handle">@${esc(p.username)}</span></div>
+      </div>`).join('');
+  }, 250);
+}
+function chatNewPickUser(username) {
+  const p = chatNewSearchResults.get(username);
+  if (!p) return;
+  location.href = messagesUrl(p.username);
 }
 
 async function startChat() {
