@@ -4463,14 +4463,47 @@ async function uploadMedia(file, onStatus) {
   notify('Uploading…');
   const ext = file.name.split('.').pop().toLowerCase();
   const path = `${crypto.randomUUID()}.${ext}`;
-  const { error } = await sb.storage.from(MEDIA_BUCKET).upload(path, file, {
-    cacheControl: '3600',
-    upsert: false,
-    contentType: file.type
-  });
-  if (error) throw error;
+  // "Failed to fetch" out of storage.upload() is almost always a
+  // dropped connection mid-request (flaky wifi/mobile data) rather
+  // than anything wrong with the file — one silent retry clears the
+  // large majority of those without bothering the person, instead of
+  // failing their message on the first hiccup.
+  let error;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    ({ error } = await sb.storage.from(MEDIA_BUCKET).upload(path, file, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType: file.type
+    }));
+    if (!error) break;
+    if (attempt === 0 && /failed to fetch/i.test(error.message || '')) {
+      notify('Connection hiccup, retrying…');
+      await new Promise(r => setTimeout(r, 800));
+      continue;
+    }
+    break;
+  }
+  if (error) throw friendlyUploadError(error);
   const { data } = sb.storage.from(MEDIA_BUCKET).getPublicUrl(path);
   return { media_url: data.publicUrl, media_type: type };
+}
+
+// Turns raw Supabase/network errors from uploadMedia() into something
+// a person can actually act on, instead of surfacing internals like
+// "mime type audio/webm is not supported" or a bare "Failed to fetch"
+// straight from the browser.
+function friendlyUploadError(error) {
+  const msg = error?.message || '';
+  if (/mime type/i.test(msg)) {
+    return new Error("That file type isn't supported yet. Try a JPG/PNG/GIF image, an MP4 video, or re-recording the voice note.");
+  }
+  if (/failed to fetch/i.test(msg)) {
+    return new Error("Couldn't reach the server — check your connection and try again.");
+  }
+  if (/exceeded the maximum allowed size|payload too large/i.test(msg)) {
+    return new Error('That file is too large to send.');
+  }
+  return error;
 }
 
 // `owner` is the full post/reply row this media belongs to (already

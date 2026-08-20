@@ -145,6 +145,17 @@ html[data-theme="dim"][data-accent="purple"],html[data-theme="dark"][data-accent
 html[data-theme="dim"][data-accent="orange"],html[data-theme="dark"][data-accent="orange"]{ --maroon:#F97316; --maroon-dk:#FB923C; --mustard:#F97316; --mustard-dk:#FB923C; --link:#F97316; --maroon-tint:rgba(249,115,22,.16); }
 
 * { margin:0; padding:0; box-sizing:border-box; }
+/* Safety net: every icon in this app is an inline <svg> with only a
+   viewBox (no width/height attributes), sized entirely by CSS at
+   each call site. Any spot that forgets a sizing rule falls back to
+   the browser's unconstrained default for a dimensionless replaced
+   SVG — ~300x150px — which reads as a giant broken icon blown up
+   over the page (e.g. the New group/channel picker, or the "new
+   message" sheet, before their specific rules existed/loaded). This
+   low-specificity default keeps any such icon at a sane size; every
+   real icon rule elsewhere in this file is more specific and wins
+   over it as normal. */
+svg { width:1em; height:1em; }
 
 /* ── KILL THE MOBILE TAP-HIGHLIGHT FLASH — Safari/Chrome on mobile
    paint their own translucent blue/gray rectangle over whatever you
@@ -1331,8 +1342,8 @@ select {
    Without a per-context size the base 16px badge also reads oversized
    next to the smaller text these rows actually use (12–15px), which is
    what made it look "off" — sitting too big and too close to the name. */
-.notif-txt .verified-badge { width:14px; height:14px; margin-left:3px; vertical-align:middle; }
-.conv-name .verified-badge { width:14px; height:14px; margin-left:3px; vertical-align:middle; }
+.notif-txt .verified-badge { width:16px; height:16px; margin:0 0 0 3px; vertical-align:middle; flex:none; display:inline-block; align-self:center; }
+.conv-name .verified-badge { width:16px; height:16px; margin:0 0 0 3px; vertical-align:middle; flex:none; display:inline-block; align-self:center; }
 .nm .verified-badge { margin-left:3px; }
 .gm-sender-name .verified-badge { width:12px; height:12px; margin-left:3px; vertical-align:middle; }
 .ulrow-name .verified-badge { width:14px; height:14px; margin-left:3px; vertical-align:middle; }
@@ -2960,9 +2971,11 @@ body.chat-thread-open #chat-fab { display:none; }
 .gcv-modal .dc-desc { text-align:left; margin-bottom:14px; }
 .gcv-kind-tabs { display:flex; gap:8px; margin-bottom:14px; background:var(--hover-bg); border-radius:999px; padding:4px; }
 .gcv-kind-tabs button {
-  flex:1; border:none; background:none; padding:8px 10px; border-radius:999px; font-family:inherit;
+  flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
+  border:none; background:none; padding:8px 10px; border-radius:999px; font-family:inherit;
   font-size:13.5px; font-weight:700; color:var(--muted); cursor:pointer; transition:background .12s ease, color .12s ease;
 }
+.gcv-kind-tabs button svg { width:15px; height:15px; flex:none; }
 .gcv-kind-tabs button.cur { background:var(--cream-card); color:var(--ink); box-shadow:0 1px 3px rgba(15,20,25,.12); }
 /* ── create group/channel modal: avatar + name row ── */
 .gcv-identity-row { display:flex; align-items:flex-start; gap:12px; margin-bottom:12px; }
@@ -3010,7 +3023,12 @@ body.chat-thread-open #chat-fab { display:none; }
 /* ── group/channel row in the conversation list — same .conv-row
    shell, plus a small kind badge over the group avatar. ── */
 .conv-row .conv-kind-badge {
-  position:absolute; left:36px; top:32px; width:18px; height:18px; border-radius:50%;
+  /* Corner badge over the group/channel avatar — .conv-group-avatar
+     is 50x50 starting 14px from the row's left/top padding edge, so
+     this sits right at its bottom-right corner (peeking mostly
+     outside the circle) instead of dead-center over the picture,
+     which used to hide the avatar image entirely. */
+  position:absolute; left:50px; top:48px; width:18px; height:18px; border-radius:50%;
   background:var(--maroon); color:#fff; display:flex; align-items:center; justify-content:center;
   box-shadow:0 0 0 2px var(--cream-card);
 }
