@@ -3606,6 +3606,7 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 
 .ttv-overlay {
   position:absolute; inset:0; cursor:pointer; background:transparent;
+  display:flex; align-items:center; justify-content:center;
 }
 .ttv-spinner {
   position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
@@ -3621,19 +3622,18 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
    flexbox — this is what makes it stay dead-centered on the player
    in every context, including fullscreen. */
 .ttv-big-play {
-  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-  width:64px; height:64px; border-radius:50%; border:none; cursor:pointer;
+  position:relative; flex:none;
+  width:96px; height:96px; border-radius:50%; border:none; cursor:pointer;
   background:rgba(15,20,25,.6); color:#fff; display:flex; align-items:center; justify-content:center;
   transition:background .15s, transform .15s;
 }
-.ttv-big-play:hover { background:rgba(15,20,25,.78); transform:translate(-50%,-50%) scale(1.05); }
+.ttv-big-play:hover { background:rgba(15,20,25,.78); transform:scale(1.05); }
 .ttv-play-tri {
-  width:22px; height:22px;
+  width:34px; height:34px;
   clip-path:polygon(0% 0%, 100% 50%, 0% 100%);
   background:#fff;
   display:block;
-  margin-left:3px;
-  margin-left:-2px;
+  margin-left:4px;
 }
 .ttv.ttv-playing .ttv-big-play { display:none; }
 .ttv.ttv-buffering .ttv-big-play { display:none; }
