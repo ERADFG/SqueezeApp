@@ -75,11 +75,56 @@ function repaintStickyChrome() {
     el.style.display = '';
   });
 }
-if ('prerendering' in document) {
-  document.addEventListener('prerenderingchange', repaintStickyChrome, { once: true });
+
+// ── WHOLE-PAGE BACKGROUND-RESUME RECOVERY — the stale-compositing-
+// layer bug above turns out not to be limited to the sticky bars the
+// original fix (repaintStickyChrome) targets. Tapping a mailto:/tel:
+// link hands off to another app (Gmail, Phone) without a real
+// navigation, so the tab is simply backgrounded/suspended and later
+// resumed rather than reloaded — and on return we've seen it also
+// leave `transform`-positioned elements with a stale/blank paint
+// (the centered logo `<img>` in #m-topbar, which is placed with
+// `transform:translate(-50%,-50%)`) and, separately, text inside a
+// `:active`/`transition`-bearing control frozen mid-transition-state
+// (the "Email us" button on the Contact page: the tap's touchend/
+// mouseup never fires because the OS intercepted the gesture to open
+// the mail app chooser, so the browser can come back with the
+// button's own transition still "stuck" partway). Both are symptoms
+// of the same underlying cause — a compositing layer computed while
+// hidden that the browser never re-derives once the tab is visible
+// again — so rather than hand-picking every element that can be
+// affected, force one reflow of the *entire* page on the same
+// resume signals repaintStickyChrome already listens for. Toggling
+// display on <body> itself (not visibility/opacity, which wouldn't
+// drop the stale layers) is cheap, invisible to the user (synchronous,
+// no animation to interrupt), and catches any affected element
+// without needing to keep growing an ID whitelist.
+function recoverFromBackgroundResume() {
+  repaintStickyChrome();
+  const b = document.body;
+  b.style.display = 'none';
+  void b.offsetHeight;
+  b.style.display = '';
+  // Some Chrome/WebView builds drop the in-flight network request for
+  // an <img> outright when the tab is backgrounded rather than just
+  // stale-painting it — that shows up as a genuinely broken image
+  // (naturalWidth 0 after `complete`), which a plain repaint can't
+  // fix since there's no decoded frame to recomposite. Re-assigning
+  // the same src forces a fresh fetch for exactly those images (any
+  // image that loaded fine is left alone).
+  document.querySelectorAll('img').forEach(img => {
+    if (img.complete && img.naturalWidth === 0 && img.src) {
+      const src = img.src;
+      img.src = '';
+      img.src = src;
+    }
+  });
 }
-window.addEventListener('pageshow', (e) => { if (e.persisted) repaintStickyChrome(); });
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') repaintStickyChrome(); });
+if ('prerendering' in document) {
+  document.addEventListener('prerenderingchange', recoverFromBackgroundResume, { once: true });
+}
+window.addEventListener('pageshow', (e) => { if (e.persisted) recoverFromBackgroundResume(); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') recoverFromBackgroundResume(); });
 // Belt-and-suspenders for a plain, ordinary navigation (not a
 // prerender activation or bfcache restore) into a page whose
 // backdrop-filter + position:fixed bars (#m-topbar/#m-tabbar/#m-fab,
