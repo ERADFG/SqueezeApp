@@ -23,7 +23,7 @@ function ttvHtml(url, opts = {}) {
   <video class="ttv-video" src="${esc(url)}" preload="metadata" playsinline ${extraAttrs}></video>
   <div class="ttv-overlay">
     <div class="ttv-spinner" hidden></div>
-    <button type="button" class="ttv-big-play" aria-label="Play">${TTV_ICON.play}</button>
+    <button type="button" class="ttv-big-play" aria-label="Play"><span class="ttv-play-tri"></span></button>
   </div>
   <div class="ttv-controls">
     <div class="ttv-progress">
@@ -81,7 +81,6 @@ function ttvUpdatePlayIcon(root) {
   const v = ttvVideo(root);
   const icon = v.paused || v.ended ? TTV_ICON.play : TTV_ICON.pause;
   ttvSetIcon(root.querySelector('.ttv-play'), icon);
-  ttvSetIcon(root.querySelector('.ttv-big-play'), TTV_ICON.play);
   root.classList.toggle('ttv-playing', !v.paused && !v.ended);
 }
 
