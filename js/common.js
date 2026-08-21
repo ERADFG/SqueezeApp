@@ -4388,14 +4388,32 @@ function startCooldownCountdown(btn, restoreLabel) {
 // that's already optimal) it silently falls back to the original,
 // untouched file.
 
-// Re-encodes a still image to WebP at a very high quality setting.
+// Re-encodes a still image to WebP at a high quality setting, and —
+// this was the missing half — downscales it first if it's larger
+// than anything the app ever actually displays an image at.
 // WebP's lossy mode at this quality is visually indistinguishable
 // from the source but usually runs 25–50% smaller, and it also
 // strips EXIF/metadata bloat as a side effect of the canvas
 // round-trip. Falls back to the original file untouched if the
 // browser can't decode it, or if re-encoding somehow comes out
 // larger (e.g. an already-optimized WebP/AVIF).
-const IMAGE_COMPRESS_QUALITY = 0.92;
+//
+// MAX_IMAGE_DIMENSION: modern phone cameras commonly shoot
+// 3000–4000px+ on the long edge. Nothing in this app ever renders an
+// image larger than the user's own screen (feed thumbnails, the
+// lightbox, chat attachments — none exceed a typical device's
+// viewport), so shipping the original resolution just means every
+// viewer's browser downloads pixels it immediately downscales for
+// display. Capping the long edge at 2048px is comfortably above any
+// real device viewport (including lightbox full-screen on a 4K
+// monitor at 2x DPR) while cutting pixel count — and therefore file
+// size and decode time — dramatically for typical camera photos.
+// 0.92 → 0.85: still a very high-quality setting with no visible
+// banding/artifacting on photos, but meaningfully smaller; paired
+// with the dimension cap this is where most of the load-time win
+// comes from.
+const IMAGE_COMPRESS_QUALITY = 0.85;
+const MAX_IMAGE_DIMENSION = 2048;
 async function compressImageFile(file) {
   // Defensive guard: drawing a GIF to a canvas only captures its
   // first frame, which would silently kill the animation. GIFs are
@@ -4403,10 +4421,16 @@ async function compressImageFile(file) {
   if (file.type === 'image/gif') return file;
   try {
     const bitmap = await createImageBitmap(file);
+    let { width, height } = bitmap;
+    if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION) {
+      const scale = MAX_IMAGE_DIMENSION / Math.max(width, height);
+      width = Math.round(width * scale);
+      height = Math.round(height * scale);
+    }
     const canvas = document.createElement('canvas');
-    canvas.width = bitmap.width;
-    canvas.height = bitmap.height;
-    canvas.getContext('2d').drawImage(bitmap, 0, 0);
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext('2d').drawImage(bitmap, 0, 0, width, height);
     bitmap.close?.();
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', IMAGE_COMPRESS_QUALITY));
     if (!blob || blob.size >= file.size) return file;
