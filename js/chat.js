@@ -206,7 +206,7 @@ async function loadConversationList(session, root) {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
         <input id="chat-new-user" placeholder="${esc(t('chat.searchUserPlaceholder'))}" oninput="chatNewSearchUsers(this.value)" onkeydown="if(event.key==='Enter'){startChat();}if(event.key==='Escape'){toggleNewChat(false);}">
       </div>
-      <button type="button" class="chat-new-close" title="${esc(t('compose.cancel'))}" aria-label="${esc(t('compose.cancel'))}" onclick="toggleNewChat(false)">${ICON_CLOSE}</button>
+      <button type="button" class="chat-new-close" onclick="toggleNewChat(false)">${esc(t('compose.cancel'))}</button>
     </div>
     <div class="gcv-member-results" id="chat-new-results" style="margin:0 16px 8px;"></div>
     <div class="errmsg" id="chat-new-err" style="display:none;margin:0 16px 10px;"></div>`;
@@ -524,6 +524,7 @@ function openCreateConversationModal(kind) {
         <span class="gcv-charcount" id="gcv-desc-count">0/${GCV_DESC_MAX}</span>
       </div>
       <div class="gcv-toggle-row">
+        <span class="gcv-toggle-icon">${ICON_GLOBE}</span>
         <span class="gcv-toggle-txt" id="gcv-toggle-txt">Public ${kind}<small>Anyone can find and join without an invite</small></span>
         <label class="toggle"><input type="checkbox" id="gcv-public"><span class="toggle-track"></span></label>
       </div>
@@ -1536,6 +1537,7 @@ function openGroupInfo() {
             <span class="gcv-charcount" id="gi-edit-desc-count">${(chatGroup.description || '').length}/${GCV_DESC_MAX}</span>
           </div>
           <div class="gcv-toggle-row">
+            <span class="gcv-toggle-icon">${ICON_GLOBE}</span>
             <span class="gcv-toggle-txt">Public ${chatGroup.kind}<small>Anyone can find and join without an invite</small></span>
             <label class="toggle"><input type="checkbox" id="gi-edit-public"${chatGroup.is_public ? ' checked' : ''}><span class="toggle-track"></span></label>
           </div>

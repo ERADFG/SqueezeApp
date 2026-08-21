@@ -2916,11 +2916,17 @@ html[data-theme="dim"] .auth-ok, html[data-theme="dark"] .auth-ok { background:r
 .chat-new-trigger { display:flex; align-items:center; gap:10px; margin:10px 16px 6px; padding:10px 16px; border-radius:999px; background:var(--hover-bg); color:var(--muted); border:none; font-size:14.5px; font-family:inherit; cursor:pointer; width:calc(100% - 32px); text-align:left; transition:background .12s ease; }
 .chat-new-trigger:hover { background:var(--border-input); }
 .chat-new-trigger svg { width:18px; height:18px; flex:none; color:var(--maroon); }
-.chat-new { display:flex; gap:8px; align-items:center; padding:10px 16px; border-bottom:1px solid var(--line); animation:oc-fade-in .15s ease both; }
-.chat-new .xsearch { flex:1; margin:0; }
-.chat-new-close { flex:none; width:36px; height:36px; border-radius:50%; border:none; background:none; color:var(--muted); display:inline-flex; align-items:center; justify-content:center; cursor:pointer; transition:background .12s ease; }
-.chat-new-close:hover { background:var(--hover-bg); }
-.chat-new-close svg { width:18px; height:18px; }
+.chat-new { display:flex; gap:10px; align-items:center; padding:10px 16px; border-bottom:1px solid var(--line); animation:oc-fade-in .15s ease both; }
+.chat-new .xsearch { flex:1; margin:0; border:1.5px solid transparent; transition:border-color .12s ease, background-color .12s ease; }
+.chat-new .xsearch:focus-within { border-color:var(--maroon); background:var(--bg); }
+/* A plain "Cancel" text action reads more clearly next to a search
+   field than a bare X glyph in a circle — the X was easy to mistake
+   for "clear text" (which the field doesn't even have) rather than
+   "close this search". Matches the text buttons used everywhere else
+   in the app (gi-edit-cancel, etc.) instead of introducing a new,
+   icon-only affordance just for this one bar. */
+.chat-new-close { flex:none; border:none; background:none; color:var(--maroon); font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; padding:8px 2px; white-space:nowrap; border-radius:var(--r-sm); transition:opacity .12s ease; }
+.chat-new-close:hover { opacity:.75; text-decoration:underline; }
 
 .chat-empty { text-align:center; padding:64px 24px; color:var(--muted); }
 .chat-empty svg { width:52px; height:52px; color:var(--maroon); opacity:.5; margin-bottom:14px; }
@@ -2994,50 +3000,60 @@ body.chat-thread-open #chat-fab { display:none; }
 }
 
 /* ── create group/channel modal ── */
-.gcv-modal { width:400px; max-width:92vw; padding:18px 20px 18px; text-align:left; }
-.gcv-modal h2 { padding:0; margin:0 0 4px; }
-.gcv-modal .dc-desc { text-align:left; margin-bottom:14px; }
-.gcv-kind-tabs { display:flex; gap:8px; margin-bottom:14px; background:var(--hover-bg); border-radius:999px; padding:4px; }
+.gcv-modal { width:400px; max-width:92vw; padding:20px 22px 20px; text-align:left; }
+.gcv-modal h2 { padding:0; margin:0 0 6px; font-size:19px; }
+.gcv-modal .dc-desc { text-align:left; margin-bottom:18px; color:var(--muted); line-height:1.4; }
+.gcv-kind-tabs { display:flex; gap:4px; margin-bottom:20px; background:var(--hover-bg); border-radius:999px; padding:4px; }
 .gcv-kind-tabs button {
   flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
-  border:none; background:none; padding:8px 10px; border-radius:999px; font-family:inherit;
-  font-size:13.5px; font-weight:700; color:var(--muted); cursor:pointer; transition:background .12s ease, color .12s ease;
+  border:none; background:none; padding:9px 10px; border-radius:999px; font-family:inherit;
+  font-size:13.5px; font-weight:700; color:var(--muted); cursor:pointer; transition:background .15s ease, color .15s ease, box-shadow .15s ease;
 }
 .gcv-kind-tabs button svg { width:15px; height:15px; flex:none; }
-.gcv-kind-tabs button.cur { background:var(--cream-card); color:var(--ink); box-shadow:0 1px 3px rgba(15,20,25,.12); }
+.gcv-kind-tabs button.cur { background:var(--cream-card); color:var(--ink); box-shadow:0 1px 4px rgba(15,20,25,.14); }
 /* ── create group/channel modal: avatar + name row ── */
-.gcv-identity-row { display:flex; align-items:flex-start; gap:12px; margin-bottom:12px; }
+.gcv-identity-row { display:flex; align-items:flex-start; gap:14px; margin-bottom:18px; }
 /* `<span>` by default — position:relative on a plain inline element
    doesn't reliably establish a normal box for width/height, which is
    why the camera badge below used to land outside/off from the
    circle instead of docked to its corner. display:inline-block makes
-   this a real 64x64 positioning context. */
-.gcv-avatar-wrap { position:relative; display:inline-block; flex:none; width:64px; height:64px; }
+   this a real positioning context. Nudged down a couple px so the
+   72px circle lines up optically with the Name *input* next to it,
+   not with its label sitting above that input. */
+.gcv-avatar-wrap { position:relative; display:inline-block; flex:none; width:72px; height:72px; margin-top:19px; }
 .gcv-avatar-preview {
-  width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  width:72px; height:72px; border-radius:50%; display:flex; align-items:center; justify-content:center;
   background:var(--maroon-tint); color:var(--maroon); overflow:hidden; box-shadow:inset 0 0 0 1px var(--div);
+  cursor:pointer; transition:filter .12s ease;
 }
-.gcv-avatar-preview svg { width:26px; height:26px; flex-shrink:0; }
+.gcv-avatar-wrap:hover .gcv-avatar-preview { filter:brightness(.94); }
+.gcv-avatar-preview svg { width:28px; height:28px; flex-shrink:0; }
 .gcv-avatar-preview img { width:100%; height:100%; object-fit:cover; }
 .gcv-avatar-pick {
-  position:absolute; right:-2px; bottom:-2px; width:24px; height:24px; min-width:24px; min-height:24px;
+  position:absolute; right:-2px; bottom:-2px; width:26px; height:26px; min-width:26px; min-height:26px;
   border-radius:50%; background:var(--maroon); color:#fff; display:flex; align-items:center; justify-content:center;
-  cursor:pointer; box-shadow:0 0 0 2px var(--cream-card); transition:background .12s ease; z-index:2;
+  padding:0; line-height:0; cursor:pointer; box-shadow:0 0 0 3px var(--cream-card); transition:background .12s ease; z-index:2;
 }
 .gcv-avatar-pick:hover { background:var(--maroon-dk); }
-.gcv-avatar-pick svg { width:13px; height:13px; flex-shrink:0; pointer-events:none; }
-.gcv-identity-row .gcv-name-field { flex:1; min-width:0; margin-bottom:0; }
-.gcv-field { margin-bottom:14px; }
+.gcv-avatar-pick svg { display:block; width:13px; height:13px; flex-shrink:0; pointer-events:none; }
+.gcv-identity-row .gcv-name-field { flex:1; min-width:0; margin-bottom:0; margin-top:2px; }
+.gcv-field { margin-bottom:16px; }
 .gcv-field label { display:block; font-size:12px; font-weight:700; color:var(--muted); margin-bottom:5px; }
 .gcv-field input[type="text"], .gcv-field textarea {
-  width:100%; font:inherit; font-size:14.5px; padding:9px 12px; border-radius:var(--r-sm);
-  border:1px solid var(--div); background:var(--bg); color:var(--ink); resize:none;
+  width:100%; font:inherit; font-size:14.5px; padding:10px 12px; border-radius:var(--r-sm);
+  border:1px solid var(--div); background:var(--bg); color:var(--ink); resize:none; transition:border-color .12s ease;
 }
 .gcv-field input[type="text"]:focus, .gcv-field textarea:focus { outline:none; border-color:var(--maroon); }
 .gcv-charcount { display:block; text-align:right; font-size:11px; color:var(--muted); margin-top:4px; }
 .gcv-charcount.gcv-charcount-limit { color:var(--maroon); font-weight:700; }
-.gcv-toggle-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:2px 0 12px; }
-.gcv-toggle-txt { font-size:13.5px; color:var(--ink); }
+/* Bordered off from the fields above/below (instead of just relying
+   on margin) so this reads as its own distinct setting rather than
+   floating ambiguously between the description box and the member
+   search — same visual grouping cue .gcv-modal's other sections use. */
+.gcv-toggle-row { display:flex; align-items:center; gap:12px; padding:14px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); margin-bottom:16px; }
+.gcv-toggle-icon { flex:none; width:34px; height:34px; border-radius:50%; background:var(--maroon-tint); color:var(--maroon); display:flex; align-items:center; justify-content:center; }
+.gcv-toggle-icon svg { width:17px; height:17px; flex-shrink:0; }
+.gcv-toggle-txt { flex:1; min-width:0; font-size:13.5px; color:var(--ink); font-weight:600; }
 .gcv-toggle-txt small { display:block; font-size:11.5px; color:var(--muted); font-weight:500; margin-top:1px; }
 .gcv-members-picked { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
 .gcv-chip { display:inline-flex; align-items:center; gap:6px; background:var(--hover-bg); border-radius:999px; padding:4px 6px 4px 4px; font-size:12.5px; font-weight:700; }
