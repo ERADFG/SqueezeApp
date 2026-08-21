@@ -565,7 +565,7 @@ function currentProfileUsername() {
 // solid — views (bars) and the liked/reposted/bookmarked filled
 // states, both handled the same as before in CSS.
 const ICON = {
-  reply:    '<svg viewBox="0 0 24 24"><path d="M12 3.75c-4.97 0-9 3.5-9 7.9 0 2.55 1.35 4.82 3.46 6.28.1.85-.16 1.9-.82 3.02a.4.4 0 0 0 .43.59c1.53-.32 2.83-.92 3.7-1.5.7.15 1.44.23 2.23.23 4.97 0 9-3.55 9-7.9 0-4.4-4.03-8.9-9-8.9z" stroke-linejoin="round"/></svg>',
+  reply:    '<svg viewBox="0 0 24 24"><path d="M1.75 10.1C1.75 5.68 5.33 2.1 9.75 2.1h4.4c4.5 0 8.15 3.64 8.15 8.15 0 2.97-1.61 5.7-4.2 7.13l-8.06 4.47v-3.7h-.07c-4.5.1-8.22-3.53-8.22-8.05Z" stroke-linejoin="round"/></svg>',
   heart:    '<svg viewBox="0 0 24 24"><path d="M12 6.24C10.4 4.4 7.85 3.9 5.8 5.1 3.4 6.5 2.66 9.6 4.24 12.15c1.9 3.06 4.9 5.5 7.76 7.6 2.86-2.1 5.86-4.54 7.76-7.6 1.58-2.55.84-5.65-1.56-7.05-2.05-1.2-4.6-.7-6.2 1.14z" stroke-linejoin="round"/></svg>',
   views:    '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M8.75 21V3h2v18h-2zM18 21V8.5h2V21h-2zM4 21l.004-10h2L6 21H4z"/></svg>',
   share:    '<svg viewBox="0 0 24 24"><path d="M4 17c0-6.6 4.4-11 11-11h2.3" stroke-linecap="round"/><path d="m13.5 2.2 4 3.8-4 3.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
