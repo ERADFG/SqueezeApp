@@ -54,12 +54,13 @@ let chatActiveVoiceAudio = null; // the <audio> element currently playing, if an
 
 const ICON_SEND = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 20V4l18 8-18 8Zm2-3 12.85-5L5 7v3.83L11 12l-6 1.17V17Z"/></svg>';
 const ICON_CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';
-// Matches NAV_ICON.chat's rounded speech-bubble shape (see common.js)
-// instead of the old boxy rectangle-with-tail icon, which used sharp
-// corners and a thicker stroke that clashed with the rounded, hand-
-// drawn style every other icon in the app uses — it read as a mismatched,
-// "pasted-in" icon rather than part of the same design language.
-const ICON_CHAT_EMPTY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.75c-4.97 0-9 3.5-9 7.9 0 2.55 1.35 4.82 3.46 6.28.1.85-.16 1.9-.82 3.02a.4.4 0 0 0 .43.59c1.53-.32 2.83-.92 3.7-1.5.7.15 1.44.23 2.23.23 4.97 0 9-3.55 9-7.9 0-4.4-4.03-8.9-9-8.9z"/><path d="M8 10.7h8M8 13.7h5.2"/></svg>';
+// Distinct from ICON.reply (common.js) — the reply icon on posts is a
+// single speech bubble, so re-using that exact shape here (as a
+// previous pass did, matching NAV_ICON.chat 1:1) made "chat" and
+// "comment" visually indistinguishable. This mirrors NAV_ICON.chat's
+// current two-bubble "conversations" glyph instead, which reads as
+// its own icon at a glance.
+const ICON_CHAT_EMPTY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2Z"/><path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"/></svg>';
 const ICON_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>';
 const CHAT_ICON_LOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
 // ── group/channel icon set — kept alongside the rest of chat.js's own
