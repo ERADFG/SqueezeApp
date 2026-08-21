@@ -509,7 +509,7 @@ function openCreateConversationModal(kind) {
       </div>
       <div class="gcv-identity-row">
         <span class="gcv-avatar-wrap" id="gcv-avatar-wrap">
-          <span class="gcv-avatar-preview" id="gcv-avatar-preview">${kind === 'channel' ? ICON_CHANNEL_AVATAR : ICON_GROUP}</span>
+          <label class="gcv-avatar-preview" id="gcv-avatar-preview" for="gcv-avatar-file">${kind === 'channel' ? ICON_CHANNEL_AVATAR : ICON_GROUP}</label>
           <label class="gcv-avatar-pick" for="gcv-avatar-file" title="Choose a picture">${ICON_CAMERA}</label>
           <input type="file" id="gcv-avatar-file" accept="image/*" style="display:none;">
         </span>
@@ -1110,6 +1110,15 @@ function renderChatAttachPreview() {
 async function startVoiceRecording() {
   if (chatRecorder) return; // already recording
   if (chatAttachment) clearChatAttachment(); // voice-note and file are mutually exclusive
+  // getUserMedia only exists in a secure context (https, or localhost)
+  // and isn't implemented at all in some embedded/in-app browser
+  // WebViews — catching that up front gives a real explanation instead
+  // of the generic denied-permission toast, which is misleading when
+  // the mic was never even prompted for.
+  if (!navigator.mediaDevices?.getUserMedia) {
+    toast(t('chat.micUnsupported'), 'error');
+    return;
+  }
   let stream;
   try {
     // Explicit constraints instead of bare `audio:true`. autoGainControl
@@ -1123,7 +1132,15 @@ async function startVoiceRecording() {
       audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
     });
   } catch (e) {
-    toast(t('chat.micPermissionDenied'), 'error');
+    // Different failure modes need different guidance — a blanket
+    // "couldn't access your microphone" leaves someone whose browser
+    // has the mic permanently blocked with no idea it's a one-time
+    // site-settings fix, not a bug that'll go away on retry.
+    const msgKey = e?.name === 'NotAllowedError' || e?.name === 'SecurityError' ? 'chat.micBlocked'
+      : e?.name === 'NotFoundError' || e?.name === 'OverconstrainedError' ? 'chat.micNotFound'
+      : e?.name === 'NotReadableError' ? 'chat.micInUse'
+      : 'chat.micPermissionDenied';
+    toast(t(msgKey), 'error');
     return;
   }
   chatRecorderStream = stream;
@@ -1617,7 +1634,7 @@ function openGroupInfo() {
       <a class="modal-close" href="#" onclick="event.preventDefault();this.closest('.modal-bg').remove();">${ICON_CLOSE}</a>
       <div class="gi-hdr">
         <span class="gi-avatar-wrap${canManage ? ' gi-avatar-editable' : ''}" id="gi-avatar-wrap">
-          ${groupAvatarHtml(chatGroup)}
+          ${canManage ? `<label for="gi-avatar-file">${groupAvatarHtml(chatGroup)}</label>` : groupAvatarHtml(chatGroup)}
           ${canManage ? `<label class="gi-avatar-pick" for="gi-avatar-file" title="Change picture">${ICON_CAMERA}</label><input type="file" id="gi-avatar-file" accept="image/*" style="display:none;">` : ''}
         </span>
         <div id="gi-details-view">

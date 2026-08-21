@@ -277,7 +277,7 @@ function opBlockHtml(p) {
       ${p.article_id ? articleCardHtml(p._promoArticle) : ''}
       ${renderMedia(p.media_url, p.media_type, '', p)}
       ${pollHtml(p)}
-      <div class="op-detail-meta"><span data-dt="${p.id}">${fullDateTime(p.created_at)}${editedSuffix(p)}</span> &middot; <b>${fmtCount(p.view_count)}</b> Views</div>
+      <div class="op-detail-meta"><span data-dt="${p.id}">${fullDateTime(p.created_at)}${editedSuffix(p)}</span> &middot; <span class="op-detail-views">${ICON.views}<b>${fmtCount(p.view_count)}</b> Views</span></div>
       <div class="op-detail-divider"></div>
       ${opDetailActionsHtml(p, "document.getElementById('rf-body')?.scrollIntoView({behavior:'smooth',block:'center'});document.getElementById('rf-body')?.focus();")}
       <div class="op-detail-divider"></div>

@@ -568,7 +568,7 @@ const ICON = {
   reply:    '<svg viewBox="0 0 24 24"><path d="M12 3.75c-4.97 0-9 3.5-9 7.9 0 2.55 1.35 4.82 3.46 6.28.1.85-.16 1.9-.82 3.02a.4.4 0 0 0 .43.59c1.53-.32 2.83-.92 3.7-1.5.7.15 1.44.23 2.23.23 4.97 0 9-3.55 9-7.9 0-4.4-4.03-8.9-9-8.9z" stroke-linejoin="round"/></svg>',
   heart:    '<svg viewBox="0 0 24 24"><path d="M12 6.24C10.4 4.4 7.85 3.9 5.8 5.1 3.4 6.5 2.66 9.6 4.24 12.15c1.9 3.06 4.9 5.5 7.76 7.6 2.86-2.1 5.86-4.54 7.76-7.6 1.58-2.55.84-5.65-1.56-7.05-2.05-1.2-4.6-.7-6.2 1.14z" stroke-linejoin="round"/></svg>',
   views:    '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M8.75 21V3h2v18h-2zM18 21V8.5h2V21h-2zM4 21l.004-10h2L6 21H4z"/></svg>',
-  share:    '<svg viewBox="0 0 24 24"><path d="M12 3v13" stroke-linecap="round"/><path d="m7.2 7.6 4.8-4.8 4.8 4.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 15v3.5A2.5 2.5 0 0 0 7.5 21h9a2.5 2.5 0 0 0 2.5-2.5V15"/></svg>',
+  share:    '<svg viewBox="0 0 24 24"><path d="M4 17c0-6.6 4.4-11 11-11h2.3" stroke-linecap="round"/><path d="m13.5 2.2 4 3.8-4 3.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   menu:     '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>',
   bookmark: '<svg viewBox="0 0 24 24"><path d="M7 4.75h10a1.25 1.25 0 0 1 1.25 1.25v13.5a.6.6 0 0 1-.95.48L12 15.9l-5.3 4.08a.6.6 0 0 1-.95-.48V6a1.25 1.25 0 0 1 1.25-1.25Z" stroke-linejoin="round"/></svg>',
   repost:   '<svg viewBox="0 0 24 24"><path d="M17 1.5 21 5.5l-4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 11.5v-2a4 4 0 0 1 4-4h14" stroke-linecap="round"/><path d="M7 22.5 3 18.5l4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12.5v2a4 4 0 0 1-4 4H3" stroke-linecap="round"/></svg>',
@@ -1558,6 +1558,32 @@ function setLikeUiState(btn, isLiked, delta) {
   btn.dataset.count = newCount;
   const lc = btn.querySelector('.lc');
   if (lc) lc.textContent = fmtCount(newCount);
+  if (isLiked) spawnLikeBurst(btn);
+}
+
+// Fires a quick radial burst of small dots out of the heart icon's
+// center on like (see .like-burst-particle in style.css). Uses
+// getBoundingClientRect() + position:fixed particles rather than
+// appending inside the button itself, since .act has overflow:hidden
+// for its own frosted-glass press effect and would clip anything
+// bigger than the pill.
+function spawnLikeBurst(btn) {
+  const icon = btn.querySelector('svg') || btn;
+  const r = icon.getBoundingClientRect();
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  const count = 8;
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 * i) / count + (Math.random() * 0.4 - 0.2);
+    const dist = 16 + Math.random() * 10;
+    const dot = document.createElement('span');
+    dot.className = 'like-burst-particle';
+    dot.style.left = `${cx}px`;
+    dot.style.top = `${cy}px`;
+    dot.style.setProperty('--tx', `${Math.cos(angle) * dist}px`);
+    dot.style.setProperty('--ty', `${Math.sin(angle) * dist}px`);
+    dot.addEventListener('animationend', () => dot.remove());
+    document.body.appendChild(dot);
+  }
 }
 
 // Toggles like/unlike — mirrors toggleBookmark's insert-or-delete pattern.
@@ -4782,7 +4808,7 @@ function renderLbSidebar(owner) {
       ${postMenuHtml(isReply ? owner.post_id : owner.id, isReply ? owner.id : null, owner.author_id, isReply ? null : owner.community_id, owner.created_at)}
     </div>
     <div class="op-detail-body" data-pb="${owner.id}">${renderBody(owner.body || '')}</div>
-    <div class="op-detail-meta"><span data-dt="${owner.id}">${fullDateTime(owner.created_at)}${editedSuffix(owner)}</span> &middot; <b>${fmtCount(owner.view_count)}</b> Views</div>
+    <div class="op-detail-meta"><span data-dt="${owner.id}">${fullDateTime(owner.created_at)}${editedSuffix(owner)}</span> &middot; <span class="op-detail-views">${ICON.views}<b>${fmtCount(owner.view_count)}</b> Views</span></div>
     <div class="op-detail-divider"></div>
     ${actions}
     <div class="op-detail-divider"></div>

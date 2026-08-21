@@ -20,7 +20,7 @@ function ttvHtml(url, opts = {}) {
   const extraAttrs = opts.videoAttrs || '';
   return `
 <div class="ttv${cls}" tabindex="0">
-  <video class="ttv-video" src="${esc(url)}" preload="metadata" playsinline ${extraAttrs}></video>
+  <video class="ttv-video" src="${esc(url)}" preload="metadata" playsinline webkit-playsinline disablepictureinpicture disableremoteplayback controlslist="nofullscreen noremoteplayback nodownload noplaybackrate" x-webkit-airplay="deny" ${extraAttrs}></video>
   <div class="ttv-overlay">
     <div class="ttv-spinner" hidden></div>
     <button type="button" class="ttv-big-play" aria-label="Play"><span class="ttv-play-tri"></span></button>
@@ -303,6 +303,24 @@ document.addEventListener('loadedmetadata', (e) => {
   ttvUpdateProgress(root);
   ttvUpdateVolIcon(root);
 }, true);
+
+// Belt-and-suspenders against the browser's own floating PiP/expand
+// bubble (some Chromium-based mobile browsers, Samsung Internet in
+// particular, inject their own round overlay buttons on top of an
+// HTML5 <video> once it starts playing — separate from and on top of
+// our custom .ttv-row controls). The `disablepictureinpicture`
+// attribute set in ttvHtml() above covers most cases, but setting the
+// IDL property directly here catches browsers that only respect it
+// post-load rather than as a static attribute.
+new MutationObserver((mutations) => {
+  for (const m of mutations) {
+    m.addedNodes.forEach(node => {
+      if (node.nodeType !== 1) return;
+      const vids = node.matches?.('.ttv-video') ? [node] : Array.from(node.querySelectorAll?.('.ttv-video') || []);
+      vids.forEach(v => { try { v.disablePictureInPicture = true; v.disableRemotePlayback = true; } catch {} });
+    });
+  }
+}).observe(document.body, { childList: true, subtree: true });
 document.addEventListener('volumechange', (e) => {
   if (!e.target.classList?.contains('ttv-video')) return;
   ttvUpdateVolIcon(ttvRoot(e.target));

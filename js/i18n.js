@@ -82,7 +82,11 @@ const I18N_DICT = {
     'chat.stopRecording': 'Stop recording', 'chat.cancelRecording': 'Cancel recording',
     'chat.removeAttachment': 'Remove', 'chat.photo': 'Photo', 'chat.video': 'Video',
     'chat.voiceMessage': 'Voice message', 'chat.uploading': 'Uploading\\u2026',
-    'chat.micPermissionDenied': "Couldn't access your microphone."
+    'chat.micPermissionDenied': "Couldn't access your microphone.",
+    'chat.micBlocked': "Microphone access is blocked for this site. Allow it in your browser's site settings, then try again.",
+    'chat.micNotFound': "No microphone was found on this device.",
+    'chat.micInUse': "Your microphone is being used by another app. Close it and try again.",
+    'chat.micUnsupported': "Voice messages need a secure (https) connection and aren't supported in this browser."
   },
   es: {
     'nav.home': 'Inicio', 'nav.explore': 'Explorar', 'nav.notifications': 'Notificaciones',

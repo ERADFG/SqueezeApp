@@ -1456,7 +1456,26 @@ a.act:hover, button.act.reply:hover, button.act.reply:active { color:var(--maroo
 .act.views svg { fill:currentColor; stroke:none; }
 .act.like:hover, .act.like:active { color:var(--like); }
 .act.like.liked { color:var(--like); }
-.act.like.liked svg { fill:var(--like); stroke:var(--like); animation:oc-pop .28s ease; }
+.act.like.liked svg { fill:var(--like); stroke:var(--like); animation:oc-like-pop .45s cubic-bezier(.17,.89,.32,1.49); }
+
+/* ── LIKE BURST — a quick radial confetti of little dots fired from
+   the heart's center the instant a post gets liked (not on unlike),
+   same spirit as X/Instagram's tap-to-like flourish. Particles are
+   fixed-position (viewport coordinates from the button's own
+   getBoundingClientRect() in spawnLikeBurst()) so they're never
+   clipped by any ancestor's overflow:hidden — including .act's own,
+   which the heart icon itself sits inside. Self-removing: each
+   particle's `animationend` listener deletes it from the DOM. */
+@keyframes oc-like-pop { 0% { transform:scale(1); } 30% { transform:scale(1.35); } 55% { transform:scale(.92); } 100% { transform:scale(1); } }
+.like-burst-particle {
+  position:fixed; left:0; top:0; width:6px; height:6px; margin:-3px 0 0 -3px;
+  border-radius:50%; background:var(--like); pointer-events:none; z-index:9999;
+  animation:oc-like-burst .55s cubic-bezier(.16,.84,.32,1) forwards;
+}
+@keyframes oc-like-burst {
+  0% { transform:translate(0,0) scale(1); opacity:1; }
+  100% { transform:translate(var(--tx), var(--ty)) scale(0); opacity:0; }
+}
 .act.reply.disabled, .act.reply:disabled {
   color:var(--muted); opacity:.55; cursor:not-allowed;
 }
@@ -1555,6 +1574,8 @@ body.oc-sheet-open { overflow:hidden; }
 .op-detail-body { font-size:21px; line-height:1.35; word-wrap:break-word; white-space:pre-wrap; color:var(--ink); margin-top:14px; }
 .op-detail-meta { font-size:15px; color:var(--muted); margin-top:16px; padding-bottom:12px; }
 .op-detail-meta b { color:var(--ink); }
+.op-detail-views { display:inline-flex; align-items:center; gap:5px; vertical-align:-3px; }
+.op-detail-views svg { width:16px; height:16px; flex:none; }
 .op-detail-divider { border-top:1px solid var(--line); }
 .op-stats { display:flex; align-items:center; justify-content:space-between; padding:4px 0; margin:0 -8px; }
 .op-stats .act { padding:8px; }
@@ -3282,7 +3303,16 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
    ordinary incoming bubble so it slots into the thread exactly like
    a real message would (and gets pushed out by one the instant it
    arrives). */
-.chat-typing-bubble { padding:11px 16px; }
+/* Explicit intrinsic sizing (not just relying on flex defaults) so
+   this bubble can never balloon to fill the message list's height —
+   width:fit-content + flex:0 0 auto pins it to just its dots/mic-icon
+   content, and max-height is a hard backstop. */
+.chat-typing-bubble {
+  padding:11px 16px; width:fit-content; max-width:fit-content; height:auto; max-height:38px;
+  flex:0 0 auto; align-self:flex-end; box-sizing:border-box;
+}
+#chat-typing-row { flex:0 0 auto; }
+#chat-typing-row .msg-bubble { flex:0 0 auto; }
 .chat-typing-dots { display:flex; align-items:center; gap:4px; }
 .chat-typing-dots span { width:6px; height:6px; border-radius:50%; background:var(--muted); opacity:.5; animation:oc-typing-bounce 1.2s infinite ease-in-out; }
 .chat-typing-dots span:nth-child(2) { animation-delay:.15s; }
@@ -3706,6 +3736,16 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 }
 .ttv:focus-visible { box-shadow:0 0 0 2px var(--maroon); }
 .ttv-video { display:block; max-width:100%; max-height:380px; width:auto; height:auto; background:#000; }
+/* Suppresses any browser-native video overlay chrome (fullscreen/PiP/
+   cast bubbles some Chromium-based mobile browsers draw on top of an
+   HTML5 <video> regardless of the page's own controls) so only our
+   custom .ttv-row buttons ever show. */
+.ttv-video::-webkit-media-controls,
+.ttv-video::-webkit-media-controls-enclosure,
+.ttv-video::-webkit-media-controls-panel,
+.ttv-video::-webkit-media-controls-picture-in-picture-button,
+.ttv-video::-webkit-media-controls-overflow-button,
+.ttv-video::-internal-media-controls-overflow-button { display:none !important; opacity:0 !important; pointer-events:none !important; }
 .rc .ttv-video, .qp-embed .ttv-video { max-height:280px; }
 .lb-media-wrap .ttv { max-width:none; border-radius:0; }
 .lb-media-wrap .ttv-video { max-height:calc(100vh - 40px); max-width:calc(100vw - 40px); }
