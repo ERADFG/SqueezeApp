@@ -661,7 +661,7 @@ function updateFavicon(theme) {
 }
 // ── ACCENT COLOR — same idea as THEME above, but swaps the app's one
 // accent color (buttons/links/active states) instead of the surface
-// colors. Applied via data-accent on <html>; "green" is the default and
+// colors. Applied via data-accent on <html>; "blue" is the default and
 // needs no attribute (matches the :root values in style.css). ──
 const ACCENT_KEY = 'oc-accent';
 const ACCENT_OPTIONS = [
@@ -672,12 +672,12 @@ const ACCENT_OPTIONS = [
   { id: 'orange', label: 'Orange' }
 ];
 function applyAccent(accent) {
-  if (accent && accent !== 'green') document.documentElement.setAttribute('data-accent', accent);
+  if (accent && accent !== 'blue') document.documentElement.setAttribute('data-accent', accent);
   else document.documentElement.removeAttribute('data-accent');
-  try { localStorage.setItem(ACCENT_KEY, accent || 'green'); } catch (e) {}
+  try { localStorage.setItem(ACCENT_KEY, accent || 'blue'); } catch (e) {}
 }
 function getAccent() {
-  try { return localStorage.getItem(ACCENT_KEY) || 'green'; } catch (e) { return 'green'; }
+  try { return localStorage.getItem(ACCENT_KEY) || 'blue'; } catch (e) { return 'blue'; }
 }
 
 let unreadNotifCount = 0;

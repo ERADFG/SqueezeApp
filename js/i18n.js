@@ -67,7 +67,7 @@ const I18N_DICT = {
     'settings.account': 'Account', 'settings.password': 'Password', 'settings.session': 'Session',
     'chat.directMessages': 'Direct messages',
     'chat.loginGate': 'Log in to send and receive messages. {login} or {signup}.',
-    'chat.newMessage': 'New message\u2026', 'chat.messageUsernamePlaceholder': 'Message a username\u2026', 'chat.searchUserTrigger': 'Search a user\u2026', 'chat.searchUserPlaceholder': 'Search a user you follow or have messaged\u2026',
+    'chat.newMessage': 'New message\u2026', 'chat.messageUsernamePlaceholder': 'Message a username\u2026', 'chat.searchUserTrigger': 'Search a user\u2026', 'chat.searchUserPlaceholder': 'Search a user\u2026',
     'chat.startMessagePlaceholder': 'Start a message\u2026', 'chat.send': 'Send', 'chat.back': 'Back',
     'chat.noMessagesTitle': 'No messages yet', 'chat.noMessagesSub': "When you message someone, it'll show up here.",
     'chat.youPrefix': 'You: ', 'chat.encryptedMessage': 'Encrypted message',

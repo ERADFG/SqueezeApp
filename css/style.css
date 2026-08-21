@@ -26,11 +26,11 @@
      brighter green-600 #16A34A, since against a near-black background
      that reads at a strong 5.7–7.3:1 while staying visually lighter/
      more legible than the green-700 shade would there. */
-  --maroon:    #15803D;   /* accent — green-700, clears 4.5:1 AA on white */
-  --maroon-dk: #166534;   /* accent hover/active */
-  --maroon-tint: rgba(21,128,61,.10); /* accent hover wash */
-  --mustard:   #15803D;   /* secondary accent, kept same as maroon for one accent color */
-  --mustard-dk:#166534;
+  --maroon:    #0B6FE0;   /* accent — brand blue, clears 4.5:1 AA on white */
+  --maroon-dk: #0857B3;   /* accent hover/active */
+  --maroon-tint: rgba(11,111,224,.10); /* accent hover wash */
+  --mustard:   #0B6FE0;   /* secondary accent, kept same as maroon for one accent color */
+  --mustard-dk:#0857B3;
   --cream-card:#FFFFFF;   /* card background */
   --line:      #EFF3F4;   /* hairline border — gray-100 */
   --muted:     #536471;   /* secondary text — twitter gray-500 */
@@ -86,9 +86,9 @@ html[data-theme="dim"] {
   --bg:#15202B; --ink:#F7F9F9; --cream-card:#15202B; --line:#38444D;
   --muted:#8B98A5; --hover-bg:#1E2732; --input-bg:#1E2732; --div:#38444D;
   --border-input:#38444D; --translucent-bg:rgba(21,32,43,.85);
-  --maroon:#16A34A; --maroon-dk:#22C55E; --mustard:#16A34A; --mustard-dk:#22C55E; --link:#16A34A;
+  --maroon:#1185FE; --maroon-dk:#3B9EFF; --mustard:#1185FE; --mustard-dk:#3B9EFF; --link:#1185FE;
   --like:#F43F5E;
-  --maroon-tint: rgba(22,163,74,.16); --like-tint: rgba(244,63,94,.16);
+  --maroon-tint: rgba(17,133,254,.16); --like-tint: rgba(244,63,94,.16);
   --share:#3BA9F5; --share-tint: rgba(59,169,245,.18);
   --save:#FBBF24; --save-tint: rgba(251,191,36,.18);
   color-scheme: dark;
@@ -97,7 +97,7 @@ html[data-theme="dark"] {
   --bg:#000000; --ink:#E7E9EA; --cream-card:#000000; --line:#2F3336;
   --muted:#71767B; --hover-bg:#0B0B0B; --input-bg:#000000; --div:#2F3336;
   --border-input:#2F3336; --translucent-bg:rgba(0,0,0,.85);
-  --maroon:#16A34A; --maroon-dk:#22C55E; --mustard:#16A34A; --mustard-dk:#22C55E; --link:#16A34A;
+  --maroon:#1185FE; --maroon-dk:#3B9EFF; --mustard:#1185FE; --mustard-dk:#3B9EFF; --link:#1185FE;
   --like:#F43F5E;
   --maroon-tint: rgba(22,163,74,.16); --like-tint: rgba(244,63,94,.16);
   --share:#3BA9F5; --share-tint: rgba(59,169,245,.18);
@@ -2231,7 +2231,7 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
    edge. Trim the outer padding a bit and let the tabs wrap their
    label smaller rather than clip. */
 @media (max-width:340px) {
-  .gcv-modal { padding:16px 14px 16px; }
+  .gcv-modal { padding:16px 16px 16px; }
   .gcv-kind-tabs button { padding:8px 6px; font-size:12.5px; gap:4px; }
 }
 
@@ -3000,7 +3000,7 @@ body.chat-thread-open #chat-fab { display:none; }
 }
 
 /* ── create group/channel modal ── */
-.gcv-modal { width:400px; max-width:92vw; padding:20px 22px 20px; text-align:left; }
+.gcv-modal { width:400px; max-width:92vw; padding:20px 24px 22px; text-align:left; box-sizing:border-box; }
 .gcv-modal h2 { padding:0; margin:0 0 6px; font-size:19px; }
 .gcv-modal .dc-desc { text-align:left; margin-bottom:18px; color:var(--muted); line-height:1.4; }
 .gcv-kind-tabs { display:flex; gap:4px; margin-bottom:20px; background:var(--hover-bg); border-radius:999px; padding:4px; }
@@ -3020,27 +3020,38 @@ body.chat-thread-open #chat-fab { display:none; }
    this a real positioning context. Nudged down a couple px so the
    72px circle lines up optically with the Name *input* next to it,
    not with its label sitting above that input. */
-.gcv-avatar-wrap { position:relative; display:inline-block; flex:none; width:72px; height:72px; margin-top:19px; }
+.gcv-avatar-wrap {
+  position:relative; display:inline-flex; flex:none; box-sizing:border-box;
+  width:72px; height:72px; min-width:72px; min-height:72px; max-width:72px; max-height:72px;
+  margin-top:19px;
+}
 .gcv-avatar-preview {
-  width:72px; height:72px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  width:72px; height:72px; min-width:72px; min-height:72px; box-sizing:border-box;
+  border-radius:50%; display:flex; align-items:center; justify-content:center;
   background:var(--maroon-tint); color:var(--maroon); overflow:hidden; box-shadow:inset 0 0 0 1px var(--div);
   cursor:pointer; transition:filter .12s ease;
 }
 .gcv-avatar-wrap:hover .gcv-avatar-preview { filter:brightness(.94); }
 .gcv-avatar-preview svg { width:28px; height:28px; flex-shrink:0; }
-.gcv-avatar-preview img { width:100%; height:100%; object-fit:cover; }
+.gcv-avatar-preview img { width:100%; height:100%; object-fit:cover; display:block; }
+/* Fixed-size badge, locked with min/max so the file-input <label> can
+   never grow past its intended 24px — this is what used to make the
+   camera badge balloon and overlap into the middle of the circle
+   instead of sitting docked in the corner. */
 .gcv-avatar-pick {
-  position:absolute; right:-2px; bottom:-2px; width:26px; height:26px; min-width:26px; min-height:26px;
+  position:absolute; right:0; bottom:0; box-sizing:border-box;
+  width:24px; height:24px; min-width:24px; min-height:24px; max-width:24px; max-height:24px;
   border-radius:50%; background:var(--maroon); color:#fff; display:flex; align-items:center; justify-content:center;
-  padding:0; line-height:0; cursor:pointer; box-shadow:0 0 0 3px var(--cream-card); transition:background .12s ease; z-index:2;
+  padding:0; margin:0; line-height:0; overflow:hidden; cursor:pointer;
+  box-shadow:0 0 0 3px var(--cream-card); transition:background .12s ease; z-index:2;
 }
 .gcv-avatar-pick:hover { background:var(--maroon-dk); }
-.gcv-avatar-pick svg { display:block; width:13px; height:13px; flex-shrink:0; pointer-events:none; }
+.gcv-avatar-pick svg { display:block; width:12px; height:12px; min-width:12px; flex-shrink:0; pointer-events:none; }
 .gcv-identity-row .gcv-name-field { flex:1; min-width:0; margin-bottom:0; margin-top:2px; }
 .gcv-field { margin-bottom:16px; }
 .gcv-field label { display:block; font-size:12px; font-weight:700; color:var(--muted); margin-bottom:5px; }
 .gcv-field input[type="text"], .gcv-field textarea {
-  width:100%; font:inherit; font-size:14.5px; padding:10px 12px; border-radius:var(--r-sm);
+  width:100%; max-width:100%; box-sizing:border-box; font:inherit; font-size:14.5px; padding:10px 14px; border-radius:var(--r-sm);
   border:1px solid var(--div); background:var(--bg); color:var(--ink); resize:none; transition:border-color .12s ease;
 }
 .gcv-field input[type="text"]:focus, .gcv-field textarea:focus { outline:none; border-color:var(--maroon); }
