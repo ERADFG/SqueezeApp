@@ -1056,7 +1056,16 @@ async function startVoiceRecording() {
   if (chatAttachment) clearChatAttachment(); // voice-note and file are mutually exclusive
   let stream;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // Explicit constraints instead of bare `audio:true`. autoGainControl
+    // is what actually fixes "recordings come out quiet" — some mobile
+    // WebViews only apply gain control when it's asked for by name,
+    // they don't reliably turn it on for a bare boolean request. Echo
+    // cancellation/noise suppression are on for the same reason: don't
+    // assume the browser's implicit defaults are good enough for a
+    // voice note that's about to get compressed further.
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+    });
   } catch (e) {
     toast(t('chat.micPermissionDenied'), 'error');
     return;
@@ -1064,7 +1073,14 @@ async function startVoiceRecording() {
   chatRecorderStream = stream;
   chatRecorderChunks = [];
   const mimeType = ['audio/webm', 'audio/mp4', 'audio/ogg'].find(m => window.MediaRecorder?.isTypeSupported?.(m)) || '';
-  chatRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+  // audioBitsPerSecond was previously left unset, which lets the
+  // browser pick its own default — and for the opus/webm path that
+  // default is tuned for small file size over clarity (well under
+  // 32kbps on some browsers), which is exactly what "sounds quiet and
+  // low quality" looks like from the encoder's side. 128kbps is
+  // plenty for a voice note and still small enough to upload quickly.
+  const recorderOpts = { audioBitsPerSecond: 128000, ...(mimeType ? { mimeType } : {}) };
+  chatRecorder = new MediaRecorder(stream, recorderOpts);
   chatRecorder.ondataavailable = e => { if (e.data && e.data.size) chatRecorderChunks.push(e.data); };
   chatRecorder.onstop = () => {
     stream.getTracks().forEach(tr => tr.stop());
