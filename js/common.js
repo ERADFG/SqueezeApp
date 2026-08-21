@@ -113,10 +113,27 @@ function recoverFromBackgroundResume() {
   // label after a mailto:/tel: handoff, so give them their own
   // explicit reflow too rather than relying solely on the body toggle
   // to cascade down to them.
+  //
+  // BUG THIS USED TO HAVE: setting `el.style.display = ''` doesn't
+  // restore the element's previous inline display — it *deletes* the
+  // display property from the inline style entirely. The Contact
+  // page's "Email us" link only looks like a button because of an
+  // inline `style="display:inline-block;..."` on the <a> itself (the
+  // .auth-submit class never declares `display`, since it's shared
+  // with <input type="submit"> elsewhere that don't need it). So this
+  // "fix" was wiping that inline-block out on every resume, leaving
+  // the anchor as a plain inline element — which ignores width/
+  // max-width/padding the same way, i.e. it visually collapses. That
+  // is exactly the bug this function exists to prevent. Capturing and
+  // restoring the actual previous value (instead of blanking it)
+  // fixes that, and .auth-submit now also carries its own
+  // `display:inline-block` in CSS as a second safety net in case any
+  // element using this class has no inline display of its own.
   document.querySelectorAll('.auth-submit').forEach(el => {
+    const prevDisplay = el.style.display;
     el.style.display = 'none';
     void el.offsetHeight;
-    el.style.display = '';
+    el.style.display = prevDisplay;
   });
   // Some Chrome/WebView builds drop the in-flight network request for
   // an <img> outright when the tab is backgrounded rather than just
@@ -755,6 +772,11 @@ function toggleMoreMenu() { document.getElementById('more-wrap')?.classList.togg
 const PLUS_ICON = '<svg viewBox="0 0 24 24"><path d="M12 4v16M4 12h16"/></svg>';
 const CHECK_ICON = '<svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>';
 const ICON_COMPOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+// Same magnifying-glass shape already inlined in every .xsearch box
+// across the app (search page, member pickers, etc.) — pulled out
+// here as a shared constant for the chat "Search a user" trigger so
+// its icon actually matches what the action does now.
+const ICON_SEARCH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>';
 // Hamburger (opens the drawer) and hashtag/Feeds icon, both used in the
 // mobile top bar — matches the reference app's icon-left / logo-center /
 // icon-right topbar layout.

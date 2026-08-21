@@ -199,12 +199,12 @@ async function loadConversationList(session, root) {
   // 1:1 flow plus New group / New channel.
   const newMsgBox = `
     <button type="button" class="chat-new-trigger" id="chat-new-trigger" onclick="toggleNewChat(true)">
-      ${ICON_COMPOSE}<span>${t('chat.newMessage')}</span>
+      ${ICON_SEARCH}<span>${t('chat.searchUserTrigger')}</span>
     </button>
     <div class="chat-new" id="chat-new" style="display:none;">
       <div class="xsearch">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
-        <input id="chat-new-user" placeholder="${esc(t('chat.messageUsernamePlaceholder'))}" oninput="chatNewSearchUsers(this.value)" onkeydown="if(event.key==='Enter'){startChat();}if(event.key==='Escape'){toggleNewChat(false);}">
+        <input id="chat-new-user" placeholder="${esc(t('chat.searchUserPlaceholder'))}" oninput="chatNewSearchUsers(this.value)" onkeydown="if(event.key==='Enter'){startChat();}if(event.key==='Escape'){toggleNewChat(false);}">
       </div>
       <button type="button" class="chat-new-close" title="${esc(t('compose.cancel'))}" aria-label="${esc(t('compose.cancel'))}" onclick="toggleNewChat(false)">${ICON_CLOSE}</button>
     </div>

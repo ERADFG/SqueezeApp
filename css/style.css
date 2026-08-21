@@ -2676,6 +2676,15 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
 }
 
 .auth-submit {
+  /* Explicit display so this class is never solely dependent on an
+     inline style="display:..." elsewhere in the markup (see the
+     recoverFromBackgroundResume() comment in js/common.js for why
+     that mattered — a JS reflow used to wipe out exactly that inline
+     value on the Contact page's "Email us" link, since a plain <a>'s
+     default display is `inline`, which ignores width/max-width. This
+     is a no-op for the existing <input type="submit"> usages, whose
+     default display is already inline-block. */
+  display:inline-block;
   width:100%; font-family:inherit; font-size:15px; font-weight:700;
   background:var(--maroon); color:#fff; border:none; border-radius:999px; padding:12px 10px; cursor:pointer;
   margin-top:10px; transition:background .12s ease, filter .12s ease, transform .05s ease;
