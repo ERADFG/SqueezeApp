@@ -69,6 +69,15 @@ const ICON_PLUS_CIRCLE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentCo
 const ICON_MSG_ONE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.75c-4.97 0-9 3.5-9 7.9 0 2.55 1.35 4.82 3.46 6.28.1.85-.16 1.9-.82 3.02a.4.4 0 0 0 .43.59c1.53-.32 2.83-.92 3.7-1.5.7.15 1.44.23 2.23.23 4.97 0 9-3.55 9-7.9 0-4.4-4.03-8.9-9-8.9z"/></svg>';
 const ICON_GROUP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.3" r="3.3"/><path d="M2.8 20c.9-3.7 3.2-5.6 6.2-5.6s5.3 1.9 6.2 5.6"/><path d="M15.6 5.3a3.2 3.2 0 0 1 0 6.1"/><path d="M16.2 14.8c2.4.5 4.1 2.2 4.9 5.2"/></svg>';
 const ICON_CHANNEL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 19 4l-2.2 16-6-4.3L7 19v-5.1z"/><path d="M10.8 14.6 19 4"/></svg>';
+// Used only as the round avatar *placeholder* glyph for a channel
+// with no picture set yet (create-channel modal, group/channel list
+// rows). ICON_CHANNEL above is fine as a small tab/menu icon, but its
+// paper-plane shape has most of its "ink" bunched in the top half —
+// mathematically centered in its 24x24 viewBox, but visibly
+// off-balance once it's blown up inside a 64px circle. A megaphone
+// is symmetric top-to-bottom/left-to-right, so simple flex centering
+// (align-items/justify-content:center) actually looks centered.
+const ICON_CHANNEL_AVATAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4a1 1 0 0 0 1 1h2l4.5 3.4a1 1 0 0 0 1.6-.8V6.4a1 1 0 0 0-1.6-.8L6 9H4a1 1 0 0 0-1 1Z"/><path d="M17.5 9a4 4 0 0 1 0 6"/><path d="M20 6.5a7.5 7.5 0 0 1 0 11"/></svg>';
 const ICON_INFO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg>';
 const ICON_GLOBE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 6 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-6-3.8-9s1.3-6.3 3.8-9Z"/></svg>';
 const ICON_LOCK_SMALL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
@@ -197,7 +206,6 @@ async function loadConversationList(session, root) {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
         <input id="chat-new-user" placeholder="${esc(t('chat.messageUsernamePlaceholder'))}" oninput="chatNewSearchUsers(this.value)" onkeydown="if(event.key==='Enter'){startChat();}if(event.key==='Escape'){toggleNewChat(false);}">
       </div>
-      <button type="button" class="chat-send-btn" title="${esc(t('chat.send'))}" aria-label="${esc(t('chat.send'))}" onclick="startChat()">${ICON_SEND}</button>
       <button type="button" class="chat-new-close" title="${esc(t('compose.cancel'))}" aria-label="${esc(t('compose.cancel'))}" onclick="toggleNewChat(false)">${ICON_CLOSE}</button>
     </div>
     <div class="gcv-member-results" id="chat-new-results" style="margin:0 16px 8px;"></div>
@@ -394,6 +402,34 @@ function toggleNewChat(open) {
 // (debounced ilike on username/display_name) so "New message" is an
 // actual user search, not just an exact-username lookup that only
 // resolves on Enter/Send.
+// "New message" is scoped to people you already have some connection
+// to — folks who follow you, folks you follow, and anyone you've
+// already DMed — rather than a raw search across every profile on the
+// site. This is cached per page-load (it only changes when you follow/
+// unfollow someone or start a new DM, neither of which happens while
+// this panel is open) so re-typing in the search box doesn't refire
+// three queries per keystroke.
+let chatEligibleContactIdsCache = null;
+async function chatEligibleContactIds() {
+  if (chatEligibleContactIdsCache) return chatEligibleContactIdsCache;
+  const uid = currentSession?.user?.id;
+  if (!uid) return new Set();
+  const [{ data: iFollow }, { data: followMe }, { data: sent }, { data: received }] = await Promise.all([
+    sb.from('follows').select('followee_id').eq('follower_id', uid),
+    sb.from('follows').select('follower_id').eq('followee_id', uid),
+    sb.from('messages').select('recipient_id').eq('sender_id', uid),
+    sb.from('messages').select('sender_id').eq('recipient_id', uid),
+  ]);
+  const ids = new Set();
+  (iFollow || []).forEach(r => ids.add(r.followee_id));
+  (followMe || []).forEach(r => ids.add(r.follower_id));
+  (sent || []).forEach(r => r.recipient_id && ids.add(r.recipient_id));
+  (received || []).forEach(r => r.sender_id && ids.add(r.sender_id));
+  ids.delete(uid);
+  chatEligibleContactIdsCache = ids;
+  return ids;
+}
+
 let chatNewSearchDebounce = null;
 let chatNewSearchResults = new Map();
 function chatNewSearchUsers(q) {
@@ -404,17 +440,22 @@ function chatNewSearchUsers(q) {
   clearErr(errEl);
   if (!q.trim()) { resultsEl.innerHTML = ''; return; }
   chatNewSearchDebounce = setTimeout(async () => {
+    const ids = [...await chatEligibleContactIds()];
+    if (!ids.length) {
+      resultsEl.innerHTML = `<div class="gcv-member-row" style="cursor:default;"><div class="ulrow-txt"><span class="ulrow-name">${esc(t('chat.noContactsYet'))}</span></div></div>`;
+      return;
+    }
     const uname = q.trim().replace(/^@/, '');
     const { data } = await sb.from('profiles').select('id,username,display_name,avatar_url,verified,verification_type')
       .or(`username.ilike.%${uname}%,display_name.ilike.%${uname}%`)
-      .neq('id', currentSession?.user?.id || '')
+      .in('id', ids)
       .limit(8);
     chatNewSearchResults = new Map((data || []).map(p => [p.username, p]));
     resultsEl.innerHTML = (data || []).map(p => `
       <div class="gcv-member-row" onclick="chatNewPickUser('${esc(p.username)}')">
         <img src="${esc(avatarUrl(p.avatar_url))}" alt="">
         <div class="ulrow-txt"><span class="ulrow-name">${esc(p.display_name || p.username)}${vBadge(p)}</span><span class="ulrow-handle">@${esc(p.username)}</span></div>
-      </div>`).join('');
+      </div>`).join('') || `<div class="gcv-member-row" style="cursor:default;"><div class="ulrow-txt"><span class="ulrow-name">${esc(t('chat.userNotFound'))}</span></div></div>`;
   }, 250);
 }
 function chatNewPickUser(username) {
@@ -423,13 +464,19 @@ function chatNewPickUser(username) {
   location.href = messagesUrl(p.username);
 }
 
+// Enter-to-send fallback for the same box — kept scoped to the same
+// contact list as the live search above so it can't be used to jump
+// straight to an arbitrary stranger's DMs by typing their exact
+// username.
 async function startChat() {
   const input = document.getElementById('chat-new-user');
   const errEl = document.getElementById('chat-new-err');
   clearErr(errEl);
   const uname = input.value.trim().replace(/^@/, '');
   if (!uname) return;
-  const { data: profile, error } = await sb.from('profiles').select('username').ilike('username', uname).maybeSingle();
+  const ids = [...await chatEligibleContactIds()];
+  if (!ids.length) { showErr(errEl, t('chat.userNotFound')); return; }
+  const { data: profile, error } = await sb.from('profiles').select('id,username').ilike('username', uname).in('id', ids).maybeSingle();
   if (error || !profile) { showErr(errEl, t('chat.userNotFound')); return; }
   location.href = messagesUrl(profile.username);
 }
@@ -461,7 +508,7 @@ function openCreateConversationModal(kind) {
       </div>
       <div class="gcv-identity-row">
         <span class="gcv-avatar-wrap" id="gcv-avatar-wrap">
-          <span class="gcv-avatar-preview" id="gcv-avatar-preview">${kind === 'channel' ? ICON_CHANNEL : ICON_GROUP}</span>
+          <span class="gcv-avatar-preview" id="gcv-avatar-preview">${kind === 'channel' ? ICON_CHANNEL_AVATAR : ICON_GROUP}</span>
           <label class="gcv-avatar-pick" for="gcv-avatar-file" title="Choose a picture">${ICON_CAMERA}</label>
           <input type="file" id="gcv-avatar-file" accept="image/*" style="display:none;">
         </span>
@@ -552,7 +599,7 @@ function gcvSwitchKind(kind) {
   // Group<->Channel shouldn't wipe it back to the generic icon.
   if (!gcvAvatarBlob) {
     const prev = document.getElementById('gcv-avatar-preview');
-    if (prev) prev.innerHTML = isChannel ? ICON_CHANNEL : ICON_GROUP;
+    if (prev) prev.innerHTML = isChannel ? ICON_CHANNEL_AVATAR : ICON_GROUP;
   }
 }
 
