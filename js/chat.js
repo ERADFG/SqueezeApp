@@ -750,6 +750,13 @@ async function loadThread(session, root) {
         ? `<div class="chat-e2e-banner pending">${CHAT_ICON_LOCK}<span>${esc(t('chat.e2ePending').replace('{username}', other.username))}</span></div>`
         : '');
 
+  // Snapshot which messages are unread *before* we mark them read
+  // below — renderMsgsHtml() uses this to drop a WhatsApp-style
+  // "N unread messages" divider right above the first one, so
+  // opening a thread with a backlog shows where to start reading
+  // instead of just dumping you at the bottom.
+  const unreadMsgIds = new Set((msgs || []).filter(m => m.recipient_id === session.user.id && !m.read).map(m => m.id));
+
   root.innerHTML = `
     <div class="chat-thread">
       <div class="chat-hdr">
@@ -760,12 +767,12 @@ async function loadThread(session, root) {
           <span class="pc-handle">@${esc(other.username)}</span>
         </div>
       </div>
-      <div class="chat-msgs" id="chat-msgs">${encBanner}${renderMsgsHtml(msgs || [], session.user.id)}</div>
+      <div class="chat-msgs" id="chat-msgs">${encBanner}${renderMsgsHtml(msgs || [], session.user.id, unreadMsgIds)}</div>
       <div id="chat-attach-preview" class="chat-attach-preview" hidden></div>
       <div id="chat-record-bar" class="chat-record-bar" hidden>
         <span class="chat-record-dot"></span>
         <span id="chat-record-time" class="chat-record-time">0:00</span>
-        <span class="chat-record-hint">${esc(t('chat.recordVoice'))}</span>
+        <span class="chat-record-hint">&lsaquo; ${esc(t('chat.slideToCancel'))}</span>
         <button type="button" class="chat-record-cancel" title="${esc(t('chat.cancelRecording'))}" aria-label="${esc(t('chat.cancelRecording'))}" onclick="cancelVoiceRecording()">${ICON_TRASH}</button>
         <button type="button" class="chat-record-stop" title="${esc(t('chat.stopRecording'))}" aria-label="${esc(t('chat.stopRecording'))}" onclick="stopVoiceRecording()">${ICON_STOP}</button>
       </div>
@@ -784,7 +791,7 @@ async function loadThread(session, root) {
   scrollChatToBottom();
   applyChatPrefill();
 
-  const unreadIds = (msgs || []).filter(m => m.recipient_id === session.user.id && !m.read).map(m => m.id);
+  const unreadIds = [...unreadMsgIds];
   if (unreadIds.length) {
     await sb.from('messages').update({ read: true }).in('id', unreadIds);
     if (typeof unreadChatCount === 'number') {
@@ -847,26 +854,53 @@ function updateChatSendBtn() {
 // without needing an explicit "stopped typing" event).
 let typingLastSentAt = 0;
 let typingHideTimer = null;
+let recordingLastSentAt = 0;
 
 function notifyTyping() {
   if (!chatChannel || !currentSession) return;
   const now = Date.now();
   if (now - typingLastSentAt < 2000) return;
   typingLastSentAt = now;
-  chatChannel.send({ type: 'broadcast', event: 'typing', payload: { from: currentSession.user.id } });
+  chatChannel.send({ type: 'broadcast', event: 'typing', payload: { from: currentSession.user.id, kind: 'text' } });
 }
 
-function showTypingBubble() {
+// Same channel/event as notifyTyping() but with kind:'audio', so the
+// other side's bubble can say "recording a voice message" with a mic
+// icon instead of the generic "…" dots — called once immediately
+// when recording starts and then re-pinged every 2s off the existing
+// record-timer tick (see updateChatRecordTimer()) for as long as the
+// mic stays open. stopVoiceRecording()/cancelVoiceRecording() send an
+// explicit 'typing-stop' so the bubble disappears the instant
+// recording ends instead of waiting out the 3s expiry.
+function notifyRecording() {
+  if (!chatChannel || !currentSession) return;
+  const now = Date.now();
+  if (now - recordingLastSentAt < 2000) return;
+  recordingLastSentAt = now;
+  chatChannel.send({ type: 'broadcast', event: 'typing', payload: { from: currentSession.user.id, kind: 'audio' } });
+}
+function notifyStoppedActivity() {
+  if (!chatChannel || !currentSession) return;
+  chatChannel.send({ type: 'broadcast', event: 'typing-stop', payload: { from: currentSession.user.id } });
+}
+
+function showTypingBubble(kind = 'text') {
   const container = document.getElementById('chat-msgs');
   if (!container) return;
-  if (document.getElementById('chat-typing-row')) return;
+  const existing = document.getElementById('chat-typing-row');
+  if (existing) { existing.dataset.kind = kind; existing.querySelector('.msg-bubble').innerHTML = typingBubbleInnerHtml(kind); return; }
   container.insertAdjacentHTML('beforeend', `
-    <div class="msg-row theirs g-start g-end" id="chat-typing-row">
-      <div class="msg-bubble chat-typing-bubble" aria-label="${esc(t('chat.typing'))}">
-        <span class="chat-typing-dots"><span></span><span></span><span></span></span>
+    <div class="msg-row theirs g-start g-end" id="chat-typing-row" data-kind="${esc(kind)}">
+      <div class="msg-bubble chat-typing-bubble" aria-label="${esc(kind === 'audio' ? t('chat.recording') : t('chat.typing'))}">
+        ${typingBubbleInnerHtml(kind)}
       </div>
     </div>`);
   scrollChatToBottom();
+}
+function typingBubbleInnerHtml(kind) {
+  return kind === 'audio'
+    ? `<span class="chat-recording-indicator">${ICON_MIC}<span class="chat-recording-pulse"></span></span>`
+    : `<span class="chat-typing-dots"><span></span><span></span><span></span></span>`;
 }
 function hideTypingBubble() {
   document.getElementById('chat-typing-row')?.remove();
@@ -895,12 +929,21 @@ function chatClockTime(iso) {
 // of each other (tight spacing, tail only on the group's last
 // bubble) rather than giving every message its own gap and tail.
 const GROUP_GAP_MS = 5 * 60 * 1000;
-function renderMsgsHtml(msgs, myId) {
+function renderMsgsHtml(msgs, myId, unreadIds) {
   let html = '';
   let lastDay = null;
+  // First message whose id is in `unreadIds` gets the "N unread
+  // messages" divider dropped right above it — matches WhatsApp's
+  // behavior of marking where the backlog starts instead of just
+  // showing every unread message with a generic dot.
+  const unreadCount = unreadIds ? unreadIds.size : 0;
+  const firstUnreadIdx = unreadCount ? msgs.findIndex(m => unreadIds.has(m.id)) : -1;
   msgs.forEach((m, i) => {
     const day = chatDayLabel(m.created_at);
     if (day !== lastDay) { html += `<div class="chat-daydivider">${esc(day)}</div>`; lastDay = day; }
+    if (i === firstUnreadIdx) {
+      html += `<div class="chat-unread-divider"><span>${unreadCount === 1 ? esc(t('chat.unreadOne')) : esc(t('chat.unreadMany').replace('{n}', unreadCount))}</span></div>`;
+    }
     const prev = msgs[i - 1];
     const next = msgs[i + 1];
     const groupsWithPrev = prev && prev.sender_id === m.sender_id && day === chatDayLabel(prev.created_at)
@@ -914,6 +957,17 @@ function renderMsgsHtml(msgs, myId) {
 
 // m._plain must already be set (decryptForDisplay()) before calling
 // this — it never decrypts on its own, since that's async and this
+// Telegram/WhatsApp-style "meta" (clock time + read ticks) that sits
+// on the same line as the end of the message text, inside the bubble
+// itself, instead of floating outside it as a separate element. For
+// a bare-media bubble (photo/video with no caption) there's no text
+// flow to float alongside, so it renders as a small translucent chip
+// docked over the bottom-right corner of the media instead — same
+// convention every chat app uses for that case.
+function msgMetaHtml(iso, ticksHtml, overlay) {
+  return `<span class="msg-meta${overlay ? ' msg-meta-overlay' : ''}">${chatClockTime(iso)}${ticksHtml}</span>`;
+}
+
 // isn't.
 function msgBubbleHtml(m, myId, group = { start: true, end: true }) {
   const mine = m.sender_id === myId;
@@ -938,11 +992,11 @@ function msgBubbleHtml(m, myId, group = { start: true, end: true }) {
   // with padding around it. Voice notes always render inside a
   // normal bubble since they're compact either way.
   const bareMedia = mediaHtml && !hasCaption && m.media_type !== 'audio';
-  const bubbleInner = mediaHtml + bodyHtml;
+  const meta = msgMetaHtml(m.created_at, ticksHtml, bareMedia);
+  const bubbleInner = mediaHtml + bodyHtml + meta;
   return `
   <div class="${cls.join(' ')}" id="msg-${m.id}" data-day="${esc(chatDayLabel(m.created_at))}" data-sender="${esc(m.sender_id)}" data-ts="${esc(m.created_at)}">
     <div class="msg-bubble${bareMedia ? ' msg-bubble-bare-media' : ''}">${bubbleInner}</div>
-    <span class="msg-time-inline">${chatClockTime(m.created_at)}</span>${ticksHtml}
   </div>`;
 }
 
@@ -1102,6 +1156,8 @@ async function startVoiceRecording() {
   document.getElementById('chat-record-bar').hidden = false;
   const composerEl = document.getElementById('chat-composer');
   if (composerEl) composerEl.hidden = true; // recording replaces the composer entirely (record bar only) instead of showing both at once
+  recordingLastSentAt = 0; // force the first ping out immediately rather than waiting on stale throttle state from an earlier recording
+  notifyRecording();
   chatRecordTimerHandle = setInterval(updateChatRecordTimer, 250);
   updateChatRecordTimer();
 }
@@ -1112,6 +1168,7 @@ function updateChatRecordTimer() {
   if (!el) return;
   const secs = Math.floor((Date.now() - chatRecordStartedAt) / 1000);
   el.textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+  notifyRecording();
 }
 function stopChatRecordUi() {
   if (chatRecordTimerHandle) { clearInterval(chatRecordTimerHandle); chatRecordTimerHandle = null; }
@@ -1119,6 +1176,7 @@ function stopChatRecordUi() {
   if (bar) bar.hidden = true;
   const composerEl = document.getElementById('chat-composer');
   if (composerEl) composerEl.hidden = false;
+  notifyStoppedActivity();
 }
 function stopVoiceRecording() {
   if (!chatRecorder) return;
@@ -1143,10 +1201,34 @@ function voicePlayerHtml(url) {
   return `
   <span class="voice-msg">
     <button type="button" class="voice-play-btn" onclick="toggleVoicePlay(this)">${ICON_VOICE_PLAY}</button>
-    <span class="voice-track"><span class="voice-track-fill"></span></span>
+    <span class="voice-wave">${voiceWaveformSvg(url)}<span class="voice-wave-fg-clip">${voiceWaveformSvg(url)}</span></span>
     <span class="voice-time">0:00</span>
     <audio preload="metadata" src="${esc(url)}"></audio>
   </span>`;
+}
+// Renders the bar-style waveform every voice-note UI uses (WhatsApp/
+// Telegram) instead of a flat progress line. There's no real
+// waveform data to draw (that'd mean decoding the audio just to
+// render a placeholder), so the bar heights are a deterministic
+// pseudo-random pattern seeded from the file's own URL — meaningless
+// as audio data, but stable across re-renders so a given voice note
+// always shows the same "shape" instead of jittering every repaint.
+// Called twice per bubble (see voicePlayerHtml): once for the dim
+// background bars, once for the bright ones clipped to the played
+// fraction by .voice-wave-fg-clip's width.
+function voiceWaveformSvg(seed) {
+  const barW = 2.6, gap = 2.2, h = 22, n = 27;
+  let x = 0;
+  for (let i = 0; i < seed.length; i++) x = (x * 31 + seed.charCodeAt(i)) >>> 0;
+  let bars = '';
+  for (let i = 0; i < n; i++) {
+    x = (Math.imul(x, 1103515245) + 12345) >>> 0;
+    const pct = 24 + (x % 76); // 24%–100% of the lane height
+    const barH = Math.max(2, Math.round(h * pct / 100));
+    bars += `<rect x="${(i * (barW + gap)).toFixed(1)}" y="${((h - barH) / 2).toFixed(1)}" width="${barW}" height="${barH}" rx="1.3"/>`;
+  }
+  const totalW = (n * (barW + gap) - gap).toFixed(1);
+  return `<svg class="voice-wave-svg" viewBox="0 0 ${totalW} ${h}" preserveAspectRatio="none" width="${totalW}" height="${h}">${bars}</svg>`;
 }
 function fmtVoiceTime(secs) {
   if (!isFinite(secs) || secs < 0) secs = 0;
@@ -1155,7 +1237,7 @@ function fmtVoiceTime(secs) {
 function toggleVoicePlay(btn) {
   const wrap = btn.closest('.voice-msg');
   const audio = wrap.querySelector('audio');
-  const fill = wrap.querySelector('.voice-track-fill');
+  const fill = wrap.querySelector('.voice-wave-fg-clip');
   const timeEl = wrap.querySelector('.voice-time');
   if (chatActiveVoiceAudio && chatActiveVoiceAudio !== audio) {
     chatActiveVoiceAudio.pause(); // only one voice note plays at a time
@@ -1170,13 +1252,14 @@ function toggleVoicePlay(btn) {
     return;
   }
   audio.ontimeupdate = () => {
-    fill.style.width = `${audio.duration ? (audio.currentTime / audio.duration) * 100 : 0}%`;
+    const pct = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
+    fill.style.clipPath = `inset(0 ${100 - pct}% 0 0)`;
     timeEl.textContent = fmtVoiceTime(audio.currentTime);
   };
   audio.onpause = () => { btn.innerHTML = ICON_VOICE_PLAY; };
   audio.onended = () => {
     btn.innerHTML = ICON_VOICE_PLAY;
-    fill.style.width = '0%';
+    fill.style.clipPath = 'inset(0 100% 0 0)';
     timeEl.textContent = fmtVoiceTime(audio.duration);
     if (chatActiveVoiceAudio === audio) chatActiveVoiceAudio = null;
   };
@@ -1269,9 +1352,16 @@ function subscribeChatRealtime(myId, otherId) {
     })
     .on('broadcast', { event: 'typing' }, ({ payload }) => {
       if (!payload || payload.from !== otherId) return;
-      showTypingBubble();
+      showTypingBubble(payload.kind === 'audio' ? 'audio' : 'text');
       if (typingHideTimer) clearTimeout(typingHideTimer);
-      typingHideTimer = setTimeout(hideTypingBubble, 3000);
+      // Recording pings arrive every 2s same as typing, but give audio
+      // a slightly longer grace window — a brief pause mid-recording
+      // (e.g. gathering thoughts) shouldn't flash the bubble away.
+      typingHideTimer = setTimeout(hideTypingBubble, payload.kind === 'audio' ? 4000 : 3000);
+    })
+    .on('broadcast', { event: 'typing-stop' }, ({ payload }) => {
+      if (!payload || payload.from !== otherId) return;
+      hideTypingBubble();
     })
     .subscribe();
 }
@@ -1328,7 +1418,7 @@ async function loadGroupThread(session, root) {
       <div id="chat-record-bar" class="chat-record-bar" hidden>
         <span class="chat-record-dot"></span>
         <span id="chat-record-time" class="chat-record-time">0:00</span>
-        <span class="chat-record-hint">${esc(t('chat.recordVoice'))}</span>
+        <span class="chat-record-hint">&lsaquo; ${esc(t('chat.slideToCancel'))}</span>
         <button type="button" class="chat-record-cancel" title="${esc(t('chat.cancelRecording'))}" aria-label="${esc(t('chat.cancelRecording'))}" onclick="cancelVoiceRecording()">${ICON_TRASH}</button>
         <button type="button" class="chat-record-stop" title="${esc(t('chat.stopRecording'))}" aria-label="${esc(t('chat.stopRecording'))}" onclick="stopVoiceRecording()">${ICON_STOP}</button>
       </div>
@@ -1354,7 +1444,7 @@ async function loadGroupThread(session, root) {
         </div>
         <button type="button" class="chat-hdr-info-btn" aria-label="Chat info" onclick="openGroupInfo()">${ICON_INFO}</button>
       </div>
-      <div class="chat-msgs" id="chat-msgs">${renderGroupMsgsHtml(msgs || [], session.user.id)}</div>
+      <div class="chat-msgs" id="chat-msgs">${renderGroupMsgsHtml(msgs || [], session.user.id, mine ? mine.last_read_at : null)}</div>
       ${composerHtml}
     </div>`;
 
@@ -1372,12 +1462,22 @@ function groupSenderProfile(senderId) {
   return chatGroupMembers.find(m => m.user_id === senderId)?.profile || null;
 }
 
-function renderGroupMsgsHtml(msgs, myId) {
+function renderGroupMsgsHtml(msgs, myId, lastReadAt) {
   let html = '';
   let lastDay = null;
+  // Same "N unread messages" divider as the 1:1 thread, positioned
+  // at the first message that arrived after this member's
+  // last_read_at (and that isn't mine — I don't need reminding about
+  // my own messages) and using last_read_at as the snapshot cutoff
+  // since group unread is tracked per-member, not per-message.
+  const unreadFromIdx = lastReadAt ? msgs.findIndex(m => m.sender_id !== myId && new Date(m.created_at) > new Date(lastReadAt)) : -1;
+  const unreadCount = unreadFromIdx === -1 ? 0 : msgs.slice(unreadFromIdx).filter(m => m.sender_id !== myId).length;
   msgs.forEach((m, i) => {
     const day = chatDayLabel(m.created_at);
     if (day !== lastDay) { html += `<div class="chat-daydivider">${esc(day)}</div>`; lastDay = day; }
+    if (i === unreadFromIdx && unreadCount > 0) {
+      html += `<div class="chat-unread-divider"><span>${unreadCount === 1 ? esc(t('chat.unreadOne')) : esc(t('chat.unreadMany').replace('{n}', unreadCount))}</span></div>`;
+    }
     const prev = msgs[i - 1];
     const next = msgs[i + 1];
     const groupsWithPrev = prev && prev.sender_id === m.sender_id && day === chatDayLabel(prev.created_at)
@@ -1400,12 +1500,12 @@ function groupMsgBubbleHtml(m, myId, group = { start: true, end: true }) {
   const bareMedia = mediaHtml && !hasCaption && m.media_type !== 'audio';
   const sender = groupSenderProfile(m.sender_id);
   const nameHtml = (!mine && group.start && sender) ? `<div class="gm-sender-name">${esc(sender.display_name || sender.username)}${vBadge(sender)}</div>` : '';
-  const bubbleInner = mediaHtml + bodyHtml;
+  const meta = msgMetaHtml(m.created_at, '', bareMedia);
+  const bubbleInner = mediaHtml + bodyHtml + meta;
   return `
   <div class="${cls.join(' ')}" id="msg-${m.id}" data-day="${esc(chatDayLabel(m.created_at))}" data-sender="${esc(m.sender_id)}" data-ts="${esc(m.created_at)}">
     ${nameHtml}
     <div class="msg-bubble${bareMedia ? ' msg-bubble-bare-media' : ''}">${bubbleInner}</div>
-    <span class="msg-time-inline">${chatClockTime(m.created_at)}</span>
   </div>`;
 }
 

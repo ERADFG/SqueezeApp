@@ -77,6 +77,8 @@ const I18N_DICT = {
     'chat.failedToSend': 'Failed to send.', 'chat.typing': 'Typing',
     'chat.today': 'Today', 'chat.yesterday': 'Yesterday', 'chat.sendViaChat': 'Send via Chat',
     'chat.attachMedia': 'Add photo or video', 'chat.recordVoice': 'Record voice message',
+    'chat.unreadOne': '1 unread message', 'chat.unreadMany': '{n} unread messages',
+    'chat.recording': 'recording a voice message…', 'chat.slideToCancel': 'Slide to cancel',
     'chat.stopRecording': 'Stop recording', 'chat.cancelRecording': 'Cancel recording',
     'chat.removeAttachment': 'Remove', 'chat.photo': 'Photo', 'chat.video': 'Video',
     'chat.voiceMessage': 'Voice message', 'chat.uploading': 'Uploading\\u2026',
