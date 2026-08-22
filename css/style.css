@@ -848,7 +848,7 @@ select {
 .comm-inline-form { background:var(--hover-bg); border-radius:var(--r-md); padding:12px; margin:0 0 12px; }
 .comm-inline-form input[type="text"], .comm-inline-form textarea {
   width:100%; box-sizing:border-box; margin-bottom:8px; background:var(--bg);
-  border:1px solid var(--line); border-radius:12px; padding:8px 10px; font:inherit; color:var(--ink);
+  border:1px solid var(--line); border-radius:12px; padding:8px 10px; font:inherit; color:var(--ink); text-align:center;
 }
 .comm-inline-form textarea { resize:vertical; min-height:44px; }
 .comm-inline-form-actions { display:flex; justify-content:flex-end; }
@@ -877,7 +877,7 @@ select {
 .cc-modal .cc-step-body label { font-size:15px; font-weight:800; color:var(--ink); display:block; margin:0 0 8px; }
 .cc-modal .cc-step-body input[type="text"], .cc-modal .cc-step-body textarea {
   width:100%; box-sizing:border-box; margin:0 0 8px; background:var(--bg);
-  border:1px solid var(--line); border-radius:12px; padding:9px 10px; font:inherit; color:var(--ink);
+  border:1px solid var(--line); border-radius:12px; padding:9px 10px; font:inherit; color:var(--ink); text-align:center;
 }
 .cc-step-body textarea { resize:vertical; }
 .cc-modal .comm-inline-form input[type="text"], .cc-modal .comm-inline-form textarea { margin:0 0 8px; width:100%; }
@@ -1062,6 +1062,7 @@ select {
 /* Create/edit-list modal — same .modal shell as the create-community
    modal, just a little taller to fit the Private toggle row. */
 .cl-modal { width:380px; }
+.cl-modal input[type="text"], .cl-modal textarea { text-align:center; }
 
 /* Add/remove-from-Lists popup, opened from a profile's "···" menu */
 .alm-modal { width:380px; max-height:80vh; display:flex; flex-direction:column; }
@@ -3227,6 +3228,21 @@ body.chat-thread-open #chat-fab { display:none; }
   background:var(--maroon); color:#fff; display:flex; align-items:center; justify-content:center;
   cursor:pointer; box-shadow:0 0 0 2px var(--cream-card); transition:background .12s ease;
 }
+/* Same specificity gotcha as `.gcv-upload-box .gcv-avatar-badge` above:
+   `.modal label { margin:0 16px 5px }` (class+type) outranks a bare
+   `.gi-avatar-pick` class rule, so its margin was nudging this badge
+   off the avatar's corner. Scoping under `.gi-avatar-wrap` wins. */
+.gi-avatar-wrap .gi-avatar-pick { margin:0; }
+/* The avatar picture itself is *also* wrapped in its own plain
+   <label for="gi-avatar-file"> (no class) so a click anywhere on the
+   picture opens the file picker too — and that label was catching
+   the same `.modal label` margin, shoving the visible avatar sideways
+   inside the 64x64 box while the corner badge stayed correctly
+   anchored to the box's true edge. Net effect: badge and avatar drift
+   apart, which reads as "the badge is off". #gi-avatar-wrap's id
+   selector guarantees this wins over `.modal label` regardless of
+   source order. */
+#gi-avatar-wrap label { margin:0; display:block; line-height:0; }
 .gi-avatar-pick:hover { background:var(--maroon-dk); }
 .gi-avatar-pick svg { width:13px; height:13px; }
 .gi-edit-details-btn {
@@ -3237,7 +3253,7 @@ body.chat-thread-open #chat-fab { display:none; }
 #gi-details-edit { text-align:left; margin-top:10px; }
 #gi-details-edit input[type="text"], #gi-details-edit textarea {
   width:100%; font:inherit; font-size:14px; padding:8px 11px; border-radius:var(--r-sm);
-  border:1px solid var(--div); background:var(--bg); color:var(--ink); resize:none;
+  border:1px solid var(--div); background:var(--bg); color:var(--ink); resize:none; text-align:center;
 }
 #gi-details-edit input[type="text"]:focus, #gi-details-edit textarea:focus { outline:none; border-color:var(--maroon); }
 /* .gcv-field's default spacing was tuned for the compact "new
