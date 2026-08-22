@@ -58,9 +58,9 @@ const TTV_ICON = {
   pause: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5.5A1.5 1.5 0 018.5 4h1A1.5 1.5 0 0111 5.5v13a1.5 1.5 0 01-1.5 1.5h-1A1.5 1.5 0 017 18.5v-13zM13 5.5A1.5 1.5 0 0114.5 4h1A1.5 1.5 0 0117 5.5v13a1.5 1.5 0 01-1.5 1.5h-1A1.5 1.5 0 0113 18.5v-13z"/></svg>',
   volHigh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h4l5 4v-13l-5 4H4z"/><path d="M16.3 8.5a5 5 0 010 7"/><path d="M18.8 6a8.5 8.5 0 010 12"/></svg>',
   volMuted: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h4l5 4v-13l-5 4H4z"/><path d="M16.5 9.5l4.5 5m0-5l-4.5 5"/></svg>',
-  pip: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><rect x="13" y="12.5" width="6.5" height="4.5" rx="1" fill="currentColor" stroke="none"/></svg>',
-  fsEnter: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
-  fsExit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>',
+  pip: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 4 5.5 12"/><path d="M5.5 6.3V12H11.2"/><path d="M13 11 17 11A2 2 0 0 1 19 13L19 18A2 2 0 0 1 17 20L11 20A2 2 0 0 1 9 18L9 14"/></svg>',
+  fsEnter: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 14.5 4 20M4 20v-4.2M4 20h4.2"/><path d="M14.5 9.5 20 4M20 4v4.2M20 4h-4.2"/></svg>',
+  fsExit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.7 9.5 4.2M9.5 4.2v4.2M9.5 4.2h-4.2"/><path d="M20 14.3 14.5 19.8M14.5 19.8v-4.2M14.5 19.8h4.2"/></svg>',
   check: '<svg class="ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>'
 };
 
