@@ -155,7 +155,7 @@ async function loadSettings() {
         ${toggleRowHtml('notify_follows', 'New followers', 'When someone follows you', s.notify_follows)}
       </div>
 
-      ${settingsRowHtml('content', NAV_ICON.globe, t('settings.language'))}
+      ${settingsRowHtml('content', NAV_ICON.doc, t('settings.language'))}
       <div class="settings-panel" id="panel-content">
         <div class="settings-row">
           <div><div class="lbl">${t('settings.language')}</div></div>
@@ -163,7 +163,7 @@ async function loadSettings() {
         </div>
       </div>
 
-      ${settingsRowHtml('appearance', NAV_ICON.palette, t('settings.appearance'))}
+      ${settingsRowHtml('appearance', NAV_ICON.info, t('settings.appearance'))}
       <div class="settings-panel" id="panel-appearance">
         <p class="sub">${t('settings.appearanceSub')}</p>
         <div class="theme-picker" id="theme-picker">
