@@ -142,6 +142,7 @@ async function loadSettings() {
           </div>
         </div>
         <button type="button" class="pf-btn" style="margin-top:6px;width:auto;padding:8px 16px;" onclick="setupChatKeyBackup()">Set up chat backup</button>
+        <button type="button" class="pf-btn" style="margin-top:6px;margin-left:8px;width:auto;padding:8px 16px;background:var(--input-bg);color:var(--ink);border:1px solid var(--border-input);" onclick="restoreChatBackupNow()">Restore chat backup</button>
         <span id="chat-backup-st" style="display:block;font-size:11px;color:var(--muted);margin-top:6px;"></span>
       </div>
 

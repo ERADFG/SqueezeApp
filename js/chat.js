@@ -1259,6 +1259,27 @@ function fmtVoiceTime(secs) {
   if (!isFinite(secs) || secs < 0) secs = 0;
   return `${Math.floor(secs / 60)}:${String(Math.floor(secs % 60)).padStart(2, '0')}`;
 }
+// Recorded voice notes are webm blobs, and Chrome (and Chromium-based
+// browsers) has a long-standing bug where a freshly recorded webm's
+// .duration reads as Infinity until you seek near the very end once —
+// the container's real duration only gets backfilled at that point.
+// Left unpatched, every percentage-of-duration calculation (the
+// waveform fill, therefore) divides by Infinity and evaluates to 0
+// forever, so the bar plays audio but visually never moves. This
+// forces that one-time seek before wiring up playback tracking.
+function fixInfiniteAudioDuration(audio) {
+  return new Promise(resolve => {
+    if (isFinite(audio.duration) && audio.duration > 0) { resolve(audio.duration); return; }
+    const onTimeUpdate = () => {
+      audio.removeEventListener('timeupdate', onTimeUpdate);
+      audio.currentTime = 0;
+      resolve(audio.duration);
+    };
+    audio.addEventListener('timeupdate', onTimeUpdate);
+    audio.currentTime = 1e101; // way past the end — forces the browser to compute the real duration
+  });
+}
+
 function toggleVoicePlay(btn) {
   const wrap = btn.closest('.voice-msg');
   const audio = wrap.querySelector('audio');
@@ -1268,7 +1289,15 @@ function toggleVoicePlay(btn) {
     chatActiveVoiceAudio.pause(); // only one voice note plays at a time
   }
   if (audio.paused) {
-    audio.play().catch(() => {});
+    const startPlayback = () => { audio.play().catch(() => {}); };
+    if (!isFinite(audio.duration) || audio.duration <= 0) {
+      // Fix the duration once, silently, before actually starting
+      // playback — otherwise the brief seek-to-the-end flashes the
+      // waveform fill to 100% for an instant, which looks broken too.
+      fixInfiniteAudioDuration(audio).then(startPlayback);
+    } else {
+      startPlayback();
+    }
     chatActiveVoiceAudio = audio;
     btn.innerHTML = ICON_VOICE_PAUSE;
   } else {
@@ -1277,7 +1306,7 @@ function toggleVoicePlay(btn) {
     return;
   }
   audio.ontimeupdate = () => {
-    const pct = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
+    const pct = isFinite(audio.duration) && audio.duration > 0 ? (audio.currentTime / audio.duration) * 100 : 0;
     fill.style.clipPath = `inset(0 ${100 - pct}% 0 0)`;
     timeEl.textContent = fmtVoiceTime(audio.currentTime);
   };
@@ -1285,7 +1314,7 @@ function toggleVoicePlay(btn) {
   audio.onended = () => {
     btn.innerHTML = ICON_VOICE_PLAY;
     fill.style.clipPath = 'inset(0 100% 0 0)';
-    timeEl.textContent = fmtVoiceTime(audio.duration);
+    timeEl.textContent = fmtVoiceTime(isFinite(audio.duration) ? audio.duration : 0);
     if (chatActiveVoiceAudio === audio) chatActiveVoiceAudio = null;
   };
 }

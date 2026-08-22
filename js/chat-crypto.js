@@ -153,6 +153,34 @@ async function setupChatKeyBackup() {
   }
 }
 
+// Called from Settings → Privacy → "Restore chat backup". Explicit,
+// on-demand version of the restore flow — only runs when the person
+// taps the button, never automatically on page load.
+async function restoreChatBackupNow() {
+  const statusEl = document.getElementById('chat-backup-st');
+  const setStatus = (msg) => { if (statusEl) statusEl.textContent = msg; };
+  if (!chatCryptoSupported()) { setStatus('Not supported in this browser.'); return; }
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { setStatus('Log in first.'); return; }
+
+  setStatus('Checking for a backup…');
+  let backupStr;
+  try {
+    const { data } = await sb.from('profiles').select('key_backup').eq('id', session.user.id).maybeSingle();
+    backupStr = data?.key_backup;
+  } catch (e) {}
+  if (!backupStr) { setStatus('No chat backup found for this account yet.'); return; }
+
+  const restored = await restoreKeyBackup(backupStr);
+  if (!restored) { setStatus('Cancelled, or passphrase didn\'t work.'); return; }
+  try {
+    localStorage.setItem(CHAT_PRIV_KEY_LS, JSON.stringify(restored.privJwk));
+    localStorage.setItem(CHAT_PUB_KEY_LS, JSON.stringify(restored.pubJwk));
+  } catch (e) {}
+  _myKeypairPromise = null; // drop the cached (freshly-generated) keypair so the restored one is used from here on
+  setStatus('Restored — reload the page and your old chats should decrypt.');
+}
+
 function chatCryptoSupported() {
   return !!(window.crypto && window.crypto.subtle);
 }
@@ -172,27 +200,16 @@ function ensureMyKeypair(myUserId) {
       if (storedPriv && storedPub) { privJwk = JSON.parse(storedPriv); pubJwk = JSON.parse(storedPub); }
     } catch (e) {}
 
-    // No key on this device yet — before generating a brand new
-    // (incompatible) one, check whether this account already has a
-    // passphrase-backed-up key from another device. Restoring it here
-    // is what actually fixes old threads showing "can't decrypt this
-    // message on this device": same private key everywhere = the same
-    // derived shared key with every contact, so history opens back up.
-    if ((!privJwk || !pubJwk) && myUserId) {
-      try {
-        const { data } = await sb.from('profiles').select('key_backup').eq('id', myUserId).maybeSingle();
-        if (data?.key_backup) {
-          const restored = await restoreKeyBackup(data.key_backup);
-          if (restored) {
-            privJwk = restored.privJwk; pubJwk = restored.pubJwk;
-            try {
-              localStorage.setItem(CHAT_PRIV_KEY_LS, JSON.stringify(privJwk));
-              localStorage.setItem(CHAT_PUB_KEY_LS, JSON.stringify(pubJwk));
-            } catch (e) {}
-          }
-        }
-      } catch (e) {} // no backup column yet, or offline — fall through to generating fresh below
-    }
+    // NOTE: restoring a passphrase-backed-up key is intentionally NOT
+    // automatic here — it used to prompt on every single page load
+    // whenever this device had no local key yet, which interrupted
+    // normal chat use with an unwanted popup. Restoring now only
+    // happens when the person explicitly asks for it (Settings →
+    // Privacy → "Restore chat backup", see restoreChatBackupNow()
+    // below) or from the in-thread "unlock old messages" prompt.
+    // Until then this device just gets its own fresh keypair, exactly
+    // like before the backup feature existed — new messages send and
+    // receive normally either way.
 
     if (!privJwk || !pubJwk) {
       const kp = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveKey']);
