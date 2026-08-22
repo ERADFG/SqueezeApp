@@ -79,6 +79,14 @@ const ICON_CHANNEL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 // is symmetric top-to-bottom/left-to-right, so simple flex centering
 // (align-items/justify-content:center) actually looks centered.
 const ICON_CHANNEL_AVATAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4a1 1 0 0 0 1 1h2l4.5 3.4a1 1 0 0 0 1.6-.8V6.4a1 1 0 0 0-1.6-.8L6 9H4a1 1 0 0 0-1 1Z"/><path d="M17.5 9a4 4 0 0 1 0 6"/><path d="M20 6.5a7.5 7.5 0 0 1 0 11"/></svg>';
+// Default group/channel avatar placeholder before a picture is chosen —
+// a plain profile silhouette, same for both kinds (matches the approved
+// "New channel" modal redesign).
+const ICON_AVATAR_PLACEHOLDER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.1-4.4 3.9-6.6 8-6.6s6.9 2.2 8 6.6"/></svg>';
+// Plain plus glyph for the avatar-pick badge — replaces the camera icon
+// there per the redesign; ICON_CAMERA is still used elsewhere (group-info
+// "change picture") where a camera is the clearer affordance.
+const ICON_PLUS_PLAIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
 const ICON_INFO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg>';
 const ICON_GLOBE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 6 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-6-3.8-9s1.3-6.3 3.8-9Z"/></svg>';
 const ICON_LOCK_SMALL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
@@ -509,8 +517,8 @@ function openCreateConversationModal(kind) {
       </div>
       <div class="gcv-identity-row">
         <span class="gcv-avatar-wrap" id="gcv-avatar-wrap">
-          <label class="gcv-avatar-preview" id="gcv-avatar-preview" for="gcv-avatar-file">${kind === 'channel' ? ICON_CHANNEL_AVATAR : ICON_GROUP}</label>
-          <label class="gcv-avatar-pick" for="gcv-avatar-file" title="Choose a picture">${ICON_CAMERA}</label>
+          <label class="gcv-avatar-preview" id="gcv-avatar-preview" for="gcv-avatar-file">${ICON_AVATAR_PLACEHOLDER}</label>
+          <label class="gcv-avatar-pick" for="gcv-avatar-file" title="Choose a picture">${ICON_PLUS_PLAIN}</label>
           <input type="file" id="gcv-avatar-file" accept="image/*" style="display:none;">
         </span>
         <div class="gcv-field gcv-name-field">
@@ -596,12 +604,12 @@ function gcvSwitchKind(kind) {
   if (toggleTxt) toggleTxt.innerHTML = `Public ${kind}<small>Anyone can find and join without an invite</small>`;
   const btn = document.getElementById('gcv-create-btn');
   if (btn) btn.textContent = `Create ${isChannel ? 'channel' : 'group'}`;
-  // Only swap the avatar placeholder glyph if no picture has been
-  // chosen yet — once someone's picked a real image, switching
-  // Group<->Channel shouldn't wipe it back to the generic icon.
+  // Placeholder glyph is the same plain profile icon for both kinds now
+  // (see ICON_AVATAR_PLACEHOLDER), so switching Group<->Channel no longer
+  // needs to swap it — only guard against clobbering a real chosen picture.
   if (!gcvAvatarBlob) {
     const prev = document.getElementById('gcv-avatar-preview');
-    if (prev) prev.innerHTML = isChannel ? ICON_CHANNEL_AVATAR : ICON_GROUP;
+    if (prev) prev.innerHTML = ICON_AVATAR_PLACEHOLDER;
   }
 }
 

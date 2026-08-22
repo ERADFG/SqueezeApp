@@ -3309,11 +3309,19 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
    content, and max-height is a hard backstop. */
 .chat-typing-bubble {
   padding:11px 16px; width:fit-content; max-width:fit-content; height:auto; max-height:38px;
-  flex:0 0 auto; align-self:flex-end; box-sizing:border-box;
+  min-height:38px; flex:0 0 auto; align-self:flex-end; box-sizing:border-box;
+  /* Was a plain block, so the dots (display:flex but with no cross-
+     axis reference) could end up sitting at the top of the 38px box
+     instead of centred, and the whole row wasn't guaranteed to clip
+     to the bubble — on some flex contexts that showed as a big pale
+     bubble with the dots rendering low/outside it. Making the bubble
+     itself the flex container fixes both: it centres its one child
+     and clips anything that doesn't fit. */
+  display:inline-flex; align-items:center; justify-content:center; overflow:hidden;
 }
 #chat-typing-row { flex:0 0 auto; }
 #chat-typing-row .msg-bubble { flex:0 0 auto; }
-.chat-typing-dots { display:flex; align-items:center; gap:4px; }
+.chat-typing-dots { display:flex; align-items:center; gap:4px; line-height:0; }
 .chat-typing-dots span { width:6px; height:6px; border-radius:50%; background:var(--muted); opacity:.5; animation:oc-typing-bounce 1.2s infinite ease-in-out; }
 .chat-typing-dots span:nth-child(2) { animation-delay:.15s; }
 .chat-typing-dots span:nth-child(3) { animation-delay:.3s; }
