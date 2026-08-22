@@ -519,7 +519,8 @@ function openCreateConversationModal(kind) {
         : 'Everyone you add can post and see the conversation.'}</p>
       <div class="gcv-upload-box">
         <span class="gcv-avatar-wrap" id="gcv-avatar-wrap">
-          <label class="gcv-avatar-preview" id="gcv-avatar-preview" for="gcv-avatar-file">${ICON_PLUS_PLAIN}</label>
+          <label class="gcv-avatar-preview" id="gcv-avatar-preview" for="gcv-avatar-file">${ICON_AVATAR_PLACEHOLDER}</label>
+          <label class="gcv-avatar-badge" for="gcv-avatar-file" aria-hidden="true">${ICON_PLUS_PLAIN}</label>
           <input type="file" id="gcv-avatar-file" accept="image/*" style="display:none;">
         </span>
         <span class="gcv-upload-txt" id="gcv-upload-txt">Add a picture<small>Optional</small></span>
@@ -606,7 +607,7 @@ function gcvSwitchKind(kind) {
   // clobbering a real chosen picture.
   if (!gcvAvatarBlob) {
     const prev = document.getElementById('gcv-avatar-preview');
-    if (prev) prev.innerHTML = ICON_PLUS_PLAIN;
+    if (prev) prev.innerHTML = ICON_AVATAR_PLACEHOLDER;
   }
 }
 

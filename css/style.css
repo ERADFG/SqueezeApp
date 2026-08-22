@@ -3079,11 +3079,30 @@ body.chat-thread-open #chat-fab { display:none; }
    squashing the circle into an oval. */
 .gcv-upload-box .gcv-avatar-preview {
   width:56px; height:56px; margin:0; box-sizing:border-box; border-radius:50%; display:flex; align-items:center; justify-content:center;
-  background:var(--maroon); color:#fff; overflow:hidden; cursor:pointer; transition:background .12s ease;
+  background:var(--div); color:var(--muted); overflow:hidden; cursor:pointer; transition:background .12s ease;
 }
-.gcv-avatar-preview:hover { background:var(--maroon-dk); }
-.gcv-avatar-preview svg { width:22px; height:22px; flex-shrink:0; }
+.gcv-avatar-preview:hover { background:var(--hover-bg-strong, var(--div)); }
+.gcv-avatar-preview svg { width:30px; height:30px; flex-shrink:0; }
 .gcv-avatar-preview img { width:100%; height:100%; object-fit:cover; display:block; }
+/* Small circular "add" badge pinned to the bottom-right corner of the
+   avatar circle — mirrors the person-silhouette-plus-badge default
+   avatar glyph used elsewhere (contacts, empty profile pics): a plain
+   picture circle with a small plus badge overlapping its edge, ringed
+   in the card background so it reads as a separate layer rather than
+   bleeding into the photo/icon beneath it. */
+.gcv-avatar-badge {
+  position:absolute; right:-2px; bottom:-2px; width:20px; height:20px; border-radius:50%;
+  background:var(--maroon); color:#fff; display:flex; align-items:center; justify-content:center;
+  box-sizing:border-box; border:2px solid var(--hover-bg); cursor:pointer; transition:background .12s ease; pointer-events:auto;
+}
+/* `.modal label { margin:0 16px 5px }` outranks the bare-class rule
+   above on specificity (class+type beats class alone), so the plain
+   `margin:0` here was silently losing and leaving the badge shifted
+   off its corner. Scoping under `.gcv-upload-box` (like the avatar
+   circle fix above) wins outright instead of relying on !important. */
+.gcv-upload-box .gcv-avatar-badge { margin:0; }
+.gcv-avatar-badge:hover { background:var(--maroon-dk); }
+.gcv-avatar-badge svg { width:10px; height:10px; flex-shrink:0; }
 .gcv-upload-txt { font-size:14.5px; font-weight:700; color:var(--ink); }
 .gcv-upload-txt small { display:block; font-size:12px; font-weight:500; color:var(--muted); margin-top:2px; }
 
