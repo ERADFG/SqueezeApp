@@ -3040,55 +3040,113 @@ body.chat-thread-open #chat-fab { display:none; }
   .chat-fab-sheet button { padding:13px 16px; font-size:15px; }
 }
 
-/* ── create group/channel modal ── */
-.gcv-modal { width:400px; max-width:92vw; padding:20px 24px 22px; text-align:left; box-sizing:border-box; }
-.gcv-modal h2 { padding:0; margin:0 0 6px; font-size:19px; }
-.gcv-modal .dc-desc { text-align:left; margin-bottom:18px; color:var(--muted); line-height:1.4; }
-.gcv-kind-tabs { display:flex; gap:4px; margin-bottom:20px; background:var(--hover-bg); border-radius:999px; padding:4px; }
+/* ── create group/channel modal — "modern card" redesign, styled
+   after a WeTransfer-style create-transfer sheet: bold oversized
+   title with a filled circular close button, a segmented Group/
+   Channel switch, flat light-gray "cards" for each section (upload,
+   fields, settings) instead of bordered inputs, and a pill button
+   that goes from muted/disabled to solid brand color once the form
+   is valid. ── */
+.gcv-modal { width:400px; max-width:92vw; padding:22px 20px 20px; text-align:left; box-sizing:border-box; }
+.gcv-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; }
+.gcv-modal h2 { padding:0; margin:0; font-size:24px; font-weight:800; letter-spacing:-.01em; }
+.gcv-close {
+  flex:none; width:32px; height:32px; border-radius:50%; background:var(--hover-bg); color:var(--ink);
+  display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background .12s ease;
+}
+.gcv-close svg { width:15px; height:15px; }
+.gcv-close:hover { background:var(--div); }
+.gcv-kind-tabs { display:flex; gap:4px; margin-bottom:16px; background:var(--hover-bg); border-radius:999px; padding:4px; }
 .gcv-kind-tabs button {
   flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
-  border:none; background:none; padding:9px 10px; border-radius:999px; font-family:inherit;
-  font-size:13.5px; font-weight:700; color:var(--muted); cursor:pointer; transition:background .15s ease, color .15s ease, box-shadow .15s ease;
+  border:none; background:none; padding:10px 10px; border-radius:999px; font-family:inherit;
+  font-size:14px; font-weight:700; color:var(--muted); cursor:pointer; transition:background .15s ease, color .15s ease, box-shadow .15s ease;
 }
 .gcv-kind-tabs button svg { width:15px; height:15px; flex:none; }
 .gcv-kind-tabs button.cur { background:var(--cream-card); color:var(--ink); box-shadow:0 1px 4px rgba(15,20,25,.14); }
-/* ── create group/channel modal: avatar + name row ── */
-.gcv-identity-row { display:flex; align-items:flex-start; gap:14px; margin-bottom:18px; }
-/* `<span>` by default — position:relative on a plain inline element
-   doesn't reliably establish a normal box for width/height, which is
-   why the camera badge below used to land outside/off from the
-   circle instead of docked to its corner. display:inline-block makes
-   this a real positioning context. Nudged down a couple px so the
-   72px circle lines up optically with the Name *input* next to it,
-   not with its label sitting above that input. */
-.gcv-avatar-wrap {
-  position:relative; display:inline-flex; flex:none; box-sizing:border-box;
-  width:72px; height:72px; min-width:72px; min-height:72px; max-width:72px; max-height:72px;
-  margin-top:19px;
+.gcv-modal .dc-desc { text-align:left; margin:0 2px 16px; color:var(--muted); line-height:1.4; font-size:13px; }
+
+/* Upload "card" — big flat gray rounded box with a centered circular
+   plus button, mirroring a WeTransfer-style "Upload files" tile. */
+.gcv-upload-box {
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;
+  background:var(--hover-bg); border-radius:18px; padding:22px 16px; margin-bottom:12px; text-align:center;
 }
-.gcv-avatar-preview {
-  width:72px; height:72px; min-width:72px; min-height:72px; box-sizing:border-box;
-  border-radius:50%; display:flex; align-items:center; justify-content:center;
-  background:var(--maroon-tint); color:var(--maroon); overflow:hidden; box-shadow:inset 0 0 0 1px var(--div);
-  cursor:pointer; transition:filter .12s ease;
+.gcv-avatar-wrap { position:relative; display:inline-flex; flex:none; box-sizing:border-box; width:56px; height:56px; }
+/* Scoped under .gcv-upload-box so this beats the generic `.modal
+   label { display:block; margin:... }` rule (higher specificity),
+   which was otherwise overriding this label's flex layout and
+   squashing the circle into an oval. */
+.gcv-upload-box .gcv-avatar-preview {
+  width:56px; height:56px; margin:0; box-sizing:border-box; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  background:var(--maroon); color:#fff; overflow:hidden; cursor:pointer; transition:background .12s ease;
 }
-.gcv-avatar-wrap:hover .gcv-avatar-preview { filter:brightness(.94); }
-.gcv-avatar-preview svg { width:28px; height:28px; flex-shrink:0; }
+.gcv-avatar-preview:hover { background:var(--maroon-dk); }
+.gcv-avatar-preview svg { width:22px; height:22px; flex-shrink:0; }
 .gcv-avatar-preview img { width:100%; height:100%; object-fit:cover; display:block; }
-/* Fixed-size badge, locked with min/max so the file-input <label> can
-   never grow past its intended 24px — this is what used to make the
-   camera badge balloon and overlap into the middle of the circle
-   instead of sitting docked in the corner. */
-.gcv-avatar-pick {
-  position:absolute; right:0; bottom:0; box-sizing:border-box;
-  width:24px; height:24px; min-width:24px; min-height:24px; max-width:24px; max-height:24px;
-  border-radius:50%; background:var(--maroon); color:#fff; display:flex; align-items:center; justify-content:center;
-  padding:0; margin:0; line-height:0; overflow:hidden; cursor:pointer;
-  box-shadow:0 0 0 3px var(--cream-card); transition:background .12s ease; z-index:2;
+.gcv-upload-txt { font-size:14.5px; font-weight:700; color:var(--ink); }
+.gcv-upload-txt small { display:block; font-size:12px; font-weight:500; color:var(--muted); margin-top:2px; }
+
+/* Flat "pill" fields — no visible border, just a filled gray rounded
+   box, placeholder doing the labeling (WeTransfer's Email / Title-
+   and-message rows) instead of a separate <label> above each one.
+   Text is centered in the pill (name/description); the char counter
+   is its own small caption under the pill rather than sitting inside
+   it, so it never overlaps what's typed. */
+.gcv-pill-field { margin-bottom:4px; }
+/* :not(.gcv-pill-field-search) keeps this centered-text rule from
+   also winning (by specificity, regardless of source order) over the
+   member-search field's own left-aligned input just below — that
+   mismatch was making "Add members by username" render centered
+   too. */
+.gcv-pill-field:not(.gcv-pill-field-search) input[type="text"], .gcv-pill-field textarea, .gcv-pill-field:not(.gcv-pill-field-search) input:not([type]) {
+  width:100%; max-width:100%; box-sizing:border-box; font:inherit; font-size:15px; padding:14px 16px; border-radius:16px;
+  border:none; background:var(--hover-bg); color:var(--ink); resize:none; transition:box-shadow .12s ease; text-align:center;
 }
-.gcv-avatar-pick:hover { background:var(--maroon-dk); }
-.gcv-avatar-pick svg { display:block; width:12px; height:12px; min-width:12px; flex-shrink:0; pointer-events:none; }
-.gcv-identity-row .gcv-name-field { flex:1; min-width:0; margin-bottom:0; margin-top:2px; }
+.gcv-pill-field textarea { min-height:48px; padding-top:14px; }
+.gcv-pill-field input::placeholder, .gcv-pill-field textarea::placeholder { color:var(--muted); }
+.gcv-pill-field input:focus, .gcv-pill-field textarea:focus { outline:none; box-shadow:inset 0 0 0 2px var(--maroon); }
+.gcv-pill-field-search { display:flex; align-items:center; gap:10px; background:var(--hover-bg); border-radius:16px; padding:0 16px; margin-bottom:10px; }
+.gcv-pill-field-search svg { flex:none; width:18px; height:18px; color:var(--muted); }
+.gcv-pill-field-search input { flex:1; min-width:0; background:none; border:none; padding:14px 0; font:inherit; font-size:15px; color:var(--ink); text-align:left; }
+.gcv-pill-field-search input:focus { outline:none; }
+.gcv-pill-field-search:focus-within { box-shadow:inset 0 0 0 2px var(--maroon); }
+.gcv-pill-charcount { display:block; text-align:right; font-size:11px; color:var(--muted); margin:4px 4px 10px; }
+.gcv-pill-charcount.gcv-charcount-limit { color:var(--maroon); font-weight:700; }
+
+/* Setting row — flat gray pill with an icon chip on the left, label
+   in the middle, and the control (toggle here) on the right, same
+   shape as a WeTransfer "Expires in / Downloads" row. */
+.gcv-setting-row { display:flex; align-items:center; gap:12px; background:var(--hover-bg); border-radius:16px; padding:12px 16px; margin-bottom:10px; }
+.gcv-setting-icon { flex:none; width:30px; height:30px; border-radius:50%; background:var(--cream-card); color:var(--muted); display:flex; align-items:center; justify-content:center; }
+.gcv-setting-icon svg { width:15px; height:15px; flex-shrink:0; }
+.gcv-setting-txt { flex:1; min-width:0; font-size:14px; color:var(--ink); font-weight:700; }
+.gcv-setting-txt small { display:block; font-size:11.5px; color:var(--muted); font-weight:500; margin-top:1px; }
+
+.gcv-members-picked { display:flex; flex-wrap:wrap; gap:6px; margin:0 2px 10px; }
+.gcv-chip { display:inline-flex; align-items:center; gap:6px; background:var(--hover-bg); border-radius:999px; padding:4px 6px 4px 4px; font-size:12.5px; font-weight:700; }
+.gcv-chip img { width:20px; height:20px; border-radius:50%; }
+.gcv-chip button { border:none; background:none; color:var(--muted); cursor:pointer; width:16px; height:16px; display:flex; align-items:center; justify-content:center; padding:0; }
+.gcv-chip button svg { width:12px; height:12px; }
+.gcv-member-results { max-height:150px; overflow-y:auto; background:var(--hover-bg); border-radius:16px; margin:-4px 2px 10px; }
+.gcv-member-results:empty { display:none; margin:0; }
+.gcv-member-row { display:flex; align-items:center; gap:8px; padding:9px 12px; cursor:pointer; transition:background .1s ease; }
+.gcv-member-row:hover { background:var(--div); }
+.gcv-member-row img { width:26px; height:26px; border-radius:50%; }
+.gcv-member-row .ulrow-txt { min-width:0; }
+
+.gcv-create-btn {
+  width:100%; padding:15px 14px; border-radius:16px; font-size:16px; font-weight:800; border:none; cursor:pointer;
+  background:var(--maroon); color:#fff; margin-top:6px; transition:background-color .15s ease, opacity .15s ease, color .15s ease;
+}
+.gcv-create-btn:hover:not(:disabled) { background:var(--maroon-dk); }
+.gcv-create-btn:disabled { background:var(--div); color:var(--muted); cursor:default; }
+.gcv-modal .errmsg { margin:0 2px 10px; }
+
+/* ── legacy field/toggle styles — still used by the group-info "Edit
+   name & description" inline form (giToggleEditDetails), which wasn't
+   part of the create-modal redesign above and keeps its original
+   bordered-field look. ── */
 .gcv-field { margin-bottom:16px; }
 .gcv-field label { display:block; font-size:12px; font-weight:700; color:var(--muted); margin-bottom:5px; }
 .gcv-field input[type="text"], .gcv-field textarea {
@@ -3098,30 +3156,11 @@ body.chat-thread-open #chat-fab { display:none; }
 .gcv-field input[type="text"]:focus, .gcv-field textarea:focus { outline:none; border-color:var(--maroon); }
 .gcv-charcount { display:block; text-align:right; font-size:11px; color:var(--muted); margin-top:4px; }
 .gcv-charcount.gcv-charcount-limit { color:var(--maroon); font-weight:700; }
-/* Bordered off from the fields above/below (instead of just relying
-   on margin) so this reads as its own distinct setting rather than
-   floating ambiguously between the description box and the member
-   search — same visual grouping cue .gcv-modal's other sections use. */
 .gcv-toggle-row { display:flex; align-items:center; gap:12px; padding:14px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); margin-bottom:16px; }
 .gcv-toggle-icon { flex:none; width:34px; height:34px; border-radius:50%; background:var(--maroon-tint); color:var(--maroon); display:flex; align-items:center; justify-content:center; }
 .gcv-toggle-icon svg { width:17px; height:17px; flex-shrink:0; }
 .gcv-toggle-txt { flex:1; min-width:0; font-size:13.5px; color:var(--ink); font-weight:600; }
 .gcv-toggle-txt small { display:block; font-size:11.5px; color:var(--muted); font-weight:500; margin-top:1px; }
-.gcv-members-picked { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
-.gcv-chip { display:inline-flex; align-items:center; gap:6px; background:var(--hover-bg); border-radius:999px; padding:4px 6px 4px 4px; font-size:12.5px; font-weight:700; }
-.gcv-chip img { width:20px; height:20px; border-radius:50%; }
-.gcv-chip button { border:none; background:none; color:var(--muted); cursor:pointer; width:16px; height:16px; display:flex; align-items:center; justify-content:center; padding:0; }
-.gcv-chip button svg { width:12px; height:12px; }
-.gcv-member-results { max-height:150px; overflow-y:auto; border:1px solid var(--div); border-radius:var(--r-sm); margin-top:6px; }
-.gcv-member-results:empty { display:none; }
-.gcv-member-row { display:flex; align-items:center; gap:8px; padding:8px 10px; cursor:pointer; transition:background .1s ease; }
-.gcv-member-row:hover { background:var(--hover-bg); }
-.gcv-member-row img { width:26px; height:26px; border-radius:50%; }
-.gcv-member-row .ulrow-txt { min-width:0; }
-.gcv-create-btn { width:100%; padding:11px 14px; border-radius:999px; font-size:15px; font-weight:800; border:none; cursor:pointer; background:var(--maroon); color:#fff; transition:background-color .12s ease, opacity .12s ease; }
-.gcv-create-btn:hover { background:var(--maroon-dk); }
-.gcv-create-btn:disabled { opacity:.55; cursor:default; }
-.gcv-modal .errmsg { margin:0 0 10px; }
 
 /* ── group/channel row in the conversation list — same .conv-row
    shell, plus a small kind badge over the group avatar. ── */

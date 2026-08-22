@@ -506,46 +506,43 @@ function openCreateConversationModal(kind) {
   bg.onclick = e => { if (e.target === bg) closeCreateConversationModal(); };
   bg.innerHTML = `
     <div class="modal gcv-modal" role="dialog" aria-modal="true">
-      <a class="modal-close" href="#" onclick="event.preventDefault();closeCreateConversationModal();">${ICON_CLOSE}</a>
-      <h2 id="gcv-title">New ${kind === 'channel' ? 'channel' : 'group'}</h2>
-      <p class="dc-desc" id="gcv-desc-text">${kind === 'channel'
-        ? 'Only you (and any admins you add) can post. Everyone else just reads — like a broadcast list.'
-        : 'Everyone you add can post and see the conversation.'}</p>
+      <div class="gcv-head">
+        <h2 id="gcv-title">New ${kind === 'channel' ? 'channel' : 'group'}</h2>
+        <a class="gcv-close" href="#" onclick="event.preventDefault();closeCreateConversationModal();" aria-label="Close">${ICON_CLOSE}</a>
+      </div>
       <div class="gcv-kind-tabs" role="tablist">
         <button type="button" id="gcv-tab-group" class="${kind !== 'channel' ? 'cur' : ''}" onclick="gcvSwitchKind('group')">${ICON_GROUP} Group</button>
         <button type="button" id="gcv-tab-channel" class="${kind === 'channel' ? 'cur' : ''}" onclick="gcvSwitchKind('channel')">${ICON_CHANNEL} Channel</button>
       </div>
-      <div class="gcv-identity-row">
+      <p class="dc-desc" id="gcv-desc-text">${kind === 'channel'
+        ? 'Only you (and any admins you add) can post. Everyone else just reads — like a broadcast list.'
+        : 'Everyone you add can post and see the conversation.'}</p>
+      <div class="gcv-upload-box">
         <span class="gcv-avatar-wrap" id="gcv-avatar-wrap">
-          <label class="gcv-avatar-preview" id="gcv-avatar-preview" for="gcv-avatar-file">${ICON_AVATAR_PLACEHOLDER}</label>
-          <label class="gcv-avatar-pick" for="gcv-avatar-file" title="Choose a picture">${ICON_PLUS_PLAIN}</label>
+          <label class="gcv-avatar-preview" id="gcv-avatar-preview" for="gcv-avatar-file">${ICON_PLUS_PLAIN}</label>
           <input type="file" id="gcv-avatar-file" accept="image/*" style="display:none;">
         </span>
-        <div class="gcv-field gcv-name-field">
-          <label for="gcv-name">Name</label>
-          <input type="text" id="gcv-name" maxlength="${GCV_NAME_MAX}" placeholder="${kind === 'channel' ? 'e.g. Announcements' : 'e.g. Weekend plans'}" oninput="gcvUpdateCreateBtn();gcvUpdateCharCount('gcv-name','gcv-name-count',${GCV_NAME_MAX})">
-          <span class="gcv-charcount" id="gcv-name-count">0/${GCV_NAME_MAX}</span>
-        </div>
+        <span class="gcv-upload-txt" id="gcv-upload-txt">Add a picture<small>Optional</small></span>
       </div>
-      <div class="gcv-field">
-        <label for="gcv-desc">Description <span style="font-weight:400;">(optional)</span></label>
-        <textarea id="gcv-desc" rows="2" maxlength="${GCV_DESC_MAX}" placeholder="What's this ${kind} about?" oninput="gcvUpdateCharCount('gcv-desc','gcv-desc-count',${GCV_DESC_MAX})"></textarea>
-        <span class="gcv-charcount" id="gcv-desc-count">0/${GCV_DESC_MAX}</span>
+      <div class="gcv-pill-field">
+        <input type="text" id="gcv-name" maxlength="${GCV_NAME_MAX}" placeholder="Name" oninput="gcvUpdateCreateBtn();gcvUpdateCharCount('gcv-name','gcv-name-count',${GCV_NAME_MAX})">
+        <span class="gcv-pill-charcount" id="gcv-name-count">0/${GCV_NAME_MAX}</span>
       </div>
-      <div class="gcv-toggle-row">
-        <span class="gcv-toggle-icon">${ICON_GLOBE}</span>
-        <span class="gcv-toggle-txt" id="gcv-toggle-txt">Public ${kind}<small>Anyone can find and join without an invite</small></span>
+      <div class="gcv-pill-field gcv-pill-field-area">
+        <textarea id="gcv-desc" rows="1" maxlength="${GCV_DESC_MAX}" placeholder="Description (optional)" oninput="gcvUpdateCharCount('gcv-desc','gcv-desc-count',${GCV_DESC_MAX})"></textarea>
+        <span class="gcv-pill-charcount" id="gcv-desc-count">0/${GCV_DESC_MAX}</span>
+      </div>
+      <div class="gcv-setting-row">
+        <span class="gcv-setting-icon">${ICON_GLOBE}</span>
+        <span class="gcv-setting-txt" id="gcv-toggle-txt">Public ${kind}<small>Anyone can find and join without an invite</small></span>
         <label class="toggle"><input type="checkbox" id="gcv-public"><span class="toggle-track"></span></label>
       </div>
-      <div class="gcv-field">
-        <label for="gcv-member-search">Add members</label>
-        <div class="xsearch" style="margin:0;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
-          <input id="gcv-member-search" placeholder="Search by username" oninput="gcvSearchMembers(this.value)">
-        </div>
-        <div class="gcv-member-results" id="gcv-member-results"></div>
-        <div class="gcv-members-picked" id="gcv-members-picked"></div>
+      <div class="gcv-pill-field gcv-pill-field-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+        <input id="gcv-member-search" placeholder="Add members by username" oninput="gcvSearchMembers(this.value)">
       </div>
+      <div class="gcv-member-results" id="gcv-member-results"></div>
+      <div class="gcv-members-picked" id="gcv-members-picked"></div>
       <div class="errmsg" id="gcv-err" style="display:none;"></div>
       <input type="hidden" id="gcv-kind" value="${esc(kind)}">
       <button type="button" class="gcv-create-btn" id="gcv-create-btn" onclick="createConversation()" disabled>Create ${kind === 'channel' ? 'channel' : 'group'}</button>
@@ -597,19 +594,19 @@ function gcvSwitchKind(kind) {
     ? 'Only you (and any admins you add) can post. Everyone else just reads — like a broadcast list.'
     : 'Everyone you add can post and see the conversation.';
   const nameEl = document.getElementById('gcv-name');
-  if (nameEl) nameEl.placeholder = isChannel ? 'e.g. Announcements' : 'e.g. Weekend plans';
+  if (nameEl) nameEl.placeholder = 'Name';
   const descField = document.getElementById('gcv-desc');
-  if (descField) descField.placeholder = `What's this ${kind} about?`;
+  if (descField) descField.placeholder = 'Description (optional)';
   const toggleTxt = document.getElementById('gcv-toggle-txt');
   if (toggleTxt) toggleTxt.innerHTML = `Public ${kind}<small>Anyone can find and join without an invite</small>`;
   const btn = document.getElementById('gcv-create-btn');
   if (btn) btn.textContent = `Create ${isChannel ? 'channel' : 'group'}`;
-  // Placeholder glyph is the same plain profile icon for both kinds now
-  // (see ICON_AVATAR_PLACEHOLDER), so switching Group<->Channel no longer
-  // needs to swap it — only guard against clobbering a real chosen picture.
+  // Upload-box plus glyph is identical for both kinds, so switching
+  // Group<->Channel no longer needs to swap it — only guard against
+  // clobbering a real chosen picture.
   if (!gcvAvatarBlob) {
     const prev = document.getElementById('gcv-avatar-preview');
-    if (prev) prev.innerHTML = ICON_AVATAR_PLACEHOLDER;
+    if (prev) prev.innerHTML = ICON_PLUS_PLAIN;
   }
 }
 
