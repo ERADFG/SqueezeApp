@@ -568,9 +568,9 @@ const ICON = {
   reply:    '<svg viewBox="0 0 24 24"><path d="M1.75 10.1C1.75 5.68 5.33 2.1 9.75 2.1h4.4c4.5 0 8.15 3.64 8.15 8.15 0 2.97-1.61 5.7-4.2 7.13l-8.06 4.47v-3.7h-.07c-4.5.1-8.22-3.53-8.22-8.05Z" stroke-linejoin="round"/></svg>',
   heart:    '<svg viewBox="0 0 24 24"><path d="M12 6.24C10.4 4.4 7.85 3.9 5.8 5.1 3.4 6.5 2.66 9.6 4.24 12.15c1.9 3.06 4.9 5.5 7.76 7.6 2.86-2.1 5.86-4.54 7.76-7.6 1.58-2.55.84-5.65-1.56-7.05-2.05-1.2-4.6-.7-6.2 1.14z" stroke-linejoin="round"/></svg>',
   views:    '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="3" y="12.5" width="3" height="8.5" rx="1.2"/><rect x="8.5" y="15.5" width="3" height="5.5" rx="1.2"/><rect x="14" y="7" width="3" height="14" rx="1.2"/><rect x="19.5" y="14" width="3" height="7" rx="1.2"/></svg>',
-  share:    '<svg viewBox="0 0 24 24"><path d="M4 17c0-6.6 4.4-11 11-11h2.3" stroke-linecap="round"/><path d="m13.5 2.2 4 3.8-4 3.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  share:    '<svg viewBox="0 0 24 24"><path d="M4 15.6C4 9.75 8.7 5 14.5 5h1.6" stroke-linecap="round"/><path d="m14.3 1 5.7 4-5.7 4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   menu:     '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>',
-  bookmark: '<svg viewBox="0 0 24 24"><path d="M7 4.75h10a1.25 1.25 0 0 1 1.25 1.25v13.5a.6.6 0 0 1-.95.48L12 15.9l-5.3 4.08a.6.6 0 0 1-.95-.48V6a1.25 1.25 0 0 1 1.25-1.25Z" stroke-linejoin="round"/></svg>',
+  bookmark: '<svg viewBox="0 0 24 24"><path d="M7.25 4.75h9.5a2 2 0 0 1 2 2v11.9c0 .97-1.1 1.53-1.9.97L12 15.7l-4.85 3.92c-.8.56-1.9 0-1.9-.97V6.75a2 2 0 0 1 2-2Z" stroke-linejoin="round"/></svg>',
   repost:   '<svg viewBox="0 0 24 24"><path d="M17 1.5 21 5.5l-4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 11.5v-2a4 4 0 0 1 4-4h14" stroke-linecap="round"/><path d="M7 22.5 3 18.5l4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12.5v2a4 4 0 0 1-4 4H3" stroke-linecap="round"/></svg>',
   quote:    '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M6.5 6.2c-2.3 1.4-3.7 3.5-3.7 6 0 2.4 1.6 3.9 3.5 3.9 1.75 0 3-1.3 3-2.95 0-1.55-1.1-2.75-2.6-2.75-.25 0-.5 0-.75.1.2-1.5 1.4-3 3-3.85L6.5 6.2Zm9 0c-2.3 1.4-3.7 3.5-3.7 6 0 2.4 1.6 3.9 3.5 3.9 1.75 0 3-1.3 3-2.95 0-1.55-1.1-2.75-2.6-2.75-.25 0-.5 0-.75.1.2-1.5 1.4-3 3-3.85l-2.45-2.3Z"/></svg>'
 };
@@ -585,7 +585,7 @@ const NAV_ICON = {
   search:   '<svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.75"/><path d="m20 20-4.55-4.55"/></svg>',
   bell:     '<svg viewBox="0 0 24 24"><path d="M12 3.25a5.75 5.75 0 0 0-5.75 5.75v2.6c0 .85-.32 1.67-.9 2.3l-1.05 1.13c-.9.97-.2 2.57 1.13 2.57h13.14c1.33 0 2.03-1.6 1.13-2.57l-1.05-1.13a3.4 3.4 0 0 1-.9-2.3V9A5.75 5.75 0 0 0 12 3.25Z"/><path d="M9.6 19.3a2.4 2.4 0 0 0 4.8 0"/></svg>',
   chat:     '<svg viewBox="0 0 24 24"><path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2Z"/><path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"/></svg>',
-  bookmark: '<svg viewBox="0 0 24 24"><path d="M7 4.5h10a1 1 0 0 1 1 1V20a.6.6 0 0 1-.95.48L12 16.3l-5.05 4.18A.6.6 0 0 1 6 20V5.5a1 1 0 0 1 1-1Z"/></svg>',
+  bookmark: '<svg viewBox="0 0 24 24"><path d="M7.25 4.5h9.5a2 2 0 0 1 2 2V20c0 .95-1.08 1.5-1.87.96L12 16.7l-4.88 4.26C6.33 21.5 5.25 20.95 5.25 20V6.5a2 2 0 0 1 2-2Z"/></svg>',
   user:     '<svg viewBox="0 0 24 24"><circle cx="12" cy="8.2" r="3.75"/><path d="M4.5 19.6c1.1-4.15 3.9-6.15 7.5-6.15s6.4 2 7.5 6.15"/></svg>',
   gear:     '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.15"/><path d="M8.55 6.02 9.16 3.25h5.68l.61 2.77 2.71-.86L21 10.09 18.9 12l2.1 1.91-2.84 4.93-2.71-.86-.61 2.77H9.16l-.61-2.77-2.71.86L3 13.91 5.1 12 3 10.09l2.84-4.93 2.71.86Z"/></svg>',
   doc:      '<svg viewBox="0 0 24 24"><path d="M6.5 3.5h8l4.5 4.5v11.5a1 1 0 0 1-1 1h-11.5a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z"/><path d="M14.5 3.5V8h4.5"/><path d="M8.5 13h7M8.5 16.5h7"/></svg>',

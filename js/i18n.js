@@ -86,7 +86,17 @@ const I18N_DICT = {
     'chat.micBlocked': "Microphone access is blocked for this site. Allow it in your browser's site settings, then try again.",
     'chat.micNotFound': "No microphone was found on this device.",
     'chat.micInUse': "Your microphone is being used by another app. Close it and try again.",
-    'chat.micUnsupported': "Voice messages need a secure (https) connection and aren't supported in this browser."
+    'chat.micUnsupported': "Voice messages need a secure (https) connection and aren't supported in this browser.",
+    'chat.restoreKeyTitle': "Restore your encrypted chats",
+    'chat.restoreKeyDesc': "This is a new device for your account. Enter your message backup passphrase to unlock messages sent before today — or skip to start fresh (older messages will stay unreadable on this device).",
+    'chat.restoreKeyBtn': "Restore",
+    'chat.restoreKeySkip': "Skip",
+    'chat.restoreKeyWrong': "That passphrase didn't work — try again.",
+    'chat.setupBackupTitle': "Back up your chat key",
+    'chat.setupBackupDesc': "Set a passphrase so you can restore your encrypted chats if you ever open this account on another device. Only you know this passphrase — it's never sent anywhere.",
+    'chat.setupBackupBtn': "Save",
+    'chat.setupBackupSkip': "Later",
+    'chat.passphrasePlaceholder': "Passphrase"
   },
   es: {
     'nav.home': 'Inicio', 'nav.explore': 'Explorar', 'nav.notifications': 'Notificaciones',
