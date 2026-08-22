@@ -568,9 +568,17 @@ const ICON = {
   reply:    '<svg viewBox="0 0 24 24"><path d="M1.75 10.1C1.75 5.68 5.33 2.1 9.75 2.1h4.4c4.5 0 8.15 3.64 8.15 8.15 0 2.97-1.61 5.7-4.2 7.13l-8.06 4.47v-3.7h-.07c-4.5.1-8.22-3.53-8.22-8.05Z" stroke-linejoin="round"/></svg>',
   heart:    '<svg viewBox="0 0 24 24"><path d="M12 6.24C10.4 4.4 7.85 3.9 5.8 5.1 3.4 6.5 2.66 9.6 4.24 12.15c1.9 3.06 4.9 5.5 7.76 7.6 2.86-2.1 5.86-4.54 7.76-7.6 1.58-2.55.84-5.65-1.56-7.05-2.05-1.2-4.6-.7-6.2 1.14z" stroke-linejoin="round"/></svg>',
   views:    '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="3" y="12.5" width="3" height="8.5" rx="1.2"/><rect x="8.5" y="15.5" width="3" height="5.5" rx="1.2"/><rect x="14" y="7" width="3" height="14" rx="1.2"/><rect x="19.5" y="14" width="3" height="7" rx="1.2"/></svg>',
-  share:    '<svg viewBox="0 0 24 24" class="icon-share"><path d="M3.2 15.8c1.4-6.3 6-9.6 12.4-9.6h1.9" stroke-linecap="round"/><path d="m13.3 2 4.2 4.2-4.2 4.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  // Forward/share arrow — a single solid (fill, not stroke) glyph: a
+  // curved tail sweeping up into an arrowhead, matching the reference
+  // share icon. fill:currentColor overrides .act svg's shared
+  // fill:none/stroke:currentColor, same trick ICON.views/menu/quote
+  // already use for their own solid glyphs.
+  share:    '<svg viewBox="0 0 24 24" class="icon-share" fill="currentColor" stroke="none"><path d="M13.5 4.6a1.15 1.15 0 0 1 1.94-.86l6.3 5.75a1.15 1.15 0 0 1 0 1.7l-6.3 5.75a1.15 1.15 0 0 1-1.94-.86v-2.72c-5.02.22-8.2 2.1-10.02 5.9a1.05 1.05 0 0 1-1.99-.5C1.9 11.6 6.2 7.36 13.5 7.03V4.6Z"/></svg>',
   menu:     '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>',
-  bookmark: '<svg viewBox="0 0 24 24" class="icon-bookmark"><path d="M6.5 5.8A2.3 2.3 0 0 1 8.8 3.5h6.4a2.3 2.3 0 0 1 2.3 2.3v14.2a.7.7 0 0 1-1.12.57L12 16.55l-4.38 4.02A.7.7 0 0 1 6.5 20V5.8Z" stroke-linejoin="round"/></svg>',
+  // Bookmark ribbon — heavier, more rounded stroke and a smooth
+  // curved notch at the bottom (instead of a sharp V), matching the
+  // reference save icon.
+  bookmark: '<svg viewBox="0 0 24 24" class="icon-bookmark"><path d="M6.25 6.4A2.65 2.65 0 0 1 8.9 3.75h6.2A2.65 2.65 0 0 1 17.75 6.4v13.2a.85.85 0 0 1-1.36.68L12 16.9l-4.39 3.38a.85.85 0 0 1-1.36-.68V6.4Z" stroke-linejoin="round"/></svg>',
   repost:   '<svg viewBox="0 0 24 24"><path d="M17 1.5 21 5.5l-4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 11.5v-2a4 4 0 0 1 4-4h14" stroke-linecap="round"/><path d="M7 22.5 3 18.5l4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12.5v2a4 4 0 0 1-4 4H3" stroke-linecap="round"/></svg>',
   quote:    '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M6.5 6.2c-2.3 1.4-3.7 3.5-3.7 6 0 2.4 1.6 3.9 3.5 3.9 1.75 0 3-1.3 3-2.95 0-1.55-1.1-2.75-2.6-2.75-.25 0-.5 0-.75.1.2-1.5 1.4-3 3-3.85L6.5 6.2Zm9 0c-2.3 1.4-3.7 3.5-3.7 6 0 2.4 1.6 3.9 3.5 3.9 1.75 0 3-1.3 3-2.95 0-1.55-1.1-2.75-2.6-2.75-.25 0-.5 0-.75.1.2-1.5 1.4-3 3-3.85l-2.45-2.3Z"/></svg>'
 };

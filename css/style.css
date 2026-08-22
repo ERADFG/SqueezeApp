@@ -50,6 +50,12 @@
   --share-tint: rgba(29,155,240,.12);
   --save:       #EAB308;  /* save/bookmark — amber-500 (AA on white) */
   --save-tint:  rgba(234,179,8,.14);
+  /* Repost always lights up purple, independent of the swappable
+     --maroon accent above — same "fixed semantic color" idea as
+     --share/--save, so a reposted card reads the same regardless of
+     which accent theme (blue/green/red/purple/orange) is active. */
+  --repost:      #7C3AED; /* violet-600 (AA on white) */
+  --repost-tint: rgba(124,58,237,.12);
   --hover-bg:  #F7F9F9;   /* row hover wash */
   --div:       #EFF3F4;   /* used by a couple of inline hr styles */
   --input-bg:  #FFFFFF;   /* form field / card-on-card background */
@@ -1499,8 +1505,8 @@ a.act:hover, button.act.reply:hover, button.act.reply:active { color:var(--maroo
    Mobile (≤640px): becomes a full-width bottom sheet with its own
    backdrop, since a 180px popover is a fiddly tap target on a phone. */
 .rp-menu-wrap { position:relative; flex:none; }
-.act.repost:hover, .act.repost:active { color:var(--maroon); }
-.act.repost.reposted { color:var(--maroon); animation:oc-pop .28s ease; }
+.act.repost:hover, .act.repost:active { color:var(--repost); }
+.act.repost.reposted { color:var(--repost); animation:oc-pop .28s ease; }
 .rp-menu-dd {
   position:absolute; left:0; bottom:calc(100% + 4px); z-index:40; min-width:200px;
   background:var(--cream-card); border:1px solid var(--line); border-radius:18px;
