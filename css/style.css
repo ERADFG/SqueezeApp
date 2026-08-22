@@ -35,7 +35,7 @@
   --line:      #EFF3F4;   /* hairline border — gray-100 */
   --muted:     #536471;   /* secondary text — twitter gray-500 */
   --green:     #00BA7C;   /* greentext */
-  --link:      #15803D;
+  --link:      #0B6FE0;   /* matches the blue --maroon accent */
   --vis:       #7C3AED;
   /* --like was rose-500 #F43F5E, 3.67:1 on white — also below AA.
      Darkened to rose-600 (4.7:1); dark/dim mode restores the
@@ -1427,6 +1427,7 @@ select {
 }
 .act:active { transform:scale(.90); }
 .act svg { width:19px; height:19px; flex:none; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; shape-rendering:geometricPrecision; transition:transform .18s cubic-bezier(.34,1.56,.64,1); }
+.act.share svg, .act.bookmark svg { stroke-width:2.1; }
 .act:hover { text-decoration:none; }
 .act:active svg { transform:scale(.86); }
 
@@ -2163,13 +2164,6 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
 .dc-btn-cancel:hover { background:var(--hover-bg); }
 .dc-btn-primary { background:var(--maroon); color:#fff; }
 .dc-btn-primary:hover { background:var(--maroon-hover, var(--maroon)); filter:brightness(.92); }
-.chat-key-pass-input {
-  width:100%; box-sizing:border-box; font:inherit; font-size:14.5px; padding:10px 14px;
-  border-radius:var(--r-sm); border:1px solid var(--div); background:var(--bg); color:var(--ink);
-  margin-bottom:10px; text-align:center;
-}
-.chat-key-pass-input:focus { outline:none; border-color:var(--maroon); }
-.chat-key-pass-err { color:var(--like); font-size:12.5px; margin:-4px 0 12px; }
 
 /* ── EDIT POST/REPLY MODAL — same .modal/.dc-* shell as the delete
    confirm modal (dc-modal), just wider and text-aligned left to fit
@@ -2190,24 +2184,16 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
    in js/common.js. */
 .edited-tag { color:var(--muted); font-weight:400; }
 
-/* ── TOAST — replaces alert() for routine confirmations ──
-   border-radius was 999px (a true pill), which only looks right on a
-   single short line. Longer messages (like the mic-permission text)
-   wrap to 3-4 lines, and a 999px radius on a tall multi-line box
-   bulges the corners into a distorted oval blob instead of a rounded
-   banner — that's the huge red oval some error toasts showed. Capped
-   the radius and switched the icon to align to the top of the text
-   instead of dead-center so it doesn't float oddly next to wrapped
-   lines. */
+/* ── TOAST — replaces alert() for routine confirmations ── */
 .oc-toast {
   position:fixed; left:50%; bottom:28px; transform:translate(-50%, 16px);
-  display:flex; align-items:flex-start; gap:10px; width:max-content; max-width:min(92vw, 420px);
+  display:flex; align-items:center; gap:10px; max-width:min(92vw, 420px);
   background:var(--ink); color:var(--bg); font-size:14px; font-weight:600; line-height:1.35;
-  padding:12px 18px; border-radius:16px; box-shadow:var(--shadow-pop);
+  padding:12px 18px; border-radius:999px; box-shadow:var(--shadow-pop);
   opacity:0; pointer-events:none; z-index:999; transition:opacity .18s ease, transform .18s ease;
 }
 .oc-toast.show { opacity:1; transform:translate(-50%, 0); pointer-events:auto; }
-.oc-toast svg { width:18px; height:18px; flex:none; margin-top:1px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.oc-toast svg { width:18px; height:18px; flex:none; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 .oc-toast-error { background:var(--like); color:#fff; }
 @media (max-width: 600px) {
   .oc-toast { bottom:calc(84px + env(safe-area-inset-bottom, 0px)); font-size:13px; padding:11px 16px; }

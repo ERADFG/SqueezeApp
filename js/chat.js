@@ -138,8 +138,6 @@ async function loadChat() {
     return;
   }
 
-  if (chatCryptoSupported()) await resolveChatKeyForDevice(session.user.id); // restore/set up this device's key before anything tries to decrypt
-
   if (chatGroupId) {
     return loadGroupThread(session, root);
   }
@@ -147,88 +145,6 @@ async function loadChat() {
     return loadThread(session, root);
   }
   return loadConversationList(session, root);
-}
-
-// ── MULTI-DEVICE KEY RESOLUTION ──
-// Runs once per chat-page load, before anything tries to decrypt.
-// If this device already has a key (the common case), it's a no-op.
-// Otherwise it's either a brand-new device for an account that
-// already set up backup elsewhere (offer to restore the real key so
-// old messages stop showing "can't decrypt"), or genuinely the first
-// device ever (nothing to restore — just offer to set up backup so
-// this doesn't happen again next time).
-async function resolveChatKeyForDevice(myUserId) {
-  if (!chatCryptoSupported()) return;
-  if (localStorage.getItem(CHAT_PRIV_KEY_LS)) return; // already has a key on this device
-  let hasBackup = false;
-  try { hasBackup = await chatKeyBackupExists(myUserId); } catch (e) {}
-  if (hasBackup) {
-    await chatKeyModal({
-      title: t('chat.restoreKeyTitle'),
-      desc: t('chat.restoreKeyDesc'),
-      confirmLabel: t('chat.restoreKeyBtn'),
-      skipLabel: t('chat.restoreKeySkip'),
-      onSubmit: async (passphrase) => await restoreChatKeyFromBackup(myUserId, passphrase),
-      wrongMsg: t('chat.restoreKeyWrong'),
-    });
-    await ensureMyKeypair(myUserId); // picks up the restored (or, if skipped, a freshly generated) key
-  } else {
-    await ensureMyKeypair(myUserId); // nothing to restore — generate this device's first key up front
-    chatKeyModal({
-      title: t('chat.setupBackupTitle'),
-      desc: t('chat.setupBackupDesc'),
-      confirmLabel: t('chat.setupBackupBtn'),
-      skipLabel: t('chat.setupBackupSkip'),
-      onSubmit: async (passphrase) => await backupChatKey(myUserId, passphrase),
-      wrongMsg: null,
-    }); // fire-and-forget: doesn't block chat from loading
-  }
-}
-
-// Small reusable passphrase modal shared by the restore/setup flows
-// above. Resolves once the user either succeeds or explicitly skips.
-function chatKeyModal({ title, desc, confirmLabel, skipLabel, onSubmit, wrongMsg }) {
-  return new Promise(resolve => {
-    const bg = document.createElement('div');
-    bg.className = 'modal-bg open';
-    bg.innerHTML = `
-      <div class="modal dc-modal">
-        <h2 class="dc-title"></h2>
-        <p class="dc-desc"></p>
-        <input type="password" class="chat-key-pass-input" autocomplete="off" placeholder="${esc(t('chat.passphrasePlaceholder'))}">
-        <p class="chat-key-pass-err" hidden></p>
-        <div class="dc-actions">
-          <button type="button" class="dc-btn"></button>
-          <button type="button" class="dc-btn dc-btn-cancel"></button>
-        </div>
-      </div>`;
-    bg.querySelector('.dc-title').textContent = title;
-    bg.querySelector('.dc-desc').textContent = desc;
-    const confirmBtn = bg.querySelector('.dc-btn');
-    const skipBtn = bg.querySelector('.dc-btn-cancel');
-    const input = bg.querySelector('.chat-key-pass-input');
-    const errEl = bg.querySelector('.chat-key-pass-err');
-    confirmBtn.textContent = confirmLabel;
-    confirmBtn.className = 'dc-btn dc-btn-primary';
-    skipBtn.textContent = skipLabel;
-    const done = () => { bg.remove(); resolve(); };
-    skipBtn.onclick = done;
-    bg.addEventListener('click', e => { if (e.target === bg) done(); });
-    const submit = async () => {
-      const val = input.value;
-      if (!val) { input.focus(); return; }
-      confirmBtn.disabled = true;
-      const ok = await onSubmit(val);
-      confirmBtn.disabled = false;
-      if (ok) { done(); return; }
-      if (wrongMsg) { errEl.textContent = wrongMsg; errEl.hidden = false; input.select(); }
-      else { done(); } // setup flow: a save failure isn't worth blocking on, just drop it silently
-    };
-    confirmBtn.onclick = submit;
-    input.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
-    document.body.appendChild(bg);
-    input.focus();
-  });
 }
 
 // ── ENCRYPTION KEY HELPERS ──
@@ -259,7 +175,7 @@ async function decryptForDisplay(key, body, iv) {
 async function loadConversationList(session, root) {
   document.body.classList.remove('chat-thread-open'); // see .chat-thread-open note in style.css — list view, not a thread
   document.getElementById('chat-sec-bar').innerHTML = t('nav.chat');
-  // Key already resolved by resolveChatKeyForDevice() in loadChat() before this ran.
+  if (chatCryptoSupported()) ensureMyKeypair(session.user.id); // fire-and-forget: publishes my pubkey so others can start encrypting to me
   subscribeConversationListRealtime(session, root);
 
   const [{ data, error }, groupRows] = await Promise.all([

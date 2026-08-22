@@ -134,6 +134,15 @@ async function loadSettings() {
           </select>
         </div>
         <span id="dm-privacy-st" style="font-size:11px;color:var(--muted);"></span>
+
+        <div class="settings-row" style="margin-top:12px;">
+          <div>
+            <div class="lbl">Chat backup</div>
+            <div class="pf-note" style="margin-top:2px;">Set a passphrase so your encrypted chats can be unlocked on a new phone or browser instead of showing "can't decrypt this message on this device."</div>
+          </div>
+        </div>
+        <button type="button" class="pf-btn" style="margin-top:6px;width:auto;padding:8px 16px;" onclick="setupChatKeyBackup()">Set up chat backup</button>
+        <span id="chat-backup-st" style="display:block;font-size:11px;color:var(--muted);margin-top:6px;"></span>
       </div>
 
       ${settingsRowHtml('notifications', NAV_ICON.bell, t('settings.notifications'))}

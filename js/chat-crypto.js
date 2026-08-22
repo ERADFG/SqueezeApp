@@ -10,13 +10,15 @@
 // ciphertext the moment they leave the browser, and Supabase (or
 // anyone with DB access) only ever sees encrypted text.
 //
-// CAVEAT (worth knowing, not hiding): the private key lives in this
-// browser's localStorage only. Open the same account in a different
-// browser/device and it generates a *new* keypair — old threads there
-// show as "can't decrypt on this device" until that device has seen
-// the same messages. Full multi-device sync would need a
-// passphrase-wrapped key backup, which is a reasonable follow-up but
-// isn't in this pass.
+// CAVEAT (worth knowing, not hiding): by default the private key still
+// lives only in whichever browser first generated it — opening the
+// same account somewhere new generates a fresh, unrelated keypair. The
+// MULTI-DEVICE KEY BACKUP section below fixes this: Settings → Privacy
+// → "Set up chat backup" wraps the existing private key with a
+// passphrase and stores it on profiles.key_backup, so a new device can
+// restore the exact same key (and therefore read old threads) instead
+// of starting from scratch. It's opt-in rather than automatic, since
+// it requires the person to choose and remember a passphrase.
 // ─────────────────────────────────────────────────────────────
 
 const CHAT_PRIV_KEY_LS = 'oc-e2e-priv';
@@ -37,6 +39,120 @@ function _bufFromB64(b64) {
   return bytes;
 }
 
+// ── MULTI-DEVICE KEY BACKUP ──
+// Fixes the "can't decrypt this message on this device" problem: since
+// every browser used to generate its own throwaway ECDH keypair, opening
+// the same account somewhere new made all old threads permanently
+// unreadable there (the shared AES key is derived from the *private*
+// key, so a different private key = a different, useless shared key).
+//
+// This wraps the *same* private key JWK with a passphrase-derived
+// AES-GCM key (PBKDF2, 250k iterations, random salt) and stores the
+// wrapped blob on profiles.key_backup. A new device can then pull that
+// blob down, ask for the passphrase, unwrap it, and end up with the
+// exact same private key the original device had — so every old
+// conversation decrypts correctly again. Nothing here changes how
+// messages themselves are encrypted; it only lets the private key
+// follow the user instead of being stranded in one browser's
+// localStorage. Entirely best-effort/non-blocking: any failure here
+// just leaves things at the old single-device behavior.
+async function _deriveWrapKey(passphrase, saltBytes) {
+  const baseKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(passphrase), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: saltBytes, iterations: 250000, hash: 'SHA-256' },
+    baseKey,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+async function wrapPrivateKeyBackup(privJwk, passphrase) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const wrapKey = await _deriveWrapKey(passphrase, salt);
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, wrapKey, new TextEncoder().encode(JSON.stringify(privJwk)));
+  return JSON.stringify({ v: 1, salt: _b64FromBuf(salt), iv: _b64FromBuf(iv), ct: _b64FromBuf(ct) });
+}
+
+// Returns the original privJwk, or throws (wrong passphrase / corrupt
+// backup) — callers should catch and show a friendly retry prompt.
+async function unwrapPrivateKeyBackup(backupStr, passphrase) {
+  const backup = JSON.parse(backupStr);
+  const salt = _bufFromB64(backup.salt);
+  const iv = _bufFromB64(backup.iv);
+  const wrapKey = await _deriveWrapKey(passphrase, salt);
+  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, wrapKey, _bufFromB64(backup.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+
+// Prompts for a passphrase (up to `tries` attempts) and tries to
+// restore the backed-up private key into localStorage on this device.
+// Returns true on success, false if the person cancels or every
+// attempt fails.
+async function restoreKeyBackup(backupStr, tries = 3) {
+  for (let i = 0; i < tries; i++) {
+    const label = i === 0
+      ? 'Enter your chat passphrase to unlock your old messages on this device.'
+      : 'That passphrase didn\'t work. Try again (or press Cancel to skip for now).';
+    const pass = window.prompt(label);
+    if (pass === null) return false; // cancelled
+    if (!pass) continue;
+    try {
+      const privJwk = await unwrapPrivateKeyBackup(backupStr, pass);
+      // An EC private JWK already carries the public x/y coordinates
+      // alongside the private 'd' — so the matching public JWK is just
+      // this same object with 'd' (and the private-only key_ops)
+      // removed, no separate derivation needed.
+      const { d, key_ops, ...pubJwk } = privJwk;
+      pubJwk.key_ops = [];
+      // Validate the restored key actually imports before trusting it.
+      await crypto.subtle.importKey('jwk', privJwk, { name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveKey']);
+      return { privJwk, pubJwk };
+    } catch (e) { /* wrong passphrase or corrupt blob — loop and retry */ }
+  }
+  return false;
+}
+
+// Called from Settings → Privacy → "Set up chat backup". Wraps THIS
+// device's existing private key with a passphrase and uploads it, so
+// any other device that later signs into this account can restore the
+// exact same key (see restoreKeyBackup above) instead of generating an
+// incompatible new one. Safe to run again later (e.g. from a device
+// that was itself restored) — it just re-wraps and overwrites.
+async function setupChatKeyBackup() {
+  const statusEl = document.getElementById('chat-backup-st');
+  const setStatus = (msg) => { if (statusEl) statusEl.textContent = msg; };
+  if (!chatCryptoSupported()) { setStatus('Not supported in this browser.'); return; }
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { setStatus('Log in first.'); return; }
+
+  let privJwk;
+  try { privJwk = JSON.parse(localStorage.getItem(CHAT_PRIV_KEY_LS) || 'null'); } catch (e) {}
+  if (!privJwk) {
+    // No key on this device to back up yet — create one first the
+    // normal way, then continue.
+    await ensureMyKeypair(session.user.id);
+    try { privJwk = JSON.parse(localStorage.getItem(CHAT_PRIV_KEY_LS) || 'null'); } catch (e) {}
+  }
+  if (!privJwk) { setStatus('Could not read your chat key on this device.'); return; }
+
+  const pass = window.prompt('Choose a chat backup passphrase. You\'ll enter this on any new device to unlock your old messages there. Keep it somewhere safe — it can\'t be recovered if you lose it.');
+  if (!pass) { setStatus('Cancelled.'); return; }
+  const confirmPass = window.prompt('Enter the same passphrase again to confirm.');
+  if (pass !== confirmPass) { setStatus('Passphrases didn\'t match — nothing was saved. Try again.'); return; }
+
+  setStatus('Saving…');
+  try {
+    const backup = await wrapPrivateKeyBackup(privJwk, pass);
+    const { error } = await sb.from('profiles').update({ key_backup: backup }).eq('id', session.user.id);
+    if (error) throw error;
+    setStatus('Chat backup is set up. Use this same passphrase on any new device.');
+  } catch (e) {
+    setStatus('Could not save backup — try again later.');
+  }
+}
+
 function chatCryptoSupported() {
   return !!(window.crypto && window.crypto.subtle);
 }
@@ -55,6 +171,28 @@ function ensureMyKeypair(myUserId) {
       const storedPub = localStorage.getItem(CHAT_PUB_KEY_LS);
       if (storedPriv && storedPub) { privJwk = JSON.parse(storedPriv); pubJwk = JSON.parse(storedPub); }
     } catch (e) {}
+
+    // No key on this device yet — before generating a brand new
+    // (incompatible) one, check whether this account already has a
+    // passphrase-backed-up key from another device. Restoring it here
+    // is what actually fixes old threads showing "can't decrypt this
+    // message on this device": same private key everywhere = the same
+    // derived shared key with every contact, so history opens back up.
+    if ((!privJwk || !pubJwk) && myUserId) {
+      try {
+        const { data } = await sb.from('profiles').select('key_backup').eq('id', myUserId).maybeSingle();
+        if (data?.key_backup) {
+          const restored = await restoreKeyBackup(data.key_backup);
+          if (restored) {
+            privJwk = restored.privJwk; pubJwk = restored.pubJwk;
+            try {
+              localStorage.setItem(CHAT_PRIV_KEY_LS, JSON.stringify(privJwk));
+              localStorage.setItem(CHAT_PUB_KEY_LS, JSON.stringify(pubJwk));
+            } catch (e) {}
+          }
+        }
+      } catch (e) {} // no backup column yet, or offline — fall through to generating fresh below
+    }
 
     if (!privJwk || !pubJwk) {
       const kp = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveKey']);
@@ -110,99 +248,6 @@ async function deriveChatKey(myUserId, theirPubkeyStr) {
       ['encrypt', 'decrypt']
     );
   } catch (e) { return null; }
-}
-
-// ─────────────────────────────────────────────────────────────
-// MULTI-DEVICE KEY BACKUP.
-//
-// The CAVEAT above was the actual cause of "Can't decrypt this
-// message on this device" showing up for real: opening the account
-// on a second phone/browser generated a brand-new keypair instead of
-// reusing the one earlier messages were encrypted for, so nothing
-// old could ever decrypt there. This adds an opt-in, passphrase-
-// protected backup of the private key on the profile row (still
-// end-to-end: the passphrase never leaves the device, so InteractInk
-// only ever stores an encrypted blob it can't open either) so a new
-// device can restore the *same* key instead of minting a new one.
-//
-// Requires three new text columns on `profiles`:
-//   key_backup, key_backup_iv, key_backup_salt
-// (run once in Supabase SQL editor):
-//   alter table profiles
-//     add column if not exists key_backup text,
-//     add column if not exists key_backup_iv text,
-//     add column if not exists key_backup_salt text;
-// ─────────────────────────────────────────────────────────────
-
-const CHAT_BACKUP_DONE_LS = 'oc-e2e-backup-done';
-
-async function _deriveWrapKey(passphrase, saltBytes) {
-  const baseKey = await crypto.subtle.importKey(
-    'raw', new TextEncoder().encode(passphrase), 'PBKDF2', false, ['deriveKey']
-  );
-  return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt: saltBytes, iterations: 150000, hash: 'SHA-256' },
-    baseKey, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']
-  );
-}
-
-// Encrypts this device's already-generated private key with a
-// passphrase and saves it to the profile row. Call after a key
-// exists locally (i.e. after ensureMyKeypair has run once).
-async function backupChatKey(myUserId, passphrase) {
-  const storedPriv = localStorage.getItem(CHAT_PRIV_KEY_LS);
-  if (!storedPriv || !passphrase || !myUserId) return false;
-  try {
-    const salt = crypto.getRandomValues(new Uint8Array(16));
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const wrapKey = await _deriveWrapKey(passphrase, salt);
-    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, wrapKey, new TextEncoder().encode(storedPriv));
-    const { error } = await sb.from('profiles').update({
-      key_backup: _b64FromBuf(ct), key_backup_iv: _b64FromBuf(iv), key_backup_salt: _b64FromBuf(salt)
-    }).eq('id', myUserId);
-    if (error) return false;
-    try { localStorage.setItem(CHAT_BACKUP_DONE_LS, '1'); } catch (e) {}
-    return true;
-  } catch (e) { return false; }
-}
-
-// Checks whether a backup exists on the profile (without needing the
-// passphrase yet) so the caller knows whether to offer "restore" or
-// "set up backup" before deciding to mint a fresh key.
-async function chatKeyBackupExists(myUserId) {
-  try {
-    const { data } = await sb.from('profiles').select('key_backup').eq('id', myUserId).maybeSingle();
-    return !!(data && data.key_backup);
-  } catch (e) { return false; }
-}
-
-// Attempts to recover this account's real private key from the
-// server-side backup using a passphrase, and — on success — installs
-// it into localStorage so ensureMyKeypair() picks it up as normal on
-// its next call. Returns false on wrong passphrase / no backup /
-// any failure, never throws.
-async function restoreChatKeyFromBackup(myUserId, passphrase) {
-  if (!myUserId || !passphrase) return false;
-  try {
-    const { data } = await sb.from('profiles')
-      .select('key_backup,key_backup_iv,key_backup_salt').eq('id', myUserId).maybeSingle();
-    if (!data || !data.key_backup) return false;
-    const wrapKey = await _deriveWrapKey(passphrase, _bufFromB64(data.key_backup_salt));
-    const pt = await crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv: _bufFromB64(data.key_backup_iv) }, wrapKey, _bufFromB64(data.key_backup)
-    );
-    const privJson = new TextDecoder().decode(pt);
-    const privJwk = JSON.parse(privJson); // wrong passphrase decrypts to garbage/throws before we get here
-    if (!privJwk || privJwk.kty !== 'EC') return false;
-    // The public half (x/y) is embedded in the EC private JWK, so the
-    // public JWK for localStorage is just the private one minus `d`.
-    const pubJwk = { ...privJwk }; delete pubJwk.d; pubJwk.key_ops = [];
-    localStorage.setItem(CHAT_PRIV_KEY_LS, privJson);
-    localStorage.setItem(CHAT_PUB_KEY_LS, JSON.stringify(pubJwk));
-    try { localStorage.setItem(CHAT_BACKUP_DONE_LS, '1'); } catch (e) {}
-    _myKeypairPromise = null; // drop the cached (wrong) in-memory keypair so the next ensureMyKeypair() re-reads localStorage
-    return true;
-  } catch (e) { return false; }
 }
 
 async function chatEncrypt(key, plaintext) {
