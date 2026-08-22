@@ -989,7 +989,7 @@ function msgBubbleHtml(m, myId, group = { start: true, end: true }) {
   const hasCaption = m._plain != null && m._plain !== '';
   const bodyHtml = m._plain != null
     ? (hasCaption ? renderBody(m._plain) : '')
-    : `<span class="msg-undecryptable">${CHAT_ICON_LOCK}<em>Can't decrypt this message on this device</em></span>`;
+    : `<button type="button" class="msg-undecryptable" onclick="restoreChatBackupNow().then(()=>location.reload())">${CHAT_ICON_LOCK}<em>Can't decrypt this message on this device — tap to unlock with your chat passphrase</em></button>`;
   const mediaHtml = chatMediaHtml(m);
   const ticksHtml = mine
     ? `<span class="msg-ticks${m.read ? ' read' : ''}">${m.read ? ICON_TICK2 : ICON_TICK1}</span>`
@@ -1014,7 +1014,7 @@ function msgBubbleHtml(m, myId, group = { start: true, end: true }) {
 // tapping one in a post. Voice notes get the compact player above.
 function chatMediaHtml(m) {
   if (!m.media_url) return '';
-  if (m.media_type === 'audio') return voicePlayerHtml(m.media_url);
+  if (m.media_type === 'audio') return voicePlayerHtml(m.media_url, m.media_duration_ms);
   return renderMedia(m.media_url, m.media_type, 'chat-media-img');
 }
 
@@ -1110,7 +1110,7 @@ function renderChatAttachPreview() {
   } else if (chatAttachment.type === 'video') {
     box.innerHTML = `<div class="chat-attach-thumb"><video src="${esc(chatAttachment.previewUrl)}" muted></video>${rmBtn}</div>`;
   } else { // audio (recorded voice note, played back for confirmation before sending)
-    box.innerHTML = `<div class="chat-attach-voice">${voicePlayerHtml(chatAttachment.previewUrl)}${rmBtn}</div>`;
+    box.innerHTML = `<div class="chat-attach-voice">${voicePlayerHtml(chatAttachment.previewUrl, chatAttachment.durationMs)}${rmBtn}</div>`;
   }
 }
 
@@ -1172,7 +1172,13 @@ async function startVoiceRecording() {
     if (!blob.size) return;
     const ext = (blob.type.split('/')[1] || 'webm').split(';')[0];
     const file = new File([blob], `voice-note.${ext}`, { type: blob.type });
-    chatAttachment = { file, type: 'audio', previewUrl: URL.createObjectURL(blob) };
+    // Recorded here, not read back from the audio element later — see
+    // supabase/voice_note_duration.sql for why: the browser's own
+    // .duration reporting for a fresh webm blob is unreliable (varies
+    // by device/browser), but we already know exactly how long the
+    // recording ran, so there's nothing to guess.
+    const durationMs = Date.now() - chatRecordStartedAt;
+    chatAttachment = { file, type: 'audio', previewUrl: URL.createObjectURL(blob), durationMs };
     renderChatAttachPreview();
     updateChatSendBtn();
   };
@@ -1222,12 +1228,13 @@ function cancelVoiceRecording() {
 // it, matching the rest of the app's hand-rolled player (js/video-
 // player.js) rather than pulling in a dependency for something this
 // small.
-function voicePlayerHtml(url) {
+function voicePlayerHtml(url, durationMs) {
+  const knownSecs = durationMs ? durationMs / 1000 : null;
   return `
-  <span class="voice-msg">
+  <span class="voice-msg" data-known-duration="${knownSecs != null ? knownSecs : ''}">
     <button type="button" class="voice-play-btn" onclick="toggleVoicePlay(this)">${ICON_VOICE_PLAY}</button>
     <span class="voice-wave">${voiceWaveformSvg(url)}<span class="voice-wave-fg-clip">${voiceWaveformSvg(url)}</span></span>
-    <span class="voice-time">0:00</span>
+    <span class="voice-time">${knownSecs != null ? fmtVoiceTime(knownSecs) : '0:00'}</span>
     <audio preload="metadata" src="${esc(url)}"></audio>
   </span>`;
 }
@@ -1260,23 +1267,28 @@ function fmtVoiceTime(secs) {
   return `${Math.floor(secs / 60)}:${String(Math.floor(secs % 60)).padStart(2, '0')}`;
 }
 // Recorded voice notes are webm blobs, and Chrome (and Chromium-based
-// browsers) has a long-standing bug where a freshly recorded webm's
-// .duration reads as Infinity until you seek near the very end once —
-// the container's real duration only gets backfilled at that point.
-// Left unpatched, every percentage-of-duration calculation (the
-// waveform fill, therefore) divides by Infinity and evaluates to 0
-// forever, so the bar plays audio but visually never moves. This
-// forces that one-time seek before wiring up playback tracking.
+// browsers) has a long-standing, INCONSISTENT bug where a freshly
+// recorded webm's .duration reads as Infinity until a seek-to-the-end
+// trick runs — "inconsistent" because that trick doesn't reliably
+// work the same way across every browser/device (it can work on one
+// phone's browser and not on a desktop browser). Rather than lean on
+// that fragile workaround, playback now prefers the message's own
+// stored, always-correct media_duration_ms (see
+// supabase/voice_note_duration.sql) whenever it's present — that
+// value came from actually timing the recording, so there's no
+// browser quirk to work around. The seek-hack below only runs as a
+// fallback for voice notes sent before that column existed.
 function fixInfiniteAudioDuration(audio) {
   return new Promise(resolve => {
     if (isFinite(audio.duration) && audio.duration > 0) { resolve(audio.duration); return; }
-    const onTimeUpdate = () => {
-      audio.removeEventListener('timeupdate', onTimeUpdate);
-      audio.currentTime = 0;
-      resolve(audio.duration);
-    };
+    let settled = false;
+    const finish = (val) => { if (settled) return; settled = true; audio.removeEventListener('timeupdate', onTimeUpdate); resolve(val); };
+    const onTimeUpdate = () => { audio.currentTime = 0; finish(audio.duration); };
     audio.addEventListener('timeupdate', onTimeUpdate);
-    audio.currentTime = 1e101; // way past the end — forces the browser to compute the real duration
+    audio.currentTime = 1e101;
+    // Some browsers never fire the timeupdate this trick relies on —
+    // don't hang the play button forever waiting on it.
+    setTimeout(() => finish(0), 1500);
   });
 }
 
@@ -1285,15 +1297,38 @@ function toggleVoicePlay(btn) {
   const audio = wrap.querySelector('audio');
   const fill = wrap.querySelector('.voice-wave-fg-clip');
   const timeEl = wrap.querySelector('.voice-time');
+  const knownAttr = wrap.dataset.knownDuration;
+  const knownDuration = knownAttr ? parseFloat(knownAttr) : null;
   if (chatActiveVoiceAudio && chatActiveVoiceAudio !== audio) {
     chatActiveVoiceAudio.pause(); // only one voice note plays at a time
   }
+
+  const updateBar = () => {
+    const durationForPct = knownDuration || (isFinite(audio.duration) ? audio.duration : 0);
+    const pct = durationForPct ? Math.min(100, (audio.currentTime / durationForPct) * 100) : 0;
+    fill.style.clipPath = `inset(0 ${100 - pct}% 0 0)`;
+    timeEl.textContent = fmtVoiceTime(audio.currentTime);
+  };
+  // requestAnimationFrame instead of the 'timeupdate' event — timeupdate
+  // only fires a few times a second (browser-dependent, often as
+  // sparse as 4x/sec), which reads as a bar that jumps in visible
+  // steps rather than glides. rAF re-checks audio.currentTime on every
+  // paint frame instead, so the fill tracks playback smoothly.
+  let rafHandle = null;
+  const rafLoop = () => {
+    if (audio.paused || audio.ended) { rafHandle = null; return; }
+    updateBar();
+    rafHandle = requestAnimationFrame(rafLoop);
+  };
+
   if (audio.paused) {
-    const startPlayback = () => { audio.play().catch(() => {}); };
-    if (!isFinite(audio.duration) || audio.duration <= 0) {
-      // Fix the duration once, silently, before actually starting
-      // playback — otherwise the brief seek-to-the-end flashes the
-      // waveform fill to 100% for an instant, which looks broken too.
+    const startPlayback = () => {
+      audio.play().catch(() => {});
+      rafHandle = requestAnimationFrame(rafLoop);
+    };
+    if (knownDuration) {
+      startPlayback(); // no need to touch audio.duration at all
+    } else if (!isFinite(audio.duration) || audio.duration <= 0) {
       fixInfiniteAudioDuration(audio).then(startPlayback);
     } else {
       startPlayback();
@@ -1302,19 +1337,17 @@ function toggleVoicePlay(btn) {
     btn.innerHTML = ICON_VOICE_PAUSE;
   } else {
     audio.pause();
+    if (rafHandle) cancelAnimationFrame(rafHandle);
     btn.innerHTML = ICON_VOICE_PLAY;
     return;
   }
-  audio.ontimeupdate = () => {
-    const pct = isFinite(audio.duration) && audio.duration > 0 ? (audio.currentTime / audio.duration) * 100 : 0;
-    fill.style.clipPath = `inset(0 ${100 - pct}% 0 0)`;
-    timeEl.textContent = fmtVoiceTime(audio.currentTime);
-  };
-  audio.onpause = () => { btn.innerHTML = ICON_VOICE_PLAY; };
+  audio.onpause = () => { btn.innerHTML = ICON_VOICE_PLAY; if (rafHandle) cancelAnimationFrame(rafHandle); };
   audio.onended = () => {
     btn.innerHTML = ICON_VOICE_PLAY;
+    if (rafHandle) cancelAnimationFrame(rafHandle);
     fill.style.clipPath = 'inset(0 100% 0 0)';
-    timeEl.textContent = fmtVoiceTime(isFinite(audio.duration) ? audio.duration : 0);
+    const total = knownDuration || (isFinite(audio.duration) ? audio.duration : 0);
+    timeEl.textContent = fmtVoiceTime(total);
     if (chatActiveVoiceAudio === audio) chatActiveVoiceAudio = null;
   };
 }
@@ -1359,6 +1392,7 @@ async function sendMessage() {
   renderChatAttachPreview();
 
   const insertRow = { sender_id: currentSession.user.id, recipient_id: chatOther.id, media_url, media_type };
+  if (attachment?.type === 'audio' && attachment.durationMs) insertRow.media_duration_ms = attachment.durationMs;
   if (chatKey && body) {
     const enc = await chatEncrypt(chatKey, body);
     insertRow.body = enc.body;
@@ -1597,6 +1631,7 @@ async function sendGroupMessage() {
   renderChatAttachPreview();
 
   const insertRow = { conversation_id: chatGroup.id, sender_id: currentSession.user.id, body, media_url, media_type };
+  if (attachment?.type === 'audio' && attachment.durationMs) insertRow.media_duration_ms = attachment.durationMs;
   const { data, error } = await sb.from('messages').insert(insertRow).select('*').single();
   if (error) { alert(error.message || t('chat.failedToSend')); return; }
   data._plain = body;

@@ -3269,7 +3269,8 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .msg-row.theirs .msg-bubble { background:var(--hover-bg); color:var(--ink); border-bottom-left-radius:18px; }
 .msg-row.mine.g-end .msg-bubble { border-bottom-right-radius:4px; }
 .msg-row.theirs.g-end .msg-bubble { border-bottom-left-radius:4px; }
-.msg-undecryptable { display:inline-flex; align-items:center; gap:5px; font-style:italic; opacity:.75; }
+.msg-undecryptable { display:inline-flex; align-items:center; gap:5px; font-style:italic; opacity:.75; font:inherit; color:inherit; background:none; border:none; padding:0; text-align:left; cursor:pointer; }
+.msg-undecryptable:hover { opacity:1; text-decoration:underline; }
 .msg-undecryptable svg { width:13px; height:13px; flex:none; }
 /* Telegram/WhatsApp-style meta (clock time + read ticks) rendered
    *inside* the bubble at the end of the message text, instead of as
