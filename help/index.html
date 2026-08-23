@@ -48,37 +48,41 @@
       <div class="help-hero">
         <h1>Help Center</h1>
         <p>Get instant answers to the most common questions and learn how to use InteractInk like a pro.</p>
-        <label class="help-search-box" for="help-search-input">
-          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-          <input id="help-search-input" type="text" placeholder="Search the Help Center" onkeydown="if(event.key==='Enter'){var q=this.value.trim();if(q)window.location.href='/help/index.html?q='+encodeURIComponent(q);}">
-        </label>
+        <div class="help-search-wrap">
+          <label class="help-search-box" for="help-search-input">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <input id="help-search-input" type="text" placeholder="Search the Help Center" autocomplete="off">
+            <button type="button" class="help-search-clear" id="help-search-clear" aria-label="Clear search">&times;</button>
+          </label>
+          <div class="help-search-results" id="help-search-results" role="listbox"></div>
+        </div>
       </div>
       <div class="help-grid">
-        <a class="help-card" href="/help/using-interactink/index.html">
+        <a class="help-card" href="/help/using-interactink/index.html" data-cat="using">
           <span class="help-card-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
           <h3>Using InteractInk</h3>
           <p>Posting, following, messaging, communities, and everything else you do day to day.</p>
           <span class="help-card-count">22 articles</span>
         </a>
-        <a class="help-card" href="/help/managing-your-account/index.html">
+        <a class="help-card" href="/help/managing-your-account/index.html" data-cat="account">
           <span class="help-card-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></span>
           <h3>Managing your account</h3>
           <p>Sign-up, your profile, passwords, email, and account settings.</p>
           <span class="help-card-count">10 articles</span>
         </a>
-        <a class="help-card" href="/help/safety-and-security/index.html">
+        <a class="help-card" href="/help/safety-and-security/index.html" data-cat="safety">
           <span class="help-card-icon"><svg viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.4 9 8 11 4.6-2 8-6 8-11V5z"/></svg></span>
           <h3>Safety and security</h3>
           <p>Privacy controls, blocking and muting, reporting, and keeping your account secure.</p>
           <span class="help-card-count">10 articles</span>
         </a>
-        <a class="help-card" href="/help/rules-and-policies/index.html">
+        <a class="help-card" href="/help/rules-and-policies/index.html" data-cat="rules">
           <span class="help-card-icon"><svg viewBox="0 0 24 24"><path d="M9 2h6l1 3H8z"/><path d="M12 5v17"/><path d="M5 8l-3 6a3.5 3.5 0 0 0 7 0z"/><path d="M19 8l-3 6a3.5 3.5 0 0 0 7 0z"/></svg></span>
           <h3>Rules and policies</h3>
           <p>What&#x27;s allowed on InteractInk, how enforcement works, and how to appeal.</p>
           <span class="help-card-count">10 articles</span>
         </a>
-        <a class="help-card" href="/help/resources/index.html">
+        <a class="help-card" href="/help/resources/index.html" data-cat="resources">
           <span class="help-card-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4.5"/><path d="M12 17.5v.1"/></svg></span>
           <h3>Resources</h3>
           <p>Glossary, accessibility, and general guides for getting the most out of InteractInk.</p>
@@ -99,5 +103,6 @@
 <script src="js/common.js?v=20260823e" defer></script>
 <script src="js/video-player.js?v=20260823e" defer></script>
 <script src="js/auth.js?v=20260820" defer></script>
+<script src="js/help.js?v=20260823a" defer></script>
 </body>
 </html>
