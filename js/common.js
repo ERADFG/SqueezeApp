@@ -397,6 +397,17 @@ window.addEventListener('pageshow', () => { document.documentElement.classList.r
 let _scrollLockCount = 0;
 function lockScroll() { _scrollLockCount++; document.body.style.overflow = 'hidden'; }
 function unlockScroll() { _scrollLockCount = Math.max(0, _scrollLockCount - 1); if (_scrollLockCount === 0) document.body.style.overflow = ''; }
+// Safety net: every opener above is supposed to keep lock/unlock calls
+// balanced, but a missed guard (a double-tap firing the same opener
+// twice, an interrupted flow, etc.) only has to slip once to leave
+// _scrollLockCount stuck above 0 — and once that happens the page is
+// unscrollable until a hard reload, on both desktop and mobile, with
+// no visible open modal to explain it. Since no modal legitimately
+// stays open across a fresh page load or a bfcache restore, force the
+// counter and the lock back to a clean state on both.
+function _resetScrollLock() { _scrollLockCount = 0; document.body.style.overflow = ''; }
+document.addEventListener('DOMContentLoaded', _resetScrollLock);
+window.addEventListener('pageshow', _resetScrollLock);
 
 // ─────────────────────────────────────────────────────────────
 // MOBILE KEYBOARD FIX — the full-screen compose modals (global
@@ -2058,6 +2069,7 @@ function quotedPostHtml(qp) {
     <div class="ph">${pcNameHtml(qp.profile)}<span class="dt">${timeAgo(qp.created_at)}</span></div>
     <div class="pb">${renderBody((qp.body || '').slice(0, 280))}</div>
     ${renderMedia(qp.media_url, qp.media_type, '', qp)}
+    ${linkCardHtml(qp.body, !!qp.media_url)}
   </div>`;
 }
 
@@ -2818,8 +2830,10 @@ function openCreateCommunityModal() {
   ccWiz = ccFreshWiz();
   const el = ccModalEl();
   clearErr(document.getElementById('cc-err'));
-  el.classList.add('open');
-  lockScroll();
+  if (!el.classList.contains('open')) {
+    el.classList.add('open');
+    lockScroll();
+  }
   renderCcForm();
 }
 
@@ -3374,8 +3388,10 @@ function openCreateListModal(editList = null) {
   document.getElementById('cl-private').checked = editList ? !!editList.is_private : false;
   document.getElementById('cl-btn').textContent = editList ? 'Save' : 'Create List';
   clearErr(document.getElementById('cl-err'));
-  el.classList.add('open');
-  lockScroll();
+  if (!el.classList.contains('open')) {
+    el.classList.add('open');
+    lockScroll();
+  }
   setTimeout(() => document.getElementById('cl-name')?.focus(), 0);
 }
 
@@ -3635,8 +3651,10 @@ async function openAddToListModal(ev, targetId, targetUsername) {
   almTargetUsername = decodeURIComponent(targetUsername);
   const el = almModalEl();
   document.getElementById('alm-title').textContent = `Add @${almTargetUsername} to Lists`;
-  el.classList.add('open');
-  lockScroll();
+  if (!el.classList.contains('open')) {
+    el.classList.add('open');
+    lockScroll();
+  }
   await renderAddToListBody();
 }
 
@@ -3862,6 +3880,7 @@ function postCardHtml(p, flash = false) {
         ${p.article_id ? articleCardHtml(p._promoArticle) : ''}
         ${renderMedia(p.media_url, p.media_type, '', p)}
         ${pollHtml(p)}
+        ${linkCardHtml(p.body, !!(p.media_url || p.quote_of || p.article_id || p.poll_options?.length))}
         ${postActionsHtml(p, { replyOnclick: `openReplyPopup('${p.id}')` })}
       </div>
     </div>
@@ -4837,6 +4856,120 @@ function renderMedia(url, type, extraClass = '', owner = null) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// LINK CARDS — Bluesky-style unfurl card for a bare URL in a post's
+// body: an image on top (only when the target site actually has one
+// — og:image-less sites get a text-only card, never a blank/broken
+// image box) followed by title, description, and a small globe +
+// domain footer.
+//
+// Only ever renders for the FIRST link in the body, and only when
+// the post has no other embed of its own (attached photo/video,
+// quote post, poll, or promoted article) — same one-embed-slot rule
+// Bluesky/X use, so a post with both a pasted link and an attached
+// image shows the image, not a duplicate/competing card for the link
+// typed alongside it.
+//
+// Cards render as an empty placeholder first, then hydrate lazily
+// (IntersectionObserver, same lazy-on-scroll-into-view pattern the
+// view counter uses below) via the /api/link-preview proxy — see
+// that file for why this can't just be a client-side fetch().
+const LINK_CARD_URL_RE = /https?:\/\/[^\s<>"']+/;
+function firstUrlInBody(body) {
+  if (!body) return null;
+  const m = LINK_CARD_URL_RE.exec(body);
+  if (!m) return null;
+  // Same trailing-punctuation trim linkifyText() does, so a link
+  // typed at the end of a sentence ("check this out: https://x.com/y.")
+  // doesn't try to unfurl "https://x.com/y." with the period attached.
+  const trailing = m[0].match(/[.,!?:;]+$/);
+  return trailing ? m[0].slice(0, -trailing[0].length) : m[0];
+}
+
+// hasOtherEmbed: true if the post already renders a photo/video, quote,
+// poll, or promoted-article embed — see the one-embed-slot note above.
+function linkCardHtml(body, hasOtherEmbed) {
+  if (hasOtherEmbed) return '';
+  const url = firstUrlInBody(body);
+  if (!url) return '';
+  const key = `lc-${Math.random().toString(36).slice(2)}`;
+  return `<div class="lc-card lc-pending" id="${key}" data-lc-url="${esc(url)}" onclick="event.stopPropagation()"></div>`;
+}
+
+const _lcCache = new Map(); // url -> preview object (or a pending Promise)
+async function fetchLinkPreview(url) {
+  if (_lcCache.has(url)) return _lcCache.get(url);
+  const p = (async () => {
+    try {
+      const res = await fetch(`api/link-preview?url=${encodeURIComponent(url)}`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return (data.title || data.description || data.image) ? data : null;
+    } catch {
+      return null;
+    }
+  })();
+  _lcCache.set(url, p);
+  const resolved = await p;
+  _lcCache.set(url, resolved); // replace the in-flight promise with its result
+  return resolved;
+}
+
+function lcDomainSvg() {
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;flex:none;"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>';
+}
+
+async function hydrateLinkCard(el) {
+  if (!el || el.dataset.lcHydrated) return;
+  el.dataset.lcHydrated = '1';
+  const url = el.dataset.lcUrl;
+  const preview = await fetchLinkPreview(url);
+  // The card (or the whole post under it) may have been removed from
+  // the DOM while the fetch was in flight — bail rather than write
+  // into a detached node.
+  if (!el.isConnected) return;
+  if (!preview) { el.remove(); return; }
+  el.classList.remove('lc-pending');
+  el.innerHTML = `
+    <a href="${esc(preview.url)}" target="_blank" rel="noopener noreferrer nofollow" class="lc-link">
+      ${preview.image ? `<div class="lc-img"><img src="${esc(preview.image)}" alt="" loading="lazy" decoding="async" onerror="this.closest('.lc-img').remove()"></div>` : ''}
+      <div class="lc-text">
+        ${preview.title ? `<div class="lc-title">${esc(preview.title)}</div>` : ''}
+        ${preview.description ? `<div class="lc-desc">${esc(preview.description)}</div>` : ''}
+        <div class="lc-domain">${lcDomainSvg()}<span>${esc(preview.domain)}</span></div>
+      </div>
+    </a>`;
+}
+
+const _lcObserver = 'IntersectionObserver' in window ? new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      hydrateLinkCard(entry.target);
+      _lcObserver.unobserve(entry.target);
+    }
+  });
+}, { rootMargin: '200px' }) : null;
+
+function watchLinkCardsIn(root = document) {
+  const nodes = root.matches?.('.lc-card') ? [root] : [];
+  nodes.push(...root.querySelectorAll('.lc-card'));
+  nodes.forEach(el => _lcObserver ? _lcObserver.observe(el) : hydrateLinkCard(el));
+}
+
+// Auto-watches any link card added anywhere on the page, same as
+// trackViewsIn()'s MutationObserver above — individual pages/renders
+// never have to remember to call watchLinkCardsIn() themselves.
+if ('MutationObserver' in window) {
+  new MutationObserver((mutations) => {
+    for (const m of mutations) {
+      m.addedNodes.forEach(node => {
+        if (node.nodeType !== 1) return;
+        watchLinkCardsIn(node);
+      });
+    }
+  }).observe(document.documentElement, { childList: true, subtree: true });
+}
+
+// ─────────────────────────────────────────────────────────────
 // MEDIA LIGHTBOX — full-screen photo/video viewer opened by
 // clicking any post's media, matching X's "click a photo" modal:
 // desktop docks the media next to a post-detail side panel, mobile
@@ -4903,8 +5036,10 @@ function openLightbox(idx) {
   renderLbSidebar(item.owner);
   renderLbMobileBar(item.owner);
   renderLbCaptionOverlay(item.owner);
-  el.classList.add('open');
-  lockScroll();
+  if (!el.classList.contains('open')) {
+    el.classList.add('open');
+    lockScroll();
+  }
   document.addEventListener('keydown', lbKeyHandler);
 }
 

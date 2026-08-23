@@ -277,6 +277,7 @@ function opBlockHtml(p) {
       ${p.article_id ? articleCardHtml(p._promoArticle) : ''}
       ${renderMedia(p.media_url, p.media_type, '', p)}
       ${pollHtml(p)}
+      ${linkCardHtml(p.body, !!(p.media_url || p.quote_of || p.article_id || p.poll_options?.length))}
       <div class="op-detail-meta"><span data-dt="${p.id}">${fullDateTime(p.created_at)}${editedSuffix(p)}</span> &middot; <span class="op-detail-views">${ICON.views}<b>${fmtCount(p.view_count)}</b> Views</span></div>
       <div class="op-detail-divider"></div>
       ${opDetailActionsHtml(p, "document.getElementById('rf-body')?.scrollIntoView({behavior:'smooth',block:'center'});document.getElementById('rf-body')?.focus();")}
@@ -310,6 +311,7 @@ function ancestorRowHtml(r) {
         <div class="ph">${pcNameHtml(r.profile)}<span class="dt" data-dt="${r.id}">${timeAgo(r.created_at)}${editedSuffix(r)}</span></div>
         <div class="pb" data-pb="${r.id}">${renderBody(r.body)}</div>
         ${renderMedia(r.media_url, r.media_type, '', r)}
+        ${linkCardHtml(r.body, !!r.media_url)}
       </div>
     </div>
   </div>`;
@@ -370,6 +372,7 @@ function renderConversation() {
       </div>
       <div class="op-detail-body" data-pb="${focused.id}">${renderBody(focused.body)}</div>
       ${renderMedia(focused.media_url, focused.media_type, '', focused)}
+      ${linkCardHtml(focused.body, !!focused.media_url)}
       <div class="op-detail-meta"><span data-dt="${focused.id}">${fullDateTime(focused.created_at)}${editedSuffix(focused)}</span></div>
       <div class="op-detail-divider"></div>
       ${postActionsHtml(focused, {
