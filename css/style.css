@@ -401,8 +401,10 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
   display:flex; align-items:center; gap:10px;
   font-family:inherit; font-size:19px; font-weight:800; color:var(--ink);
   text-decoration:none; padding:10px 8px; border-radius:999px; width:fit-content;
+  transition:background .15s ease, filter .15s ease;
 }
 .logo:hover { background:var(--maroon-tint); text-decoration:none; color:var(--ink); }
+.logo:active { background:var(--maroon-tint); filter:brightness(.93); }
 .logo .badge {
   width:36px; height:36px; border-radius:50%;
   display:flex; align-items:center; justify-content:center; flex:none;
@@ -415,12 +417,17 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
 #hdr nav a {
   display:flex; align-items:center; gap:16px; color:var(--ink); text-decoration:none;
   font-size:19px; font-weight:500; padding:10px 12px; border-radius:999px;
-  transition:background .12s ease; position:relative;
+  transition:background .15s ease, filter .15s ease; position:relative;
 }
 #hdr nav a:hover { background:var(--hover-bg); text-decoration:none; color:var(--ink); }
-#hdr nav a:active, .navmore-btn:active, .logo:active {
-  box-shadow: inset 0 0 0 100vmax rgba(120,130,140,.14);
-}
+/* Press state reuses the same hover wash instead of an untransitioned
+   inset box-shadow — the old box-shadow trick had no transition of
+   its own, so it snapped on and off instantly on every tap, which is
+   the "ugly" flash. Backing it with `background` (already smoothly
+   transitioned above) plus a touch of `filter` darkening gives a
+   soft, symmetric fade in both directions, matching how Twitter/X's
+   own nav rows ease into and out of their press state. */
+#hdr nav a:active { background:var(--hover-bg); filter:brightness(.93); }
 #hdr nav a:visited { color:var(--ink); }
 #hdr nav a.cur { font-weight:800; }
 #hdr nav a .navicon { width:24px; height:24px; flex:none; position:relative; display:flex; }
@@ -437,9 +444,10 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
 .navmore-btn {
   display:flex; align-items:center; gap:16px; width:100%; background:none; border:none; text-align:left;
   color:var(--ink); font-family:inherit; font-size:19px; font-weight:500; padding:10px 12px; border-radius:999px;
-  cursor:pointer; transition:background .12s ease;
+  cursor:pointer; transition:background .15s ease, filter .15s ease;
 }
 .navmore-btn:hover { background:var(--hover-bg); }
+.navmore-btn:active { background:var(--hover-bg); filter:brightness(.93); }
 .navmore-btn .navicon { width:24px; height:24px; flex:none; }
 .navmore-btn .navicon svg { width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 .navmore-menu a { display:flex; align-items:center; gap:12px; }
@@ -2466,6 +2474,7 @@ html[data-theme="dim"] .ptr-spinner, html[data-theme="dark"] .ptr-spinner {
     cursor:pointer; text-decoration:none;
   }
   #m-topbar .m-menu-btn svg, #m-topbar .m-feeds-btn svg { width:22px; height:22px; }
+  #m-topbar .m-menu-btn, #m-topbar .m-feeds-btn { transition:background-color .15s ease; }
   #m-topbar .m-menu-btn:active, #m-topbar .m-feeds-btn:active { background:var(--hover-bg); }
   /* Absolutely centered on the bar itself (not flex-centered between
      siblings) so the logo stays dead-center regardless of what sits
@@ -2494,10 +2503,9 @@ html[data-theme="dim"] .ptr-spinner, html[data-theme="dark"] .ptr-spinner {
   }
   #m-tabbar a {
     flex:1; display:flex; align-items:center; justify-content:center;
-    position:relative; overflow:hidden;
-    height:40px; padding:0; border-radius:16px;
+    position:relative; height:40px; padding:0;
     color:var(--muted); text-decoration:none;
-    transition:color .15s ease, background-color .15s ease;
+    transition:color .15s ease;
   }
   #m-tabbar a svg { width:24px; height:24px; flex:none; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
   /* Icon-only bar, same as Bluesky's — the active tab is just a
@@ -2505,8 +2513,28 @@ html[data-theme="dim"] .ptr-spinner, html[data-theme="dark"] .ptr-spinner {
   #m-tabbar a .m-tab-label { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
   #m-tabbar a.cur { color:var(--ink); }
   #m-tabbar a.cur svg { stroke-width:2.5; }
-  #m-tabbar a:active { background:var(--hover-bg); }
-  #m-tabbar a .navbadge { position:absolute; top:2px; right:calc(50% - 17px); margin-left:0; box-shadow:0 0 0 2px var(--bg); }
+  /* Tap/press highlight — a small circle snugly hugging just the icon,
+     the same footprint Twitter/X itself uses, instead of a rounded
+     rectangle stretched across the whole flex-width tab column. Pops
+     in instantly on press (no fade-in delay, so it feels responsive)
+     and eases back out smoothly on release via the scale+opacity
+     transition, matching the soft in/out wash the reference video
+     shows — same pattern as the post action buttons' (.act) own
+     press sheen elsewhere in this file, for a consistent feel. */
+  #m-tabbar a .m-tab-hit {
+    position:relative; isolation:isolate;
+    width:40px; height:40px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+  }
+  #m-tabbar a .m-tab-hit::before {
+    content:""; position:absolute; inset:0; border-radius:inherit; z-index:-1;
+    background:var(--hover-bg); opacity:0; transform:scale(.5);
+    transition:opacity .15s ease, transform .15s cubic-bezier(.2,.8,.2,1);
+  }
+  #m-tabbar a:hover .m-tab-hit::before,
+  #m-tabbar a:active .m-tab-hit::before,
+  #m-tabbar a:focus-visible .m-tab-hit::before { opacity:1; transform:scale(1); }
+  #m-tabbar a .navbadge { position:absolute; top:-2px; right:-4px; margin-left:0; box-shadow:0 0 0 2px var(--bg); z-index:1; }
   /* Last tab is the person's own avatar (Bluesky puts the profile pic,
      not an icon, in the bottom-right slot) — small ring on the active
      state instead of the bolder-stroke treatment icons get. */

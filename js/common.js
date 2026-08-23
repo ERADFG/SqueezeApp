@@ -1000,11 +1000,11 @@ function renderMobileChrome() {
     </div>
 
     <div id="m-tabbar">
-      <a class="${cur('home')}" href="${lp || '/'}">${NAV_ICON.home}<span class="m-tab-label">Home</span></a>
-      <a class="${cur('search')}" href="search.html">${NAV_ICON.search}<span class="m-tab-label">Search</span></a>
-      <a class="${cur('messages')}" href="chat.html">${NAV_ICON.chat}${chatBadge}<span class="m-tab-label">Chat</span></a>
-      <a class="${cur('notifications')}" href="notifications.html">${NAV_ICON.bell}${badge}<span class="m-tab-label">Notifications</span></a>
-      <a class="${cur('profile')} m-tab-avatar" href="${ownHref}"><img class="avatar${avSqClass(currentProfile)}" src="${esc(avatar)}" alt=""><span class="m-tab-label">Profile</span></a>
+      <a class="${cur('home')}" href="${lp || '/'}"><span class="m-tab-hit">${NAV_ICON.home}</span><span class="m-tab-label">Home</span></a>
+      <a class="${cur('search')}" href="search.html"><span class="m-tab-hit">${NAV_ICON.search}</span><span class="m-tab-label">Search</span></a>
+      <a class="${cur('messages')}" href="chat.html"><span class="m-tab-hit">${NAV_ICON.chat}${chatBadge}</span><span class="m-tab-label">Chat</span></a>
+      <a class="${cur('notifications')}" href="notifications.html"><span class="m-tab-hit">${NAV_ICON.bell}${badge}</span><span class="m-tab-label">Notifications</span></a>
+      <a class="${cur('profile')} m-tab-avatar" href="${ownHref}"><span class="m-tab-hit"><img class="avatar${avSqClass(currentProfile)}" src="${esc(avatar)}" alt=""></span><span class="m-tab-label">Profile</span></a>
     </div>
 
     ${currentSession && !onChatPage ? `<button id="m-fab" onclick="mobileCompose();return false;" aria-label="Post">${ICON_COMPOSE}</button>` : ''}
