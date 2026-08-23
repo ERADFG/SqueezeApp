@@ -683,10 +683,22 @@ updateFavicon(getTheme());
 // has exactly one of these, so no per-page wiring is needed.
 // Touch-only — a mouse drag never triggers it.
 (function initPullToRefresh() {
-  const THRESHOLD = 64;  // px of actual finger travel needed to trigger a refresh
-  const MAX_PULL = 100;  // visual cap on how far the indicator opens up
-  const DAMP = 0.5;      // drag feels "heavier" than a 1:1 finger tracking
-  let startY = null, pulling = false, refreshing = false, indicator = null, lastPull = 0;
+  const THRESHOLD = 64;   // px of actual finger travel needed to trigger a refresh
+  const MAX_PULL = 100;   // visual cap on how far the indicator opens up
+  const DAMP = 0.5;       // drag feels "heavier" than a 1:1 finger tracking
+  const DEAD_ZONE = 8;    // px of initial wiggle room before committing to a direction — this
+                          // is what stops a normal upward scroll swipe (whose very first
+                          // touchmove sample can jitter a pixel or two downward before the
+                          // real motion kicks in) from being misread as the start of a pull.
+                          // Calling preventDefault() on that stray first sample was cancelling
+                          // scrolling for the *whole* gesture, even once the real, negative-dy
+                          // motion followed — that was the "can't scroll posts" bug.
+  let startX = null, startY = null, indicator = null, lastPull = 0, refreshing = false;
+  // phase: null (not armed) | 'watching' (armed, still inside the dead zone,
+  // direction not yet decided) | 'confirmed' (deliberate downward pull — we
+  // own this gesture and call preventDefault) | 'abandoned' (turned out to be
+  // a scroll/horizontal swipe/etc — hands off for the rest of this touch)
+  let phase = null;
 
   function feedRefreshFn() {
     if (typeof loadFeed === 'function') return loadFeed;
@@ -718,6 +730,7 @@ updateFavicon(getTheme());
   }
 
   function onTouchStart(e) {
+    phase = null;
     if (refreshing || !e.touches || e.touches.length !== 1) return;
     if (!feedRefreshFn() || !document.getElementById('feed-posts')) return;
     if (!atTop()) return;
@@ -725,16 +738,31 @@ updateFavicon(getTheme());
     // (sidebar, modals, chat panes, the mobile topbar) so this only
     // ever fires over the main feed column.
     if (e.target.closest && e.target.closest('#sidebar, .modal, .chat-msgs, #m-topbar, .gif-grid, .cx-emoji-grid')) return;
+    startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
-    pulling = true;
+    phase = 'watching';
   }
 
   function onTouchMove(e) {
-    if (!pulling || refreshing) return;
+    if (!phase || phase === 'abandoned' || refreshing) return;
+    const dx = e.touches[0].clientX - startX;
     const dy = e.touches[0].clientY - startY;
-    if (dy <= 0 || !atTop()) { pulling = false; resetIndicator(); return; }
+
+    if (phase === 'watching') {
+      // Not enough movement yet to know what this gesture is — do nothing
+      // (and critically, no preventDefault) until it clears the dead zone.
+      if (Math.abs(dx) < DEAD_ZONE && Math.abs(dy) < DEAD_ZONE) return;
+      // Only a clearly-vertical, clearly-downward drag becomes a pull.
+      // Anything else (upward scroll, a horizontal swipe) is abandoned for
+      // good — we never touch preventDefault for the rest of this touch,
+      // so native scrolling behaves exactly as it would with no PTR code at all.
+      if (dy <= 0 || Math.abs(dx) > Math.abs(dy) || !atTop()) { phase = 'abandoned'; return; }
+      phase = 'confirmed';
+    }
+
+    if (dy <= 0 || !atTop()) { phase = 'abandoned'; resetIndicator(); return; }
     const ind = ensureIndicator();
-    if (!ind) { pulling = false; return; }
+    if (!ind) { phase = 'abandoned'; return; }
     e.preventDefault(); // suppress the native scroll bounce / OS pull-to-refresh while dragging
     lastPull = Math.min(dy * DAMP, MAX_PULL);
     ind.classList.add('ptr-dragging', 'ptr-visible');
@@ -743,8 +771,9 @@ updateFavicon(getTheme());
   }
 
   async function onTouchEnd() {
-    if (!pulling) return;
-    pulling = false;
+    const wasConfirmed = phase === 'confirmed';
+    phase = null;
+    if (!wasConfirmed) return;
     const ind = indicator;
     if (!ind) return;
     ind.classList.remove('ptr-dragging');

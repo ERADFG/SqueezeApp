@@ -347,10 +347,60 @@ document.addEventListener('volumechange', (e) => {
 document.addEventListener('fullscreenchange', () => {
   document.querySelectorAll('.ttv').forEach(root => {
     const btn = root.querySelector('.ttv-fs');
-    if (!btn) return;
-    ttvSetIcon(btn, document.fullscreenElement === root ? TTV_ICON.fsExit : TTV_ICON.fsEnter);
+    if (btn) ttvSetIcon(btn, document.fullscreenElement === root ? TTV_ICON.fsExit : TTV_ICON.fsEnter);
+    ttvSyncFullscreenLayout(root);
   });
 });
+// FULLSCREEN LAYOUT SYNC — the browser only ever resizes the .ttv
+// wrapper itself to fill the screen; the <video> inside it still uses
+// object-fit:contain to preserve its own aspect ratio, so on any
+// screen whose aspect ratio doesn't match the video's there are black
+// letterbox/pillarbox bars on two edges. .ttv-controls used to be
+// positioned with inset:0 against the *wrapper* (the full screen),
+// not against the video's actual rendered box — so the button rail,
+// scrub bar, and time readout all ended up floating out in the empty
+// letterbox space instead of hugging the visible video, and at a
+// size/position that had nothing to do with where the video actually
+// was. This measures the video's real on-screen rect every time it
+// can change (entering/leaving fullscreen, window resize, rotating
+// the device, and once metadata loads if that's still pending) and
+// pins .ttv-controls + .ttv-overlay to exactly that rect instead.
+function ttvSyncFullscreenLayout(root) {
+  const isFs = document.fullscreenElement === root || document.webkitFullscreenElement === root;
+  const controls = root.querySelector('.ttv-controls');
+  const overlay = root.querySelector('.ttv-overlay');
+  if (!isFs) {
+    // Back to normal layout — drop the inline override so the regular
+    // (non-fullscreen) `inset:0` CSS rule takes over again.
+    if (controls) controls.style.cssText = '';
+    if (overlay) overlay.style.cssText = '';
+    return;
+  }
+  const video = root.querySelector('.ttv-video');
+  if (!video) return;
+  const place = () => {
+    const vr = video.getBoundingClientRect();
+    const rr = root.getBoundingClientRect();
+    if (!vr.width || !vr.height) return; // metadata not loaded yet — nothing to measure
+    const css = `position:absolute; inset:auto; left:${vr.left - rr.left}px; top:${vr.top - rr.top}px; width:${vr.width}px; height:${vr.height}px;`;
+    if (controls) controls.style.cssText = css;
+    if (overlay) overlay.style.cssText = css;
+  };
+  // Fullscreen resize is applied by the browser over a frame or two,
+  // so measuring immediately can catch the wrapper mid-transition —
+  // a rAF (post-layout) plus a follow-up next frame covers that.
+  requestAnimationFrame(() => { place(); requestAnimationFrame(place); });
+}
+window.addEventListener('resize', () => {
+  const fs = document.fullscreenElement || document.webkitFullscreenElement;
+  if (fs && fs.classList?.contains('ttv')) ttvSyncFullscreenLayout(fs);
+});
+document.addEventListener('loadedmetadata', (e) => {
+  if (!e.target.classList?.contains('ttv-video')) return;
+  const fs = document.fullscreenElement || document.webkitFullscreenElement;
+  const root = ttvRoot(e.target);
+  if (fs && fs === root) ttvSyncFullscreenLayout(root);
+}, true);
 
 // pause any player that scrolls fully out of view (saves bandwidth,
 // matches X pausing timeline video once it's off-screen)
