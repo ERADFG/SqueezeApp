@@ -1628,6 +1628,38 @@ function wireSidebarSearch() {
 }
 document.addEventListener('DOMContentLoaded', wireSidebarSearch);
 
+// #sidebar (the right-hand "Search / Trending / Who to follow" column)
+// is position:fixed with its own overflow-y:auto, deliberately taken out
+// of normal document flow so it stays put while the feed scrolls (see
+// the CSS comment above #sidebar's rule for why). Being a fixed element
+// with an independent scroll box, whether the mouse wheel actually
+// lands on IT — rather than chaining straight past it to the document —
+// is left entirely to each browser/OS's own wheel-to-scroll-container
+// resolution, which has proven inconsistent in the wild: some desktop
+// setups only ever scroll the document (i.e. only the native scrollbar
+// track works), leaving #sidebar's own content stuck. Handling wheel
+// input on #sidebar ourselves removes that ambiguity so it scrolls the
+// same way everywhere. Runs on every page since #sidebar is shared
+// markup; pages without it (login, signup, etc.) just no-op below.
+function wireFixedColumnWheelScroll(el) {
+  if (!el || el.__wheelScrollWired) return;
+  el.__wheelScrollWired = true;
+  el.addEventListener('wheel', e => {
+    if (e.deltaY === 0 || el.scrollHeight <= el.clientHeight) return;
+    const atTop = el.scrollTop <= 0;
+    const atBottom = Math.ceil(el.scrollTop + el.clientHeight) >= el.scrollHeight;
+    // At either edge, let the event carry on as normal (e.g. so an
+    // overscroll past the bottom can still fall through to the page)
+    // instead of trapping the wheel gesture with nowhere left to go.
+    if ((atTop && e.deltaY < 0) || (atBottom && e.deltaY > 0)) return;
+    el.scrollTop += e.deltaY;
+    e.preventDefault();
+  }, { passive: false });
+}
+document.addEventListener('DOMContentLoaded', () => {
+  wireFixedColumnWheelScroll(document.getElementById('sidebar'));
+});
+
 // ── WHO TO FOLLOW — right-column suggestion box (index.html, thread.html,
 // etc.). Self-contained: only runs on pages that actually have a
 // #who-to-follow container, same pattern renderSideNav() uses, so no
