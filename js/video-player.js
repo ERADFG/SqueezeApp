@@ -23,7 +23,7 @@ function ttvHtml(url, opts = {}) {
   <video class="ttv-video" src="${esc(url)}" preload="metadata" playsinline webkit-playsinline disablepictureinpicture disableremoteplayback controlslist="nofullscreen noremoteplayback nodownload noplaybackrate" x-webkit-airplay="deny" ${extraAttrs}></video>
   <div class="ttv-overlay">
     <div class="ttv-spinner" hidden></div>
-    <button type="button" class="ttv-big-play" aria-label="Play"><span class="ttv-play-tri"></span></button>
+    <button type="button" class="ttv-big-play" aria-label="Play"><span class="ttv-big-play-ring"></span>${TTV_ICON.playBig}</button>
   </div>
   <div class="ttv-controls">
     <div class="ttv-progress">
@@ -55,6 +55,9 @@ function ttvHtml(url, opts = {}) {
 
 const TTV_ICON = {
   play: '<svg viewBox="2.03 0 24 24" fill="currentColor"><path d="M8 5.14v13.72c0 .6.66.96 1.17.65l10.9-6.86a.75.75 0 000-1.28L9.17 4.49A.75.75 0 008 5.14z"/></svg>',
+  // Rounded-corner triangle (vs. the feed's sharp-cornered clip-path
+  // one) — softer, more modern silhouette for the big center button.
+  playBig: '<svg class="ttv-big-play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 6.4c0-1.2 1.32-1.93 2.34-1.28l8.51 5.6c.95.6.95 2 0 2.6l-8.51 5.6c-1.02.65-2.34-.08-2.34-1.28V6.4z" stroke="currentColor" stroke-width=".4" stroke-linejoin="round"/></svg>',
   pause: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5.5A1.5 1.5 0 018.5 4h1A1.5 1.5 0 0111 5.5v13a1.5 1.5 0 01-1.5 1.5h-1A1.5 1.5 0 017 18.5v-13zM13 5.5A1.5 1.5 0 0114.5 4h1A1.5 1.5 0 0117 5.5v13a1.5 1.5 0 01-1.5 1.5h-1A1.5 1.5 0 0113 18.5v-13z"/></svg>',
   volHigh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h4l5 4v-13l-5 4H4z"/><path d="M16.3 8.5a5 5 0 010 7"/><path d="M18.8 6a8.5 8.5 0 010 12"/></svg>',
   volMuted: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h4l5 4v-13l-5 4H4z"/><path d="M16.5 9.5l4.5 5m0-5l-4.5 5"/></svg>',
