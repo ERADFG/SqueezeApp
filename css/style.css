@@ -302,12 +302,24 @@ html.oc-page-leaving body { opacity:0; }
    spec and is what makes vertical scrolling work here at all, but a
    couple of older WebKit-based in-app browsers (some Android WebView
    builds in particular) have been seen getting it wrong and treating
-   the y-axis as 'visible' instead, which can misbehave once a fixed-
-   position ancestor is in the mix (see #hdr/#sidebar above). Spelling
-   it out removes the guesswork on those. -webkit-overflow-scrolling
-   gives old iOS Safari (<13) momentum/inertia scrolling on the root
-   scroller — modern iOS ignores it safely. */
-html, body { overflow-x:hidden; overflow-y:auto; max-width:100vw; -webkit-overflow-scrolling:touch; }
+   the y-axis as 'visible' instead. Spelling it out removes the
+   guesswork on those. -webkit-overflow-scrolling gives old iOS Safari
+   (<13) momentum/inertia scrolling on the root scroller — modern iOS
+   ignores it safely.
+   IMPORTANT: this lives on <html> ONLY, not <body>. Setting matching
+   overflow on both used to make html AND body into two separate,
+   ambiguous scroll containers stacked on top of each other — harmless
+   for plain page scrolling, but it's exactly what broke wheel-scroll
+   reliably reaching a position:fixed descendant like #sidebar on a
+   number of real desktop browser/OS combinations (the fixed element's
+   own overflow:auto box, plus two possible document scrollers above
+   it, left the browser's "which ancestor actually owns this wheel
+   event" resolution ambiguous). <body> is left with its default,
+   unset overflow (effectively visible) so there is exactly one
+   scrolling element on the page: document.scrollingElement, i.e.
+   <html>. #sidebar handles its own internal scrolling independently
+   via its own overflow-y:auto — see its rule below. */
+html { overflow-x:hidden; overflow-y:auto; max-width:100vw; -webkit-overflow-scrolling:touch; }
 
 a { color:var(--link); text-decoration:none; }
 a:hover { color:var(--maroon-dk); text-decoration:underline; }
@@ -724,22 +736,20 @@ select {
 /* ── MAIN LAYOUT ── */
 #main { display:flex; gap:0; padding:0; max-width:none; margin:0 0 0 275px; align-items:flex-start; flex:1; min-width:0; }
 #feed { flex:1 1 600px; max-width:600px; min-width:0; border-left:1px solid var(--line); border-right:1px solid var(--line); min-height:100vh; }
-/* position:fixed (not sticky) — same reason #hdr above uses fixed
-   instead of sticky: the overflow-x:hidden rule on html/body (see
-   top of file) implicitly turns their overflow-y into 'auto' too
-   (CSS pairs overflow-x/overflow-y so neither stays 'visible' once
-   the other isn't), which makes html AND body both scroll
-   containers. With two ambiguous scrolling ancestors, sticky's
-   containing block resolution gets unreliable — the sidebar drifts
-   or scrolls away with the feed instead of staying put. Fixed pins
-   it to the viewport with zero ambiguity. Mirrors #hdr's left-edge
-   formula exactly, just measured from the right: .xshell centers at
-   max-width:1265px via margin:0 auto, so its right edge sits at
-   max(0, (viewport-1265)/2) in from the viewport's right edge, same
-   as #hdr's left offset. #main needs no extra margin to compensate —
-   #feed already caps at max-width:600px on its own, so it renders in
-   exactly the same place whether #sidebar takes up flex space or not. */
-#sidebar { width:350px; flex:none; min-width:0; padding:8px 16px; position:fixed; top:0; right:max(0px, calc(50% - 632.5px)); height:100vh; overflow-y:auto; scrollbar-width:none; z-index:5; }
+/* position:sticky, in normal flex flow (not fixed/detached) — pins
+   the sidebar to the viewport top exactly like position:fixed did,
+   but because it stays part of the document's normal scroll flow, a
+   mouse wheel/trackpad/touch gesture anywhere over it is guaranteed
+   to land on either its own overflow-y:auto box or the single page
+   scroller (<html>) — there's no separate, easily-bypassed scroll
+   container for the browser to fail to route the gesture to, which is
+   what made the sidebar's own content stop responding to scrolling on
+   some desktop browser/OS combinations under the old position:fixed
+   setup. align-self:flex-start keeps it from stretching to #main's
+   full row height (the default for a flex item) so height:100vh +
+   overflow-y:auto only ever scrolls the sidebar's own content, never
+   the whole row. */
+#sidebar { width:350px; flex:none; min-width:0; padding:8px 16px; position:sticky; align-self:flex-start; top:0; height:100vh; overflow-y:auto; scrollbar-width:none; z-index:5; }
 #sidebar::-webkit-scrollbar { display:none; }
 
 /* ── WHO TO FOLLOW (right column, Twitter-style suggestions box) ── */
@@ -1598,8 +1608,11 @@ a.act:hover, button.act.reply:hover, button.act.reply:active { color:var(--maroo
   .rp-menu-dd button svg { width:19px; height:19px; }
   .rp-menu-dd-sep { margin:2px 6px; }
 }
-/* Locks background scroll while the mobile repost sheet is open. */
-body.oc-sheet-open { overflow:hidden; }
+/* Locks background scroll while the mobile repost sheet is open.
+   html:has(...) covers <html> — the actual scrolling element — since
+   the class itself is only ever toggled on <body> by the JS. */
+body.oc-sheet-open,
+html:has(> body.oc-sheet-open) { overflow:hidden; }
 
 /* ── POST DETAIL (thread.html's OP) — Twitter's post-detail screen:
    bigger body text, a "9:00 PM · Aug 8, 2026 · 64.5k Views" meta line

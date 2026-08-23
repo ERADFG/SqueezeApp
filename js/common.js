@@ -395,8 +395,8 @@ window.addEventListener('pageshow', () => { document.documentElement.classList.r
 // modal. A simple counter keeps the lock held until every open
 // modal has released it.
 let _scrollLockCount = 0;
-function lockScroll() { _scrollLockCount++; document.body.style.overflow = 'hidden'; }
-function unlockScroll() { _scrollLockCount = Math.max(0, _scrollLockCount - 1); if (_scrollLockCount === 0) document.body.style.overflow = ''; }
+function lockScroll() { _scrollLockCount++; document.documentElement.style.overflow = 'hidden'; document.body.style.overflow = 'hidden'; }
+function unlockScroll() { _scrollLockCount = Math.max(0, _scrollLockCount - 1); if (_scrollLockCount === 0) { document.documentElement.style.overflow = ''; document.body.style.overflow = ''; } }
 // Safety net: every opener above is supposed to keep lock/unlock calls
 // balanced, but a missed guard (a double-tap firing the same opener
 // twice, an interrupted flow, etc.) only has to slip once to leave
@@ -419,8 +419,10 @@ function unlockScroll() { _scrollLockCount = Math.max(0, _scrollLockCount - 1); 
 // clear all three locks together in one place.
 function _resetScrollLock() {
   _scrollLockCount = 0;
+  document.documentElement.style.overflow = '';
   document.body.style.overflow = '';
   document.documentElement.classList.remove('oc-drawer-open');
+  document.documentElement.classList.remove('oc-sheet-open');
   document.body.classList.remove('oc-sheet-open');
   document.getElementById('m-drawer-bg')?.classList.remove('open');
 }
