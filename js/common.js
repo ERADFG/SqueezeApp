@@ -405,7 +405,25 @@ function unlockScroll() { _scrollLockCount = Math.max(0, _scrollLockCount - 1); 
 // no visible open modal to explain it. Since no modal legitimately
 // stays open across a fresh page load or a bfcache restore, force the
 // counter and the lock back to a clean state on both.
-function _resetScrollLock() { _scrollLockCount = 0; document.body.style.overflow = ''; }
+//
+// Two OTHER scroll-lock mechanisms exist outside this counter —
+// html.oc-drawer-open (mobile hamburger drawer, see openMobileDrawer()/
+// closeMobileDrawer() above) and body.oc-sheet-open (mobile repost
+// sheet / new-chat sheet) — each also sets CSS overflow:hidden while
+// its own UI is open. Same failure mode applies: leave with the
+// drawer/sheet open (a link inside it navigating away without calling
+// its close function first, or a bfcache snapshot taken mid-open) and
+// the *next* page load or restore can inherit an overflow:hidden lock
+// with no visible drawer/sheet on screen to explain it. Nothing
+// legitimately stays open across a fresh load or bfcache restore, so
+// clear all three locks together in one place.
+function _resetScrollLock() {
+  _scrollLockCount = 0;
+  document.body.style.overflow = '';
+  document.documentElement.classList.remove('oc-drawer-open');
+  document.body.classList.remove('oc-sheet-open');
+  document.getElementById('m-drawer-bg')?.classList.remove('open');
+}
 document.addEventListener('DOMContentLoaded', _resetScrollLock);
 window.addEventListener('pageshow', _resetScrollLock);
 

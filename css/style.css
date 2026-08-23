@@ -297,7 +297,17 @@ html.oc-page-leaving body { opacity:0; }
    sideways — nested horizontal scrollers (board-scroller, tables,
    the mobile repost sheet) keep scrolling normally since this only
    affects the outermost box. */
-html, body { overflow-x:hidden; max-width:100vw; }
+/* overflow-y:auto is written explicitly (not left to the browser to
+   infer from overflow-x:hidden alone) — that inference is correct per
+   spec and is what makes vertical scrolling work here at all, but a
+   couple of older WebKit-based in-app browsers (some Android WebView
+   builds in particular) have been seen getting it wrong and treating
+   the y-axis as 'visible' instead, which can misbehave once a fixed-
+   position ancestor is in the mix (see #hdr/#sidebar above). Spelling
+   it out removes the guesswork on those. -webkit-overflow-scrolling
+   gives old iOS Safari (<13) momentum/inertia scrolling on the root
+   scroller — modern iOS ignores it safely. */
+html, body { overflow-x:hidden; overflow-y:auto; max-width:100vw; -webkit-overflow-scrolling:touch; }
 
 a { color:var(--link); text-decoration:none; }
 a:hover { color:var(--maroon-dk); text-decoration:underline; }
