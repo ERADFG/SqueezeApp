@@ -3986,6 +3986,40 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
   width:50px !important; height:50px !important; margin-left:6px !important;
 }
 
+/* FULLSCREEN CONTROL BAR — swaps the feed player's translucent
+   gradient bar + pill-chip buttons for a plain, solid, minimal bar
+   matching X's own fullscreen video controls: an opaque black strip
+   docked to the bottom, a hairline progress track with no drag
+   handle bubble, a secondary-gray timestamp, and unstyled icon
+   buttons with no hover backgrounds. Always visible (no idle
+   fade-out) since there's no page content underneath to reveal. */
+.ttv:fullscreen .ttv-controls, .ttv:-webkit-full-screen .ttv-controls {
+  background:#000; opacity:1 !important;
+  padding:10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  border-top:1px solid rgba(255,255,255,.08);
+}
+.ttv:fullscreen.ttv-playing.ttv-idle, .ttv:-webkit-full-screen.ttv-playing.ttv-idle { cursor:default; }
+
+.ttv:fullscreen .ttv-progress, .ttv:-webkit-full-screen .ttv-progress { height:10px; margin:0 0 4px; }
+.ttv:fullscreen .ttv-progress-track, .ttv:-webkit-full-screen .ttv-progress-track,
+.ttv:fullscreen .ttv-progress:hover .ttv-progress-track, .ttv:-webkit-full-screen .ttv-progress:hover .ttv-progress-track,
+.ttv:fullscreen .ttv-progress.ttv-dragging .ttv-progress-track, .ttv:-webkit-full-screen .ttv-progress.ttv-dragging .ttv-progress-track {
+  height:2.5px; background:rgba(255,255,255,.25);
+}
+.ttv:fullscreen .ttv-progress-played, .ttv:-webkit-full-screen .ttv-progress-played { background:#fff; }
+.ttv:fullscreen .ttv-progress-buffered, .ttv:-webkit-full-screen .ttv-progress-buffered { background:rgba(255,255,255,.4); }
+.ttv:fullscreen .ttv-progress-handle, .ttv:-webkit-full-screen .ttv-progress-handle { display:none; }
+
+.ttv:fullscreen .ttv-row, .ttv:-webkit-full-screen .ttv-row { gap:14px; height:26px; }
+.ttv:fullscreen .ttv-btn, .ttv:-webkit-full-screen .ttv-btn { background:transparent !important; width:26px; height:26px; }
+.ttv:fullscreen .ttv-btn:hover, .ttv:-webkit-full-screen .ttv-btn:hover { background:transparent !important; opacity:.8; }
+.ttv:fullscreen .ttv-btn svg, .ttv:-webkit-full-screen .ttv-btn svg { width:19px; height:19px; }
+.ttv:fullscreen .ttv-btn.ttv-play svg, .ttv:-webkit-full-screen .ttv-btn.ttv-play svg { width:18px; height:18px; }
+.ttv:fullscreen .ttv-time, .ttv:-webkit-full-screen .ttv-time { color:#71767b; font-weight:500; padding:0 0 0 2px; }
+.ttv:fullscreen .ttv-speed, .ttv:-webkit-full-screen .ttv-speed { border-radius:0; padding:0; font-weight:800; }
+.ttv:fullscreen .ttv-vol-wrap, .ttv:-webkit-full-screen .ttv-vol-wrap { display:flex !important; }
+.ttv:fullscreen .ttv-vol-slider, .ttv:-webkit-full-screen .ttv-vol-slider { display:none !important; }
+
 /* ── CROP MODAL — shared "Edit media" step (crop-modal.js) used
    before any image becomes an avatar or banner: profile, community,
    or List. Dark, full-bleed, matches Twitter's own edit-media UI. ── */
