@@ -81,16 +81,21 @@ function ttvSetIcon(btn, svg) { if (btn) btn.innerHTML = svg; }
 
 function ttvUpdatePlayIcon(root) {
   const v = ttvVideo(root);
-  const icon = v.paused || v.ended ? TTV_ICON.play : TTV_ICON.pause;
-  ttvSetIcon(root.querySelector('.ttv-play'), icon);
+  // The center button is .ttv-big-play (the current "reel rail" markup
+  // has no separate .ttv-play element — that was left over from an
+  // earlier player layout). It's fully hidden via CSS while playing
+  // (.ttv.ttv-playing .ttv-big-play { display:none }), so nothing here
+  // needs to swap its icon — it only ever shows the play triangle,
+  // for when playback is paused/ended.
   root.classList.toggle('ttv-playing', !v.paused && !v.ended);
 }
 
 function ttvUpdateVolIcon(root) {
   const v = ttvVideo(root);
+  // .ttv-vol-slider doesn't exist in this player's markup (the "reel
+  // rail" design only has a mute toggle button, no drag slider) — that
+  // lookup used to silently no-op every time this ran.
   ttvSetIcon(root.querySelector('.ttv-mute'), (v.muted || v.volume === 0) ? TTV_ICON.volMuted : TTV_ICON.volHigh);
-  const slider = root.querySelector('.ttv-vol-slider');
-  if (slider && document.activeElement !== slider) slider.value = v.muted ? 0 : v.volume;
 }
 
 function ttvUpdateProgress(root, previewFrac = null) {
@@ -172,7 +177,7 @@ document.addEventListener('click', (e) => {
   // clicking outside an open menu closes it
   document.querySelectorAll('.ttv.ttv-menu-open').forEach(r => { if (!r.contains(e.target)) ttvCloseMenu(r); });
 
-  const playBtn = e.target.closest('.ttv-play, .ttv-big-play');
+  const playBtn = e.target.closest('.ttv-big-play');
   if (playBtn) { ttvTogglePlay(ttvRoot(playBtn)); return; }
   const muteBtn = e.target.closest('.ttv-mute');
   if (muteBtn) { ttvToggleMute(ttvRoot(muteBtn)); return; }
