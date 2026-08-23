@@ -1479,16 +1479,22 @@ a.act:hover, button.act.reply:hover, button.act.reply:active { color:var(--maroo
 .act.like.liked { color:var(--like); }
 .act.like.liked svg { fill:var(--like); stroke:var(--like); animation:oc-like-pop .45s cubic-bezier(.17,.89,.32,1.49); }
 
-/* ── LIKE BURST — a quick radial confetti of little dots fired from
-   the heart's center the instant a post gets liked (not on unlike),
-   same spirit as X/Instagram's tap-to-like flourish. Particles are
-   fixed-position (viewport coordinates from the button's own
-   getBoundingClientRect() in spawnLikeBurst()) so they're never
-   clipped by any ancestor's overflow:hidden — including .act's own,
-   which the heart icon itself sits inside. Self-removing: each
-   particle's `animationend` listener deletes it from the DOM. */
+/* ── ACTION BURST — a quick radial confetti of little dots fired from
+   an action icon's center the instant it fires: like (on like, not
+   unlike), save (on bookmark), repost/quote (on repost, not undo),
+   share (on tap), comment (on tap) — see spawnActionBurst() in
+   common.js, which colors the particles per-action via an inline
+   style override on this same class. Same spirit as X/Instagram's
+   tap-to-like flourish, now shared by every action instead of just
+   like. Particles are fixed-position (viewport coordinates from the
+   button's own getBoundingClientRect()) so they're never clipped by
+   any ancestor's overflow:hidden — including .act's own, which every
+   one of these icons sits inside. Self-removing: each particle's
+   `animationend` listener deletes it from the DOM. Pure viewport math,
+   so this looks identical on mobile and desktop — no separate mobile
+   version to keep in sync. */
 @keyframes oc-like-pop { 0% { transform:scale(1); } 30% { transform:scale(1.35); } 55% { transform:scale(.92); } 100% { transform:scale(1); } }
-.like-burst-particle {
+.act-burst-particle {
   position:fixed; left:0; top:0; width:6px; height:6px; margin:-3px 0 0 -3px;
   border-radius:50%; background:var(--like); pointer-events:none; z-index:9999;
   animation:oc-like-burst .55s cubic-bezier(.16,.84,.32,1) forwards;
@@ -1506,6 +1512,8 @@ a.act:hover, button.act.reply:hover, button.act.reply:active { color:var(--maroo
 /* Share — always reads blue, on hover, press, and after a successful
    copy, so tapping it never looks like an unrelated brand color. */
 .act.share:hover, .act.share:active, .act.share.copied { color:var(--share); }
+.act.share:active svg { animation:oc-pop .28s ease; }
+.act.reply:not(.disabled):active svg { animation:oc-pop .28s ease; }
 
 /* Save/Bookmark — always reads amber/yellow, same idea. */
 .act.bookmark { flex:none; }

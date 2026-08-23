@@ -1569,13 +1569,18 @@ function setLikeUiState(btn, isLiked, delta) {
   if (isLiked) spawnLikeBurst(btn);
 }
 
-// Fires a quick radial burst of small dots out of the heart icon's
-// center on like (see .like-burst-particle in style.css). Uses
+// Fires a quick radial burst of small dots out of an action icon's
+// center (see .act-burst-particle in style.css). Uses
 // getBoundingClientRect() + position:fixed particles rather than
 // appending inside the button itself, since .act has overflow:hidden
 // for its own frosted-glass press effect and would clip anything
-// bigger than the pill.
-function spawnLikeBurst(btn) {
+// bigger than the pill. Shared by like/save/repost/quote/share/
+// comment — colorVar picks which action color (--like, --save,
+// --repost, --share, --maroon) the particles render in, so every
+// action gets the same flourish in its own themed color. Same effect
+// on mobile and desktop — it's plain viewport math, no separate
+// mobile path.
+function spawnActionBurst(btn, colorVar) {
   const icon = btn.querySelector('svg') || btn;
   const r = icon.getBoundingClientRect();
   const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
@@ -1584,15 +1589,30 @@ function spawnLikeBurst(btn) {
     const angle = (Math.PI * 2 * i) / count + (Math.random() * 0.4 - 0.2);
     const dist = 16 + Math.random() * 10;
     const dot = document.createElement('span');
-    dot.className = 'like-burst-particle';
+    dot.className = 'act-burst-particle';
     dot.style.left = `${cx}px`;
     dot.style.top = `${cy}px`;
     dot.style.setProperty('--tx', `${Math.cos(angle) * dist}px`);
     dot.style.setProperty('--ty', `${Math.sin(angle) * dist}px`);
+    dot.style.background = `var(${colorVar})`;
     dot.addEventListener('animationend', () => dot.remove());
     document.body.appendChild(dot);
   }
 }
+// Kept as a thin wrapper — spawnLikeBurst(btn) is still called by name
+// wherever the like flow used to reference it directly.
+function spawnLikeBurst(btn) { spawnActionBurst(btn, '--like'); }
+
+// Comment doesn't toggle a persistent state the way like/save/repost
+// do — tapping it just opens a composer — so instead of hooking every
+// call site's replyOnclick string, one delegated listener bursts
+// whichever reply button was actually tapped, covering every page
+// that renders one (feed cards, thread OP, lightbox, replies) with a
+// single rule.
+document.addEventListener('click', (e) => {
+  const replyBtn = e.target.closest('.act.reply:not(.disabled)');
+  if (replyBtn) spawnActionBurst(replyBtn, '--maroon');
+});
 
 // Toggles like/unlike — mirrors toggleBookmark's insert-or-delete pattern.
 // OPTIMISTIC: flips the heart and count the instant you tap it, before
@@ -1665,6 +1685,7 @@ function setBookmarkUiState(btn, isBookmarked, delta) {
     btn.dataset.count = n;
     bc.textContent = fmtCount(n);
   }
+  if (isBookmarked) spawnActionBurst(btn, '--save');
 }
 
 // OPTIMISTIC, like toggleLike() above — instant visual state, rolled
@@ -1820,6 +1841,7 @@ function setRepostUiState(postId, isReposted, delta) {
     btn.dataset.count = n;
     label.textContent = fmtCount(n);
   }
+  if (isReposted && btn) spawnActionBurst(btn, '--repost');
   const undoBtn = wrap.querySelector('.rp-undo');
   const doBtn = wrap.querySelector('.rp-do');
   if (undoBtn) undoBtn.style.display = isReposted ? '' : 'none';
@@ -2027,6 +2049,12 @@ async function submitQuote() {
     if (postCache[quotingPostId]) data.quoted = postCache[quotingPostId];
     else await attachQuotedPosts([data]);
     cachePost(data);
+    // Same repost/quote family as doRepost() above — burst the
+    // original post's repost icon (if it's visible anywhere on
+    // screen) so quoting gets the same instant flourish as a plain
+    // repost, not just a silently-closing modal.
+    const quotedRepostBtn = document.getElementById(`rpmenu-${quotingPostId}`)?.querySelector('.act.repost');
+    if (quotedRepostBtn) spawnActionBurst(quotedRepostBtn, '--repost');
     closeQuoteModal();
     if (typeof addPostToFeed === 'function' && document.getElementById('feed-posts')) {
       addPostToFeed(data, true);
@@ -2051,6 +2079,7 @@ async function submitQuote() {
 // or a share the person cancels) falls back to the old copy-link
 // behavior, so the button still does *something* useful everywhere.
 function sharePost(id, btn) {
+  if (btn) spawnActionBurst(btn, '--share');
   const url = `${location.origin}${prettyPostUrlById(id, postCache?.[id]?.profile?.username)}`;
   const post = postCache?.[id];
   const title = post ? `${post.profile?.display_name || post.profile?.username || 'InteractInk'} on InteractInk` : 'InteractInk';
