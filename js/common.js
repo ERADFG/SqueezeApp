@@ -664,9 +664,110 @@ function updateFavicon(theme) {
   const dark = theme && theme !== 'light';
   const f32 = document.getElementById('fav32');
   const f512 = document.getElementById('fav512');
-  if (f32) f32.href = dark ? 'img/favicon-dark-32.png' : 'img/favicon-32.png';
-  if (f512) f512.href = dark ? 'img/favicon-dark.png' : 'img/favicon.png';
+  if (f32) f32.setAttribute('href', f32.getAttribute('href').replace(dark ? 'favicon-32.png' : 'favicon-dark-32.png', dark ? 'favicon-dark-32.png' : 'favicon-32.png'));
+  if (f512) f512.setAttribute('href', f512.getAttribute('href').replace(dark ? 'favicon.png' : 'favicon-dark.png', dark ? 'favicon-dark.png' : 'favicon.png'));
 }
+// Belt-and-suspenders: the pre-paint inline <script> in <head> already sets
+// the right favicon before first paint (for people with dark saved/system
+// theme), but if it ever fails silently (localStorage disabled, etc.) this
+// re-syncs the tab icon to whatever theme actually ended up on screen, on
+// every single page load — not just live OS flips or a manual Settings change.
+updateFavicon(getTheme());
+// ── PULL TO REFRESH ──────────────────────────────────────────────
+// Twitter-style: drag down from the very top of a feed page and it
+// re-fetches just the posts in place instead of the browser doing a
+// full-page reload (which is what mobile Chrome/a PWA does natively
+// when you pull down at scrollTop 0 — the "site refreshes" behavior
+// this replaces). Works on any page that has a #feed-posts list and
+// defines one of the load functions below; each feed page already
+// has exactly one of these, so no per-page wiring is needed.
+// Touch-only — a mouse drag never triggers it.
+(function initPullToRefresh() {
+  const THRESHOLD = 64;  // px of actual finger travel needed to trigger a refresh
+  const MAX_PULL = 100;  // visual cap on how far the indicator opens up
+  const DAMP = 0.5;      // drag feels "heavier" than a 1:1 finger tracking
+  let startY = null, pulling = false, refreshing = false, indicator = null, lastPull = 0;
+
+  function feedRefreshFn() {
+    if (typeof loadFeed === 'function') return loadFeed;
+    if (typeof loadCommunityFeed === 'function') return loadCommunityFeed;
+    if (typeof loadBookmarks === 'function') return loadBookmarks;
+    return null;
+  }
+
+  function ensureIndicator() {
+    if (indicator) return indicator;
+    const feed = document.getElementById('feed-posts');
+    if (!feed || !feed.parentNode) return null;
+    indicator = document.createElement('div');
+    indicator.id = 'ptr-indicator';
+    indicator.innerHTML = '<span class="ptr-spinner"></span>';
+    feed.parentNode.insertBefore(indicator, feed);
+    return indicator;
+  }
+
+  function atTop() {
+    return (window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0) <= 0;
+  }
+
+  function resetIndicator() {
+    if (!indicator) return;
+    indicator.classList.remove('ptr-loading', 'ptr-visible', 'ptr-dragging');
+    indicator.style.height = '0px';
+    lastPull = 0;
+  }
+
+  function onTouchStart(e) {
+    if (refreshing || !e.touches || e.touches.length !== 1) return;
+    if (!feedRefreshFn() || !document.getElementById('feed-posts')) return;
+    if (!atTop()) return;
+    // Ignore drags starting inside anything with its own scroll/gestures
+    // (sidebar, modals, chat panes, the mobile topbar) so this only
+    // ever fires over the main feed column.
+    if (e.target.closest && e.target.closest('#sidebar, .modal, .chat-msgs, #m-topbar, .gif-grid, .cx-emoji-grid')) return;
+    startY = e.touches[0].clientY;
+    pulling = true;
+  }
+
+  function onTouchMove(e) {
+    if (!pulling || refreshing) return;
+    const dy = e.touches[0].clientY - startY;
+    if (dy <= 0 || !atTop()) { pulling = false; resetIndicator(); return; }
+    const ind = ensureIndicator();
+    if (!ind) { pulling = false; return; }
+    e.preventDefault(); // suppress the native scroll bounce / OS pull-to-refresh while dragging
+    lastPull = Math.min(dy * DAMP, MAX_PULL);
+    ind.classList.add('ptr-dragging', 'ptr-visible');
+    ind.style.height = lastPull + 'px';
+    ind.querySelector('.ptr-spinner').style.setProperty('--ptr-rot', (Math.min(lastPull / MAX_PULL, 1) * 360) + 'deg');
+  }
+
+  async function onTouchEnd() {
+    if (!pulling) return;
+    pulling = false;
+    const ind = indicator;
+    if (!ind) return;
+    ind.classList.remove('ptr-dragging');
+    if (lastPull >= THRESHOLD) {
+      const fn = feedRefreshFn();
+      refreshing = true;
+      ind.classList.add('ptr-loading');
+      ind.style.height = '48px';
+      try { if (fn) await fn(); } finally {
+        refreshing = false;
+        resetIndicator();
+      }
+    } else {
+      resetIndicator();
+    }
+  }
+
+  document.addEventListener('touchstart', onTouchStart, { passive:true });
+  document.addEventListener('touchmove', onTouchMove, { passive:false });
+  document.addEventListener('touchend', onTouchEnd, { passive:true });
+  document.addEventListener('touchcancel', onTouchEnd, { passive:true });
+})();
+
 // ── ACCENT COLOR — same idea as THEME above, but swaps the app's one
 // accent color (buttons/links/active states) instead of the surface
 // colors. Applied via data-accent on <html>; "blue" is the default and

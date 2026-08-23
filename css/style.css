@@ -269,6 +269,10 @@ button:not(:disabled):active, [role="button"]:active, input[type="submit"]:activ
 }
 
 html { scroll-behavior:auto; }
+/* Stops the browser's own full-page pull-to-refresh from ever firing
+   on mobile Chrome/PWA — initPullToRefresh() in common.js (below)
+   replaces it with an in-page refresh of just the posts. */
+html, body { overscroll-behavior-y:contain; }
 
 body {
   background:var(--bg);
@@ -2072,6 +2076,31 @@ body.oc-sheet-open { overflow:hidden; }
 html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgba(244,63,94,.14); color:#FDA4AF; }
 
 .spinner { display:block; text-align:center; padding:28px; font-size:14px; color:var(--muted); font-style:normal; }
+
+/* ── PULL TO REFRESH — see initPullToRefresh() in common.js. Sits
+   right above #feed-posts, collapsed to 0 height until a touch-drag
+   from the very top of the page opens it up; height and spin angle
+   both track the drag live, then it either snaps back (short pull)
+   or locks into a spinning "loading" state while the feed refetches. */
+#ptr-indicator {
+  display:flex; align-items:center; justify-content:center;
+  height:0; overflow:hidden; opacity:0;
+  transition:height .22s cubic-bezier(.2,.8,.2,1), opacity .22s ease;
+}
+#ptr-indicator.ptr-dragging { transition:opacity .22s ease; }
+#ptr-indicator.ptr-visible { opacity:1; }
+.ptr-spinner {
+  width:24px; height:24px; border-radius:50%; flex:none; margin:10px 0;
+  background:conic-gradient(from 0deg, var(--maroon), rgba(255,255,255,0) 78%);
+  -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+          mask:radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+  transform:rotate(var(--ptr-rot, 0deg));
+}
+#ptr-indicator.ptr-loading .ptr-spinner { animation:ptr-spin .8s cubic-bezier(.5,0,.5,1) infinite; }
+@keyframes ptr-spin { to { transform:rotate(360deg); } }
+html[data-theme="dim"] .ptr-spinner, html[data-theme="dark"] .ptr-spinner {
+  background:conic-gradient(from 0deg, var(--maroon), rgba(0,0,0,0) 78%);
+}
 
 /* ── SKELETON LOADERS — shown the instant a page/feed starts loading,
    swapped for real cards the moment data arrives. Reads as "already
