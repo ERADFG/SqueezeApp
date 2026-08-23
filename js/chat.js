@@ -93,8 +93,8 @@ const ICON_LOCK_SMALL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentCol
 // Group/channel name & description limits — enforced client-side via
 // maxlength + these constants (used for the live counters below) and
 // server-side via check constraints in supabase/chat_group_manage.sql.
-const GCV_NAME_MAX = 14;
-const GCV_DESC_MAX = 50;
+const GCV_NAME_MAX = 20;
+const GCV_DESC_MAX = 80;
 // Camera glyph for the group/channel avatar picker overlay — mirrors
 // the .cc-avatar-pick / .cc-banner-pick icon used for community/List
 // pictures (js/common.js's createCommunity wizard), kept local here
