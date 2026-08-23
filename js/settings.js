@@ -155,15 +155,15 @@ async function loadSettings() {
         ${toggleRowHtml('notify_follows', 'New followers', 'When someone follows you', s.notify_follows)}
       </div>
 
-      ${settingsRowHtml('content', NAV_ICON.doc, t('settings.language'))}
-      <div class="settings-panel" id="panel-content">
+      ${settingsRowHtml('language', NAV_ICON.globe, t('settings.language'))}
+      <div class="settings-panel" id="panel-language">
         <div class="settings-row">
           <div><div class="lbl">${t('settings.language')}</div></div>
           ${langSelectHtml('set-lang')}
         </div>
       </div>
 
-      ${settingsRowHtml('appearance', NAV_ICON.info, t('settings.appearance'))}
+      ${settingsRowHtml('appearance', NAV_ICON.palette, t('settings.appearance'))}
       <div class="settings-panel" id="panel-appearance">
         <p class="sub">${t('settings.appearanceSub')}</p>
         <div class="theme-picker" id="theme-picker">
@@ -178,6 +178,19 @@ async function loadSettings() {
           ${ACCENT_OPTIONS.map(a => accentSwatchHtml(a.id, a.label, curAccent === a.id)).join('')}
         </div>
       </div>
+    </div>
+
+    <div class="settings-menu" style="margin-top:8px;">
+      <a class="settings-menu-row" href="rules.html" style="text-decoration:none;">
+        <span class="smr-icon">${NAV_ICON.help}</span>
+        <span class="smr-label">Help</span>
+        <span class="smr-chevron">${CHEVRON_ICON}</span>
+      </a>
+      <a class="settings-menu-row" href="about.html" style="text-decoration:none;">
+        <span class="smr-icon">${NAV_ICON.info}</span>
+        <span class="smr-label">About</span>
+        <span class="smr-chevron">${CHEVRON_ICON}</span>
+      </a>
     </div>
 
     <div class="settings-section" style="border-top:1px solid var(--line);margin-top:8px;padding-top:16px;">

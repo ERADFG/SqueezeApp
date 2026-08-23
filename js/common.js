@@ -634,7 +634,10 @@ const NAV_ICON = {
   article:  '<svg viewBox="0 0 24 24"><path d="M5.5 4.5h13a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-13a1 1 0 0 1 1-1Z"/><path d="M8 8.5h8M8 12h8M8 15.5h5"/></svg>',
   info:     '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg>',
   mail:     '<svg viewBox="0 0 24 24"><rect x="3.5" y="5.5" width="17" height="13" rx="2.5"/><path d="m4.3 6.7 7.7 6 7.7-6"/></svg>',
-  shield:   '<svg viewBox="0 0 24 24"><path d="M12 3.3 5.3 5.9v5.4c0 4.7 2.9 7.9 6.7 8.9 3.8-1 6.7-4.2 6.7-8.9V5.9Z"/><path d="m9 12 2 2 4-4"/></svg>'
+  shield:   '<svg viewBox="0 0 24 24"><path d="M12 3.3 5.3 5.9v5.4c0 4.7 2.9 7.9 6.7 8.9 3.8-1 6.7-4.2 6.7-8.9V5.9Z"/><path d="m9 12 2 2 4-4"/></svg>',
+  globe:    '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.5 2.5 3.8 5.8 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.8-3.8-9s1.3-6.5 3.8-9Z"/></svg>',
+  palette:  '<svg viewBox="0 0 24 24"><path d="M12 3.3a8.7 8.7 0 1 0 0 17.4c1 0 1.7-.8 1.7-1.7 0-.45-.18-.86-.46-1.16-.28-.3-.46-.7-.46-1.14 0-.9.75-1.65 1.7-1.65h1.9c2.3 0 4.2-1.85 4.2-4.15 0-4.2-4.2-7.6-8.58-7.6Z"/><circle cx="7.7" cy="11.3" r="1.15" fill="currentColor" stroke="none"/><circle cx="10.3" cy="7.5" r="1.15" fill="currentColor" stroke="none"/><circle cx="15" cy="7.9" r="1.15" fill="currentColor" stroke="none"/><circle cx="17" cy="12" r="1.15" fill="currentColor" stroke="none"/></svg>',
+  help:     '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.3 9.3a2.7 2.7 0 1 1 3.9 2.4c-.7.4-1.2 1-1.2 1.8v.4"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></svg>'
 };
 
 // ── THEME — Default (light) / Dim / Lights out (dark), applied via
@@ -900,35 +903,31 @@ function renderSideNav() {
   const item = (href, icon, label, key, extra = '') => {
     return `<a href="${href}"${key === here ? ' class="cur"' : ''}><span class="navicon">${icon}${extra}</span><span class="navlabel">${label}</span></a>`;
   };
-  const morePage = here === 'settings' || here === 'rules' || here === 'about' || here === 'contact' || here === 'privacy' || here === 'terms' || here === 'lists';
   const postBtn = currentSession
     ? `<button class="sidebar-post-btn" onclick="mobileCompose();return false;">${ICON_COMPOSE}<span>${t('nav.post')}</span></button>`
     : `<a class="sidebar-post-btn" href="${lp}/signup">${ICON_COMPOSE}<span>${t('nav.post')}</span></a>`;
+  // Same 9-item order as Bluesky's own sidebar/drawer: Home, Explore,
+  // Notifications, Chat, [Feeds slot] Lists, Saved, Profile, Settings —
+  // the only swap is this app's Communities feature standing in for
+  // Bluesky's Feeds slot (same position, same icon-left/label-right
+  // row style), since InteractInk doesn't have custom Feeds. Rules/
+  // About/Contact/Privacy/Terms no longer live behind a "More" dropdown
+  // here (Bluesky's sidebar doesn't have one either) — they're still
+  // reachable from the page footer everywhere, and Help/About now also
+  // have their own rows on the Settings page.
   el.innerHTML =
     item(lp ? `${lp}/home` : '/home', NAV_ICON.home, t('nav.home'), 'home') +
     item('/search', NAV_ICON.search, t('nav.explore'), 'search') +
     item('/notifications', NAV_ICON.bell, t('nav.notifications'), 'notifications', notifBadge) +
     item('/messages', NAV_ICON.chat, t('nav.chat'), 'messages', chatBadge) +
-    item('/bookmarks', NAV_ICON.bookmark, t('nav.bookmarks'), 'bookmarks') +
-    item('/articles', NAV_ICON.article, t('nav.articles'), 'articles') +
     item(`${lp}/communities`, NAV_ICON.people, t('nav.communities'), 'communities') +
+    item('/lists', NAV_ICON.list, t('nav.lists'), 'lists') +
+    item('/bookmarks', NAV_ICON.bookmark, t('nav.bookmarks'), 'bookmarks') +
     item(ownHref, NAV_ICON.user, t('nav.profile'), 'profile') +
-    `<div class="acct" id="more-wrap">
-       <button class="navmore-btn"${morePage ? ' style="font-weight:800;"' : ''} onclick="toggleMoreMenu();return false;">
-         <span class="navicon">${NAV_ICON.dots}</span><span class="navlabel">${t('nav.more')}</span>
-       </button>
-       <div class="acct-menu navmore-menu" id="more-menu">
-         <a href="/lists"${here === 'lists' ? ' class="cur"' : ''}>${NAV_ICON.list}${t('nav.lists')}</a>
-         <a href="/settings">${NAV_ICON.gear}${t('nav.settings')}</a>
-         <a href="${lp}/rules">${NAV_ICON.doc}${t('nav.rules')}</a>
-         <a href="${lp}/about">${NAV_ICON.info}${t('nav.about')}</a>
-         <a href="${lp}/contact">${NAV_ICON.mail}${t('nav.contact')}</a>
-         <a href="${lp}/privacy">${NAV_ICON.shield}${t('nav.privacy')}</a>
-         <a href="${lp}/terms">${NAV_ICON.doc}${t('nav.terms')}</a>
-       </div>
-     </div>` +
+    item('/settings', NAV_ICON.gear, t('nav.settings'), 'settings') +
     postBtn;
 }
+
 
 function toggleMoreMenu() { document.getElementById('more-wrap')?.classList.toggle('open'); }
 
@@ -1024,19 +1023,18 @@ function renderMobileChrome() {
           </div>
           <hr>
           <div class="m-drawer-menu">
-            <a href="search.html">${NAV_ICON.search}Explore</a>
             <a href="${lp || '/'}">${NAV_ICON.home}Home</a>
-            <a href="chat.html">${NAV_ICON.chat}${chatBadge}Chat</a>
+            <a href="search.html">${NAV_ICON.search}Explore</a>
             <a href="notifications.html">${NAV_ICON.bell}${badge}Notifications</a>
-            <a href="articles.html">${NAV_ICON.article}Feeds</a>
+            <a href="chat.html">${NAV_ICON.chat}${chatBadge}Chat</a>
+            <a href="${lp}/communities">${NAV_ICON.people}Communities</a>
             <a href="lists.html">${NAV_ICON.list}Lists</a>
             <a href="bookmarks.html">${NAV_ICON.bookmark}Saved</a>
             <a href="${ownHref}">${NAV_ICON.user}Profile</a>
             <a href="/settings">${NAV_ICON.gear}Settings</a>
           </div>
-          <span class="m-drawer-group-label">Discover</span>
+          <span class="m-drawer-group-label">More</span>
           <div class="m-drawer-menu">
-            <a href="${lp}/communities">${NAV_ICON.people}Communities</a>
             <a href="${lp}/rules">${NAV_ICON.doc}Rules</a>
             <a href="${lp}/about">${NAV_ICON.info}About</a>
             <a href="${lp}/contact">${NAV_ICON.mail}Contact</a>
@@ -1057,7 +1055,6 @@ function renderMobileChrome() {
           <hr>
           <div class="m-drawer-menu" style="margin-top:8px;">
             <a href="search.html">${NAV_ICON.search}Explore</a>
-            <a href="articles.html">${NAV_ICON.article}Feeds</a>
             <a href="${lp}/communities">${NAV_ICON.people}Communities</a>
             <a href="lists.html">${NAV_ICON.list}Lists</a>
           </div>
