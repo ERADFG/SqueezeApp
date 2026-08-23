@@ -1,13 +1,17 @@
 // ─────────────────────────────────────────────────────────────
-// TTV — custom video player, styled after X/Twitter's in-timeline
-// player: big center play button, bottom scrub bar with buffered
-// range + hover time preview, volume slider, speed menu, PiP and
-// fullscreen. Fully event-delegated off `document` (play/pause/
-// timeupdate/etc. don't bubble, so those are bound with capture:
-// true, which still fires on the way down to the <video>) — that
-// means any `.ttv` block dropped into the page via innerHTML just
-// works, no per-element init call needed, matching how the rest of
-// the app inserts raw HTML strings.
+// TTV — custom video player, "reel rail" layout: a hairline
+// progress track flush along the top edge, a bare (no backdrop
+// circle) center play/pause triangle you can tap anywhere on the
+// video to toggle, a small time readout bottom-left, and a
+// vertical rail of icon buttons (mute, speed, fullscreen, PiP)
+// docked to the right edge. Buffered range + hover/drag scrub,
+// speed menu, idle auto-hide all carry over unchanged. Fully
+// event-delegated off `document` (play/pause/timeupdate/etc.
+// don't bubble, so those are bound with capture: true, which
+// still fires on the way down to the <video>) — that means any
+// `.ttv` block dropped into the page via innerHTML just works, no
+// per-element init call needed, matching how the rest of the app
+// inserts raw HTML strings.
 //
 // Call ttvHtml(url, { className }) to get the markup; drop it in
 // wherever a video used to be rendered.
@@ -23,7 +27,7 @@ function ttvHtml(url, opts = {}) {
   <video class="ttv-video" src="${esc(url)}" preload="metadata" playsinline webkit-playsinline disablepictureinpicture disableremoteplayback controlslist="nofullscreen noremoteplayback nodownload noplaybackrate" x-webkit-airplay="deny" ${extraAttrs}></video>
   <div class="ttv-overlay">
     <div class="ttv-spinner" hidden></div>
-    <button type="button" class="ttv-big-play" aria-label="Play"><span class="ttv-big-play-ring"></span>${TTV_ICON.playBig}</button>
+    <button type="button" class="ttv-big-play" aria-label="Play">${TTV_ICON.playBig}</button>
   </div>
   <div class="ttv-controls">
     <div class="ttv-progress">
@@ -34,15 +38,10 @@ function ttvHtml(url, opts = {}) {
         <div class="ttv-progress-handle"></div>
       </div>
     </div>
-    <div class="ttv-row">
-      <button type="button" class="ttv-btn ttv-play" aria-label="Play">${TTV_ICON.play}</button>
-      <span class="ttv-time"><span class="ttv-remain">-0:00</span></span>
-      <span class="ttv-spacer"></span>
+    <span class="ttv-time"><span class="ttv-remain">-0:00</span></span>
+    <div class="ttv-rail">
+      <button type="button" class="ttv-btn ttv-mute" aria-label="Mute">${TTV_ICON.volHigh}</button>
       <button type="button" class="ttv-btn ttv-speed" aria-label="Playback speed">1x</button>
-      <div class="ttv-vol-wrap">
-        <button type="button" class="ttv-btn ttv-mute" aria-label="Mute">${TTV_ICON.volHigh}</button>
-        <input type="range" class="ttv-vol-slider" min="0" max="1" step="0.05" value="1" aria-label="Volume">
-      </div>
       <button type="button" class="ttv-btn ttv-fs" aria-label="Fullscreen">${TTV_ICON.fsEnter}</button>
       <button type="button" class="ttv-btn ttv-pip" aria-label="Picture in picture">${TTV_ICON.pip}</button>
     </div>
@@ -311,7 +310,7 @@ document.addEventListener('loadedmetadata', (e) => {
 // bubble (some Chromium-based mobile browsers, Samsung Internet in
 // particular, inject their own round overlay buttons on top of an
 // HTML5 <video> once it starts playing — separate from and on top of
-// our custom .ttv-row controls). The `disablepictureinpicture`
+// our custom .ttv-rail controls). The `disablepictureinpicture`
 // attribute set in ttvHtml() above covers most cases, but setting the
 // IDL property directly here catches browsers that only respect it
 // post-load rather than as a static attribute.

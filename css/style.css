@@ -868,12 +868,25 @@ select {
    letting only .cc-step-body scroll internally (below) keeps the
    dots/header and the nav buttons always on-screen regardless of how
    many rules or moderators have been added. */
+/* Single-screen create-community modal — same markup and classes on
+   mobile and desktop; the shared .modal-bg/.modal shell already
+   centers and caps width responsively (max-width:92vw), so there is
+   no separate mobile layout to keep in sync with this one. */
 .modal.cc-modal { width:420px; padding-bottom:0; max-height:88vh; display:flex; flex-direction:column; }
-.cc-dots { display:flex; justify-content:center; gap:6px; margin:0 0 12px; flex:none; }
-.cc-dot { width:6px; height:6px; border-radius:50%; background:var(--line); transition:background-color .15s ease, transform .15s ease; }
-.cc-dot.active { background:var(--maroon); transform:scale(1.3); }
-.cc-dot.done { background:var(--muted); }
+.cc-head { display:flex; align-items:center; justify-content:space-between; padding:16px 16px 0; flex:none; }
+.cc-head h2 { margin:0; padding:0; border-bottom:none; }
+.cc-head .modal-close { position:static; }
 .cc-step-body { padding:0 16px; min-height:120px; flex:1 1 auto; overflow-y:auto; overflow-x:hidden; }
+.cc-priv-row { display:flex; align-items:center; justify-content:space-between; padding:12px 2px; border-top:1px solid var(--line); margin-top:4px; }
+.cc-priv-title { font-weight:700; font-size:14px; color:var(--ink); }
+.cc-priv-sub { font-size:12px; color:var(--muted); }
+.cc-switch { width:40px; height:22px; border-radius:99px; background:var(--line); border:none; position:relative; flex:none; cursor:pointer; padding:0; transition:background-color .15s ease; }
+.cc-switch::after { content:""; position:absolute; width:18px; height:18px; background:#fff; border-radius:50%; top:2px; left:2px; transition:left .15s ease; box-shadow:0 1px 2px rgba(0,0,0,.2); }
+.cc-switch.on { background:var(--maroon); }
+.cc-switch.on::after { left:20px; }
+.cc-advanced-toggle { display:block; width:100%; text-align:left; background:none; border:none; border-top:1px solid var(--line); padding:12px 2px; margin-top:4px; font-weight:700; font-size:13.5px; color:var(--maroon); cursor:pointer; }
+.cc-advanced-toggle .cc-hint { color:var(--muted); font-weight:400; }
+.cc-advanced-toggle:hover { color:var(--maroon-dk); }
 .cc-modal .cc-step-body label { font-size:15px; font-weight:800; color:var(--ink); display:block; margin:0 0 8px; }
 .cc-modal .cc-step-body input[type="text"], .cc-modal .cc-step-body textarea {
   width:100%; box-sizing:border-box; margin:0 0 8px; background:var(--bg);
@@ -3814,10 +3827,14 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 
 /* ═══════════════════════════════════════════════════════════════
    TTV — custom video player (replaces native <video controls>)
-   Self-contained skin that sits on top of the video, dark scrim +
-   white icons regardless of light/dim/dark site theme, same as
-   X's own player. Sky accent (var(--maroon)) for the played bar to
-   match the rest of the app instead of hardcoding Twitter blue.
+   "Reel rail" skin: no bottom scrim bar. A hairline white progress
+   track sits flush along the top edge, a bare center triangle (no
+   backdrop circle) handles tap-to-play/pause, the time readout sits
+   bottom-left with a text-shadow for contrast, and mute/speed/
+   fullscreen/PiP live in a small vertical icon rail docked to the
+   right edge — each icon chip carries its own translucent
+   background since there's no scrim behind it. White/icons
+   regardless of light/dim/dark site theme, same as before.
    ═══════════════════════════════════════════════════════════════ */
 .ttv {
   position:relative; display:block; width:max-content; max-width:100%;
@@ -3829,7 +3846,7 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 /* Suppresses any browser-native video overlay chrome (fullscreen/PiP/
    cast bubbles some Chromium-based mobile browsers draw on top of an
    HTML5 <video> regardless of the page's own controls) so only our
-   custom .ttv-row buttons ever show. */
+   custom .ttv-rail buttons ever show. */
 .ttv-video::-webkit-media-controls,
 .ttv-video::-webkit-media-controls-enclosure,
 .ttv-video::-webkit-media-controls-panel,
@@ -3858,124 +3875,97 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .ttv-spinner[hidden] { display:none; }
 @keyframes ttv-spin { to { transform:translate(-50%,-50%) rotate(360deg); } }
 
-/* ── MODERN BIG PLAY BUTTON ──────────────────────────────────────
-   Glassmorphic disc (blurred, translucent, thin light ring) with a
-   soft brand-accent glow instead of the old flat dark circle. A
-   slow ambient pulse invites the tap; hover/press add real depth via
-   scale + shifting shadow rather than just a background swap.
-   Centered with absolute + transform (viewport/box-relative,
-   independent of the video's own size or flex behavior) — this is
-   what keeps it dead-centered on the player in every context,
-   including fullscreen. */
+/* ── BIG PLAY/PAUSE — bare triangle, no backdrop circle ──────────
+   Tap-anywhere-on-the-video is the primary interaction (bound to
+   .ttv-overlay in the JS), so this button is just a big invisible
+   hit target with the icon centered inside it; a drop-shadow on the
+   glyph itself (not a filled disc behind it) is what keeps it
+   legible over bright video. Centered with absolute + transform
+   (viewport/box-relative, independent of the video's own size or
+   flex behavior) — this is what keeps it dead-centered on the
+   player in every context, including fullscreen. */
 .ttv-big-play {
-  position:relative; flex:none;
-  width:84px; height:84px; border-radius:50%; border:none; cursor:pointer;
-  background:rgba(20,22,26,.42); color:#fff; display:flex; align-items:center; justify-content:center;
-  backdrop-filter:blur(18px) saturate(160%); -webkit-backdrop-filter:blur(18px) saturate(160%);
-  box-shadow:
-    inset 0 0 0 1.5px rgba(255,255,255,.28),
-    0 8px 28px rgba(0,0,0,.35),
-    0 0 0 0 rgba(11,111,224,.45);
-  transition:transform .28s cubic-bezier(.34,1.56,.64,1), box-shadow .28s ease, background .2s ease;
-  animation:ttv-big-play-pulse 2.6s ease-in-out infinite;
+  position:absolute; inset:0; margin:auto;
+  width:56px; height:56px; border:none; cursor:pointer; background:none;
+  color:#fff; display:flex; align-items:center; justify-content:center;
+  transition:transform .15s ease, opacity .15s ease;
 }
-@keyframes ttv-big-play-pulse {
-  0%, 100% { box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.28), 0 8px 28px rgba(0,0,0,.35), 0 0 0 0 rgba(11,111,224,.35); }
-  50% { box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.4), 0 8px 28px rgba(0,0,0,.35), 0 0 0 10px rgba(11,111,224,0); }
-}
-.ttv-big-play:hover {
-  transform:scale(1.08);
-  background:rgba(26,29,34,.5);
-  animation-play-state:paused;
-  box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.45), 0 10px 32px rgba(0,0,0,.4), 0 0 0 8px rgba(11,111,224,.16);
-}
+.ttv-big-play:hover { transform:scale(1.06); }
 .ttv-big-play:active { transform:scale(.94); transition-duration:.1s; }
-.ttv-big-play-icon { width:34px; height:34px; margin-left:4px; filter:drop-shadow(0 1px 3px rgba(0,0,0,.4)); position:relative; z-index:1; }
-/* Slow rotating accent-gradient ring, masked to a hairline so it
-   reads as a subtle glowing outline rather than a spinner. */
-.ttv-big-play-ring {
-  position:absolute; inset:-1.5px; border-radius:50%; pointer-events:none;
-  background:conic-gradient(from 0deg, var(--maroon), transparent 30%, transparent 70%, var(--maroon));
-  -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
-          mask:radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
-  opacity:.55; animation:ttv-ring-spin 5s linear infinite;
+.ttv-big-play-icon {
+  width:34px; height:34px; transform:translateX(.5px);
+  filter:drop-shadow(0 1px 3px rgba(0,0,0,.45)); position:relative; z-index:1;
 }
-@keyframes ttv-ring-spin { to { transform:rotate(360deg); } }
 .ttv.ttv-playing .ttv-big-play { display:none; }
 .ttv.ttv-buffering .ttv-big-play { display:none; }
 
-/* bottom gradient control bar — fades out while playing + idle */
+/* full-bleed overlay wrapper — top progress line, bottom-left time,
+   right-edge icon rail. No background of its own (each child carries
+   its own contrast treatment); fades out together while playing +
+   idle, same as before. */
 .ttv-controls {
-  position:absolute; left:0; right:0; bottom:0; z-index:2;
-  padding:20px 10px 8px;
-  background:linear-gradient(to top, rgba(0,0,0,.72), rgba(0,0,0,0));
+  position:absolute; inset:0; z-index:2; pointer-events:none;
   opacity:1; transition:opacity .18s ease;
 }
+.ttv-controls > * { pointer-events:auto; }
 .ttv.ttv-playing.ttv-idle .ttv-controls { opacity:0; }
 .ttv.ttv-playing.ttv-idle { cursor:none; }
 .ttv.ttv-menu-open .ttv-controls { opacity:1; }
 
+/* hairline progress track flush along the top edge */
 .ttv-progress {
-  position:relative; height:14px; margin:0 2px 2px; cursor:pointer; touch-action:none;
+  position:absolute; left:8px; right:8px; top:0; height:16px; cursor:pointer; touch-action:none;
 }
 .ttv-progress-track {
-  position:absolute; left:0; right:0; top:50%; transform:translateY(-50%);
-  height:3px; border-radius:3px; background:rgba(255,255,255,.3);
+  position:absolute; left:0; right:0; top:6px;
+  height:2.5px; border-radius:2.5px; background:rgba(255,255,255,.3);
   transition:height .1s;
 }
-.ttv-progress:hover .ttv-progress-track, .ttv-progress.ttv-dragging .ttv-progress-track { height:5px; }
+.ttv-progress:hover .ttv-progress-track, .ttv-progress.ttv-dragging .ttv-progress-track { height:4.5px; }
 .ttv-progress-buffered {
-  position:absolute; left:0; top:0; bottom:0; width:0%; border-radius:3px;
+  position:absolute; left:0; top:0; bottom:0; width:0%; border-radius:2.5px;
   background:rgba(255,255,255,.45);
 }
 .ttv-progress-played {
-  position:absolute; left:0; top:0; bottom:0; width:0%; border-radius:3px;
-  background:var(--maroon);
+  position:absolute; left:0; top:0; bottom:0; width:0%; border-radius:2.5px;
+  background:#fff;
 }
 .ttv-progress-handle {
-  position:absolute; top:50%; left:0%; width:12px; height:12px; border-radius:50%;
-  background:var(--maroon); transform:translate(-50%,-50%) scale(0);
+  position:absolute; top:0; left:0%; width:11px; height:11px; border-radius:50%;
+  background:#fff; transform:translate(-50%,-50%) scale(0);
   transition:transform .1s; box-shadow:0 0 0 1px rgba(0,0,0,.2);
 }
 .ttv-progress:hover .ttv-progress-handle, .ttv-progress.ttv-dragging .ttv-progress-handle { transform:translate(-50%,-50%) scale(1); }
 .ttv-progress-preview {
-  position:absolute; bottom:16px; transform:translateX(-50%);
+  position:absolute; top:16px; transform:translateX(-50%);
   background:rgba(15,20,25,.9); color:#fff; font-size:12px; font-weight:700;
   padding:3px 6px; border-radius:6px; white-space:nowrap; pointer-events:none;
   opacity:0; transition:opacity .1s;
 }
 .ttv-progress:hover .ttv-progress-preview, .ttv-progress.ttv-dragging .ttv-progress-preview { opacity:1; }
 
-.ttv-row { display:flex; align-items:center; gap:2px; height:32px; }
+/* time readout, bottom-left — text-shadow instead of a background
+   chip since there's no scrim bar behind it anymore */
+.ttv-time {
+  position:absolute; left:10px; bottom:10px; pointer-events:none; /* label only — taps under it fall through to tap-to-play */
+  color:#fff; font-size:12.5px; font-weight:700; user-select:none;
+  font-variant-numeric:tabular-nums; white-space:nowrap;
+  text-shadow:0 1px 4px rgba(0,0,0,.65), 0 0 1px rgba(0,0,0,.5);
+}
+
+/* vertical icon rail, docked to the right edge */
+.ttv-rail { position:absolute; right:8px; bottom:12px; display:flex; flex-direction:column; align-items:center; gap:8px; }
 .ttv-btn {
   flex:none; width:32px; height:32px; border-radius:50%; border:none; cursor:pointer;
-  background:transparent; color:#fff; display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,.4); color:#fff; display:flex; align-items:center; justify-content:center;
   position:relative;
 }
-.ttv-btn:hover { background:rgba(255,255,255,.15); }
-.ttv-btn svg { width:18px; height:18px; }
-.ttv-btn.ttv-play svg { width:17px; height:17px; }
-.ttv-time {
-  color:#fff; font-size:12.5px; font-weight:600; padding:0 6px; user-select:none;
-  font-variant-numeric:tabular-nums; white-space:nowrap;
-}
-.ttv-spacer { flex:1; }
-.ttv-speed { width:auto; padding:0 8px; font-size:12.5px; font-weight:700; border-radius:15px; }
-.ttv-vol-wrap { display:flex; align-items:center; }
-.ttv-vol-slider {
-  width:0; opacity:0; overflow:hidden; transition:width .15s, opacity .15s, margin .15s;
-  -webkit-appearance:none; appearance:none; height:3px; border-radius:3px; background:rgba(255,255,255,.35);
-  cursor:pointer; vertical-align:middle;
-}
-.ttv-vol-wrap:hover .ttv-vol-slider, .ttv-vol-wrap:focus-within .ttv-vol-slider { width:60px; opacity:1; margin-left:2px; }
-.ttv-vol-slider::-webkit-slider-thumb {
-  -webkit-appearance:none; width:11px; height:11px; border-radius:50%; background:#fff; cursor:pointer;
-}
-.ttv-vol-slider::-moz-range-thumb { width:11px; height:11px; border-radius:50%; background:#fff; border:none; cursor:pointer; }
-.ttv-vol-slider::-moz-range-track { height:3px; border-radius:3px; background:rgba(255,255,255,.35); }
+.ttv-btn:hover { background:rgba(0,0,0,.6); }
+.ttv-btn svg { width:17px; height:17px; }
+.ttv-speed { width:32px; padding:0; font-size:12px; font-weight:700; border-radius:50%; }
 
 .ttv-menu {
-  display:none; position:absolute; right:8px; bottom:44px; z-index:6;
+  display:none; position:absolute; right:46px; bottom:12px; z-index:6;
   background:rgba(21,24,28,.96); backdrop-filter:blur(6px); border-radius:16px;
   min-width:120px; padding:6px; box-shadow:0 4px 18px rgba(0,0,0,.4);
 }
@@ -3988,10 +3978,6 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .ttv-menu-opt:hover { background:rgba(255,255,255,.12); }
 .ttv-menu-opt .ck { width:14px; height:14px; opacity:0; }
 .ttv-menu-opt.active .ck { opacity:1; }
-
-@media (max-width:700px) {
-  .ttv-vol-wrap { display:none; } /* no hover on touch — mute toggle only */
-}
 
 /* FULLSCREEN — the browser only stretches the .ttv wrapper itself to
    fill the screen; without this the <video> stayed capped at its
@@ -4013,42 +3999,32 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
   width:96px !important; height:96px !important;
 }
 .ttv:fullscreen .ttv-big-play-icon, .ttv:-webkit-full-screen .ttv-big-play-icon {
-  width:40px !important; height:40px !important; margin-left:5px !important;
+  width:40px !important; height:40px !important;
 }
 
-/* FULLSCREEN CONTROL BAR — swaps the feed player's translucent
-   gradient bar + pill-chip buttons for a plain, solid, minimal bar
-   matching X's own fullscreen video controls: an opaque black strip
-   docked to the bottom, a hairline progress track with no drag
-   handle bubble, a secondary-gray timestamp, and unstyled icon
-   buttons with no hover backgrounds. Always visible (no idle
-   fade-out) since there's no page content underneath to reveal. */
+/* FULLSCREEN CONTROLS — same rail layout, scaled up a little and
+   always visible (no idle fade-out) since there's no page content
+   underneath to reveal. */
 .ttv:fullscreen .ttv-controls, .ttv:-webkit-full-screen .ttv-controls {
-  background:#000; opacity:1 !important;
-  padding:10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
-  border-top:1px solid rgba(255,255,255,.08);
+  opacity:1 !important;
 }
 .ttv:fullscreen.ttv-playing.ttv-idle, .ttv:-webkit-full-screen.ttv-playing.ttv-idle { cursor:default; }
 
-.ttv:fullscreen .ttv-progress, .ttv:-webkit-full-screen .ttv-progress { height:10px; margin:0 0 4px; }
+.ttv:fullscreen .ttv-progress, .ttv:-webkit-full-screen .ttv-progress { left:16px; right:16px; top:0; height:20px; }
 .ttv:fullscreen .ttv-progress-track, .ttv:-webkit-full-screen .ttv-progress-track,
 .ttv:fullscreen .ttv-progress:hover .ttv-progress-track, .ttv:-webkit-full-screen .ttv-progress:hover .ttv-progress-track,
 .ttv:fullscreen .ttv-progress.ttv-dragging .ttv-progress-track, .ttv:-webkit-full-screen .ttv-progress.ttv-dragging .ttv-progress-track {
-  height:2.5px; background:rgba(255,255,255,.25);
+  top:9px; height:3px;
 }
-.ttv:fullscreen .ttv-progress-played, .ttv:-webkit-full-screen .ttv-progress-played { background:#fff; }
-.ttv:fullscreen .ttv-progress-buffered, .ttv:-webkit-full-screen .ttv-progress-buffered { background:rgba(255,255,255,.4); }
-.ttv:fullscreen .ttv-progress-handle, .ttv:-webkit-full-screen .ttv-progress-handle { display:none; }
 
-.ttv:fullscreen .ttv-row, .ttv:-webkit-full-screen .ttv-row { gap:14px; height:26px; }
-.ttv:fullscreen .ttv-btn, .ttv:-webkit-full-screen .ttv-btn { background:transparent !important; width:26px; height:26px; }
-.ttv:fullscreen .ttv-btn:hover, .ttv:-webkit-full-screen .ttv-btn:hover { background:transparent !important; opacity:.8; }
-.ttv:fullscreen .ttv-btn svg, .ttv:-webkit-full-screen .ttv-btn svg { width:19px; height:19px; }
-.ttv:fullscreen .ttv-btn.ttv-play svg, .ttv:-webkit-full-screen .ttv-btn.ttv-play svg { width:18px; height:18px; }
-.ttv:fullscreen .ttv-time, .ttv:-webkit-full-screen .ttv-time { color:#71767b; font-weight:500; padding:0 0 0 2px; }
-.ttv:fullscreen .ttv-speed, .ttv:-webkit-full-screen .ttv-speed { border-radius:0; padding:0; font-weight:800; }
-.ttv:fullscreen .ttv-vol-wrap, .ttv:-webkit-full-screen .ttv-vol-wrap { display:flex !important; }
-.ttv:fullscreen .ttv-vol-slider, .ttv:-webkit-full-screen .ttv-vol-slider { display:none !important; }
+.ttv:fullscreen .ttv-time, .ttv:-webkit-full-screen .ttv-time {
+  left:20px; bottom:24px; font-size:14px;
+}
+.ttv:fullscreen .ttv-rail, .ttv:-webkit-full-screen .ttv-rail { right:20px; bottom:24px; gap:12px; }
+.ttv:fullscreen .ttv-btn, .ttv:-webkit-full-screen .ttv-btn { width:38px; height:38px; }
+.ttv:fullscreen .ttv-btn svg, .ttv:-webkit-full-screen .ttv-btn svg { width:20px; height:20px; }
+.ttv:fullscreen .ttv-speed, .ttv:-webkit-full-screen .ttv-speed { width:38px; font-size:13px; }
+.ttv:fullscreen .ttv-menu, .ttv:-webkit-full-screen .ttv-menu { right:58px; bottom:24px; }
 
 /* ── CROP MODAL — shared "Edit media" step (crop-modal.js) used
    before any image becomes an avatar or banner: profile, community,

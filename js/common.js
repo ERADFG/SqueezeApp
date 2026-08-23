@@ -2606,17 +2606,24 @@ function applyEditToDom(id, newBody, updatedAt) {
 // step, so backing out or closing the modal midway leaves nothing
 // behind.
 // ─────────────────────────────────────────────────────────────
-const CC_STEPS = ['name', 'description', 'image', 'rules', 'mods'];
+// This is a single-screen modal — name, picture, description and
+// privacy up front; rules and moderators are optional add-ons tucked
+// under a collapsible "Advanced" section below, so nothing that used
+// to only be settable at creation time (rules, mods) was dropped, it
+// just isn't gated behind a multi-step wizard anymore. Same markup
+// renders on mobile and desktop — the shared .modal-bg/.modal shell
+// already centers and caps width responsively, so there's no separate
+// mobile layout to keep in sync.
 let ccWiz = null; // reset fresh every time the modal opens — see openCreateCommunityModal()
 
 function ccFreshWiz() {
   return {
-    step: 0,
-    name: '', description: '',
+    name: '', description: '', isPrivate: false,
     avatarBlob: null, avatarPreviewUrl: null,
     bannerBlob: null, bannerPreviewUrl: null,
     rules: [],  // [{title, description}]
     mods: [],   // [{id, username, display_name, avatar_url}]
+    advancedOpen: false,
   };
 }
 
@@ -2629,14 +2636,15 @@ function ccModalEl() {
   el.addEventListener('click', e => { if (e.target === el) closeCreateCommunityModal(); });
   el.innerHTML = `
     <div class="modal cc-modal">
-      <a class="modal-close" href="#" onclick="closeCreateCommunityModal();return false;">&#10005;</a>
-      <h2>Create a community</h2>
-      <div class="cc-dots" id="cc-dots"></div>
+      <div class="cc-head">
+        <h2>Create a community</h2>
+        <a class="modal-close" href="#" onclick="closeCreateCommunityModal();return false;">&#10005;</a>
+      </div>
       <div class="errmsg" id="cc-err" style="display:none;margin:0 16px 8px;"></div>
       <div id="cc-step-body" class="cc-step-body"></div>
       <div class="cc-nav">
-        <button type="button" class="cc-nav-back" id="cc-back-btn" onclick="ccWizBack()">Back</button>
-        <button type="button" class="modal-btn cc-nav-next" id="cc-next-btn" onclick="ccWizNext()">Next</button>
+        <button type="button" class="cc-nav-back" onclick="closeCreateCommunityModal()">Cancel</button>
+        <button type="button" class="modal-btn cc-nav-next" id="cc-next-btn" onclick="submitCreateCommunityWizard()">Create community</button>
       </div>
     </div>`;
   document.body.appendChild(el);
@@ -2653,7 +2661,7 @@ function openCreateCommunityModal() {
   clearErr(document.getElementById('cc-err'));
   el.classList.add('open');
   lockScroll();
-  renderCcStep();
+  renderCcForm();
 }
 
 function closeCreateCommunityModal() {
@@ -2672,74 +2680,45 @@ function slugify(name) {
   return name.toLowerCase().trim()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
-    .slice(0, 50);
+    .slice(0, 20);
 }
 
-// ── STEP RENDERING ──
-function renderCcStep() {
+// ── SINGLE-SCREEN FORM ──
+function renderCcForm() {
   if (!ccWiz) return;
-  const stepName = CC_STEPS[ccWiz.step];
-  document.getElementById('cc-dots').innerHTML = CC_STEPS.map((_, i) =>
-    `<span class="cc-dot${i === ccWiz.step ? ' active' : ''}${i < ccWiz.step ? ' done' : ''}"></span>`).join('');
-  document.getElementById('cc-back-btn').style.visibility = ccWiz.step === 0 ? 'hidden' : 'visible';
-  const nextBtn = document.getElementById('cc-next-btn');
-  nextBtn.textContent = stepName === 'mods' ? 'Create community' : 'Next';
-  clearErr(document.getElementById('cc-err'));
-
   const body = document.getElementById('cc-step-body');
-  if (stepName === 'name') {
-    body.innerHTML = `
-      <label>Name your community</label>
-      <input type="text" id="cc-name" maxlength="50" placeholder="e.g. Shounen Fans" value="${esc(ccWiz.name)}">
-      <p class="cc-step-hint">Choose something that describes what people will find here.</p>`;
-    setTimeout(() => document.getElementById('cc-name')?.focus(), 0);
-  } else if (stepName === 'description') {
-    body.innerHTML = `
-      <label>Add a description</label>
-      <textarea id="cc-desc" rows="4" maxlength="300" placeholder="What's this community about? Share what you're working on, get feedback…">${esc(ccWiz.description)}</textarea>
-      <p class="cc-step-hint">This shows at the top of your community and on its About tab. Optional.</p>`;
-  } else if (stepName === 'image') {
-    body.innerHTML = `
-      <label>Add a banner &amp; picture</label>
-      <div class="cc-banner-wrap" id="cc-banner-wrap" style="${ccWiz.bannerPreviewUrl ? `--banner-img:url('${ccWiz.bannerPreviewUrl}')` : ''}">
-        <label class="cc-banner-pick" for="cc-banner-file" title="Choose a banner">
+  body.innerHTML = `
+    <div class="cc-banner-wrap" id="cc-banner-wrap" style="${ccWiz.bannerPreviewUrl ? `--banner-img:url('${ccWiz.bannerPreviewUrl}')` : ''}">
+      <label class="cc-banner-pick" for="cc-banner-file" title="Choose a banner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h3l2-2h6l2 2h3v12H4V7Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+      </label>
+      <input type="file" id="cc-banner-file" accept="image/*" style="display:none;">
+      <span class="cc-avatar-wrap">
+        <span class="cc-avatar-preview" id="cc-avatar-preview">${ccWiz.avatarPreviewUrl ? `<img src="${ccWiz.avatarPreviewUrl}" alt="">` : esc((ccWiz.name || '?').trim().charAt(0).toUpperCase() || '?')}</span>
+        <label class="cc-avatar-pick" for="cc-avatar-file" title="Choose a picture">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h3l2-2h6l2 2h3v12H4V7Z"/><circle cx="12" cy="13" r="3.5"/></svg>
         </label>
-        <input type="file" id="cc-banner-file" accept="image/*" style="display:none;">
-        <span class="cc-avatar-wrap">
-          <span class="cc-avatar-preview" id="cc-avatar-preview">${ccWiz.avatarPreviewUrl ? `<img src="${ccWiz.avatarPreviewUrl}" alt="">` : esc((ccWiz.name || '?').trim().charAt(0).toUpperCase() || '?')}</span>
-          <label class="cc-avatar-pick" for="cc-avatar-file" title="Choose a picture">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h3l2-2h6l2 2h3v12H4V7Z"/><circle cx="12" cy="13" r="3.5"/></svg>
-          </label>
-          <input type="file" id="cc-avatar-file" accept="image/*" style="display:none;">
-        </span>
-      </div>
-      <p class="cc-step-hint">Optional — you (and only you, as creator) can change these anytime.</p>`;
-    document.getElementById('cc-avatar-file').addEventListener('change', (e) => {
-      const file = e.target.files[0]; e.target.value = '';
-      const errEl = document.getElementById('cc-err');
-      if (!file || !validateFile(file, errEl)) return;
-      clearErr(errEl);
-      openCropModal(file, 'square', (cropped) => {
-        ccWiz.avatarBlob = cropped;
-        ccWiz.avatarPreviewUrl = URL.createObjectURL(cropped);
-        document.getElementById('cc-avatar-preview').innerHTML = `<img src="${ccWiz.avatarPreviewUrl}" alt="">`;
-      });
-    });
-    document.getElementById('cc-banner-file').addEventListener('change', (e) => {
-      const file = e.target.files[0]; e.target.value = '';
-      const errEl = document.getElementById('cc-err');
-      if (!file || !validateFile(file, errEl)) return;
-      clearErr(errEl);
-      openCropModal(file, 'wide', (cropped) => {
-        ccWiz.bannerBlob = cropped;
-        ccWiz.bannerPreviewUrl = URL.createObjectURL(cropped);
-        document.getElementById('cc-banner-wrap').style.setProperty('--banner-img', `url('${ccWiz.bannerPreviewUrl}')`);
-      });
-    });
-  } else if (stepName === 'rules') {
-    body.innerHTML = `
-      <label>Add rules</label>
+        <input type="file" id="cc-avatar-file" accept="image/*" style="display:none;">
+      </span>
+    </div>
+
+    <label>Name</label>
+    <input type="text" id="cc-name" maxlength="20" placeholder="e.g. Shounen Fans" value="${esc(ccWiz.name)}">
+
+    <label>Description</label>
+    <textarea id="cc-desc" rows="3" maxlength="80" placeholder="What's this community about? Optional.">${esc(ccWiz.description)}</textarea>
+
+    <div class="cc-priv-row">
+      <div><div class="cc-priv-title">Private community</div><div class="cc-priv-sub">Only members can see posts</div></div>
+      <button type="button" class="cc-switch${ccWiz.isPrivate ? ' on' : ''}" id="cc-priv-switch" onclick="ccTogglePrivate()" aria-pressed="${ccWiz.isPrivate}"></button>
+    </div>
+
+    <button type="button" class="cc-advanced-toggle" onclick="ccToggleAdvanced()">
+      ${ccWiz.advancedOpen ? 'Hide' : 'Add'} rules &amp; moderators <span class="cc-hint">(optional)</span>
+    </button>
+
+    <div id="cc-advanced" style="${ccWiz.advancedOpen ? '' : 'display:none;'}">
+      <label>Rules</label>
       ${ccWiz.rules.length ? `<ol class="comm-rules-list" id="cc-rules-list">${ccWiz.rules.map((r, i) => `
         <li class="comm-rule-row">
           <span class="comm-rule-num"></span>
@@ -2756,10 +2735,8 @@ function renderCcStep() {
           <button type="button" class="modal-btn" style="margin:0;width:auto;padding:7px 16px;" onclick="ccAddRule()">Add rule</button>
         </div>
       </div>
-      <p class="cc-step-hint">Optional — set the ground rules for your community, or skip and add them later.</p>`;
-  } else if (stepName === 'mods') {
-    body.innerHTML = `
-      <label>Add moderators</label>
+
+      <label style="margin-top:16px;">Moderators</label>
       ${ccWiz.mods.length ? `<div class="comm-mods-list" id="cc-mods-list">${ccWiz.mods.map(m => `
         <div class="who-row comm-mod-row">
           <img class="avatar pfp-md${avSqClass(m)}" src="${esc(avatarUrl(m.avatar_url))}" alt="">
@@ -2773,19 +2750,49 @@ function renderCcStep() {
         <input type="text" id="cc-mod-search" placeholder="Search by username" autocomplete="off">
         <div id="cc-mod-results"></div>
       </div>
-      <p class="cc-step-hint">Optional — as creator, only you can add or remove moderators, ever.</p>`;
-    const input = document.getElementById('cc-mod-search');
-    input.addEventListener('input', () => {
+    </div>`;
+
+  document.getElementById('cc-avatar-file').addEventListener('change', (e) => {
+    const file = e.target.files[0]; e.target.value = '';
+    const errEl = document.getElementById('cc-err');
+    if (!file || !validateFile(file, errEl)) return;
+    clearErr(errEl);
+    openCropModal(file, 'square', (cropped) => {
+      ccWiz.avatarBlob = cropped;
+      ccWiz.avatarPreviewUrl = URL.createObjectURL(cropped);
+      document.getElementById('cc-avatar-preview').innerHTML = `<img src="${ccWiz.avatarPreviewUrl}" alt="">`;
+    });
+  });
+  document.getElementById('cc-banner-file').addEventListener('change', (e) => {
+    const file = e.target.files[0]; e.target.value = '';
+    const errEl = document.getElementById('cc-err');
+    if (!file || !validateFile(file, errEl)) return;
+    clearErr(errEl);
+    openCropModal(file, 'wide', (cropped) => {
+      ccWiz.bannerBlob = cropped;
+      ccWiz.bannerPreviewUrl = URL.createObjectURL(cropped);
+      document.getElementById('cc-banner-wrap').style.setProperty('--banner-img', `url('${ccWiz.bannerPreviewUrl}')`);
+    });
+  });
+  const modInput = document.getElementById('cc-mod-search');
+  if (modInput) {
+    modInput.addEventListener('input', () => {
       clearTimeout(ccWiz._modDebounce);
-      ccWiz._modDebounce = setTimeout(() => ccRunModSearch(input.value), 250);
+      ccWiz._modDebounce = setTimeout(() => ccRunModSearch(modInput.value), 250);
     });
   }
+  setTimeout(() => document.getElementById('cc-name')?.focus(), 0);
 }
 
-function ccWizBack() {
-  if (!ccWiz || ccWiz.step === 0) return;
-  ccWiz.step--;
-  renderCcStep();
+function ccTogglePrivate() {
+  ccWiz.isPrivate = !ccWiz.isPrivate;
+  document.getElementById('cc-priv-switch').classList.toggle('on', ccWiz.isPrivate);
+  document.getElementById('cc-priv-switch').setAttribute('aria-pressed', ccWiz.isPrivate);
+}
+
+function ccToggleAdvanced() {
+  ccWiz.advancedOpen = !ccWiz.advancedOpen;
+  renderCcForm();
 }
 
 function ccAddRule() {
@@ -2793,14 +2800,18 @@ function ccAddRule() {
   const descEl = document.getElementById('cc-rule-desc');
   const title = titleEl.value.trim();
   const description = descEl.value.trim();
-  if (!title) { showErr(document.getElementById('cc-err'), 'Give the rule a short title.'); return; }
-  if (ccWiz.rules.length >= 20) { showErr(document.getElementById('cc-err'), 'That\u2019s enough rules for now.'); return; }
+  const errEl = document.getElementById('cc-err');
+  if (!title) { showErr(errEl, 'Give the rule a short title.'); return; }
+  if (ccWiz.rules.length >= 20) { showErr(errEl, 'That\u2019s enough rules for now.'); return; }
+  clearErr(errEl);
   ccWiz.rules.push({ title, description });
-  renderCcStep();
+  ccWiz.advancedOpen = true;
+  renderCcForm();
 }
 function ccRemoveRule(i) {
   ccWiz.rules.splice(i, 1);
-  renderCcStep();
+  ccWiz.advancedOpen = true;
+  renderCcForm();
 }
 
 async function ccRunModSearch(q) {
@@ -2828,44 +2839,33 @@ function ccAddMod(profile) {
   ccWiz.mods.push(profile);
   document.getElementById('cc-mod-results').innerHTML = '';
   document.getElementById('cc-mod-search').value = '';
-  renderCcStep();
+  ccWiz.advancedOpen = true;
+  renderCcForm();
 }
 function ccRemoveMod(id) {
   ccWiz.mods = ccWiz.mods.filter(m => m.id !== id);
-  renderCcStep();
-}
-
-function ccWizNext() {
-  const stepName = CC_STEPS[ccWiz.step];
-  const errEl = document.getElementById('cc-err');
-  clearErr(errEl);
-
-  if (stepName === 'name') {
-    const name = document.getElementById('cc-name').value.trim();
-    if (name.length < 3) { showErr(errEl, 'Give it a name — at least 3 characters.'); return; }
-    if (name.length > 50) { showErr(errEl, 'Name is too long (max 50 characters).'); return; }
-    if (slugify(name).length < 3) { showErr(errEl, 'That name needs at least a few letters or numbers.'); return; }
-    ccWiz.name = name;
-  } else if (stepName === 'description') {
-    ccWiz.description = document.getElementById('cc-desc').value.trim();
-  } else if (stepName === 'mods') {
-    submitCreateCommunityWizard();
-    return;
-  }
-  ccWiz.step++;
-  renderCcStep();
+  ccWiz.advancedOpen = true;
+  renderCcForm();
 }
 
 async function submitCreateCommunityWizard() {
   const errEl = document.getElementById('cc-err');
   const btn = document.getElementById('cc-next-btn');
-  const backBtn = document.getElementById('cc-back-btn');
   clearErr(errEl);
-  btn.disabled = true; backBtn.disabled = true;
-  btn.textContent = 'Creating…';
+
+  const name = document.getElementById('cc-name').value.trim();
+  if (name.length < 3) { showErr(errEl, 'Give it a name — at least 3 characters.'); return; }
+  if (name.length > 20) { showErr(errEl, 'Name is too long (max 20 characters).'); return; }
+  if (slugify(name).length < 3) { showErr(errEl, 'That name needs at least a few letters or numbers.'); return; }
+  ccWiz.name = name;
+  const description = document.getElementById('cc-desc').value.trim();
+  if (description.length > 80) { showErr(errEl, 'Description is too long (max 80 characters).'); return; }
+  ccWiz.description = description;
+
+  btn.disabled = true;
+  btn.textContent = 'Creating\u2026';
   try {
-    const name = ccWiz.name;
-    const baseSlug = slugify(name);
+    const baseSlug = slugify(ccWiz.name);
     // A second community with the same/similar name just gets a
     // numeric suffix on its slug (shounen-fans-2, shounen-fans-3, …)
     // rather than blocking on the name being taken — same as how
@@ -2874,7 +2874,7 @@ async function submitCreateCommunityWizard() {
     let slug = baseSlug, attempt = 0, data, error;
     while (attempt < 6) {
       ({ data, error } = await sb.from('communities').insert({
-        name, slug, description: ccWiz.description || null, created_by: currentSession.user.id
+        name: ccWiz.name, slug, description: ccWiz.description || null, is_private: ccWiz.isPrivate, created_by: currentSession.user.id
       }).select('id,slug').single());
       if (!error) break;
       if (error.code === '23505') { attempt++; slug = `${baseSlug}-${attempt + 1}`; continue; }
@@ -2913,7 +2913,7 @@ async function submitCreateCommunityWizard() {
     location.href = communityUrl(data.slug);
   } catch (e) {
     showErr(errEl, e.message || 'Failed to create community.');
-    btn.disabled = false; backBtn.disabled = false;
+    btn.disabled = false;
     btn.textContent = 'Create community';
   }
 }
