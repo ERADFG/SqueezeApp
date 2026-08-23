@@ -2324,6 +2324,16 @@ function togglePostMenu(id, ev) {
   if (willOpen) {
     wrap.classList.add('open');
     positionMenuDd(wrap);
+    // Quick icon pop on the "···" button itself, same flourish family
+    // as the like/reply/share/bookmark buttons (see .pc-menu-btn.menu-open
+    // in style.css) — works identically for a mouse click on desktop and
+    // a tap on mobile since it's just a class toggle off the same click.
+    const btn = wrap.querySelector('.pc-menu-btn');
+    if (btn) {
+      btn.classList.remove('menu-open');
+      void btn.offsetWidth;
+      btn.classList.add('menu-open');
+    }
   }
 }
 

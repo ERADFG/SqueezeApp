@@ -1406,13 +1406,33 @@ select {
 .ph .num { display:none; }
 
 .pc-menu-wrap { position:relative; margin-left:auto; flex:none; }
+/* Same "glass chip" press language as .act (like/reply/share/bookmark)
+   above: a soft frosted sheen floods the circle the instant it's
+   pressed, clipped to the button's own round shape via isolation +
+   overflow:hidden, plus a quick icon pop when the dropdown opens.
+   Pure CSS/click-driven (no touch-only handlers, no mobile media
+   query), so it behaves identically with a mouse on desktop and a
+   finger on mobile — same as every other .act flourish in this file. */
 .pc-menu-btn {
+  position:relative; isolation:isolate; overflow:hidden;
   background:none; border:none; cursor:pointer; color:var(--muted); border-radius:50%;
   width:30px; height:30px; display:inline-flex; align-items:center; justify-content:center;
-  transition:background .12s ease, color .12s ease;
+  transition:background .12s ease, color .12s ease, transform .1s cubic-bezier(.2,.8,.2,1);
 }
 .pc-menu-btn:hover { background:var(--maroon-tint); color:var(--maroon); }
-.pc-menu-btn svg { width:17px; height:17px; }
+.pc-menu-btn:active { transform:scale(.90); }
+.pc-menu-btn svg { width:17px; height:17px; transition:transform .18s cubic-bezier(.34,1.56,.64,1); }
+.pc-menu-btn:active svg { transform:scale(.86) rotate(-8deg); }
+.pc-menu-btn::before {
+  content:""; position:absolute; inset:0; border-radius:inherit; z-index:-1;
+  background:currentColor; opacity:0; backdrop-filter:blur(6px);
+  transform:scale(.6); transition:opacity .18s ease, transform .18s cubic-bezier(.2,.8,.2,1);
+}
+.pc-menu-btn:active::before, .pc-menu-btn:focus-visible::before { opacity:.16; transform:scale(1); }
+/* Little pop when the dropdown actually opens (menu-open class toggled
+   in togglePostMenu(), common.js) — same spirit as .act.like.liked's
+   oc-like-pop, just on the "···" glyph instead of the heart. */
+.pc-menu-btn.menu-open svg { animation:oc-pop .3s cubic-bezier(.17,.89,.32,1.49); }
 .pc-menu-dd {
   position:absolute; right:0; top:calc(100% + 4px); z-index:40; min-width:180px;
   max-width:min(280px, calc(100vw - 24px));
