@@ -134,6 +134,30 @@ function hrefForVariant(origin, path, lang) {
   return path ? `${origin}/${lang}/${path}` : `${origin}/${lang}`;
 }
 
+// Help Center — help/index.html (hub), help/<cat>/index.html (5 category
+// pages), and help/<cat>/<slug>.html (every individual Q&A article). Not
+// localized (English-only for now), so these are plain urlTag() entries
+// rather than going through localizedStaticUrls()'s hreflang machinery.
+// The article slug lists below are kept in sync with gen_help.py by hand;
+// if a Help Center article is added/removed there, mirror it here too.
+const HELP_CATEGORIES = {
+  'using-interactink': ['how-to-post','how-to-follow-and-unfollow','for-you-and-following-feed','reposts-and-quote-posts','replying-and-threads','edit-post-and-undo','delete-a-post','liking-posts','bookmarks','direct-messages','group-chats-and-channels','encrypted-messages','read-receipts-and-typing-indicators','communities','creating-a-community','lists','articles-feature','polls','posting-gifs-images-and-video','search','notifications-overview','mentions-and-replies'],
+  'managing-your-account': ['create-an-account','how-to-customize-your-profile','change-your-username','update-your-email-address','resetting-a-forgotten-password','deactivating-your-account','downloading-your-data','notification-settings','changing-your-language','login-issues'],
+  'safety-and-security': ['blocking-accounts','muting-accounts','reporting-a-post','reporting-an-account-or-impersonation','public-and-private-accounts','account-security-tips','sensitive-media-settings','recognizing-phishing-and-fake-emails','child-safety','self-harm-and-suicide-resources'],
+  'rules-and-policies': ['community-rules-overview','hateful-conduct-policy','abusive-behavior-and-harassment-policy','spam-and-platform-manipulation','impersonation-policy','copyright-and-dmca-policy','enforcement-and-suspensions','appealing-a-suspension','intellectual-property-and-trademark','child-sexual-exploitation-policy'],
+  'resources': ['new-user-guide','glossary','accessibility-features','how-recommendations-work','keeping-interactink-safe','contacting-support'],
+};
+function helpCenterUrls(origin) {
+  const urls = [urlTag(`${origin}/help/index.html`, fileLastmod('help/index.html'), 'monthly', '0.4')];
+  for (const [cat, slugs] of Object.entries(HELP_CATEGORIES)) {
+    urls.push(urlTag(`${origin}/help/${cat}/index.html`, fileLastmod(`help/${cat}/index.html`), 'monthly', '0.4'));
+    for (const slug of slugs) {
+      urls.push(urlTag(`${origin}/help/${cat}/${slug}.html`, fileLastmod(`help/${cat}/${slug}.html`), 'monthly', '0.3'));
+    }
+  }
+  return urls;
+}
+
 function localizedStaticUrls(origin) {
   const urls = [];
   for (const page of STATIC_PAGES) {
@@ -191,6 +215,7 @@ module.exports = async function handler(req, res) {
   // present in the sitemap is a contradiction Search Console flags
   // as an error. Keep these two files in sync if that ever changes.
   const staticUrls = localizedStaticUrls(origin);
+  const helpUrls = helpCenterUrls(origin);
 
   const profileUrls = profiles.map(p =>
     urlTag(`${origin}/${encodeURIComponent(p.username)}`, p.created_at, 'daily', '0.8'));
@@ -218,7 +243,7 @@ module.exports = async function handler(req, res) {
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
-${[...staticUrls, ...profileUrls, ...postUrls, ...communityUrls, ...listUrls, ...articleUrls].join('\n')}
+${[...staticUrls, ...helpUrls, ...profileUrls, ...postUrls, ...communityUrls, ...listUrls, ...articleUrls].join('\n')}
 </urlset>
 `;
 

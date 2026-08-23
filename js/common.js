@@ -875,6 +875,7 @@ function currentNavKey() {
   if (path === '/contact' || path.endsWith('/contact.html')) return 'contact';
   if (path === '/privacy' || path.endsWith('/privacy.html')) return 'privacy';
   if (path === '/terms' || path.endsWith('/terms.html')) return 'terms';
+  if (path === '/help' || path.startsWith('/help/')) return 'help';
   if (currentSession && currentProfile && path.toLowerCase() === profileUrl(currentProfile.username).toLowerCase()) return 'profile';
   return null;
 }
@@ -912,7 +913,7 @@ function renderSideNav() {
   // auth.js) — #more-wrap just needs the shared "acct" class and its
   // own toggle, both already wired up below/in toggleMoreMenu().
   const moreItem = (href, icon, label) => `<a href="${href}"><span class="navicon">${icon}</span>${label}</a>`;
-  const moreCur = ['settings', 'articles', 'rules', 'about', 'contact', 'privacy', 'terms'].includes(here);
+  const moreCur = ['settings', 'articles', 'rules', 'about', 'contact', 'privacy', 'terms', 'help'].includes(here);
   const moreBtn = `
     <div class="acct" id="more-wrap">
       <button class="navmore-btn${moreCur ? ' cur' : ''}" onclick="toggleMoreMenu();return false;">
@@ -926,6 +927,7 @@ function renderSideNav() {
         ${moreItem(`${lp}/contact`, NAV_ICON.mail, t('nav.contact'))}
         ${moreItem(`${lp}/privacy`, NAV_ICON.shield, t('nav.privacy'))}
         ${moreItem(`${lp}/terms`, NAV_ICON.doc, t('nav.terms'))}
+        ${moreItem('/help/index.html', NAV_ICON.help, 'Help Center')}
       </div>
     </div>`;
   const postBtn = currentSession
