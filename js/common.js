@@ -903,18 +903,39 @@ function renderSideNav() {
   const item = (href, icon, label, key, extra = '') => {
     return `<a href="${href}"${key === here ? ' class="cur"' : ''}><span class="navicon">${icon}${extra}</span><span class="navlabel">${label}</span></a>`;
   };
+  // "More" — replaces the old standalone Settings row with a
+  // three-dot flyout (X's own pattern) so Settings can sit alongside
+  // the pages that used to only be reachable from the page footer or
+  // mobile drawer (Articles, Rules, About, Contact, Privacy, Terms).
+  // Reuses the exact same .acct/.acct-menu open-state + outside-click
+  // machinery as the account card at the bottom of the sidebar (see
+  // auth.js) — #more-wrap just needs the shared "acct" class and its
+  // own toggle, both already wired up below/in toggleMoreMenu().
+  const moreItem = (href, icon, label) => `<a href="${href}"><span class="navicon">${icon}</span>${label}</a>`;
+  const moreCur = ['settings', 'articles', 'rules', 'about', 'contact', 'privacy', 'terms'].includes(here);
+  const moreBtn = `
+    <div class="acct" id="more-wrap">
+      <button class="navmore-btn${moreCur ? ' cur' : ''}" onclick="toggleMoreMenu();return false;">
+        <span class="navicon">${NAV_ICON.dots}</span><span class="navlabel">${t('nav.more')}</span>
+      </button>
+      <div class="acct-menu navmore-menu" id="more-menu">
+        ${moreItem('/settings', NAV_ICON.gear, t('nav.settings'))}
+        ${moreItem(`${lp}/articles`, NAV_ICON.article, t('nav.articles'))}
+        ${moreItem(`${lp}/rules`, NAV_ICON.doc, t('nav.rules'))}
+        ${moreItem(`${lp}/about`, NAV_ICON.info, t('nav.about'))}
+        ${moreItem(`${lp}/contact`, NAV_ICON.mail, t('nav.contact'))}
+        ${moreItem(`${lp}/privacy`, NAV_ICON.shield, t('nav.privacy'))}
+        ${moreItem(`${lp}/terms`, NAV_ICON.doc, t('nav.terms'))}
+      </div>
+    </div>`;
   const postBtn = currentSession
     ? `<button class="sidebar-post-btn" onclick="mobileCompose();return false;">${ICON_COMPOSE}<span>${t('nav.post')}</span></button>`
     : `<a class="sidebar-post-btn" href="${lp}/signup">${ICON_COMPOSE}<span>${t('nav.post')}</span></a>`;
   // Same 9-item order as Bluesky's own sidebar/drawer: Home, Explore,
-  // Notifications, Chat, [Feeds slot] Lists, Saved, Profile, Settings —
-  // the only swap is this app's Communities feature standing in for
-  // Bluesky's Feeds slot (same position, same icon-left/label-right
-  // row style), since InteractInk doesn't have custom Feeds. Rules/
-  // About/Contact/Privacy/Terms no longer live behind a "More" dropdown
-  // here (Bluesky's sidebar doesn't have one either) — they're still
-  // reachable from the page footer everywhere, and Help/About now also
-  // have their own rows on the Settings page.
+  // Notifications, Chat, [Feeds slot] Lists, Saved, Profile, More —
+  // the only swaps are this app's Communities feature standing in for
+  // Bluesky's Feeds slot, and a three-dot "More" flyout (X's own
+  // pattern, see above) replacing the old standalone Settings row.
   el.innerHTML =
     item(lp ? `${lp}/home` : '/home', NAV_ICON.home, t('nav.home'), 'home') +
     item('/search', NAV_ICON.search, t('nav.explore'), 'search') +
@@ -924,7 +945,7 @@ function renderSideNav() {
     item('/lists', NAV_ICON.list, t('nav.lists'), 'lists') +
     item('/bookmarks', NAV_ICON.bookmark, t('nav.bookmarks'), 'bookmarks') +
     item(ownHref, NAV_ICON.user, t('nav.profile'), 'profile') +
-    item('/settings', NAV_ICON.gear, t('nav.settings'), 'settings') +
+    moreBtn +
     postBtn;
 }
 
@@ -1035,6 +1056,7 @@ function renderMobileChrome() {
           </div>
           <span class="m-drawer-group-label">More</span>
           <div class="m-drawer-menu">
+            <a href="${lp}/articles">${NAV_ICON.article}Articles</a>
             <a href="${lp}/rules">${NAV_ICON.doc}Rules</a>
             <a href="${lp}/about">${NAV_ICON.info}About</a>
             <a href="${lp}/contact">${NAV_ICON.mail}Contact</a>

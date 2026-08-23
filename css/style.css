@@ -448,10 +448,22 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
 }
 .navmore-btn:hover { background:var(--hover-bg); }
 .navmore-btn:active { background:var(--hover-bg); filter:brightness(.93); }
+.navmore-btn.cur { font-weight:800; }
 .navmore-btn .navicon { width:24px; height:24px; flex:none; }
 .navmore-btn .navicon svg { width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
-.navmore-menu a { display:flex; align-items:center; gap:12px; }
-.navmore-menu a svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; flex:none; }
+/* The "More" flyout reuses .acct-menu's box/animation/outside-click
+   machinery wholesale (see auth.js) — #more-wrap just needs its own
+   position, since it hangs off a row in the middle of the nav list
+   and should drop *down* from it, not spring up from the bottom of
+   the sidebar the way the account card's menu does. */
+#more-wrap { position:relative; }
+#more-wrap .acct-menu {
+  bottom:auto; top:calc(100% + 4px);
+  transform-origin:top left; transform:translateY(-6px) scale(.97);
+}
+#more-wrap.open .acct-menu { transform:translateY(0) scale(1); }
+.navmore-menu a, #more-menu a { display:flex; align-items:center; gap:12px; }
+.navmore-menu a svg, #more-menu a svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; flex:none; }
 
 /* Big rounded "Post" pill under the nav items, X-style */
 .sidebar-post-btn {
