@@ -3317,7 +3317,7 @@ body.chat-thread-open #chat-fab { display:none; }
    center — nudge them left a few px (anchoring the left edge and
    pulling in the right edge only) so they line up visually centered
    under the upload box above them. */
-#gcv-step-1 .gcv-pill-field { margin-right:8px; }
+#gcv-step-1 .gcv-pill-field { margin-right:16px; }
 /* :not(.gcv-pill-field-search) keeps this centered-text rule from
    also winning (by specificity, regardless of source order) over the
    member-search field's own left-aligned input just below — that
