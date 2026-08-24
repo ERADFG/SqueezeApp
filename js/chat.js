@@ -1630,10 +1630,21 @@ async function sendMessage() {
 
   const insertRow = { sender_id: currentSession.user.id, recipient_id: chatOther.id, media_url, media_type };
   if (attachment?.type === 'audio' && attachment.durationMs) insertRow.media_duration_ms = attachment.durationMs;
+  // chatEncrypt() (unlike chatDecrypt()) doesn't guard against WebCrypto
+  // throwing — a stale/mismatched key, a locked-down browser context,
+  // etc. Without this try/catch that exception used to escape sendMessage()
+  // entirely: an uncaught rejection, the message silently never sent, and
+  // the send button stuck disabled. Fall back to sending the plaintext body
+  // instead (same as when chatKey is null/not-yet-established) so a send
+  // always goes through and nothing "can't encrypt"-shaped ever surfaces.
   if (chatKey && body) {
-    const enc = await chatEncrypt(chatKey, body);
-    insertRow.body = enc.body;
-    insertRow.iv = enc.iv;
+    try {
+      const enc = await chatEncrypt(chatKey, body);
+      insertRow.body = enc.body;
+      insertRow.iv = enc.iv;
+    } catch (e) {
+      insertRow.body = body; // encryption failed — send as plaintext rather than losing/blocking the message
+    }
   } else {
     insertRow.body = body; // '' when it's a caption-less attachment
   }
