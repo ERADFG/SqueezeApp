@@ -86,7 +86,19 @@ const I18N_DICT = {
     'chat.micBlocked': "Microphone access is blocked for this site. Allow it in your browser's site settings, then try again.",
     'chat.micNotFound': "No microphone was found on this device.",
     'chat.micInUse': "Your microphone is being used by another app. Close it and try again.",
-    'chat.micUnsupported': "Voice messages need a secure (https) connection and aren't supported in this browser."
+    'chat.micUnsupported': "Voice messages need a secure (https) connection and aren't supported in this browser.",
+    'chat.deleteForMe': 'Delete for me', 'chat.deleteForEveryone': 'Delete for everyone',
+    'chat.deleteMessageTitle': 'Delete message?',
+    'chat.deleteForMeDesc': "This removes it only for you \\u2014 the other person will still see it.",
+    'chat.deleteForEveryoneDesc': "This removes it for everyone in the chat. This can't be undone.",
+    'chat.messageDeleted': 'This message was deleted',
+    'chat.deleteConversation': 'Delete conversation',
+    'chat.deleteConversationTitle': 'Delete this conversation?',
+    'chat.deleteConversationDesc': 'This removes your messages with {username} from your inbox. {username} will still see their side.',
+    'chat.cantDecryptBannerUnlock': "Some messages can't be shown on this device.",
+    'chat.unlockBtn': 'Unlock with passphrase', 'chat.setupBackupBtn': 'Set up chat backup',
+    'chat.backupNudge': "Set up chat backup in Settings so you don't lose access to old messages on a new device.",
+    'chat.setUpNow': 'Set up now'
   },
   es: {
     'nav.home': 'Inicio', 'nav.explore': 'Explorar', 'nav.notifications': 'Notificaciones',

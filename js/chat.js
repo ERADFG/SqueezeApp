@@ -190,10 +190,20 @@ async function loadConversationList(session, root) {
 
   if (error) { root.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
 
+  // Drop anything the current viewer has "deleted for me" (a single
+  // message, or an entire contact via deleteConversationWithUser())
+  // before it ever reaches the list — a conversation whose every
+  // message is hidden this way just silently stops appearing, which
+  // is exactly "deleted this contact from my messages".
+  const visibleRows = (data || []).filter(m => {
+    const mine = m.sender_id === session.user.id;
+    return mine ? !m.deleted_for_sender : !m.deleted_for_recipient;
+  });
+
   // Collapse the flat message log into one row per other participant,
   // keeping only the most recent message (list is already newest-first).
   const seen = new Map();
-  (data || []).forEach(m => {
+  visibleRows.forEach(m => {
     const mine = m.sender_id === session.user.id;
     const otherId = mine ? m.recipient_id : m.sender_id;
     if (!seen.has(otherId)) {
@@ -246,7 +256,9 @@ async function loadConversationList(session, root) {
     const unread = !mine && !last.read;
     const uname = other?.username || 'unknown';
     let snip;
-    if (last.iv) {
+    if (last.deleted_for_everyone) {
+      snip = `<em>${esc(t('chat.messageDeleted'))}</em>`;
+    } else if (last.iv) {
       const key = other?.id ? await getChatKey(session.user.id, other.id, other.pubkey) : null;
       const plain = await decryptForDisplay(key, last.body, last.iv);
       snip = plain != null ? esc(plain.slice(0, 80)) : `${CHAT_ICON_LOCK}<span>${esc(t('chat.encryptedMessage'))}</span>`;
@@ -258,6 +270,7 @@ async function loadConversationList(session, root) {
       snip = esc((last.body || '').slice(0, 80));
     }
     return `
+    <div class="conv-row-wrap">
     <a class="conv-row${unread ? ' unread' : ''}" href="${messagesUrl(uname)}">
       <img class="avatar${avSqClass(other)}" src="${esc(avatarUrl(other?.avatar_url))}" alt="" loading="lazy" decoding="async">
       <div class="conv-txt">
@@ -269,7 +282,15 @@ async function loadConversationList(session, root) {
         <div class="conv-snip">${mine ? esc(t('chat.youPrefix')) : ''}${snip}</div>
       </div>
       ${unread ? '<span class="conv-dot"></span>' : ''}
-    </a>`;
+    </a>
+    ${other?.id ? `
+    <div class="pc-menu-wrap conv-menu-wrap" id="cmenu-${other.id}">
+      <button type="button" class="pc-menu-btn" onclick="toggleConvMenu('${other.id}', event)">${ICON.menu}</button>
+      <div class="pc-menu-dd">
+        <button type="button" class="pc-menu-danger" onclick="deleteConversationWithUser('${other.id}', '${esc(uname)}', event)">${esc(t('chat.deleteConversation'))}</button>
+      </div>
+    </div>` : ''}
+    </div>`;
   }));
 
   root.innerHTML = newMsgBox + rows.join('');
@@ -739,6 +760,14 @@ async function loadThread(session, root) {
 
   if (error) { root.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
 
+  // Drop anything I've deleted-for-me (a single message, or the
+  // whole conversation via deleteConversationWithUser()) — the other
+  // person's copy is untouched, this only affects what I see.
+  const visibleMsgs = (msgs || []).filter(m => {
+    const mine = m.sender_id === session.user.id;
+    return mine ? !m.deleted_for_sender : !m.deleted_for_recipient;
+  });
+
   // Publish my key (if missing) and derive the shared key for this
   // conversation before rendering anything, so the very first paint
   // already shows decrypted text instead of a flash of ciphertext/
@@ -748,20 +777,35 @@ async function loadThread(session, root) {
     await ensureMyKeypair(session.user.id);
     if (other.pubkey) chatKey = await getChatKey(session.user.id, other.id, other.pubkey);
   }
-  await Promise.all((msgs || []).map(async m => { m._plain = await decryptForDisplay(chatKey, m.body, m.iv); }));
+  await Promise.all(visibleMsgs.map(async m => { m._plain = m.deleted_for_everyone ? '' : await decryptForDisplay(chatKey, m.body, m.iv); }));
 
-  const encBanner = chatKey
+  let encBanner = chatKey
     ? `<div class="chat-e2e-banner">${CHAT_ICON_LOCK}<span>${esc(t('chat.e2eActive'))}</span></div>`
     : (chatCryptoSupported()
         ? `<div class="chat-e2e-banner pending">${CHAT_ICON_LOCK}<span>${esc(t('chat.e2ePending').replace('{username}', other.username))}</span></div>`
         : '');
+
+  // Some messages in this thread failed to decrypt with the current
+  // device's key (see the msg-undecryptable bubble in msgBubbleHtml)
+  // — most often because this device generated a fresh keypair at
+  // some point (new browser, cleared site data, etc.) instead of
+  // using the one these messages were actually encrypted with. Surface
+  // one clear way out at the top of the thread rather than leaving the
+  // person to notice and tap the small per-bubble lock icon.
+  const hasUndecryptable = visibleMsgs.some(m => !m.deleted_for_everyone && m._plain == null);
+  if (hasUndecryptable) {
+    const backupExists = await chatBackupExists(session.user.id);
+    encBanner += backupExists
+      ? `<div class="chat-e2e-banner recover"><button type="button" class="chat-e2e-recover-btn" onclick="restoreChatBackupNow().then(()=>location.reload())">${CHAT_ICON_LOCK}<span>${esc(t('chat.cantDecryptBannerUnlock'))} <u>${esc(t('chat.unlockBtn'))}</u></span></button></div>`
+      : `<div class="chat-e2e-banner recover"><a class="chat-e2e-recover-btn" href="settings.html">${CHAT_ICON_LOCK}<span>${esc(t('chat.cantDecryptBannerUnlock'))} <u>${esc(t('chat.setupBackupBtn'))}</u></span></a></div>`;
+  }
 
   // Snapshot which messages are unread *before* we mark them read
   // below — renderMsgsHtml() uses this to drop a WhatsApp-style
   // "N unread messages" divider right above the first one, so
   // opening a thread with a backlog shows where to start reading
   // instead of just dumping you at the bottom.
-  const unreadMsgIds = new Set((msgs || []).filter(m => m.recipient_id === session.user.id && !m.read).map(m => m.id));
+  const unreadMsgIds = new Set(visibleMsgs.filter(m => m.recipient_id === session.user.id && !m.read).map(m => m.id));
 
   root.innerHTML = `
     <div class="chat-thread">
@@ -773,7 +817,7 @@ async function loadThread(session, root) {
           <span class="pc-handle">@${esc(other.username)}</span>
         </div>
       </div>
-      <div class="chat-msgs" id="chat-msgs">${encBanner}${renderMsgsHtml(msgs || [], session.user.id, unreadMsgIds)}</div>
+      <div class="chat-msgs" id="chat-msgs">${encBanner}${renderMsgsHtml(visibleMsgs, session.user.id, unreadMsgIds)}</div>
       <div id="chat-attach-preview" class="chat-attach-preview" hidden></div>
       <div id="chat-record-bar" class="chat-record-bar" hidden>
         <span class="chat-record-dot"></span>
@@ -980,6 +1024,20 @@ function msgBubbleHtml(m, myId, group = { start: true, end: true }) {
   const cls = ['msg-row', mine ? 'mine' : 'theirs'];
   if (group.start) cls.push('g-start');
   if (group.end) cls.push('g-end');
+
+  // Deleted-for-everyone tombstone — content was already wiped
+  // server-side (delete_message_for_everyone), so there's nothing to
+  // decrypt or render but a placeholder. Takes priority over the
+  // undecryptable-bubble case below.
+  if (m.deleted_for_everyone) {
+    const meta = msgMetaHtml(m.created_at, '', false);
+    return `
+  <div class="${cls.join(' ')}" id="msg-${m.id}" data-day="${esc(chatDayLabel(m.created_at))}" data-sender="${esc(m.sender_id)}" data-ts="${esc(m.created_at)}">
+    ${msgMenuHtml(m, mine)}
+    <div class="msg-bubble">${CHAT_ICON_LOCK}<em class="msg-deleted-note">${esc(t('chat.messageDeleted'))}</em>${meta}</div>
+  </div>`;
+  }
+
   // An attachment's iv/body only cover the caption — the message can
   // have media with no caption at all, in which case m._plain is ''
   // (never null, since '' never went through encryption/decryption
@@ -1000,10 +1058,117 @@ function msgBubbleHtml(m, myId, group = { start: true, end: true }) {
   const bareMedia = mediaHtml && !hasCaption && m.media_type !== 'audio';
   const meta = msgMetaHtml(m.created_at, ticksHtml, bareMedia);
   const bubbleInner = mediaHtml + bodyHtml + meta;
+  const menu = msgMenuHtml(m, mine);
+  // Menu sits on the side of the bubble closest to the thread's
+  // center column — before the bubble for "mine" (row is packed to
+  // the right, so this lands just left of it), after the bubble for
+  // "theirs" (row packed left, lands just right of it).
   return `
   <div class="${cls.join(' ')}" id="msg-${m.id}" data-day="${esc(chatDayLabel(m.created_at))}" data-sender="${esc(m.sender_id)}" data-ts="${esc(m.created_at)}">
+    ${mine ? menu : ''}
     <div class="msg-bubble${bareMedia ? ' msg-bubble-bare-media' : ''}">${bubbleInner}</div>
+    ${mine ? '' : menu}
   </div>`;
+}
+
+// The hover-reveal "···" next to a bubble. "Delete for me" is always
+// offered (works for either side of the DM); "Delete for everyone"
+// only for your own, not-already-deleted messages.
+function msgMenuHtml(m, mine) {
+  return `
+    <div class="pc-menu-wrap msg-menu-wrap" id="mmenu-${m.id}">
+      <button type="button" class="pc-menu-btn" onclick="toggleMsgMenu('${m.id}', event)">${ICON.menu}</button>
+      <div class="pc-menu-dd">
+        <button type="button" onclick="deleteMessageForMe('${m.id}', event)">${esc(t('chat.deleteForMe'))}</button>
+        ${mine && !m.deleted_for_everyone ? `<button type="button" class="pc-menu-danger" onclick="deleteMessageForEveryone('${m.id}', event)">${esc(t('chat.deleteForEveryone'))}</button>` : ''}
+      </div>
+    </div>`;
+}
+
+// ── PER-MESSAGE / PER-CONVERSATION "···" MENUS ──
+// Same open/close/position behavior as togglePostMenu() (common.js),
+// just generic over any wrap element instead of assuming the
+// "pmenu-<id>" post-menu id shape.
+function toggleGenericMenu(wrap, ev) {
+  if (ev) ev.stopPropagation();
+  if (!wrap) return;
+  const willOpen = !wrap.classList.contains('open');
+  document.querySelectorAll('.pc-menu-wrap.open').forEach(w => { if (w !== wrap) w.classList.remove('open'); });
+  if (willOpen) { wrap.classList.add('open'); positionMenuDd(wrap); }
+  else { wrap.classList.remove('open'); }
+}
+function toggleMsgMenu(id, ev) { toggleGenericMenu(document.getElementById(`mmenu-${id}`), ev); }
+function toggleConvMenu(id, ev) {
+  if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+  toggleGenericMenu(document.getElementById(`cmenu-${id}`), ev);
+}
+
+// Hides one message from just this account's view (see
+// delete_message_for_me in supabase/chat_delete_messages_and_contacts.sql).
+// Works whether the current user is the sender or the recipient.
+async function deleteMessageForMe(id, ev) {
+  if (ev) ev.stopPropagation();
+  document.getElementById(`mmenu-${id}`)?.classList.remove('open');
+  const ok = await ocConfirm({
+    title: t('chat.deleteMessageTitle'),
+    desc: t('chat.deleteForMeDesc'),
+    confirmLabel: t('chat.deleteForMe'),
+  });
+  if (!ok) return;
+  try {
+    const { error } = await sb.rpc('delete_message_for_me', { message_id: id });
+    if (error) throw error;
+    document.getElementById(`msg-${id}`)?.remove();
+  } catch (e) {
+    toast(e.message || 'Could not delete that message.', 'error');
+  }
+}
+
+// Sender-only. Wipes the message for both sides and swaps the bubble
+// to a "This message was deleted" tombstone in place, without a full
+// thread reload.
+async function deleteMessageForEveryone(id, ev) {
+  if (ev) ev.stopPropagation();
+  document.getElementById(`mmenu-${id}`)?.classList.remove('open');
+  const ok = await ocConfirm({
+    title: t('chat.deleteMessageTitle'),
+    desc: t('chat.deleteForEveryoneDesc'),
+    confirmLabel: t('chat.deleteForEveryone'),
+  });
+  if (!ok) return;
+  try {
+    const { error } = await sb.rpc('delete_message_for_everyone', { message_id: id });
+    if (error) throw error;
+    const row = document.getElementById(`msg-${id}`);
+    if (row) {
+      const bubble = row.querySelector('.msg-bubble');
+      if (bubble) bubble.innerHTML = `${CHAT_ICON_LOCK}<em class="msg-deleted-note">${esc(t('chat.messageDeleted'))}</em>`;
+      row.querySelectorAll('.msg-menu-wrap .pc-menu-danger').forEach(b => b.remove());
+    }
+  } catch (e) {
+    toast(e.message || 'Could not delete that message.', 'error');
+  }
+}
+
+// "Delete this contact" from the message list — delete-for-me on
+// every message exchanged with them (see delete_conversation_with_user
+// in the same migration). Only affects this account's own inbox.
+async function deleteConversationWithUser(otherId, uname, ev) {
+  if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+  document.getElementById(`cmenu-${otherId}`)?.classList.remove('open');
+  const ok = await ocConfirm({
+    title: t('chat.deleteConversationTitle'),
+    desc: t('chat.deleteConversationDesc').replace(/\{username\}/g, uname),
+    confirmLabel: t('chat.deleteConversation'),
+  });
+  if (!ok) return;
+  try {
+    const { error } = await sb.rpc('delete_conversation_with_user', { other_user_id: otherId });
+    if (error) throw error;
+    document.getElementById(`cmenu-${otherId}`)?.closest('.conv-row-wrap')?.remove();
+  } catch (e) {
+    toast(e.message || 'Could not delete that conversation.', 'error');
+  }
 }
 
 // Renders a message row's attachment, if any. Images/video reuse the
@@ -1406,6 +1571,23 @@ async function sendMessage() {
     appendChatMsg(data, currentSession.user.id);
     scrollChatToBottom();
   }
+  maybeNudgeChatBackup(!!data.iv);
+}
+
+// One-time (per browser) nudge toward Settings → Privacy → "Set up
+// chat backup", the first time someone sends an actually-encrypted
+// message without a backup already saved. The goal is to have a
+// recovery path in place *before* a new device or cleared site data
+// ever makes old messages unreadable, rather than only reacting to it
+// afterward (see the "can't decrypt" banner built in loadThread()).
+// Silent no-op once shown, or once a backup already exists.
+const CHAT_BACKUP_NUDGE_LS = 'oc-e2e-backup-nudge-shown';
+async function maybeNudgeChatBackup(hasIv) {
+  if (!hasIv || !currentSession) return;
+  try { if (localStorage.getItem(CHAT_BACKUP_NUDGE_LS)) return; } catch (e) {}
+  const exists = await chatBackupExists(currentSession.user.id);
+  try { localStorage.setItem(CHAT_BACKUP_NUDGE_LS, '1'); } catch (e) {}
+  if (!exists) toast(t('chat.backupNudge'));
 }
 
 function subscribeChatRealtime(myId, otherId) {

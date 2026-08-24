@@ -3105,6 +3105,9 @@ html[data-theme="dim"] .auth-ok, html[data-theme="dark"] .auth-ok { background:r
    ═══════════════════════════════════════════════════════════════ */
 
 /* ── conversation list ── */
+.conv-row-wrap { position:relative; }
+.conv-row-wrap .conv-menu-wrap { position:absolute; top:14px; right:12px; z-index:2; }
+.conv-row-wrap .conv-row { padding-right:44px; }
 .conv-row { display:flex; gap:12px; align-items:center; padding:12px 16px 12px 14px; border-bottom:1px solid var(--line); text-decoration:none; color:var(--ink); transition:background-color .12s ease; position:relative; animation:oc-fade-in .2s ease both; border-left:3px solid transparent; }
 .conv-row:hover { background:var(--hover-bg); text-decoration:none; }
 .conv-row .avatar { flex:none; width:50px; height:50px; }
@@ -3520,6 +3523,16 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .msg-undecryptable { display:inline-flex; align-items:center; gap:5px; font-style:italic; opacity:.75; font:inherit; color:inherit; background:none; border:none; padding:0; text-align:left; cursor:pointer; }
 .msg-undecryptable:hover { opacity:1; text-decoration:underline; }
 .msg-undecryptable svg { width:13px; height:13px; flex:none; }
+.msg-deleted-note { font-style:italic; opacity:.65; font-size:13.5px; }
+
+/* Per-message "···" — hidden until the row is hovered/tapped (or its
+   own dropdown is open), same reveal pattern chat apps use so the
+   thread isn't cluttered with a menu button on every single bubble. */
+.msg-menu-wrap { flex:none; opacity:0; transition:opacity .12s ease; align-self:center; }
+.msg-row:hover .msg-menu-wrap, .msg-menu-wrap.open { opacity:1; }
+.msg-menu-wrap .pc-menu-btn { width:26px; height:26px; }
+.msg-menu-wrap .pc-menu-btn svg { width:14px; height:14px; }
+.msg-menu-wrap .pc-menu-dd { min-width:170px; }
 /* Telegram/WhatsApp-style meta (clock time + read ticks) rendered
    *inside* the bubble at the end of the message text, instead of as
    a separate element floating outside it. float:right on the last

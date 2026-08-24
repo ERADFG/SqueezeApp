@@ -185,6 +185,18 @@ function chatCryptoSupported() {
   return !!(window.crypto && window.crypto.subtle);
 }
 
+// Cheap, non-prompting check for whether this ACCOUNT has a chat
+// backup saved anywhere (not specific to this device). Never prompts
+// or restores anything itself — just lets a caller decide what to
+// show ("tap to unlock" vs "set up backup") before the person acts.
+async function chatBackupExists(myUserId) {
+  if (!myUserId) return false;
+  try {
+    const { data } = await sb.from('profiles').select('key_backup').eq('id', myUserId).maybeSingle();
+    return !!data?.key_backup;
+  } catch (e) { return false; }
+}
+
 // Generates (once per browser) or loads this browser's ECDH keypair,
 // and makes sure the public half is on this user's profile row so
 // the other side of any conversation can find it. Safe to call
