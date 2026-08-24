@@ -871,7 +871,7 @@ async function loadThread(session, root) {
     const backupExists = await chatBackupExists(session.user.id);
     encBanner += backupExists
       ? `<div class="chat-e2e-banner recover"><button type="button" class="chat-e2e-recover-btn" onclick="restoreChatBackupNow().then(()=>location.reload())">${CHAT_ICON_LOCK}<span>${esc(t('chat.cantDecryptBannerUnlock'))} <u>${esc(t('chat.unlockBtn'))}</u></span></button></div>`
-      : `<div class="chat-e2e-banner recover"><a class="chat-e2e-recover-btn" href="settings.html">${CHAT_ICON_LOCK}<span>${esc(t('chat.cantDecryptBannerUnlock'))} <u>${esc(t('chat.setupBackupBtn'))}</u></span></a></div>`;
+      : `<div class="chat-e2e-banner recover"><a class="chat-e2e-recover-btn" href="settings.html#chat-backup">${CHAT_ICON_LOCK}<span>${esc(t('chat.cantDecryptBannerUnlock'))} <u>${esc(t('chat.setupBackupBtn'))}</u></span></a></div>`;
   }
 
   // Snapshot which messages are unread *before* we mark them read
