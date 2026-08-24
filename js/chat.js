@@ -37,6 +37,7 @@ let chatGroupRealtimeChannel = null;
 const gcvPickedMembers = new Map(); // username -> profile, for the create-group/channel modal
 let gcvAvatarBlob = null;       // cropped File staged for the group/channel picture, until Create is pressed
 let gcvAvatarPreviewUrl = null; // local object URL for the picker preview, revoked on close/create
+let gcvStep = 1;                // 1 = basic info, 2 = privacy, 3 = members — see gcvGoToStep()
 
 // ── MEDIA / VOICE-NOTE COMPOSER STATE ──
 // At most one pending attachment at a time (image, video, or a
@@ -517,9 +518,20 @@ async function startChat() {
 // pattern). 'group' = anyone in it can post; 'channel' = only the
 // owner/admin can post, everyone else just reads — matches the
 // kind check constraint in supabase/chat_full_setup.sql.
+//
+// Redesigned as a 3-step wizard (basic info -> privacy -> members)
+// instead of one long scrolling form — same fields and same backing
+// #gcv-* element ids as before (so gcvSearchMembers/gcvPickMember/
+// createConversation/etc. all still work untouched), just split
+// across three panels that gcvGoToStep() shows one at a time. All
+// three panels are built up front (not injected per-step) so nothing
+// the person already typed is lost switching steps, and Group<->
+// Channel can still be swapped from step 1 without losing step 2/3
+// input, same as before.
 function openCreateConversationModal(kind) {
   gcvPickedMembers.clear();
   gcvResetAvatarState();
+  gcvStep = 1;
   document.getElementById('gcv-modal-bg')?.remove();
   const bg = document.createElement('div');
   bg.id = 'gcv-modal-bg';
@@ -528,50 +540,78 @@ function openCreateConversationModal(kind) {
   bg.innerHTML = `
     <div class="modal gcv-modal" role="dialog" aria-modal="true">
       <div class="gcv-head">
+        <a class="gcv-back" href="#" id="gcv-back" onclick="event.preventDefault();gcvGoToStep(gcvStep-1);" aria-label="Back" style="visibility:hidden;">${ICON_BACK}</a>
         <h2 id="gcv-title">New ${kind === 'channel' ? 'channel' : 'group'}</h2>
         <a class="gcv-close" href="#" onclick="event.preventDefault();closeCreateConversationModal();" aria-label="Close">${ICON_CLOSE}</a>
       </div>
-      <div class="gcv-kind-tabs" role="tablist">
-        <button type="button" id="gcv-tab-group" class="${kind !== 'channel' ? 'cur' : ''}" onclick="gcvSwitchKind('group')">${ICON_GROUP} Group</button>
-        <button type="button" id="gcv-tab-channel" class="${kind === 'channel' ? 'cur' : ''}" onclick="gcvSwitchKind('channel')">${ICON_CHANNEL} Channel</button>
+      <div class="gcv-progress" aria-hidden="true">
+        <span class="gcv-progress-seg" id="gcv-seg-1"></span>
+        <span class="gcv-progress-seg" id="gcv-seg-2"></span>
+        <span class="gcv-progress-seg" id="gcv-seg-3"></span>
       </div>
-      <p class="dc-desc" id="gcv-desc-text">${kind === 'channel'
-        ? 'Only you (and any admins you add) can post. Everyone else just reads — like a broadcast list.'
-        : 'Everyone you add can post and see the conversation.'}</p>
-      <div class="gcv-upload-box">
-        <span class="gcv-avatar-wrap" id="gcv-avatar-wrap">
-          <label class="gcv-avatar-preview" id="gcv-avatar-preview" for="gcv-avatar-file">${ICON_AVATAR_PLACEHOLDER}</label>
-          <label class="gcv-avatar-badge" for="gcv-avatar-file" aria-hidden="true">${ICON_PLUS_PLAIN}</label>
-          <input type="file" id="gcv-avatar-file" accept="image/*" style="display:none;">
-        </span>
-        <span class="gcv-upload-txt" id="gcv-upload-txt">Add a picture<small>Optional</small></span>
+      <p class="gcv-step-label" id="gcv-step-label">Step 1 of 3 &middot; Basic info</p>
+
+      <div class="gcv-step" id="gcv-step-1">
+        <div class="gcv-kind-tabs" role="tablist">
+          <button type="button" id="gcv-tab-group" class="${kind !== 'channel' ? 'cur' : ''}" onclick="gcvSwitchKind('group')">${ICON_GROUP} Group</button>
+          <button type="button" id="gcv-tab-channel" class="${kind === 'channel' ? 'cur' : ''}" onclick="gcvSwitchKind('channel')">${ICON_CHANNEL} Channel</button>
+        </div>
+        <p class="dc-desc" id="gcv-desc-text">${kind === 'channel'
+          ? 'Only you (and any admins you add) can post. Everyone else just reads — like a broadcast list.'
+          : 'Everyone you add can post and see the conversation.'}</p>
+        <div class="gcv-upload-box">
+          <span class="gcv-avatar-wrap" id="gcv-avatar-wrap">
+            <label class="gcv-avatar-preview" id="gcv-avatar-preview" for="gcv-avatar-file">${ICON_AVATAR_PLACEHOLDER}</label>
+            <label class="gcv-avatar-badge" for="gcv-avatar-file" aria-hidden="true">${ICON_PLUS_PLAIN}</label>
+            <input type="file" id="gcv-avatar-file" accept="image/*" style="display:none;">
+          </span>
+          <span class="gcv-upload-txt" id="gcv-upload-txt">Add a picture<small>Optional</small></span>
+        </div>
+        <div class="gcv-pill-field">
+          <input type="text" id="gcv-name" maxlength="${GCV_NAME_MAX}" placeholder="Name" oninput="gcvUpdateCreateBtn();gcvUpdateCharCount('gcv-name','gcv-name-count',${GCV_NAME_MAX})">
+          <span class="gcv-pill-charcount" id="gcv-name-count">0/${GCV_NAME_MAX}</span>
+        </div>
+        <div class="gcv-pill-field gcv-pill-field-area">
+          <textarea id="gcv-desc" rows="1" maxlength="${GCV_DESC_MAX}" placeholder="Description (optional)" oninput="gcvUpdateCharCount('gcv-desc','gcv-desc-count',${GCV_DESC_MAX})"></textarea>
+          <span class="gcv-pill-charcount" id="gcv-desc-count">0/${GCV_DESC_MAX}</span>
+        </div>
       </div>
-      <div class="gcv-pill-field">
-        <input type="text" id="gcv-name" maxlength="${GCV_NAME_MAX}" placeholder="Name" oninput="gcvUpdateCreateBtn();gcvUpdateCharCount('gcv-name','gcv-name-count',${GCV_NAME_MAX})">
-        <span class="gcv-pill-charcount" id="gcv-name-count">0/${GCV_NAME_MAX}</span>
+
+      <div class="gcv-step" id="gcv-step-2" style="display:none;">
+        <div class="gcv-privacy-illus" id="gcv-privacy-illus" aria-hidden="true">${ICON_GLOBE}</div>
+        <div class="gcv-setting-row">
+          <span class="gcv-setting-icon">${ICON_GLOBE}</span>
+          <span class="gcv-setting-txt" id="gcv-toggle-txt">Public ${kind}<small>Anyone can find and join without an invite</small></span>
+          <label class="toggle"><input type="checkbox" id="gcv-public"><span class="toggle-track"></span></label>
+        </div>
       </div>
-      <div class="gcv-pill-field gcv-pill-field-area">
-        <textarea id="gcv-desc" rows="1" maxlength="${GCV_DESC_MAX}" placeholder="Description (optional)" oninput="gcvUpdateCharCount('gcv-desc','gcv-desc-count',${GCV_DESC_MAX})"></textarea>
-        <span class="gcv-pill-charcount" id="gcv-desc-count">0/${GCV_DESC_MAX}</span>
+
+      <div class="gcv-step" id="gcv-step-3" style="display:none;">
+        <div class="gcv-pill-field gcv-pill-field-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+          <input id="gcv-member-search" placeholder="Add members by username" oninput="gcvSearchMembers(this.value)">
+        </div>
+        <div class="gcv-member-results" id="gcv-member-results"></div>
+        <div class="gcv-members-picked" id="gcv-members-picked"></div>
       </div>
-      <div class="gcv-setting-row">
-        <span class="gcv-setting-icon">${ICON_GLOBE}</span>
-        <span class="gcv-setting-txt" id="gcv-toggle-txt">Public ${kind}<small>Anyone can find and join without an invite</small></span>
-        <label class="toggle"><input type="checkbox" id="gcv-public"><span class="toggle-track"></span></label>
-      </div>
-      <div class="gcv-pill-field gcv-pill-field-search">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
-        <input id="gcv-member-search" placeholder="Add members by username" oninput="gcvSearchMembers(this.value)">
-      </div>
-      <div class="gcv-member-results" id="gcv-member-results"></div>
-      <div class="gcv-members-picked" id="gcv-members-picked"></div>
+
       <div class="errmsg" id="gcv-err" style="display:none;"></div>
       <input type="hidden" id="gcv-kind" value="${esc(kind)}">
-      <button type="button" class="gcv-create-btn" id="gcv-create-btn" onclick="createConversation()" disabled>Create ${kind === 'channel' ? 'channel' : 'group'}</button>
+      <div class="gcv-footer">
+        <button type="button" class="gcv-create-btn" id="gcv-next-btn" onclick="gcvGoToStep(gcvStep+1)" disabled>Continue</button>
+        <button type="button" class="gcv-create-btn" id="gcv-create-btn" onclick="createConversation()" style="display:none;">Create ${kind === 'channel' ? 'channel' : 'group'}</button>
+      </div>
     </div>`;
   document.body.appendChild(bg);
   requestAnimationFrame(() => bg.classList.add('open'));
   setTimeout(() => document.getElementById('gcv-name')?.focus(), 50);
+  // Every other modal/sheet in the app (compose, GIF/emoji pickers,
+  // the chat FAB sheet) locks page scroll behind it via .oc-sheet-open
+  // — this one never did, so the conversation list kept scrolling
+  // (and showing its own scrollbar) right through the dimmed overlay
+  // while the modal was open.
+  document.body.classList.add('oc-sheet-open');
+  gcvGoToStep(1);
   document.getElementById('gcv-avatar-file').addEventListener('change', (e) => {
     const file = e.target.files[0];
     e.target.value = '';
@@ -595,9 +635,41 @@ function gcvResetAvatarState() {
 function closeCreateConversationModal() {
   document.getElementById('gcv-modal-bg')?.remove();
   gcvResetAvatarState();
+  document.body.classList.remove('oc-sheet-open');
+}
+
+// Moves the wizard to step n (1-3), swapping which panel is visible,
+// updating the progress bar/step label/back-button visibility, and
+// swapping the footer between "Continue" (steps 1-2) and the actual
+// "Create group/channel" button (step 3) — so the create action is
+// physically a different, unmissable button rather than the same
+// "Continue" pill silently changing what it does on the last step.
+// Clamped to 1-3 so Back on step 1 / Continue past step 3 no-op.
+const GCV_STEP_LABELS = { 1: 'Basic info', 2: 'Privacy', 3: 'Members' };
+function gcvGoToStep(n) {
+  n = Math.max(1, Math.min(3, n));
+  if (n === 2 && !document.getElementById('gcv-name')?.value.trim()) return; // guard against Enter-key/direct calls skipping the name requirement
+  gcvStep = n;
+  for (let i = 1; i <= 3; i++) {
+    const panel = document.getElementById(`gcv-step-${i}`);
+    if (panel) panel.style.display = i === n ? '' : 'none';
+    document.getElementById(`gcv-seg-${i}`)?.classList.toggle('filled', i <= n);
+  }
+  const label = document.getElementById('gcv-step-label');
+  if (label) label.innerHTML = `Step ${n} of 3 &middot; ${GCV_STEP_LABELS[n]}`;
+  const back = document.getElementById('gcv-back');
+  if (back) back.style.visibility = n === 1 ? 'hidden' : 'visible';
+  const nextBtn = document.getElementById('gcv-next-btn');
+  const createBtn = document.getElementById('gcv-create-btn');
+  if (nextBtn) nextBtn.style.display = n === 3 ? 'none' : '';
+  if (createBtn) createBtn.style.display = n === 3 ? '' : 'none';
+  if (n === 1) gcvUpdateCreateBtn();
+  const focusTarget = n === 1 ? 'gcv-name' : n === 3 ? 'gcv-member-search' : null;
+  if (focusTarget) setTimeout(() => document.getElementById(focusTarget)?.focus(), 50);
 }
 
 // Switches between Group/Channel without rebuilding the modal, so
+
 // whatever the person already typed (name, description, public
 // toggle, picked members) survives the switch instead of getting
 // wiped — the old openCreateConversationModal(kind) re-call used to
@@ -632,13 +704,15 @@ function gcvSwitchKind(kind) {
   }
 }
 
-// Create is only enabled once a name is typed — matches the same
-// "disable until valid" pattern used elsewhere in the app, instead of
-// letting the person tap Create and only then finding out it needs a
-// name.
+// Continue (step 1) is only enabled once a name is typed — matches
+// the same "disable until valid" pattern used elsewhere in the app,
+// instead of letting the person tap through and only then finding
+// out step 3 needs a name. gcv-create-btn itself has nothing to
+// validate (name was already required to reach it), so this only
+// ever touches gcv-next-btn.
 function gcvUpdateCreateBtn() {
   const nameEl = document.getElementById('gcv-name');
-  const btn = document.getElementById('gcv-create-btn');
+  const btn = document.getElementById('gcv-next-btn');
   if (!nameEl || !btn) return;
   btn.disabled = !nameEl.value.trim();
 }
