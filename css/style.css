@@ -3313,6 +3313,11 @@ body.chat-thread-open #chat-fab { display:none; }
    is its own small caption under the pill rather than sitting inside
    it, so it never overlaps what's typed. */
 .gcv-pill-field { margin-bottom:4px; }
+/* Step 1's Name/Description pills read as sitting slightly right of
+   center — nudge them left a few px (anchoring the left edge and
+   pulling in the right edge only) so they line up visually centered
+   under the upload box above them. */
+#gcv-step-1 .gcv-pill-field { margin-right:8px; }
 /* :not(.gcv-pill-field-search) keeps this centered-text rule from
    also winning (by specificity, regardless of source order) over the
    member-search field's own left-aligned input just below — that
