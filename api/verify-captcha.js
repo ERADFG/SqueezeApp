@@ -35,11 +35,15 @@
 // "good enough for a project this size" tradeoffs.
 //
 // Set CAPTCHA_SECRET in your Vercel project's Environment Variables
-// for a signing key unique to your deployment. Falls back to a baked-
-// in default so it still works out of the box — swap it in production.
+// for a signing key unique to your deployment. There is deliberately
+// NO hardcoded fallback: a fixed default value shipped in source (and
+// therefore in every clone/export of this project) would let anyone
+// who has ever seen this file forge a valid signature for any
+// nonce/ts they like, defeating the whole check. The endpoint refuses
+// to issue or verify challenges until the real env var is set.
 import crypto from 'crypto';
 
-const SECRET = process.env.CAPTCHA_SECRET || 'interactink-default-captcha-secret-change-me';
+const SECRET = process.env.CAPTCHA_SECRET;
 const MIN_DELAY_MS = 700;        // faster than this and it wasn't a real click
 const MAX_AGE_MS = 15 * 60 * 1000; // older than this and the challenge is stale
 
@@ -54,6 +58,14 @@ function safeEqual(a, b) {
 }
 
 export default async function handler(req, res) {
+  if (!SECRET) {
+    // Misconfigured deployment — refuse rather than sign/verify with
+    // an empty/undefined secret, which would make every challenge
+    // trivially forgeable.
+    console.error('verify-captcha: CAPTCHA_SECRET is not set');
+    return res.status(503).json({ error: 'Captcha not configured' });
+  }
+
   if (req.method === 'GET') {
     const nonce = crypto.randomBytes(16).toString('hex');
     const ts = Date.now();

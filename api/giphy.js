@@ -21,13 +21,16 @@ export default async function handler(req, res) {
     return res.status(405).json({ data: [], error: 'Method not allowed' });
   }
 
-  // Prefer the env var (proper setup: Vercel Settings -> Environment
-  // Variables -> GIPHY_API_KEY), but fall back to the key baked in
-  // here so the picker works out of the box even before that env var
-  // is configured on the deployment. Same key used for browser calls
-  // used to be an issue for exposure, but a server-side fallback like
-  // this never reaches the client bundle either way.
-  const apiKey = process.env.GIPHY_API_KEY || 'a4SzSp8qCSlLKqPT5wtatv0YCop7VWBL';
+  // Requires GIPHY_API_KEY to be set in Vercel Settings -> Environment
+  // Variables. No hardcoded fallback key here — a real API key baked
+  // into source (even server-only source) ends up in git history and
+  // in this project's zip/export, which is enough exposure to warrant
+  // rotating a key if one is ever found here. Fail soft instead: the
+  // picker just returns no GIFs until the env var is configured.
+  const apiKey = process.env.GIPHY_API_KEY;
+  if (!apiKey) {
+    return res.status(200).json({ data: [], error: 'GIPHY not configured' });
+  }
 
   const type = req.query.type === 'search' ? 'search' : 'trending';
   const q = typeof req.query.q === 'string' ? req.query.q.slice(0, 100) : '';

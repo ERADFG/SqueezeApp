@@ -4505,9 +4505,19 @@ body[data-page="community"] .comm-leave-btn { padding:9px 20px; font-weight:800;
    a solid black active pill, matching the reference's
    Community/Design/Education row instead of the app's usual green. */
 body[data-page="community"] .sec-bar { padding:8px 16px; font-size:13px; border-bottom:none; }
+/* Was `background:none; backdrop-filter:none` — #board-hdr is still
+   `position:sticky;top:0` (set once, above), so stripping its
+   background here left the pinned tab row with nothing behind it:
+   scrolling content ran straight through the transparent bar and
+   got visually cut by the opaque active-tab pill sitting on top of
+   it. Every other sticky header in the app (.search-topbar,
+   .chat-hdr, the default #board-hdr) uses this same translucent
+   blur so scrolled content fades under it instead — matching that
+   here fixes the overlap instead of just hiding it. */
 body[data-page="community"] #board-hdr,
 body[data-page="communities"] #board-hdr {
-  background:none; border:none; backdrop-filter:none; padding:10px 16px 4px;
+  background:var(--translucent-bg); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  border:none; padding:10px 16px 4px;
 }
 body[data-page="community"] .xtabs, body[data-page="communities"] .xtabs { padding:3px; }
 body[data-page="community"] .xtab.active, body[data-page="communities"] .xtab.active { background:var(--ink); color:var(--bg); }
