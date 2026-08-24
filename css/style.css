@@ -4051,7 +4051,8 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
   line-height:0; -webkit-tap-highlight-color:transparent;
 }
 .ttv:focus-visible { box-shadow:0 0 0 2px var(--maroon); }
-.ttv-video { display:block; max-width:100%; max-height:380px; width:auto; height:auto; background:#000; }
+.ttv-video { display:block; max-width:100%; max-height:380px; width:auto; height:auto; background:#000; outline:none; -webkit-tap-highlight-color:transparent; }
+.ttv-video:focus, .ttv-video:focus-visible { outline:none; }
 /* Suppresses any browser-native video overlay chrome (fullscreen/PiP/
    cast bubbles some Chromium-based mobile browsers draw on top of an
    HTML5 <video> regardless of the page's own controls) so only our
@@ -4264,8 +4265,13 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
    which owns the right edge the way it does on TikTok/Shorts. */
 .ttv.ttv-shorts-active:fullscreen .ttv-rail,
 .ttv.ttv-shorts-active:-webkit-full-screen .ttv-rail { right:auto; left:16px; gap:10px; }
+/* Time readout used to sit bottom-right, inherited from the base
+   fullscreen rule — directly under the like/reply/share/save rail,
+   which the "save" button's label text would render on top of.
+   Move it up to the top-right corner in shorts mode instead, clear
+   of both rails entirely. */
 .ttv.ttv-shorts-active:fullscreen .ttv-time,
-.ttv.ttv-shorts-active:-webkit-full-screen .ttv-time { left:auto; right:20px; }
+.ttv.ttv-shorts-active:-webkit-full-screen .ttv-time { left:auto; right:16px; bottom:auto; top:16px; z-index:6; }
 .ttv.ttv-shorts-active:fullscreen .ttv-menu,
 .ttv.ttv-shorts-active:-webkit-full-screen .ttv-menu { left:58px; right:auto; }
 
@@ -4279,7 +4285,7 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .ttv.ttv-shorts-active:-webkit-full-screen .ttv-shorts-meta { left:84px; }
 
 .ttv-shorts-rail {
-  position:absolute; right:14px; bottom:96px;
+  position:absolute; right:14px; bottom:140px;
   display:flex; flex-direction:column; align-items:center; gap:18px;
   pointer-events:auto;
 }
@@ -4304,7 +4310,7 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .ttv-shorts-share svg { fill:#fff; stroke:none; }
 
 .ttv-shorts-meta {
-  position:absolute; left:16px; right:84px; bottom:28px;
+  position:absolute; left:16px; right:84px; bottom:60px;
   pointer-events:auto;
 }
 .ttv-shorts-handle {

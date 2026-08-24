@@ -181,7 +181,7 @@ async function loadSettings() {
     </div>
 
     <div class="settings-menu" style="margin-top:8px;">
-      <a class="settings-menu-row" href="rules.html" style="text-decoration:none;">
+      <a class="settings-menu-row" href="/help/index.html" style="text-decoration:none;">
         <span class="smr-icon">${NAV_ICON.help}</span>
         <span class="smr-label">Help</span>
         <span class="smr-chevron">${CHEVRON_ICON}</span>

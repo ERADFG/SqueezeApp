@@ -30,7 +30,7 @@ function ttvHtml(url, opts = {}) {
   const postAttr = opts.postId ? ` data-post-id="${esc(opts.postId)}"` : '';
   return `
 <div class="ttv${cls}" tabindex="0"${postAttr}>
-  <video class="ttv-video" src="${esc(url)}" preload="metadata" playsinline webkit-playsinline disablepictureinpicture disableremoteplayback controlslist="nofullscreen noremoteplayback nodownload noplaybackrate" x-webkit-airplay="deny" ${extraAttrs}></video>
+  <video class="ttv-video" src="${esc(url)}" data-src="${esc(url)}" preload="metadata" playsinline webkit-playsinline disablepictureinpicture disableremoteplayback controlslist="nofullscreen noremoteplayback nodownload noplaybackrate" x-webkit-airplay="deny" ${extraAttrs}></video>
   <div class="ttv-overlay">
     <div class="ttv-spinner" hidden></div>
     <button type="button" class="ttv-big-play" aria-label="Play">${TTV_ICON.playBig}</button>
@@ -550,7 +550,14 @@ async function ttvShortsSwap(root, dir) {
   ttvShortsPc = ttvShortsQueue[ttvShortsIndex];
 
   const v = ttvVideo(root);
-  const newSrc = ttvShortsPc.querySelector('.ttv-video')?.getAttribute('src');
+  // Read the stable data-src, not the live src attribute: the single
+  // fullscreened <video> element physically still lives inside its
+  // original post's card, so once we've swapped it to show a
+  // different post's clip, that original card's own .ttv-video (the
+  // same DOM node) would report the *new* src if we read `src` here —
+  // swiping back to it looked like a no-op because we'd just be
+  // reading back what we ourselves overwrote a moment ago.
+  const newSrc = ttvShortsPc.querySelector('.ttv-video')?.dataset.src;
   if (v && newSrc) {
     v.pause();
     v.setAttribute('src', newSrc);

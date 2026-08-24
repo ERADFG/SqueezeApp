@@ -1068,7 +1068,7 @@ function renderMobileChrome() {
           <a class="m-drawer-tos" href="${lp}/terms">Terms of Service</a>
           <div class="m-drawer-footer-row">
             <a class="m-drawer-pill" href="${lp}/contact">Feedback</a>
-            <a class="m-drawer-pill" href="${lp}/rules">Help</a>
+            <a class="m-drawer-pill" href="/help/index.html">Help</a>
           </div>
           <hr>
           <button class="m-drawer-logout" onclick="closeMobileDrawer();logOut();"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4.5H6a1.5 1.5 0 0 0-1.5 1.5v12A1.5 1.5 0 0 0 6 19.5h3"/><path d="M15.5 16.5 20 12l-4.5-4.5"/><path d="M20 12H9"/></svg>Log out</button>
