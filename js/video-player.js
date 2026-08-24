@@ -417,14 +417,23 @@ let ttvShortsPc = null;    // the .pc backing whatever is currently showing
 let ttvShortsOrigSrc = null;
 let ttvShortsLoadingMore = false;
 
+// Feed cards use .pc, but a post opened in its own page (thread.html)
+// renders the OP in .op-detail and replies in .rc instead — neither
+// of those is a .pc. Those were never recognized as "post context" by
+// this queue, so tapping a post, then fullscreening its video, always
+// fell through to a plain, un-styled browser fullscreen (the old
+// pre-Shorts player) instead of the same rail+caption UI the feed
+// gets. Matching on whichever of the three card types actually
+// wraps a given .ttv-video fixes that for the post-detail page too.
 function ttvShortsBuildQueue() {
-  return Array.from(document.querySelectorAll('.pc[data-post-id]'))
-    .filter(pc => pc.querySelector('.ttv-video'));
+  return Array.from(document.querySelectorAll('.ttv-video'))
+    .map(v => v.closest('.pc, .op-detail, .rc'))
+    .filter(Boolean);
 }
 
 function ttvEnterShorts(root) {
   if (!root.dataset.postId) return; // no post context — leave as plain fullscreen video
-  const pc = root.closest('.pc');
+  const pc = root.closest('.pc, .op-detail, .rc');
   if (!pc) return;
   ttvShortsQueue = ttvShortsBuildQueue();
   ttvShortsIndex = ttvShortsQueue.indexOf(pc);
@@ -480,7 +489,11 @@ function ttvShortsSync(root, pc) {
     handleA.textContent = handleEl?.textContent || '';
   }
 
-  const bodyEl = pc.querySelector('.pb');
+  // Feed/reply cards use .pb for the post body; the post-detail page's
+  // OP (and a focused-reply's detail view) use .op-detail-body instead
+  // — same text, different class, so both need checking here now that
+  // this rail can sync from either card shape (see ttvShortsBuildQueue).
+  const bodyEl = pc.querySelector('.pb, .op-detail-body');
   const captionEl = shorts.querySelector('.ttv-shorts-caption');
   if (captionEl) captionEl.textContent = bodyEl?.textContent || '';
 
@@ -629,15 +642,28 @@ function ttvSyncFullscreenLayout(root) {
   const isFs = document.fullscreenElement === root || document.webkitFullscreenElement === root;
   const controls = root.querySelector('.ttv-controls');
   const overlay = root.querySelector('.ttv-overlay');
+  const shorts = root.querySelector('.ttv-shorts');
   if (!isFs) {
     // Back to normal layout — drop the inline override so the regular
     // (non-fullscreen) `inset:0` CSS rule takes over again.
     if (controls) controls.style.cssText = '';
     if (overlay) overlay.style.cssText = '';
+    if (shorts) shorts.style.cssText = '';
     return;
   }
   const video = root.querySelector('.ttv-video');
   if (!video) return;
+  // The Shorts rail/caption (avatar, like/reply/share/save, handle +
+  // caption — see .ttv-shorts-rail/.ttv-shorts-meta in style.css) only
+  // needs the same rect-pinning treatment on desktop. A portrait video
+  // fullscreened on a phone already fills the screen edge-to-edge, so
+  // the rail sits right against it for free. On a wide desktop monitor
+  // that same portrait video pillarboxes with big black bars on both
+  // sides, and the rail — CSS-anchored to the *screen's* right edge —
+  // ends up stranded out in that empty space instead of next to the
+  // video. Leave phones exactly as they were.
+  const pinShorts = shorts && window.matchMedia('(min-width:701px)').matches;
+  if (shorts && !pinShorts) shorts.style.cssText = '';
   const place = () => {
     const vr = video.getBoundingClientRect();
     const rr = root.getBoundingClientRect();
@@ -645,6 +671,7 @@ function ttvSyncFullscreenLayout(root) {
     const css = `position:absolute; inset:auto; left:${vr.left - rr.left}px; top:${vr.top - rr.top}px; width:${vr.width}px; height:${vr.height}px;`;
     if (controls) controls.style.cssText = css;
     if (overlay) overlay.style.cssText = css;
+    if (pinShorts) shorts.style.cssText = css;
   };
   // Fullscreen resize is applied by the browser over a frame or two,
   // so measuring immediately can catch the wrapper mid-transition —

@@ -1046,14 +1046,14 @@ function renderMobileChrome() {
           </div>
           <hr>
           <div class="m-drawer-menu">
+            <a href="${ownHref}">${NAV_ICON.user}Profile</a>
             <a href="${lp || '/'}">${NAV_ICON.home}Home</a>
-            <a href="search.html">${NAV_ICON.search}Explore</a>
             <a href="notifications.html">${NAV_ICON.bell}${badge}Notifications</a>
             <a href="chat.html">${NAV_ICON.chat}${chatBadge}Chat</a>
+            <a href="search.html">${NAV_ICON.search}Explore</a>
             <a href="${lp}/communities">${NAV_ICON.people}Communities</a>
             <a href="lists.html">${NAV_ICON.list}Lists</a>
             <a href="bookmarks.html">${NAV_ICON.bookmark}Saved</a>
-            <a href="${ownHref}">${NAV_ICON.user}Profile</a>
             <a href="/settings">${NAV_ICON.gear}Settings</a>
           </div>
           <span class="m-drawer-group-label">More</span>
@@ -2345,6 +2345,24 @@ function togglePostMenu(id, ev) {
   if (willOpen) {
     wrap.classList.add('open');
     positionMenuDd(wrap);
+    // A fast re-tap can land while the browser's own chrome (the
+    // address bar hiding/showing as the page scrolls) is still
+    // resizing the visual viewport — the getBoundingClientRect() read
+    // inside positionMenuDd() above can get measured mid-transition,
+    // landing the dropdown noticeably off from the "···" button for a
+    // moment. Re-measuring one and two frames later catches and
+    // corrects that with no visible flicker (same double-rAF
+    // self-correction used for the fullscreen video layout in
+    // video-player.js's ttvSyncFullscreenLayout). Each callback
+    // re-checks .open in case a second fast tap already closed the
+    // menu again by the time it runs.
+    requestAnimationFrame(() => {
+      if (!wrap.classList.contains('open')) return;
+      positionMenuDd(wrap);
+      requestAnimationFrame(() => {
+        if (wrap.classList.contains('open')) positionMenuDd(wrap);
+      });
+    });
     // Quick icon pop on the "···" button itself, same flourish family
     // as the like/reply/share/bookmark buttons (see .pc-menu-btn.menu-open
     // in style.css) — works identically for a mouse click on desktop and
@@ -2398,6 +2416,19 @@ document.addEventListener('click', (e) => {
     if (!w.contains(e.target)) w.classList.remove('open');
   });
 });
+// The dropdown is positioned with real viewport pixel coordinates
+// (see positionMenuDd() above), computed once at the moment it opens.
+// Scrolling doesn't touch those inline styles again, so the menu used
+// to just hang there floating in place — visibly detached from its
+// own "···" button — while the whole page scrolled underneath it.
+// Closing it as soon as a scroll happens (capture:true so this also
+// catches scrolling inside a nested scrollable container, not just
+// the window) matches how these transient action menus behave
+// elsewhere (X/Twitter, most mobile apps): scrolling dismisses them
+// rather than leaving them stranded mid-air.
+document.addEventListener('scroll', () => {
+  document.querySelectorAll('.pc-menu-wrap.open, .rp-menu-wrap.open').forEach(w => w.classList.remove('open'));
+}, { passive: true, capture: true });
 
 // Avatar + name/handle building blocks used by the tweet-style post card.
 function pcAvatarHtml(profile, sizeClass = '') {
@@ -3990,8 +4021,8 @@ function getDeviceId() {
   return id;
 }
 
-// Plain grey silhouette shown when a user has no avatar_url set.
-const DEFAULT_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%23E1E8EA'/%3E%3Ccircle cx='20' cy='16' r='7' fill='%23AAB8C2'/%3E%3Cpath d='M6 36c1-9 8-14 14-14s13 5 14 14' fill='%23AAB8C2'/%3E%3C/svg%3E";
+// Grey cat/wolf silhouette shown when a user has no avatar_url set.
+const DEFAULT_AVATAR = "img/default-avatar.png";
 
 function avatarUrl(url) {
   return url || DEFAULT_AVATAR;
