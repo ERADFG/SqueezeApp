@@ -4173,6 +4173,16 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .ttv-btn svg { width:17px; height:17px; }
 .ttv-speed { width:32px; padding:0; font-size:12px; font-weight:700; border-radius:50%; }
 
+/* Inline (non-fullscreen) rail is trimmed down to just the
+   fullscreen toggle — mute/speed/PiP only reappear once the player
+   is actually fullscreened (see the .ttv:fullscreen override
+   below). Fullscreen/shorts-mode layout is untouched. */
+.ttv-mute, .ttv-pip, .ttv-speed { display:none; }
+.ttv:fullscreen .ttv-mute, .ttv:fullscreen .ttv-pip, .ttv:fullscreen .ttv-speed,
+.ttv:-webkit-full-screen .ttv-mute, .ttv:-webkit-full-screen .ttv-pip, .ttv:-webkit-full-screen .ttv-speed {
+  display:flex;
+}
+
 .ttv-menu {
   display:none; position:absolute; right:46px; bottom:12px; z-index:6;
   background:rgba(21,24,28,.96); backdrop-filter:blur(6px); border-radius:16px;
@@ -4258,6 +4268,15 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .ttv.ttv-shorts-active:-webkit-full-screen .ttv-time { left:auto; right:20px; }
 .ttv.ttv-shorts-active:fullscreen .ttv-menu,
 .ttv.ttv-shorts-active:-webkit-full-screen .ttv-menu { left:58px; right:auto; }
+
+/* .ttv-shorts-meta (handle/caption) kept its feed-mode left:16px inset,
+   which is exactly where the playback rail lands once it moves to the
+   left edge above — the old mute/speed/exit/PiP button stack sat right
+   on top of the handle and caption text. Give it the same clearance on
+   the left that it already had on the right (84px, sized for the like/
+   reply/share/save rail) so the two don't overlap. */
+.ttv.ttv-shorts-active:fullscreen .ttv-shorts-meta,
+.ttv.ttv-shorts-active:-webkit-full-screen .ttv-shorts-meta { left:84px; }
 
 .ttv-shorts-rail {
   position:absolute; right:14px; bottom:96px;
