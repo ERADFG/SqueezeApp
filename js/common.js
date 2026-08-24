@@ -4933,7 +4933,7 @@ function renderMedia(url, type, extraClass = '', owner = null) {
   if (!url) return '';
   const idx = registerLbMedia(url, type, owner);
   if (type === 'video') {
-    return `<div class="pm">${ttvHtml(url)}</div>`;
+    return `<div class="pm">${ttvHtml(url, { postId: owner?.id || null })}</div>`;
   }
   return `<div class="pm"><img src="${esc(url)}" class="${extraClass}" alt="" onclick="openLightbox(${idx})" loading="lazy" decoding="async"></div>`;
 }

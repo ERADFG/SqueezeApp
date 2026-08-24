@@ -4235,6 +4235,69 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .ttv:fullscreen .ttv-speed, .ttv:-webkit-full-screen .ttv-speed { width:38px; font-size:13px; }
 .ttv:fullscreen .ttv-menu, .ttv:-webkit-full-screen .ttv-menu { right:58px; bottom:24px; }
 
+/* SHORTS MODE — see ttvEnterShorts()/ttvExitShorts() in
+   video-player.js. Only ever visible while a .ttv with post context
+   is browser-fullscreened (`.ttv-shorts-active:fullscreen`); the rest
+   of the time it's display:none, so a normal inline player in the
+   feed looks exactly as it did before — no rail, no avatar, no
+   caption overlay. Going fullscreen is what turns a feed video into
+   the vertical Shorts-style experience; leaving fullscreen hands it
+   straight back. */
+.ttv-shorts { display:none; }
+.ttv.ttv-shorts-active:fullscreen .ttv-shorts,
+.ttv.ttv-shorts-active:-webkit-full-screen .ttv-shorts {
+  display:block; position:absolute; inset:0; z-index:5; pointer-events:none;
+}
+
+/* Playback controls (mute/speed/exit-fullscreen/PiP) move to the left
+   edge in shorts mode so they don't collide with the action rail,
+   which owns the right edge the way it does on TikTok/Shorts. */
+.ttv.ttv-shorts-active:fullscreen .ttv-rail,
+.ttv.ttv-shorts-active:-webkit-full-screen .ttv-rail { right:auto; left:16px; gap:10px; }
+.ttv.ttv-shorts-active:fullscreen .ttv-time,
+.ttv.ttv-shorts-active:-webkit-full-screen .ttv-time { left:auto; right:20px; }
+.ttv.ttv-shorts-active:fullscreen .ttv-menu,
+.ttv.ttv-shorts-active:-webkit-full-screen .ttv-menu { left:58px; right:auto; }
+
+.ttv-shorts-rail {
+  position:absolute; right:14px; bottom:96px;
+  display:flex; flex-direction:column; align-items:center; gap:18px;
+  pointer-events:auto;
+}
+.ttv-shorts-avatar {
+  display:block; width:42px; height:42px; border-radius:50%;
+  border:2px solid #fff; overflow:hidden; margin-bottom:2px;
+  background:#333;
+}
+.ttv-shorts-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
+
+.ttv-shorts-btn {
+  all:unset; cursor:pointer;
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+}
+.ttv-shorts-btn svg { width:26px; height:26px; fill:none; stroke:#fff; stroke-width:1.8; filter:drop-shadow(0 1px 3px rgba(0,0,0,.45)); }
+.ttv-shorts-count { font-size:11px; font-weight:700; color:#fff; text-shadow:0 1px 3px rgba(0,0,0,.5); }
+
+.ttv-shorts-like svg { transition:fill .15s, stroke .15s, transform .15s; }
+.ttv-shorts-like.active svg { fill:#fe2c55; stroke:#fe2c55; transform:scale(1.08); }
+.ttv-shorts-bookmark svg { transition:fill .15s; }
+.ttv-shorts-bookmark.active svg { fill:#fff; }
+.ttv-shorts-share svg { fill:#fff; stroke:none; }
+
+.ttv-shorts-meta {
+  position:absolute; left:16px; right:84px; bottom:28px;
+  pointer-events:auto;
+}
+.ttv-shorts-handle {
+  display:block; color:#fff; font-weight:700; font-size:14px;
+  text-decoration:none; margin-bottom:6px; text-shadow:0 1px 3px rgba(0,0,0,.5);
+}
+.ttv-shorts-caption {
+  margin:0; color:#f2f2f2; font-size:13px; line-height:1.4;
+  text-shadow:0 1px 3px rgba(0,0,0,.5);
+  display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;
+}
+
 /* ── CROP MODAL — shared "Edit media" step (crop-modal.js) used
    before any image becomes an avatar or banner: profile, community,
    or List. Dark, full-bleed, matches Twitter's own edit-media UI. ── */

@@ -22,8 +22,14 @@ const TTV_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 function ttvHtml(url, opts = {}) {
   const cls = opts.className ? ` ${opts.className}` : '';
   const extraAttrs = opts.videoAttrs || '';
+  // opts.postId links this player back to the feed card it was
+  // rendered inside (see renderMedia() in common.js). It's what lets
+  // ttvEnterShorts() below find the real like/reply/share/bookmark
+  // buttons for that post — the shorts rail never re-implements that
+  // logic, it just forwards taps to the buttons that already exist.
+  const postAttr = opts.postId ? ` data-post-id="${esc(opts.postId)}"` : '';
   return `
-<div class="ttv${cls}" tabindex="0">
+<div class="ttv${cls}" tabindex="0"${postAttr}>
   <video class="ttv-video" src="${esc(url)}" preload="metadata" playsinline webkit-playsinline disablepictureinpicture disableremoteplayback controlslist="nofullscreen noremoteplayback nodownload noplaybackrate" x-webkit-airplay="deny" ${extraAttrs}></video>
   <div class="ttv-overlay">
     <div class="ttv-spinner" hidden></div>
@@ -49,8 +55,36 @@ function ttvHtml(url, opts = {}) {
       ${TTV_SPEEDS.map(s => `<button type="button" class="ttv-menu-opt${s === 1 ? ' active' : ''}" data-speed="${s}">${TTV_ICON.check}<span>${s === 1 ? 'Normal' : s + 'x'}</span></button>`).join('')}
     </div>
   </div>
+  <!-- SHORTS OVERLAY — stays display:none (see CSS) until this .ttv
+       is the browser-fullscreened element. ttvEnterShorts() populates
+       it from the post card and wires swipe-to-next-video. -->
+  <div class="ttv-shorts">
+    <div class="ttv-shorts-rail">
+      <a class="ttv-shorts-avatar" href="#"><img src="" alt=""></a>
+      <button type="button" class="ttv-shorts-btn ttv-shorts-like" aria-label="Like">${SHORTS_ICON.heart}<span class="ttv-shorts-count">0</span></button>
+      <button type="button" class="ttv-shorts-btn ttv-shorts-reply" aria-label="Comment">${SHORTS_ICON.reply}<span class="ttv-shorts-count">0</span></button>
+      <button type="button" class="ttv-shorts-btn ttv-shorts-share" aria-label="Share">${SHORTS_ICON.share}<span class="ttv-shorts-count">Share</span></button>
+      <button type="button" class="ttv-shorts-btn ttv-shorts-bookmark" aria-label="Save">${SHORTS_ICON.bookmark}<span class="ttv-shorts-count">Save</span></button>
+    </div>
+    <div class="ttv-shorts-meta">
+      <a class="ttv-shorts-handle" href="#"></a>
+      <p class="ttv-shorts-caption"></p>
+    </div>
+  </div>
 </div>`.trim();
 }
+
+// Same glyphs as ICON.heart/reply/share/bookmark in common.js — kept
+// as a separate copy (rather than referencing ICON directly) so this
+// file has no load-order dependency on common.js, but the paths are
+// identical on purpose: the shorts rail should look exactly like the
+// like/comment/share/save icons everywhere else on the site.
+const SHORTS_ICON = {
+  heart:    '<svg viewBox="0 0 24 24"><path d="M12 6.24C10.4 4.4 7.85 3.9 5.8 5.1 3.4 6.5 2.66 9.6 4.24 12.15c1.9 3.06 4.9 5.5 7.76 7.6 2.86-2.1 5.86-4.54 7.76-7.6 1.58-2.55.84-5.65-1.56-7.05-2.05-1.2-4.6-.7-6.2 1.14z" stroke-linejoin="round"/></svg>',
+  reply:    '<svg viewBox="0 0 24 24"><path d="M1.75 10.1C1.75 5.68 5.33 2.1 9.75 2.1h4.4c4.5 0 8.15 3.64 8.15 8.15 0 2.97-1.61 5.7-4.2 7.13l-8.06 4.47v-3.7h-.07c-4.5.1-8.22-3.53-8.22-8.05Z" stroke-linejoin="round"/></svg>',
+  share:    '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M13.5 4.6a1.15 1.15 0 0 1 1.94-.86l6.3 5.75a1.15 1.15 0 0 1 0 1.7l-6.3 5.75a1.15 1.15 0 0 1-1.94-.86v-2.72c-5.02.22-8.2 2.1-10.02 5.9a1.05 1.05 0 0 1-1.99-.5C1.9 11.6 6.2 7.36 13.5 7.03V4.6Z"/></svg>',
+  bookmark: '<svg viewBox="0 0 24 24"><path d="M6.25 6.4A2.65 2.65 0 0 1 8.9 3.75h6.2A2.65 2.65 0 0 1 17.75 6.4v13.2a.85.85 0 0 1-1.36.68L12 16.9l-4.39 3.38a.85.85 0 0 1-1.36-.68V6.4Z" stroke-linejoin="round"/></svg>'
+};
 
 const TTV_ICON = {
   play: '<svg viewBox="2.03 0 24 24" fill="currentColor"><path d="M8 5.14v13.72c0 .6.66.96 1.17.65l10.9-6.86a.75.75 0 000-1.28L9.17 4.49A.75.75 0 008 5.14z"/></svg>',
@@ -354,7 +388,221 @@ document.addEventListener('fullscreenchange', () => {
     const btn = root.querySelector('.ttv-fs');
     if (btn) ttvSetIcon(btn, document.fullscreenElement === root ? TTV_ICON.fsExit : TTV_ICON.fsEnter);
     ttvSyncFullscreenLayout(root);
+    if (document.fullscreenElement === root) ttvEnterShorts(root);
+    else if (root.classList.contains('ttv-shorts-active')) ttvExitShorts(root);
   });
+});
+
+// ─────────────────────────────────────────────────────────────
+// SHORTS MODE — going fullscreen on a feed video turns it into a
+// TikTok/Shorts-style vertical player: a right-side rail (avatar,
+// like, comment, share, save) and a bottom caption, plus swipe-up/
+// down (touch or wheel) to move to the next/previous video already
+// in the feed. It only activates for players rendered with a
+// data-post-id (i.e. actual feed posts, via renderMedia() in
+// common.js) — a video with no post context just gets plain
+// fullscreen playback, unchanged.
+//
+// The rail is deliberately dumb: it never reimplements like/comment/
+// share/save. Every tap finds the real .act button already rendered
+// in that post's card (postActionsHtml() in common.js) and clicks
+// it, then copies that button's resulting state back onto the rail.
+// That keeps counts, optimistic UI, and the actual Supabase calls
+// coming from exactly one place.
+// ─────────────────────────────────────────────────────────────
+
+let ttvShortsQueue = [];   // ordered list of .pc elements currently in the DOM that have a video
+let ttvShortsIndex = -1;   // index of the post currently showing in the fullscreened player
+let ttvShortsPc = null;    // the .pc backing whatever is currently showing
+let ttvShortsOrigSrc = null;
+let ttvShortsLoadingMore = false;
+
+function ttvShortsBuildQueue() {
+  return Array.from(document.querySelectorAll('.pc[data-post-id]'))
+    .filter(pc => pc.querySelector('.ttv-video'));
+}
+
+function ttvEnterShorts(root) {
+  if (!root.dataset.postId) return; // no post context — leave as plain fullscreen video
+  const pc = root.closest('.pc');
+  if (!pc) return;
+  ttvShortsQueue = ttvShortsBuildQueue();
+  ttvShortsIndex = ttvShortsQueue.indexOf(pc);
+  if (ttvShortsIndex === -1) { ttvShortsQueue.unshift(pc); ttvShortsIndex = 0; }
+  ttvShortsPc = pc;
+  ttvShortsOrigSrc = ttvVideo(root)?.getAttribute('src') || null;
+  root.classList.add('ttv-shorts-active');
+  ttvShortsSync(root, pc);
+  root.addEventListener('wheel', ttvShortsOnWheel, { passive: false });
+  root.addEventListener('touchstart', ttvShortsOnTouchStart, { passive: true });
+  root.addEventListener('touchend', ttvShortsOnTouchEnd, { passive: true });
+}
+
+function ttvExitShorts(root) {
+  root.classList.remove('ttv-shorts-active');
+  root.removeEventListener('wheel', ttvShortsOnWheel);
+  root.removeEventListener('touchstart', ttvShortsOnTouchStart);
+  root.removeEventListener('touchend', ttvShortsOnTouchEnd);
+  // Put the player back to whatever it was actually embedded with —
+  // swiping in shorts mode only changes what's showing fullscreen,
+  // it never edits the underlying feed.
+  const v = ttvVideo(root);
+  if (v && ttvShortsOrigSrc && v.getAttribute('src') !== ttvShortsOrigSrc) {
+    v.pause();
+    v.setAttribute('src', ttvShortsOrigSrc);
+    v.load();
+  }
+  ttvShortsQueue = [];
+  ttvShortsIndex = -1;
+  ttvShortsPc = null;
+  ttvShortsOrigSrc = null;
+}
+
+// Pulls avatar/handle/caption/like/reply/bookmark state straight off
+// the real post card and paints the rail with it.
+function ttvShortsSync(root, pc) {
+  const shorts = root.querySelector('.ttv-shorts');
+  if (!shorts) return;
+
+  const avatarLnk = pc.querySelector('.pc-avatar-lnk');
+  const avatarImg = avatarLnk?.querySelector('img');
+  const avA = shorts.querySelector('.ttv-shorts-avatar');
+  if (avA) {
+    avA.href = avatarLnk?.getAttribute('href') || '#';
+    avA.querySelector('img').src = avatarImg?.getAttribute('src') || '';
+  }
+
+  const handleEl = pc.querySelector('.pc-handle');
+  const nameLnk = pc.querySelector('.nm');
+  const handleA = shorts.querySelector('.ttv-shorts-handle');
+  if (handleA) {
+    handleA.href = nameLnk?.getAttribute('href') || '#';
+    handleA.textContent = handleEl?.textContent || '';
+  }
+
+  const bodyEl = pc.querySelector('.pb');
+  const captionEl = shorts.querySelector('.ttv-shorts-caption');
+  if (captionEl) captionEl.textContent = bodyEl?.textContent || '';
+
+  ttvShortsSyncActions(root, pc);
+}
+
+// Just the like/reply/share/bookmark button *state* — split out from
+// ttvShortsSync so a tap on the rail can resync immediately after
+// forwarding a click, without re-reading avatar/caption too.
+function ttvShortsSyncActions(root, pc) {
+  const shorts = root.querySelector('.ttv-shorts');
+  if (!shorts) return;
+
+  const likeBtn = pc.querySelector('.act.like');
+  const likeRail = shorts.querySelector('.ttv-shorts-like');
+  if (likeRail) {
+    likeRail.classList.toggle('active', !!likeBtn?.classList.contains('liked'));
+    likeRail.querySelector('.ttv-shorts-count').textContent = likeBtn?.querySelector('.act-label')?.textContent || '0';
+    likeRail.style.display = likeBtn ? '' : 'none';
+  }
+
+  const replyBtn = pc.querySelector('.act.reply');
+  const replyRail = shorts.querySelector('.ttv-shorts-reply');
+  if (replyRail) {
+    replyRail.querySelector('.ttv-shorts-count').textContent = replyBtn?.querySelector('.act-label')?.textContent || '0';
+    replyRail.style.display = replyBtn ? '' : 'none';
+  }
+
+  const bookmarkBtn = pc.querySelector('.act.bookmark');
+  const bookmarkRail = shorts.querySelector('.ttv-shorts-bookmark');
+  if (bookmarkRail) {
+    bookmarkRail.classList.toggle('active', !!bookmarkBtn?.classList.contains('bookmarked'));
+    bookmarkRail.style.display = bookmarkBtn ? '' : 'none';
+  }
+}
+
+function ttvShortsForward(root, selector) {
+  if (!ttvShortsPc) return;
+  const realBtn = ttvShortsPc.querySelector(selector);
+  if (!realBtn) return;
+  realBtn.click();
+  // toggleLike/toggleBookmark/sharePost all update their button's own
+  // DOM synchronously (optimistic UI) before their network call
+  // resolves, so re-reading state right after click() already
+  // reflects the new state.
+  ttvShortsSyncActions(root, ttvShortsPc);
+}
+
+// Swipes to the next (dir=1) or previous (dir=-1) video post already
+// loaded in the feed. Reuses the SAME fullscreened .ttv element and
+// just swaps its video src + rail content — matches how a real Shorts
+// feed feels (one persistent player, content changes underneath it)
+// without needing to fullscreen a different DOM node each swipe.
+async function ttvShortsSwap(root, dir) {
+  if (ttvShortsIndex === -1) return;
+  let nextIndex = ttvShortsIndex + dir;
+
+  if (nextIndex >= ttvShortsQueue.length - 2 && !ttvShortsLoadingMore && typeof loadMoreFeed === 'function') {
+    ttvShortsLoadingMore = true;
+    try { await loadMoreFeed(); } catch {}
+    ttvShortsLoadingMore = false;
+    ttvShortsQueue = ttvShortsBuildQueue();
+  }
+
+  if (nextIndex < 0 || nextIndex >= ttvShortsQueue.length) return; // nothing further that way
+  ttvShortsIndex = nextIndex;
+  ttvShortsPc = ttvShortsQueue[ttvShortsIndex];
+
+  const v = ttvVideo(root);
+  const newSrc = ttvShortsPc.querySelector('.ttv-video')?.getAttribute('src');
+  if (v && newSrc) {
+    v.pause();
+    v.setAttribute('src', newSrc);
+    v.currentTime = 0;
+    v.load();
+    v.play().catch(() => {});
+  }
+  ttvShortsSync(root, ttvShortsPc);
+}
+
+let ttvShortsTouchY = null;
+function ttvShortsOnTouchStart(e) {
+  ttvShortsTouchY = e.touches?.[0]?.clientY ?? null;
+}
+function ttvShortsOnTouchEnd(e) {
+  if (ttvShortsTouchY === null) return;
+  const endY = e.changedTouches?.[0]?.clientY ?? ttvShortsTouchY;
+  const dy = ttvShortsTouchY - endY;
+  ttvShortsTouchY = null;
+  if (Math.abs(dy) < 60) return; // not a deliberate swipe
+  ttvShortsSwap(ttvRoot(e.target), dy > 0 ? 1 : -1);
+}
+
+let ttvShortsWheelLock = false;
+function ttvShortsOnWheel(e) {
+  e.preventDefault();
+  if (ttvShortsWheelLock) return;
+  if (Math.abs(e.deltaY) < 12) return;
+  ttvShortsWheelLock = true;
+  ttvShortsSwap(ttvRoot(e.target), e.deltaY > 0 ? 1 : -1).finally(() => {
+    setTimeout(() => { ttvShortsWheelLock = false; }, 350);
+  });
+}
+
+// ── rail click delegation ──
+document.addEventListener('click', (e) => {
+  const shortsBtn = e.target.closest('.ttv-shorts-btn');
+  if (!shortsBtn) return;
+  const root = ttvRoot(shortsBtn);
+  if (!root) return;
+  if (shortsBtn.classList.contains('ttv-shorts-like')) ttvShortsForward(root, '.act.like');
+  else if (shortsBtn.classList.contains('ttv-shorts-reply')) {
+    // The reply popup renders outside .ttv, so it can't show while
+    // still browser-fullscreened — drop out of fullscreen first, then
+    // open it normally, same as tapping a comment icon anywhere else.
+    const pc = ttvShortsPc;
+    (document.exitFullscreen ? document.exitFullscreen() : Promise.resolve()).catch(() => {}).finally(() => {
+      pc?.querySelector('.act.reply')?.click();
+    });
+  }
+  else if (shortsBtn.classList.contains('ttv-shorts-share')) ttvShortsForward(root, '.act.share');
+  else if (shortsBtn.classList.contains('ttv-shorts-bookmark')) ttvShortsForward(root, '.act.bookmark');
 });
 // FULLSCREEN LAYOUT SYNC — the browser only ever resizes the .ttv
 // wrapper itself to fill the screen; the <video> inside it still uses
