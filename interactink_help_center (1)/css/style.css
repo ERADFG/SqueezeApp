@@ -3507,7 +3507,7 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
    throughout) with the speech-bubble "tail" only on the last bubble
    of the group — same convention as iMessage/Telegram — instead of
    every single message getting its own tail and full gap. */
-.msg-row { display:flex; align-items:flex-end; gap:6px; margin-top:2px; animation:oc-fade-in .15s ease both; }
+.msg-row { display:flex; align-items:flex-end; gap:6px; margin-top:2px; animation:oc-fade-in .15s ease; }
 .msg-row.g-start { margin-top:14px; }
 .chat-daydivider + .msg-row.g-start { margin-top:0; }
 .msg-row.mine { justify-content:flex-end; }
