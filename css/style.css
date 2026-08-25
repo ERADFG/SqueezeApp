@@ -2785,6 +2785,52 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
 .auth-input-wrap input[type="password"], .auth-input-wrap input[type="text"].has-pw-toggle { padding-right:40px; }
 .auth-input-wrap:focus-within .auth-fi { color:var(--maroon); }
 
+/* ── Date-of-birth field (Sign Up) — three <select>s (month/day/year)
+   sharing one bordered wrap so it reads as a single field, same look
+   as .auth-input-wrap above. ── */
+.dob-input-wrap {
+  position:relative; display:flex; align-items:stretch;
+  border:1px solid var(--border-input); border-radius:var(--r-sm);
+  background:var(--input-bg); padding-left:38px; overflow:hidden;
+}
+.dob-input-wrap:focus-within { border-color:var(--maroon); box-shadow:0 0 0 1px var(--maroon); }
+.dob-input-wrap:focus-within .auth-fi { color:var(--maroon); }
+.dob-select {
+  flex:1 1 0; min-width:0; border:none; background:var(--input-bg);
+  color:var(--ink); font-family:inherit; font-size:15px; padding:8px 20px 8px 10px;
+  appearance:none; -webkit-appearance:none; cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23536471'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 7px center;
+}
+.dob-select:focus { outline:none; }
+.dob-select + .dob-select { border-left:1px solid var(--line); }
+.dob-select.dob-day { flex:0.75 1 0; }
+.dob-select.dob-year { flex:1.15 1 0; }
+.auth-hint-error { color:var(--like); font-weight:700; }
+
+/* ── Gender chip selector (Sign Up) — tappable cards standing in for
+   the plain <select> below (kept in the DOM, hidden, so the existing
+   read/validation code needs no changes). ── */
+.gender-group { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.gender-chip {
+  display:flex; align-items:center; gap:8px;
+  border:1px solid var(--border-input); border-radius:var(--r-sm);
+  background:var(--input-bg); color:var(--ink);
+  font-family:inherit; font-size:14px; font-weight:600;
+  padding:10px 12px; cursor:pointer; text-align:left;
+  transition:border-color .12s ease, background .12s ease, color .12s ease;
+}
+.gender-chip-icon {
+  width:20px; height:20px; flex:none; color:var(--muted);
+  display:flex; align-items:center; justify-content:center;
+  transition:color .12s ease;
+}
+.gender-chip-icon svg { width:100%; height:100%; }
+.gender-chip:hover { border-color:var(--maroon); background:var(--maroon-tint); }
+.gender-chip.active { border-color:var(--maroon); background:var(--maroon-tint); color:var(--maroon); }
+.gender-chip.active .gender-chip-icon { color:var(--maroon); }
+@media (max-width:420px) { .gender-group { grid-template-columns:1fr; } }
+
 .pw-toggle {
   position:absolute; right:5px; top:50%; transform:translateY(-50%);
   width:28px; height:28px; display:flex; align-items:center; justify-content:center;

@@ -81,25 +81,61 @@
             </div>
           </div>
           <div class="auth-field">
-            <label for="su-age" data-i18n="auth.age">Age</label>
-            <div class="auth-input-wrap">
-              <span class="auth-fi"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span>
-              <input type="number" id="su-age" required min="13" max="120" step="1" inputmode="numeric" autocomplete="off" placeholder="18">
-            </div>
-            <span class="auth-hint" data-i18n="auth.ageHint">13–120 years old.</span>
-          </div>
-          <div class="auth-field">
-            <label for="su-gender" data-i18n="auth.gender">Gender</label>
-            <div class="auth-input-wrap">
-              <span class="auth-fi"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></span>
-              <select id="su-gender" required>
-                <option value="" disabled selected data-i18n="auth.genderSelect">Select…</option>
-                <option value="male" data-i18n="auth.genderMale">Male</option>
-                <option value="female" data-i18n="auth.genderFemale">Female</option>
-                <option value="other" data-i18n="auth.genderOther">Other</option>
-                <option value="not_specified" data-i18n="auth.genderNotSpecified">Prefer not to say</option>
+            <label id="su-dob-label" data-i18n="auth.dob">Date of birth</label>
+            <div class="dob-input-wrap" id="su-dob-wrap">
+              <span class="auth-fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/></svg></span>
+              <select id="su-dob-month" class="dob-select" aria-label="Month" required>
+                <option value="" disabled selected data-i18n="auth.dobMonth">Month</option>
+                <option value="1">Jan</option>
+                <option value="2">Feb</option>
+                <option value="3">Mar</option>
+                <option value="4">Apr</option>
+                <option value="5">May</option>
+                <option value="6">Jun</option>
+                <option value="7">Jul</option>
+                <option value="8">Aug</option>
+                <option value="9">Sep</option>
+                <option value="10">Oct</option>
+                <option value="11">Nov</option>
+                <option value="12">Dec</option>
+              </select>
+              <select id="su-dob-day" class="dob-select dob-day" aria-label="Day" required>
+                <option value="" disabled selected data-i18n="auth.dobDay">Day</option>
+              </select>
+              <select id="su-dob-year" class="dob-select dob-year" aria-label="Year" required>
+                <option value="" disabled selected data-i18n="auth.dobYear">Year</option>
               </select>
             </div>
+            <span class="auth-hint" id="su-age-hint" data-i18n="auth.dobHint">We use this to keep the community age-appropriate.</span>
+            <input type="hidden" id="su-age">
+          </div>
+          <div class="auth-field">
+            <label data-i18n="auth.gender">Gender</label>
+            <div class="gender-group" id="su-gender-group" role="radiogroup" aria-label="Gender">
+              <button type="button" class="gender-chip" data-value="male" role="radio" aria-checked="false">
+                <span class="gender-chip-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="14" r="6"/><path d="M14.5 9.5 20 4M15 4h5v5"/></svg></span>
+                <span data-i18n="auth.genderMale">Male</span>
+              </button>
+              <button type="button" class="gender-chip" data-value="female" role="radio" aria-checked="false">
+                <span class="gender-chip-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="6"/><path d="M12 15v6M9 19h6"/></svg></span>
+                <span data-i18n="auth.genderFemale">Female</span>
+              </button>
+              <button type="button" class="gender-chip" data-value="other" role="radio" aria-checked="false">
+                <span class="gender-chip-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="5.5"/><circle cx="15" cy="15" r="5.5"/></svg></span>
+                <span data-i18n="auth.genderOther">Other</span>
+              </button>
+              <button type="button" class="gender-chip" data-value="not_specified" role="radio" aria-checked="false">
+                <span class="gender-chip-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>
+                <span data-i18n="auth.genderNotSpecified">Prefer not to say</span>
+              </button>
+            </div>
+            <select id="su-gender" required style="display:none" aria-hidden="true" tabindex="-1">
+              <option value="" disabled selected data-i18n="auth.genderSelect">Select…</option>
+              <option value="male" data-i18n="auth.genderMale">Male</option>
+              <option value="female" data-i18n="auth.genderFemale">Female</option>
+              <option value="other" data-i18n="auth.genderOther">Other</option>
+              <option value="not_specified" data-i18n="auth.genderNotSpecified">Prefer not to say</option>
+            </select>
           </div>
           <div class="auth-field">
             <label for="su-password" data-i18n="auth.password">Password</label>
@@ -129,7 +165,102 @@
           <input type="submit" id="su-btn" class="auth-submit" value="Sign Up" data-i18n-value="auth.signUp">
         </form>
 
+        <script>
+        // Date-of-birth (month/day/year) + gender chips are progressive
+        // enhancements over two hidden fields (#su-age, #su-gender) that
+        // auth.js's doSignUp() already reads/validates — so none of that
+        // JS needed to change. This block only keeps those two fields in
+        // sync with what the person picks.
+        (function(){
+          const monthSel = document.getElementById('su-dob-month');
+          const daySel   = document.getElementById('su-dob-day');
+          const yearSel  = document.getElementById('su-dob-year');
+          const ageHidden= document.getElementById('su-age');
+          const hintEl   = document.getElementById('su-age-hint');
+          if (!monthSel || !daySel || !yearSel) return;
 
+          const now = new Date();
+          const CUR_YEAR = now.getFullYear();
+          const MIN_YEAR = CUR_YEAR - 120;
+          const MAX_YEAR = CUR_YEAR - 13;
+
+          // Most-recent-eligible-year first — closer to what a typical
+          // signup skews toward, so less scrolling on average.
+          for (let y = MAX_YEAR; y >= MIN_YEAR; y--) {
+            const opt = document.createElement('option');
+            opt.value = String(y); opt.textContent = String(y);
+            yearSel.appendChild(opt);
+          }
+
+          function daysInMonth(month, year) {
+            if (!month) return 31;
+            return new Date(year || 2000, month, 0).getDate();
+          }
+
+          function populateDays() {
+            const month = Number(monthSel.value) || 0;
+            const year  = Number(yearSel.value) || 0;
+            const prevVal = daySel.value;
+            const total = daysInMonth(month, year);
+            const placeholder = daySel.firstElementChild.cloneNode(true);
+            daySel.innerHTML = '';
+            daySel.appendChild(placeholder);
+            for (let d = 1; d <= total; d++) {
+              const opt = document.createElement('option');
+              opt.value = String(d); opt.textContent = String(d);
+              daySel.appendChild(opt);
+            }
+            if (prevVal && Number(prevVal) <= total) {
+              daySel.value = prevVal;
+            } else {
+              placeholder.selected = true;
+            }
+          }
+          populateDays();
+
+          function updateAge() {
+            const m = Number(monthSel.value), d = Number(daySel.value), y = Number(yearSel.value);
+            if (!m || !d || !y) { if (ageHidden) ageHidden.value = ''; return; }
+            let age = CUR_YEAR - y;
+            const hadBirthdayThisYear = (now.getMonth() + 1 > m) || (now.getMonth() + 1 === m && now.getDate() >= d);
+            if (!hadBirthdayThisYear) age--;
+            if (ageHidden) ageHidden.value = String(age);
+            if (hintEl) {
+              // t() comes from i18n.js (deferred, so it's loaded by the
+              // time a person has actually filled in all three selects);
+              // fall back to English if it somehow isn't ready yet.
+              if (age < 13) {
+                hintEl.textContent = (typeof t === 'function') ? t('auth.dobHintError') : 'You must be at least 13 years old to sign up.';
+                hintEl.classList.add('auth-hint-error');
+              } else {
+                hintEl.textContent = (typeof t === 'function') ? t('auth.dobHint') : (hintEl.dataset.defaultText || hintEl.textContent);
+                hintEl.classList.remove('auth-hint-error');
+              }
+            }
+          }
+          if (hintEl) hintEl.dataset.defaultText = hintEl.textContent;
+
+          monthSel.addEventListener('change', function(){ populateDays(); updateAge(); });
+          yearSel.addEventListener('change', function(){ populateDays(); updateAge(); });
+          daySel.addEventListener('change', updateAge);
+
+          // Gender chips — set the hidden <select> so existing validation
+          // and submit logic in auth.js keeps working unchanged.
+          const chips = document.querySelectorAll('#su-gender-group .gender-chip');
+          const genderSel = document.getElementById('su-gender');
+          chips.forEach(function(chip){
+            chip.addEventListener('click', function(){
+              chips.forEach(function(c){ c.classList.remove('active'); c.setAttribute('aria-checked','false'); });
+              chip.classList.add('active');
+              chip.setAttribute('aria-checked','true');
+              if (genderSel) {
+                genderSel.value = chip.dataset.value;
+                genderSel.dispatchEvent(new Event('change'));
+              }
+            });
+          });
+        })();
+        </script>
 
         <div class="auth-switch" id="su-switch"><span data-i18n="auth.haveAccount">Already have an account?</span> <a href="login.html" data-i18n="nav.logIn">Log in</a></div>
         <div class="auth-legal" id="su-legal" data-i18n="auth.legal">By signing up you agree to InteractInk's <a href="rules.html">rules</a>.</div>
@@ -146,5 +277,6 @@
 <script src="js/common.js?v=20260823e" defer></script>
 <script src="js/video-player.js?v=20260823e" defer></script>
 <script src="js/auth.js?v=20260820" defer></script>
+<script src="/js/pjax.js?v=20260825a" defer></script>
 </body>
 </html>
