@@ -39,6 +39,9 @@
     { "src": "^/help$",                          "dest": "/help/index.html" },
     { "src": "^/help/(?<cat>[^/]+)$",            "dest": "/help/$cat/index.html" },
 
+    { "src": "^/blog$",                          "dest": "/blog/index.html" },
+    { "src": "^/blog/(?<post>[^/]+)$",           "dest": "/blog/$post.html" },
+
     { "src": "^/es$",                 "dest": "/es/index.html" },
     { "src": "^/es/home$",            "dest": "/es/index.html" },
     { "src": "^/es/rules$",           "dest": "/es/rules.html" },

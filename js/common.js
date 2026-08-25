@@ -876,6 +876,7 @@ function currentNavKey() {
   if (path === '/privacy' || path.endsWith('/privacy.html')) return 'privacy';
   if (path === '/terms' || path.endsWith('/terms.html')) return 'terms';
   if (path === '/help' || path.startsWith('/help/')) return 'help';
+  if (path === '/blog' || path.startsWith('/blog/') || path.endsWith('/blog/index.html')) return 'blog';
   if (currentSession && currentProfile && path.toLowerCase() === profileUrl(currentProfile.username).toLowerCase()) return 'profile';
   return null;
 }
@@ -913,7 +914,7 @@ function renderSideNav() {
   // auth.js) — #more-wrap just needs the shared "acct" class and its
   // own toggle, both already wired up below/in toggleMoreMenu().
   const moreItem = (href, icon, label) => `<a href="${href}"><span class="navicon">${icon}</span>${label}</a>`;
-  const moreCur = ['settings', 'articles', 'rules', 'about', 'contact', 'privacy', 'terms', 'help'].includes(here);
+  const moreCur = ['settings', 'articles', 'blog', 'rules', 'about', 'contact', 'privacy', 'terms', 'help'].includes(here);
   const moreBtn = `
     <div class="acct" id="more-wrap">
       <button class="navmore-btn${moreCur ? ' cur' : ''}" onclick="toggleMoreMenu();return false;">
@@ -922,6 +923,7 @@ function renderSideNav() {
       <div class="acct-menu navmore-menu" id="more-menu">
         ${moreItem('/settings', NAV_ICON.gear, t('nav.settings'))}
         ${moreItem(`${lp}/articles`, NAV_ICON.article, t('nav.articles'))}
+        ${moreItem('/blog/index.html', NAV_ICON.doc, 'Blog')}
         ${moreItem(`${lp}/rules`, NAV_ICON.doc, t('nav.rules'))}
         ${moreItem(`${lp}/about`, NAV_ICON.info, t('nav.about'))}
         ${moreItem(`${lp}/contact`, NAV_ICON.mail, t('nav.contact'))}
