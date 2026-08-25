@@ -158,6 +158,34 @@ function helpCenterUrls(origin) {
   return urls;
 }
 
+// ── BLOG ── static, English-only posts under /blog/<slug> (see
+// vercel.json's "^/blog/(?<post>[^/]+)$" rewrite to blog/$post.html).
+// These were live, crawlable pages with their own canonical URLs but
+// were never listed anywhere a crawler could discover them from
+// (they're not linked off any indexed page besides /blog itself) —
+// added here the same way the Help Center articles above are, by
+// slug list kept in sync with the actual files in /blog by hand.
+const BLOG_SLUGS = [
+  'how-to-build-an-online-community-people-stick-around-in',
+  'the-first-ten-members-why-who-you-invite-first-decides-everything',
+  'writing-rules-people-actually-read',
+  'designing-onboarding-that-actually-keeps-people',
+  'handling-your-first-troll-without-losing-the-room',
+  'the-anatomy-of-a-pile-on',
+  'rituals-the-weekly-threads-that-keep-a-community-alive',
+  'delegating-without-losing-your-communitys-soul',
+  'when-to-split-a-community-and-when-not-to',
+  'small-beats-big-the-case-for-staying-small-on-purpose',
+  'the-slow-death-of-a-server-a-postmortem',
+];
+function blogUrls(origin) {
+  const urls = [urlTag(`${origin}/blog`, fileLastmod('blog/index.html'), 'weekly', '0.4')];
+  for (const slug of BLOG_SLUGS) {
+    urls.push(urlTag(`${origin}/blog/${slug}`, fileLastmod(`blog/${slug}.html`), 'monthly', '0.4'));
+  }
+  return urls;
+}
+
 function localizedStaticUrls(origin) {
   const urls = [];
   for (const page of STATIC_PAGES) {
@@ -216,6 +244,7 @@ module.exports = async function handler(req, res) {
   // as an error. Keep these two files in sync if that ever changes.
   const staticUrls = localizedStaticUrls(origin);
   const helpUrls = helpCenterUrls(origin);
+  const blogUrlList = blogUrls(origin);
 
   const profileUrls = profiles.map(p =>
     urlTag(`${origin}/${encodeURIComponent(p.username)}`, p.created_at, 'daily', '0.8'));
@@ -243,7 +272,7 @@ module.exports = async function handler(req, res) {
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
-${[...staticUrls, ...helpUrls, ...profileUrls, ...postUrls, ...communityUrls, ...listUrls, ...articleUrls].join('\n')}
+${[...staticUrls, ...helpUrls, ...blogUrlList, ...profileUrls, ...postUrls, ...communityUrls, ...listUrls, ...articleUrls].join('\n')}
 </urlset>
 `;
 

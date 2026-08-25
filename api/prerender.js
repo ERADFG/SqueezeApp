@@ -1,10 +1,12 @@
 // ─────────────────────────────────────────────────────────────
-// SERVER-RENDERED POST/HOME PAGES.
+// SERVER-RENDERED CONTENT PAGES.
 //
 // Wired up in vercel.json: EVERY request (not just recognized bots)
-// to "/", "/home", "/i/status/:id", and "/:username/status/:id" is
-// rewritten here instead of being served the static index.html /
-// thread.html directly.
+// to "/", "/home", "/i/status/:id", "/:username/status/:id",
+// "/:username" (profile), "/communities/:slug", "/i/lists/:id", and
+// "/i/articles/:id" is rewritten here instead of being served the
+// static index.html/thread.html/profile.html/community.html/
+// list.html/article.html directly.
 //
 // WHY THIS EXISTS: index.html/thread.html are otherwise empty shells
 // until js/board.js / js/thread.js run in the browser and fetch the

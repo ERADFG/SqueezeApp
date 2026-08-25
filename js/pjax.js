@@ -9,13 +9,18 @@
 // clicking a link with JS disabled, or before this script has run,
 // just does a normal navigation.
 //
-// This does NOT touch <head> (styles, theme/accent attrs on <html>,
-// the shared <script src> tags already sitting at the bottom of
-// every page) — only the .xshell wrapper's content gets replaced,
-// which is where every page's actual header + body lives (see the
+// This does NOT touch <head> (styles, theme/accent attrs on <html>)
+// — only the .xshell wrapper's content gets replaced, which is
+// where every page's actual header + body lives (see the
 // <body><div class="xshell"> pattern shared by every page in this
 // app). That's also why dark/dim theme never flickers on navigate:
 // it's set on <html> before the swap and is simply never touched.
+// The trailing <script src> tags at the bottom of <body> (shared
+// config/i18n/common/auth/pjax tags plus each page's own bundle,
+// e.g. board.js/profile.js/notifications.js) DO still get loaded —
+// see loadTrailingScripts() below — just not by touching the DOM
+// nodes sitting outside .xshell, since those aren't part of the
+// swap.
 // ─────────────────────────────────────────────────────────────
 (function () {
   if (window.__pjaxInit) return;
@@ -96,8 +101,20 @@
   // previous finishes, so load-order dependencies (config -> i18n ->
   // common -> auth -> page bundle) still hold even though these are
   // being inserted well after the initial parse.
-  function runScripts(container) {
-    const scripts = Array.from(container.querySelectorAll('script'));
+  //
+  // `scripts` is a plain array of <script> elements to (re)run, in
+  // order. When `liveNodes` is true they're already attached to the
+  // real document (e.g. ones that just got copied in via .xshell's
+  // innerHTML swap) and get replaced in place with replaceWith() —
+  // assigning innerHTML doesn't execute them, but the tag itself is
+  // real DOM we can swap. When `liveNodes` is false the elements
+  // still belong to the throwaway DOMParser document (e.g. the
+  // page-specific bundle tag that sits after </div> of .xshell,
+  // right before </body> on every page — see the block comment at
+  // the top of this file) and so get freshly created + appended to
+  // the real <body> instead, since there is no live counterpart to
+  // replace.
+  function runScriptList(scripts, liveNodes) {
     let chain = Promise.resolve();
     scripts.forEach(old => {
       chain = chain.then(() => new Promise(resolve => {
@@ -113,15 +130,39 @@
           s.src = old.src;
           s.onload = () => resolve();
           s.onerror = () => resolve();
-          old.replaceWith(s);
+          if (liveNodes) old.replaceWith(s); else document.body.appendChild(s);
         } else {
           s.textContent = old.textContent;
-          old.replaceWith(s);
+          if (liveNodes) old.replaceWith(s); else document.body.appendChild(s);
           resolve();
         }
       }));
     });
     return chain;
+  }
+
+  function runScripts(container) {
+    return runScriptList(Array.from(container.querySelectorAll('script')), true);
+  }
+
+  // The page-specific bundle (board.js, profile.js, notifications.js,
+  // chat.js, ...) is NOT inside .xshell on any page — every page has
+  // it sitting right before </body>, alongside the shared
+  // config/i18n/common/auth/pjax tags (see the trailing <script>
+  // block at the bottom of e.g. notifications.html). runScripts()
+  // above only ever looks inside the swapped .xshell content, so it
+  // was silently never loading that bundle on pjax navigations —
+  // the destination page's own DOMContentLoaded-driven loader
+  // (loadNotifications(), initProfile(), etc.) never existed to run,
+  // so the skeleton/placeholder the shell arrived with just sat
+  // there forever. This walks the *whole* fetched document for
+  // <script> tags outside .xshell and loads whichever ones aren't
+  // already in loadedScripts (shared ones are skipped as no-ops,
+  // same dedup as runScripts()).
+  function loadTrailingScripts(doc) {
+    const shell = doc.querySelector(SHELL_SEL);
+    const scripts = Array.from(doc.querySelectorAll('script')).filter(s => !shell || !shell.contains(s));
+    return runScriptList(scripts, false);
   }
 
   function clearTransientState() {
@@ -172,6 +213,7 @@
     else delete document.body.dataset.page;
 
     await runScripts(curShell);
+    await loadTrailingScripts(doc);
 
     // common.js renders #auth-area, the mobile tab bar, sidebar
     // search, captchas, etc. from listeners registered on the
