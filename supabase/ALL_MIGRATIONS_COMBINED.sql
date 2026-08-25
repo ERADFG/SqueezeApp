@@ -1,4 +1,43 @@
 -- ================================================================
+-- INTERACTINK — ALL MIGRATIONS, COMBINED (run this one file)
+-- ================================================================
+-- This is supabase/MASTER_MIGRATIONS_reconstructed.sql followed by
+-- supabase/RUN_PENDING_MIGRATIONS.sql (== RUN_THIS_SQL_FIRST.sql),
+-- pasted back to back in the order their own headers say they
+-- depend on each other. Every statement in both files is written to
+-- be idempotent (create-if-not-exists / drop-then-create), so this
+-- whole file is safe to paste into Supabase SQL Editor → New query →
+-- Run on a brand-new project OR one that already has some/all of
+-- this applied.
+--
+-- ⚠️ WHAT THIS FILE DOES **NOT** INCLUDE, READ BEFORE RUNNING:
+-- The base schema — the actual `create table` statements for
+-- profiles, posts, replies, likes, follows, communities, lists,
+-- messages, notifications, storage buckets, etc., plus their
+-- original RLS policies — is NOT part of this export. Only the
+-- later *patches* on top of that base schema were included in the
+-- project you uploaded. I did not invent those CREATE TABLE/RLS
+-- definitions to fill the gap: guessing at column types, constraints
+-- and policies for tables that already exist in your live database
+-- is exactly the kind of thing that's cheap to get subtly wrong
+-- (wrong RLS policy, wrong constraint) and expensive to have gotten
+-- wrong against real user data.
+--
+-- So: if you already have a working Supabase project for this app,
+-- you almost certainly already have that base schema applied —
+-- this file is only the layer of fixes/features on top of it, safe
+-- to run again. If you are starting a BRAND NEW Supabase project
+-- from zero, running only this file will fail (tables like `posts`
+-- won't exist yet) — you need your original schema.sql /
+-- MASTER_SCHEMA.sql first. Check Supabase Dashboard → Database →
+-- Migrations, or your own git history/backups, for that file; if you
+-- genuinely don't have it anywhere, say so and I can help
+-- reconstruct it from the client code (js/*.js), with the same
+-- honesty about what's inferred vs. verbatim.
+-- ================================================================
+
+
+-- ================================================================
 -- INTERACTINK — MASTER MIGRATIONS (reconstructed)
 -- ================================================================
 -- What this is: every supabase/*.sql migration that was actually
@@ -1412,13 +1451,13 @@ grant execute on function public.admin_delete_article(uuid) to authenticated;
 -- the browser — they run as SECURITY DEFINER and re-check is_admin()
 -- themselves, same as every other function on this page.
 
--- Defensive drop: if report_community.sql has already been run on
--- this project, admin_list_reports() currently has extra
--- community_id/name/slug OUT columns — CREATE OR REPLACE can't
--- change a function's return row shape, only DROP + CREATE can, so
--- this always drops first regardless of which shape currently
--- exists. The report_community.sql section (run separately/after)
--- recreates the wider version on top of this one.
+-- Defensive drop: a live project may already have a
+-- report_community.sql-shaped admin_list_reports() (extra
+-- community_id/name/slug OUT columns) from a prior run — CREATE OR
+-- REPLACE can't change a function's return row shape, only DROP +
+-- CREATE can, so this always drops first regardless of which shape
+-- (if any) currently exists. The report_community.sql section later
+-- in this file recreates the wider version on top of this one.
 drop function if exists public.admin_list_reports(text);
 
 create or replace function public.admin_list_reports(status_filter text default 'open')
@@ -1797,3 +1836,1328 @@ $$;
 
 grant execute on function public.admin_verify_user(uuid, boolean, text) to authenticated;
 notify pgrst, 'reload schema';
+
+-- ################################################################
+-- ### BELOW: supabase/RUN_PENDING_MIGRATIONS.sql (chat/DMs, groups,
+-- ### channels, group/channel avatars, voice-note fix — not yet in
+-- ### the master file above)
+-- ################################################################
+
+-- ═══════════════════════════════════════════════════════════════
+-- INTERACTINK — PENDING MIGRATIONS (run this once)
+--
+-- Everything in MASTER_MIGRATIONS_reconstructed.sql should already
+-- be applied to your project. These six files are NOT in that
+-- master yet — they're what's needed for chat/DMs, groups &
+-- channels, group/channel avatars, and today's voice-note upload
+-- fix. Every statement here is written to be safe to re-run
+-- (if not exists / drop-if-exists-then-create), so it's fine to
+-- run this whole file even if some pieces already partially
+-- exist on your project.
+--
+-- Run this in the Supabase SQL editor, top to bottom, in one go.
+-- ═══════════════════════════════════════════════════════════════
+
+-- ───────────────────────────────────────────────────────────────
+-- FROM: supabase/fix_messages_body_check.sql
+-- ───────────────────────────────────────────────────────────────
+-- Drops a stale pre-existing `messages_body_check` constraint (not
+-- created by any file in this repo — left over from the table's
+-- original creation) that rejects the empty-string body the app
+-- sends for a caption-less photo/video/voice-note attachment. See
+-- that file for the full explanation. Run this early, before the
+-- PART 1 media-attachment block below, so uploading media never hits
+-- it even mid-migration.
+alter table public.messages alter column body drop not null;
+alter table public.messages drop constraint if exists messages_body_check;
+
+-- ───────────────────────────────────────────────────────────────
+-- FROM: supabase/chat_full_setup.sql
+-- ───────────────────────────────────────────────────────────────
+-- ============================================================
+-- CHAT — full setup for media attachments, sharing posts into a
+-- chat, and group/channel messaging. Safe to re-run any time —
+-- every statement is idempotent. Run this whole file once in the
+-- Supabase SQL editor.
+--
+-- Covers three things:
+--   PART 1 — media attachments on messages (images/video/voice
+--            notes). Same as supabase/chat_media.sql — included
+--            here again so this file is a complete, standalone
+--            setup script; re-running it is harmless.
+--   PART 2 — sharing a post into a chat (a message that embeds a
+--            post, like retweeting into a DM).
+--   PART 3 — group chats and channels: new `conversations` /
+--            `conversation_members` tables, and extending
+--            `messages` so a row can belong to either a 1:1 DM
+--            (sender_id/recipient_id, as today) or a group/channel
+--            (conversation_id) — never both.
+--
+-- SCHEMA NOTE assumed from the existing app: `public.messages`
+-- already exists with (at least) id, sender_id, recipient_id, body,
+-- iv, read, created_at, and `public.posts`/`public.profiles` already
+-- exist. This file only adds to them — it never drops or rewrites
+-- your existing DM policies, since this script can't see their
+-- exact names. New RLS policies below are additive (Postgres OR's
+-- multiple permissive policies together), so existing 1:1 DM access
+-- keeps working exactly as it does today.
+--
+-- ENCRYPTION NOTE: message text stays end-to-end encrypted for 1:1
+-- DMs only (per-pair ECDH, see js/chat-crypto.js — unchanged by this
+-- file). Group/channel messages are plain text server-side, and
+-- media attachments (in any context) are plain public URLs, same
+-- trust model as a post's image — see the PART 1 comment below for
+-- why.
+-- ============================================================
+
+create extension if not exists pgcrypto;
+
+-- ────────────────────────────────────────────────────────────
+-- PART 1 — MEDIA ATTACHMENTS (images / video / voice notes)
+-- ────────────────────────────────────────────────────────────
+-- Media is uploaded to the same public "media" storage bucket posts
+-- and replies already use (see MEDIA_BUCKET / uploadMedia() in
+-- js/common.js) — no new bucket or storage policy needed, since that
+-- bucket's insert/select policies are already scoped to "any
+-- authenticated user can upload, anyone can read the public URL".
+--
+-- Attached media is NOT end-to-end encrypted — it's a plain public
+-- URL. A message's body/iv (caption) still goes through the normal
+-- 1:1 E2E path independently, so a photo can have an encrypted
+-- caption, an unencrypted one, or no caption at all (body = '').
+
+alter table public.messages add column if not exists media_url text;
+alter table public.messages add column if not exists media_type text
+  check (media_type in ('image', 'video', 'audio'));
+
+comment on column public.messages.media_url is
+  'Public URL of an attached image/video/voice-note in the shared "media" storage bucket. NULL = no attachment.';
+comment on column public.messages.media_type is
+  'image | video | audio (voice note). NULL when media_url is NULL.';
+
+-- ────────────────────────────────────────────────────────────
+-- PART 2 — SHARING A POST INTO A CHAT
+-- ────────────────────────────────────────────────────────────
+-- A message can embed a post (like "Send via Chat" already partially
+-- supports at the UI-prefill level — see list.js's listMenuSendChat()
+-- — this is the DB-level version: an actual structured reference
+-- instead of just prefilled text). on delete set null (not cascade):
+-- deleting the original post shouldn't delete someone's message, it
+-- should just leave the embed pointing at nothing (render as
+-- "this post was deleted" client-side).
+
+alter table public.messages add column if not exists shared_post_id uuid
+  references public.posts(id) on delete set null;
+
+create index if not exists messages_shared_post_idx
+  on public.messages(shared_post_id) where shared_post_id is not null;
+
+comment on column public.messages.shared_post_id is
+  'Set when this message is sharing a post into the chat, X-style. NULL for ordinary messages.';
+
+-- A message must contain *something* — text, media, or a shared
+-- post. Replaces the narrower version of this constraint from
+-- chat_media.sql (which didn't know about shared_post_id yet).
+--
+-- Written to also allow a tombstoned "delete for everyone" row
+-- through (deleted_for_everyone = true, body/media/shared_post_id
+-- all cleared) — see chat_delete_messages_and_contacts.sql later in
+-- this file. That column doesn't exist yet on a brand-new project,
+-- so it's added here (harmless no-op if it already exists — e.g. on
+-- a project that already has real tombstoned messages from prior
+-- use of the delete feature) so this ADD CONSTRAINT doesn't reject
+-- rows that are legitimately empty because they were deleted, not
+-- because they're broken.
+alter table public.messages add column if not exists deleted_for_everyone boolean not null default false;
+
+-- Defensive backfill: mark any row that's already contentless (no
+-- body, no media, no shared post) as tombstoned, whatever the reason
+-- it ended up that way (an old bug, a manual edit, anything). This
+-- doesn't discard any real data — a row already has nothing to show
+-- — it just makes the ADD CONSTRAINT below succeed no matter what's
+-- currently in the table, instead of failing on rows this script has
+-- no way to know about in advance.
+update public.messages
+  set deleted_for_everyone = true
+  where not deleted_for_everyone
+    and coalesce(body, '') = ''
+    and media_url is null
+    and shared_post_id is null;
+
+alter table public.messages drop constraint if exists messages_body_or_media_chk;
+alter table public.messages drop constraint if exists messages_has_content_chk;
+alter table public.messages add constraint messages_has_content_chk
+  check (deleted_for_everyone or coalesce(body, '') <> '' or media_url is not null or shared_post_id is not null);
+
+-- ────────────────────────────────────────────────────────────
+-- PART 3 — GROUP CHATS & CHANNELS
+-- ────────────────────────────────────────────────────────────
+-- `conversations` is the group/channel itself; `conversation_members`
+-- is who's in it and their role. `kind` distinguishes the two:
+--   'group'   — any member can post (like a Telegram group).
+--   'channel' — only owner/admin can post; everyone else just reads
+--               (like a Telegram channel / broadcast list).
+-- `is_public` lets a channel (or group) be discovered and joined by
+-- anyone without an invite — private ones only show up for members.
+
+create table if not exists public.conversations (
+  id          uuid primary key default gen_random_uuid(),
+  kind        text not null check (kind in ('group', 'channel')),
+  name        text not null,
+  description text,
+  avatar_url  text,
+  is_public   boolean not null default false,
+  created_by  uuid not null references public.profiles(id) on delete cascade,
+  created_at  timestamptz not null default now()
+);
+
+create table if not exists public.conversation_members (
+  conversation_id uuid not null references public.conversations(id) on delete cascade,
+  user_id         uuid not null references public.profiles(id) on delete cascade,
+  role            text not null default 'member' check (role in ('owner', 'admin', 'member')),
+  joined_at       timestamptz not null default now(),
+  last_read_at    timestamptz,
+  primary key (conversation_id, user_id)
+);
+
+create index if not exists conversation_members_user_idx on public.conversation_members(user_id);
+create index if not exists conversations_public_idx on public.conversations(is_public) where is_public = true;
+
+-- `messages.conversation_id` — a group/channel message. A row now
+-- belongs to *either* a 1:1 DM (sender_id/recipient_id, as today) or
+-- a group/channel (conversation_id), never both — hence recipient_id
+-- becoming nullable and the new check constraint.
+alter table public.messages add column if not exists conversation_id uuid
+  references public.conversations(id) on delete cascade;
+
+alter table public.messages alter column recipient_id drop not null;
+
+alter table public.messages drop constraint if exists messages_target_chk;
+alter table public.messages add constraint messages_target_chk
+  check (
+    (conversation_id is not null and recipient_id is null)
+    or (conversation_id is null and recipient_id is not null)
+  );
+
+create index if not exists messages_conversation_idx
+  on public.messages(conversation_id, created_at) where conversation_id is not null;
+
+comment on column public.messages.conversation_id is
+  'Set for a group/channel message. Mutually exclusive with recipient_id (1:1 DM).';
+
+-- ── force created_by server-side (same pattern as articles_full_setup.sql) ──
+create or replace function public.conversations_force_creator()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  new.created_by := auth.uid();
+  return new;
+end;
+$$;
+
+drop trigger if exists conversations_force_creator_trg on public.conversations;
+create trigger conversations_force_creator_trg
+  before insert on public.conversations
+  for each row execute function public.conversations_force_creator();
+
+-- ── auto-add the creator as owner ──
+-- Runs as security definer so it isn't blocked by conversation_members'
+-- own RLS (the creator's membership row is what most of those
+-- policies rely on existing in the first place).
+create or replace function public.conversations_add_owner()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.conversation_members (conversation_id, user_id, role)
+  values (new.id, new.created_by, 'owner')
+  on conflict (conversation_id, user_id) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists conversations_add_owner_trg on public.conversations;
+create trigger conversations_add_owner_trg
+  after insert on public.conversations
+  for each row execute function public.conversations_add_owner();
+
+-- ── force sender_id server-side on group/channel messages ──
+-- Only touches rows that are actually group/channel messages
+-- (conversation_id is not null); 1:1 DM inserts are untouched, so
+-- whatever your existing messages insert trigger/policy does for
+-- those keeps doing it.
+create or replace function public.messages_force_sender_for_conversation()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.conversation_id is not null then
+    new.sender_id := auth.uid();
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists messages_force_sender_conversation_trg on public.messages;
+create trigger messages_force_sender_conversation_trg
+  before insert on public.messages
+  for each row execute function public.messages_force_sender_for_conversation();
+
+-- ── RLS: conversations ──
+alter table public.conversations enable row level security;
+
+drop policy if exists "conversations_select" on public.conversations;
+create policy "conversations_select" on public.conversations
+  for select
+  to authenticated
+  using (
+    is_public = true
+    or exists (
+      select 1 from public.conversation_members cm
+      where cm.conversation_id = conversations.id and cm.user_id = auth.uid()
+    )
+  );
+
+drop policy if exists "conversations_insert" on public.conversations;
+create policy "conversations_insert" on public.conversations
+  for insert
+  to authenticated
+  with check (created_by = auth.uid());
+
+-- Only owner/admin can rename, re-describe, re-avatar, or flip
+-- public/private.
+drop policy if exists "conversations_update_admin" on public.conversations;
+create policy "conversations_update_admin" on public.conversations
+  for update
+  to authenticated
+  using (
+    exists (
+      select 1 from public.conversation_members cm
+      where cm.conversation_id = conversations.id and cm.user_id = auth.uid()
+        and cm.role in ('owner', 'admin')
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.conversation_members cm
+      where cm.conversation_id = conversations.id and cm.user_id = auth.uid()
+        and cm.role in ('owner', 'admin')
+    )
+  );
+
+-- Only the owner can delete the whole group/channel.
+drop policy if exists "conversations_delete_owner" on public.conversations;
+create policy "conversations_delete_owner" on public.conversations
+  for delete
+  to authenticated
+  using (
+    exists (
+      select 1 from public.conversation_members cm
+      where cm.conversation_id = conversations.id and cm.user_id = auth.uid()
+        and cm.role = 'owner'
+    )
+  );
+
+-- ── RLS: conversation_members ──
+alter table public.conversation_members enable row level security;
+
+-- Any current member can see the member list of a conversation
+-- they're in (self-referencing EXISTS — a standard, non-recursive
+-- pattern for "am I in this group" checks).
+drop policy if exists "conversation_members_select" on public.conversation_members;
+create policy "conversation_members_select" on public.conversation_members
+  for select
+  to authenticated
+  using (
+    exists (
+      select 1 from public.conversation_members cm2
+      where cm2.conversation_id = conversation_members.conversation_id and cm2.user_id = auth.uid()
+    )
+  );
+
+-- Owner/admin can add anyone to a group/channel.
+drop policy if exists "conversation_members_insert_admin" on public.conversation_members;
+create policy "conversation_members_insert_admin" on public.conversation_members
+  for insert
+  to authenticated
+  with check (
+    exists (
+      select 1 from public.conversation_members cm
+      where cm.conversation_id = conversation_members.conversation_id and cm.user_id = auth.uid()
+        and cm.role in ('owner', 'admin')
+    )
+  );
+
+-- Anyone can join a public group/channel themselves (self-serve
+-- subscribe, like following a Telegram channel).
+drop policy if exists "conversation_members_insert_self_public" on public.conversation_members;
+create policy "conversation_members_insert_self_public" on public.conversation_members
+  for insert
+  to authenticated
+  with check (
+    user_id = auth.uid()
+    and exists (
+      select 1 from public.conversations c
+      where c.id = conversation_members.conversation_id and c.is_public = true
+    )
+  );
+
+-- A member can update their own row (e.g. last_read_at for unread
+-- counts). Role changes by admins are a v2 concern — kept out of
+-- scope here to avoid a self-escalation hole.
+drop policy if exists "conversation_members_update_own" on public.conversation_members;
+create policy "conversation_members_update_own" on public.conversation_members
+  for update
+  to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+-- Leave a conversation yourself, or be removed by an owner/admin.
+drop policy if exists "conversation_members_delete_self" on public.conversation_members;
+create policy "conversation_members_delete_self" on public.conversation_members
+  for delete
+  to authenticated
+  using (user_id = auth.uid());
+
+drop policy if exists "conversation_members_delete_admin" on public.conversation_members;
+create policy "conversation_members_delete_admin" on public.conversation_members
+  for delete
+  to authenticated
+  using (
+    exists (
+      select 1 from public.conversation_members cm
+      where cm.conversation_id = conversation_members.conversation_id and cm.user_id = auth.uid()
+        and cm.role in ('owner', 'admin')
+    )
+  );
+
+-- ── RLS: messages, additive policies for the conversation_id case ──
+-- These are new, separate policies scoped to `conversation_id is not
+-- null` — they don't touch or replace whatever policies already
+-- govern the 1:1 DM case (sender_id/recipient_id), since Postgres
+-- combines multiple permissive policies for the same command with
+-- OR.
+drop policy if exists "messages_select_conversation" on public.messages;
+create policy "messages_select_conversation" on public.messages
+  for select
+  to authenticated
+  using (
+    conversation_id is not null
+    and exists (
+      select 1 from public.conversation_members cm
+      where cm.conversation_id = messages.conversation_id and cm.user_id = auth.uid()
+    )
+  );
+
+-- Any member can post in a 'group'; only owner/admin can post in a
+-- 'channel'. sender_id is re-forced server-side above regardless of
+-- what the client sends.
+drop policy if exists "messages_insert_conversation" on public.messages;
+create policy "messages_insert_conversation" on public.messages
+  for insert
+  to authenticated
+  with check (
+    conversation_id is not null
+    and exists (
+      select 1
+      from public.conversation_members cm
+      join public.conversations c on c.id = cm.conversation_id
+      where cm.conversation_id = messages.conversation_id and cm.user_id = auth.uid()
+        and (c.kind = 'group' or cm.role in ('owner', 'admin'))
+    )
+  );
+
+-- A member can delete their own group/channel message (soft- or
+-- hard-delete, matching whatever convention posts.sql already uses
+-- for is_deleted — adjust to `update ... set is_deleted = true` client
+-- side if this app soft-deletes rather than hard-deletes messages).
+drop policy if exists "messages_delete_own_conversation" on public.messages;
+create policy "messages_delete_own_conversation" on public.messages
+  for delete
+  to authenticated
+  using (conversation_id is not null and sender_id = auth.uid());
+
+-- ── REALTIME ──
+-- `messages` is already in the realtime publication (that's how 1:1
+-- DM delivery works today) — conversation_id rides on the same table
+-- so nothing extra is needed there. The two new tables aren't,
+-- though, so group/channel membership changes and metadata edits
+-- won't push over realtime until they're added. Guarded with a DO
+-- block since `alter publication ... add table` errors (rather than
+-- no-ops) if the table's already a member.
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'conversations'
+  ) then
+    alter publication supabase_realtime add table public.conversations;
+  end if;
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'conversation_members'
+  ) then
+    alter publication supabase_realtime add table public.conversation_members;
+  end if;
+end $$;
+
+
+-- ───────────────────────────────────────────────────────────────
+-- FROM: supabase/chat_media.sql
+-- ───────────────────────────────────────────────────────────────
+-- ─────────────────────────────────────────────────────────────
+-- CHAT MEDIA — lets DM messages carry an image, video, or voice
+-- note, with or without a text caption.
+--
+-- Media is uploaded to the same public "media" storage bucket posts
+-- and replies already use (see MEDIA_BUCKET / uploadMedia() in
+-- js/common.js) — no new bucket or storage policy needed, since that
+-- bucket's insert/select policies are already scoped to "any
+-- authenticated user can upload, anyone can read the public URL".
+--
+-- NOTE ON ENCRYPTION: unlike message text (see chat_e2e_encryption.sql
+-- / js/chat-crypto.js), attached media is NOT end-to-end encrypted.
+-- It's a plain public URL, same trust model as post/reply media. A
+-- message's `body`/`iv` (caption) still go through the normal E2E
+-- path independently — a photo can have an encrypted caption, an
+-- unencrypted one, or no caption at all (body = '').
+-- ─────────────────────────────────────────────────────────────
+
+alter table public.messages add column if not exists media_url text;
+alter table public.messages add column if not exists media_type text
+  check (media_type in ('image', 'video', 'audio'));
+
+comment on column public.messages.media_url is
+  'Public URL of an attached image/video/voice-note in the shared "media" storage bucket. NULL = text-only message.';
+comment on column public.messages.media_type is
+  'image | video | audio (voice note). NULL when media_url is NULL.';
+
+-- A message must either say something or attach something. NOTE:
+-- this constraint (from the older, standalone chat_media.sql) is
+-- superseded by messages_has_content_chk, added earlier in this file
+-- from chat_full_setup.sql — that version already covers everything
+-- this one does, plus shared_post_id and deleted_for_everyone
+-- tombstones. Adding this narrower one on top would just reject
+-- those same tombstoned rows all over again, so it's dropped here
+-- and not re-created.
+alter table public.messages drop constraint if exists messages_body_or_media_chk;
+
+
+-- ───────────────────────────────────────────────────────────────
+-- FROM: supabase/chat_group_avatar_and_names.sql
+-- ───────────────────────────────────────────────────────────────
+-- ============================================================
+-- CHAT — group/channel avatars + names/descriptions.
+-- Safe to re-run any time — every statement is idempotent.
+--
+-- This is a standalone confirmation/completion script for the
+-- avatar-upload + rename feature added to the "New group"/"New
+-- channel" modal and the group-info panel. Most of this already
+-- exists if supabase/chat_full_setup.sql has been run — this file
+-- just makes sure every piece it depends on is actually in place,
+-- and is safe to run on its own even if chat_full_setup.sql never
+-- was.
+-- ============================================================
+
+-- ── conversations table + columns ──
+-- (No-op if supabase/chat_full_setup.sql already created this.)
+create table if not exists public.conversations (
+  id          uuid primary key default gen_random_uuid(),
+  kind        text not null check (kind in ('group', 'channel')),
+  name        text not null,
+  description text,
+  avatar_url  text,
+  is_public   boolean not null default false,
+  created_by  uuid not null references public.profiles(id) on delete cascade,
+  created_at  timestamptz not null default now()
+);
+alter table public.conversations add column if not exists avatar_url text;
+alter table public.conversations add column if not exists description text;
+
+create table if not exists public.conversation_members (
+  conversation_id uuid not null references public.conversations(id) on delete cascade,
+  user_id         uuid not null references public.profiles(id) on delete cascade,
+  role            text not null default 'member' check (role in ('owner', 'admin', 'member')),
+  joined_at       timestamptz not null default now(),
+  last_read_at    timestamptz,
+  primary key (conversation_id, user_id)
+);
+
+comment on column public.conversations.avatar_url is
+  'Public URL of the group/channel picture, in the shared "avatars" storage bucket (same bucket/policy as profile pictures — see uploadAvatar() in js/auth.js). NULL = no picture set, client falls back to an initial-letter avatar.';
+
+-- ── RLS ──
+alter table public.conversations enable row level security;
+alter table public.conversation_members enable row level security;
+
+-- Only a current owner/admin may rename, re-describe, re-avatar, or
+-- flip public/private on an existing group/channel. (Anyone can
+-- still INSERT a new one — see "conversations_insert" in
+-- chat_full_setup.sql, unaffected by this file.)
+drop policy if exists "conversations_update_admin" on public.conversations;
+create policy "conversations_update_admin" on public.conversations
+  for update
+  to authenticated
+  using (
+    exists (
+      select 1 from public.conversation_members cm
+      where cm.conversation_id = conversations.id and cm.user_id = auth.uid()
+        and cm.role in ('owner', 'admin')
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.conversation_members cm
+      where cm.conversation_id = conversations.id and cm.user_id = auth.uid()
+        and cm.role in ('owner', 'admin')
+    )
+  );
+
+-- Every current member can read the group/channel row (name,
+-- avatar_url, description, is_public, etc.) — needed for the info
+-- panel and conversation-list rows to render at all.
+drop policy if exists "conversations_select_member" on public.conversations;
+create policy "conversations_select_member" on public.conversations
+  for select
+  to authenticated
+  using (
+    is_public = true
+    or exists (
+      select 1 from public.conversation_members cm
+      where cm.conversation_id = conversations.id and cm.user_id = auth.uid()
+    )
+  );
+
+-- ── STORAGE — group/channel avatars reuse the existing "avatars"
+-- bucket (same one profile pictures use), uploaded to the acting
+-- user's own <uid> folder — see uploadAvatar() in js/auth.js. That
+-- bucket's policies already allow any authenticated user to write
+-- inside their own folder and let anyone read the public URL, so no
+-- new bucket or storage policy is needed here. This block only
+-- creates the bucket if this project genuinely doesn't have it yet
+-- (fresh Supabase project) — it's a no-op everywhere else.
+insert into storage.buckets (id, name, public)
+select 'avatars', 'avatars', true
+where not exists (select 1 from storage.buckets where id = 'avatars');
+
+drop policy if exists "avatars_public_read" on storage.objects;
+create policy "avatars_public_read" on storage.objects
+  for select
+  to public
+  using (bucket_id = 'avatars');
+
+drop policy if exists "avatars_own_folder_write" on storage.objects;
+create policy "avatars_own_folder_write" on storage.objects
+  for insert
+  to authenticated
+  with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "avatars_own_folder_update" on storage.objects;
+create policy "avatars_own_folder_update" on storage.objects
+  for update
+  to authenticated
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+
+
+-- ───────────────────────────────────────────────────────────────
+-- FROM: supabase/fix_media_bucket_audio_mime.sql
+-- ───────────────────────────────────────────────────────────────
+-- ─────────────────────────────────────────────────────────────
+-- FIX: voice notes fail to upload with "mime type audio/webm is
+-- not supported" (and similarly for audio/mp4, audio/ogg).
+--
+-- Root cause: the shared "media" storage bucket (see MEDIA_BUCKET /
+-- uploadMedia() in js/common.js — created outside these migrations,
+-- directly in the Supabase dashboard, back when it only had to hold
+-- post/reply images and videos) has an allowed_mime_types allow-list
+-- that was never updated when voice notes were added in
+-- chat_media.sql. Supabase Storage rejects the upload at the bucket
+-- level before it ever reaches app code, which is what surfaces as
+-- that raw "mime type ... is not supported" error in the UI.
+--
+-- This sets the bucket to accept the actual set of types every
+-- uploader in this app can produce:
+--  - images: compressImageFile()/compressGifFile() output + originals
+--  - video:  uploaded as-is (see the note in uploadMedia())
+--  - audio:  startVoiceRecording()'s MediaRecorder, whichever of
+--            audio/webm, audio/mp4, audio/ogg the browser picked
+--
+-- Safe to run repeatedly — it's a plain update, not an insert.
+-- ─────────────────────────────────────────────────────────────
+
+update storage.buckets
+set allowed_mime_types = array[
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif',
+  'video/mp4', 'video/webm', 'video/quicktime',
+  'audio/webm', 'audio/mp4', 'audio/ogg', 'audio/mpeg', 'audio/wav'
+],
+    file_size_limit = coalesce(file_size_limit, 52428800) -- 50MB, only if not already set
+where id = 'media';
+
+-- If this project genuinely never had the bucket at all, create it
+-- now with the right allow-list already in place (no-op everywhere
+-- the bucket already exists, per the `where not exists` guard).
+insert into storage.buckets (id, name, public, allowed_mime_types, file_size_limit)
+select 'media', 'media', true, array[
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif',
+  'video/mp4', 'video/webm', 'video/quicktime',
+  'audio/webm', 'audio/mp4', 'audio/ogg', 'audio/mpeg', 'audio/wav'
+], 52428800
+where not exists (select 1 from storage.buckets where id = 'media');
+
+
+-- ───────────────────────────────────────────────────────────────
+-- FROM: supabase/ip_ban.sql
+-- ───────────────────────────────────────────────────────────────
+-- ============================================================
+-- IP BAN — suspending someone now bans their known IP address(es)
+-- too, not just the account. Run after admin_panel_advanced.sql and
+-- suspend_deletes_content.sql. Additive/idempotent — safe to re-run.
+--
+-- WHY: banning only the account (profiles.banned) is trivial to
+-- evade — sign up again with a new email and you're back. This adds
+-- a second, IP-based layer:
+--   1. public.user_ips logs every IP each account has connected
+--      from (recorded via api/ip.js, a Vercel function that reads
+--      the *real* client IP from Vercel's own x-forwarded-for header
+--      — not something the browser can just lie about the way it
+--      could if the client sent its own IP value straight to
+--      Postgres).
+--   2. public.banned_ips is the deny-list. Suspending a user copies
+--      every IP on file for them into it; unsuspending removes only
+--      the rows that suspension added (a shared IP another still-
+--      suspended account also used stays banned).
+--   3. is_ip_banned() is a public RPC (works for signed-out visitors
+--      too) that api/ip.js calls before letting someone sign up, and
+--      that js/auth.js also checks once a session exists — so a
+--      banned IP can neither create a new account nor keep an
+--      existing session alive.
+-- ============================================================
+
+-- ── 1. Tables ───────────────────────────────────────────────
+
+create table if not exists public.user_ips (
+  user_id    uuid not null references public.profiles(id) on delete cascade,
+  ip         text not null,
+  first_seen timestamptz not null default now(),
+  last_seen  timestamptz not null default now(),
+  primary key (user_id, ip)
+);
+create index if not exists user_ips_ip_idx on public.user_ips(ip);
+
+create table if not exists public.banned_ips (
+  ip        text not null,
+  user_id   uuid not null references public.profiles(id) on delete cascade,
+  banned_at timestamptz not null default now(),
+  reason    text,
+  primary key (ip, user_id)
+);
+create index if not exists banned_ips_ip_idx on public.banned_ips(ip);
+
+alter table public.user_ips   enable row level security;
+alter table public.banned_ips enable row level security;
+-- No direct client policies on either table on purpose — every read/
+-- write goes through the SECURITY DEFINER functions below, same
+-- pattern the rest of the admin panel uses to avoid a service_role
+-- key ever touching the browser.
+
+-- ── 2. record_user_ip() — called by api/ip.js on every signup/login/
+-- page load for a signed-in user, with the IP api/ip.js itself read
+-- from the request headers (never trusted from the client body).
+-- Upserts the IP against the caller's own account and returns
+-- whether that IP is currently banned, so api/ip.js can act on it in
+-- the same round trip. ──
+
+create or replace function public.record_user_ip(p_ip text)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null or p_ip is null or trim(p_ip) = '' then
+    return false;
+  end if;
+  insert into public.user_ips (user_id, ip, first_seen, last_seen)
+    values (auth.uid(), p_ip, now(), now())
+  on conflict (user_id, ip) do update set last_seen = now();
+
+  return exists(select 1 from public.banned_ips b where b.ip = p_ip);
+end;
+$$;
+
+-- ── 3. is_ip_banned() — public (anon-callable) so api/ip.js can
+-- refuse a signup from a banned IP before an account even exists. ──
+
+create or replace function public.is_ip_banned(p_ip text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists(select 1 from public.banned_ips where ip = p_ip);
+$$;
+
+grant execute on function public.record_user_ip(text) to authenticated;
+grant execute on function public.is_ip_banned(text)   to anon, authenticated;
+
+-- ── 4. admin_get_user_ips() — lets the admin panel show which IPs
+-- are on file for an account before/while suspending it. ──
+
+create or replace function public.admin_get_user_ips(target_user_id uuid)
+returns table(ip text, first_seen timestamptz, last_seen timestamptz)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'not authorized';
+  end if;
+  return query
+    select u.ip, u.first_seen, u.last_seen
+    from public.user_ips u
+    where u.user_id = target_user_id
+    order by u.last_seen desc;
+end;
+$$;
+grant execute on function public.admin_get_user_ips(uuid) to authenticated;
+
+-- ── 5. Extend admin_suspend_user / admin_unsuspend_user (re-defined
+-- from suspend_deletes_content.sql, plus the IP step) ──
+
+create or replace function public.admin_suspend_user(target_user_id uuid, reason text default null, until timestamptz default null)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'not authorized';
+  end if;
+  if target_user_id = auth.uid() then
+    raise exception 'cannot suspend your own account';
+  end if;
+  update public.profiles
+    set banned = true,
+        suspend_reason = nullif(trim(coalesce(reason, '')), ''),
+        suspended_until = until
+    where id = target_user_id;
+
+  update public.posts
+    set is_deleted = true, deleted_by_suspension = true
+    where author_id = target_user_id and is_deleted = false;
+  update public.replies
+    set is_deleted = true, deleted_by_suspension = true
+    where author_id = target_user_id and is_deleted = false;
+
+  -- Ban every IP this account has ever connected from, so a fresh
+  -- account made from the same device/network is blocked at signup
+  -- (see is_ip_banned() in api/ip.js's pre-signup check) instead of
+  -- only the old account being locked out.
+  insert into public.banned_ips (ip, user_id, reason)
+    select u.ip, target_user_id, nullif(trim(coalesce(reason, '')), '')
+    from public.user_ips u
+    where u.user_id = target_user_id
+  on conflict (ip, user_id) do update
+    set reason = excluded.reason, banned_at = now();
+end;
+$$;
+
+create or replace function public.admin_unsuspend_user(target_user_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'not authorized';
+  end if;
+  update public.profiles set banned = false, suspended_until = null, suspend_reason = null where id = target_user_id;
+
+  update public.posts
+    set is_deleted = false, deleted_by_suspension = false
+    where author_id = target_user_id and deleted_by_suspension = true;
+  update public.replies
+    set is_deleted = false, deleted_by_suspension = false
+    where author_id = target_user_id and deleted_by_suspension = true;
+
+  -- Only lift the IP bans THIS suspension added. If another still-
+  -- suspended account shares one of these IPs, its own row (a
+  -- different user_id on the same ip) stays behind and the IP stays
+  -- banned — exactly the point of keying banned_ips by (ip, user_id).
+  delete from public.banned_ips where user_id = target_user_id;
+end;
+$$;
+
+grant execute on function public.admin_suspend_user(uuid, text, timestamptz) to authenticated;
+grant execute on function public.admin_unsuspend_user(uuid)                  to authenticated;
+
+notify pgrst, 'reload schema';
+
+
+-- ───────────────────────────────────────────────────────────────
+-- FROM: supabase/suspend_deletes_content.sql
+-- ───────────────────────────────────────────────────────────────
+-- ============================================================
+-- SUSPEND -> AUTO-DELETE CONTENT
+-- Run after admin_panel_advanced.sql. Additive/idempotent — safe to
+-- re-run any time.
+--
+-- What this adds on top of admin_panel_advanced.sql's suspend/
+-- unsuspend (which only flipped profiles.banned + metadata):
+--   1. Every post and reply belonging to a user is automatically
+--      soft-deleted (same is_deleted flag admin_delete_post/
+--      admin_delete_reply already use) the moment they're suspended
+--      — same as X, where a suspended account's posts disappear.
+--   2. A new deleted_by_suspension flag on posts/replies marks which
+--      ones were taken down *because of* the suspension, as opposed
+--      to ones the author (or a mod) had already deleted themselves
+--      beforehand. That distinction matters twice: unsuspending only
+--      restores the former (a manually-deleted post doesn't come
+--      back just because the account got unsuspended), and
+--      quotedPostHtml() in js/common.js reads it to show "This post
+--      is from a suspended account" instead of the generic "no
+--      longer available" wording for quote-post embeds.
+--   3. The username itself is never freed up — nothing here touches
+--      the profiles row or its username, so the unique constraint on
+--      profiles.username keeps anyone else from ever registering it,
+--      exactly like a suspended handle on X.
+-- ============================================================
+
+alter table public.posts   add column if not exists deleted_by_suspension boolean not null default false;
+alter table public.replies add column if not exists deleted_by_suspension boolean not null default false;
+
+create or replace function public.admin_suspend_user(target_user_id uuid, reason text default null, until timestamptz default null)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'not authorized';
+  end if;
+  if target_user_id = auth.uid() then
+    raise exception 'cannot suspend your own account';
+  end if;
+  update public.profiles
+    set banned = true,
+        suspend_reason = nullif(trim(coalesce(reason, '')), ''),
+        suspended_until = until
+    where id = target_user_id;
+
+  -- Only touch rows that weren't already deleted, so a post the
+  -- author (or a mod) removed beforehand doesn't get relabeled as
+  -- "deleted by suspension" and wrongly come back on unsuspend.
+  update public.posts
+    set is_deleted = true, deleted_by_suspension = true
+    where author_id = target_user_id and is_deleted = false;
+  update public.replies
+    set is_deleted = true, deleted_by_suspension = true
+    where author_id = target_user_id and is_deleted = false;
+end;
+$$;
+
+create or replace function public.admin_unsuspend_user(target_user_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'not authorized';
+  end if;
+  update public.profiles set banned = false, suspended_until = null, suspend_reason = null where id = target_user_id;
+
+  -- Only restore what the suspension itself took down — leaves any
+  -- of the user's own prior deletions alone.
+  update public.posts
+    set is_deleted = false, deleted_by_suspension = false
+    where author_id = target_user_id and deleted_by_suspension = true;
+  update public.replies
+    set is_deleted = false, deleted_by_suspension = false
+    where author_id = target_user_id and deleted_by_suspension = true;
+end;
+$$;
+
+grant execute on function public.admin_suspend_user(uuid, text, timestamptz) to authenticated;
+grant execute on function public.admin_unsuspend_user(uuid)                  to authenticated;
+notify pgrst, 'reload schema';
+
+
+
+
+-- ################################################################
+-- ### BELOW: supabase/view_counts.sql (NEW — found missing during
+-- ### an audit of every sb.rpc() call in js/*.js against the SQL
+-- ### files present in this export; see that file's own header)
+-- ################################################################
+
+-- ============================================================
+-- VIEW COUNTS — increment_post_view / increment_reply_views
+-- ============================================================
+-- js/common.js (bumpPostView / bumpReplyViews, called from thread.js
+-- when a thread opens and from the feed's scroll-based view tracker)
+-- calls these two RPCs by name:
+--   sb.rpc('increment_post_view',   { p_id:  postId   })
+--   sb.rpc('increment_reply_views', { p_ids: replyIds })
+-- Neither function existed anywhere in the SQL export — every other
+-- RPC the client calls (delete_own_post, edit_own_post, admin_*,
+-- get_for_you_feed, etc.) has a matching definition in this project's
+-- other migrations; these two didn't. That means every post/reply
+-- view counter has been silently failing (caught by the .catch/
+-- console.warn in bumpPostView/bumpReplyViews — it doesn't break the
+-- page, the numbers just never move).
+--
+-- This assumes `posts.view_count` and `replies.view_count` already
+-- exist as integer columns (the client already reads and displays
+-- p.view_count / owner.view_count in thread.js, board.js, and
+-- common.js, so those columns must already be present in your live
+-- schema) — it only adds the two functions that increment them.
+-- Safe to re-run.
+-- ============================================================
+
+create or replace function public.increment_post_view(p_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.posts set view_count = coalesce(view_count, 0) + 1 where id = p_id;
+end;
+$$;
+
+create or replace function public.increment_reply_views(p_ids uuid[])
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.replies set view_count = coalesce(view_count, 0) + 1 where id = any(p_ids);
+end;
+$$;
+
+-- Anyone (including logged-out visitors) can bump a view count, same
+-- as every other read-facing counter on the site.
+grant execute on function public.increment_post_view(uuid)   to anon, authenticated;
+grant execute on function public.increment_reply_views(uuid[]) to anon, authenticated;
+
+notify pgrst, 'reload schema';
+
+
+-- ################################################################
+-- ### BELOW: supabase/report_community.sql (was missing from this
+-- ### combined file — it replaces admin_list_reports() with a
+-- ### version that adds community_id/name/slug columns, and MUST
+-- ### drop the function first since CREATE OR REPLACE can't change
+-- ### a function's return columns. Run last, after the
+-- ### admin_panel_advanced.sql section above.)
+-- ################################################################
+
+-- ============================================================
+-- REPORT COMMUNITY — supports the new "Report community" item in
+-- the community page's "•••" menu (js/community.js
+-- communityMenuReport() → common.js openReportCommunity()).
+--
+-- Run this in the Supabase SQL Editor after schema.sql and
+-- admin_panel_advanced.sql (it only adds a column and replaces the
+-- admin_list_reports() function those set up) — safe to re-run any
+-- time, same as the other migrations in this folder.
+--
+-- What this adds:
+--   1. reports.community_id — nullable, so every existing report
+--      row (post/reply/user reports) is untouched. A community
+--      report is inserted with only community_id set and
+--      post_id/reply_id/reported_user_id left null, exactly the
+--      same shape submitReport() in common.js already uses for the
+--      other three report kinds.
+--   2. admin_list_reports() now also returns community_id,
+--      community_name and community_slug, so the admin panel
+--      (js/admin.js adminReportRowHtml()) can show and link to the
+--      reported community instead of the row baffling an admin
+--      with "Reported: @null".
+-- ============================================================
+
+-- ── 1. Column ───────────────────────────────────────────────
+alter table public.reports
+  add column if not exists community_id uuid references public.communities(id) on delete cascade;
+
+-- Same "one report is about exactly one thing" shape the table
+-- already implies for post_id/reply_id/reported_user_id — makes it
+-- a database-level guarantee instead of just an app convention.
+-- Existing rows (all pre-dating this column) have community_id null
+-- and at least one of the other three set, so they already satisfy
+-- this without any backfill.
+do $$
+begin
+  alter table public.reports add constraint reports_exactly_one_target check (
+    (case when post_id is not null then 1 else 0 end) +
+    (case when reply_id is not null then 1 else 0 end) +
+    (case when reported_user_id is not null then 1 else 0 end) +
+    (case when community_id is not null then 1 else 0 end) = 1
+  );
+exception when duplicate_object then null;
+end $$;
+
+-- ── 2. admin_list_reports() — same function/signature as
+--      admin_panel_advanced.sql, replaced to add the three
+--      community_* columns via a left join on communities.
+--
+--      Postgres won't let CREATE OR REPLACE change a function's
+--      return row shape (new OUT columns = a different row type,
+--      even with the same name/args) — it errors with 42P13 and
+--      tells you to DROP FUNCTION first. That's expected here since
+--      this replaces the 16-column version from admin_panel_advanced.sql
+--      with a 19-column one, so drop it before recreating. ──
+drop function if exists public.admin_list_reports(text);
+
+create function public.admin_list_reports(status_filter text default 'open')
+returns table (
+  id                     uuid,
+  created_at             timestamptz,
+  reason                 text,
+  details                text,
+  status                 text,
+  reporter_id            uuid,
+  reporter_username      text,
+  post_id                uuid,
+  post_body              text,
+  post_author_id         uuid,
+  post_author_username   text,
+  reply_id               uuid,
+  reply_body             text,
+  reply_author_id        uuid,
+  reply_author_username  text,
+  reported_user_id       uuid,
+  reported_username      text,
+  community_id           uuid,
+  community_name         text,
+  community_slug         text
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'not authorized';
+  end if;
+
+  return query
+  select
+    r.id, r.created_at, r.reason, r.details, r.status,
+    r.reporter_id, rp.username,
+    r.post_id, p.body, p.author_id, pa.username,
+    r.reply_id, rl.body, rl.author_id, ra.username,
+    r.reported_user_id, ru.username,
+    r.community_id, c.name, c.slug
+  from public.reports r
+  left join public.profiles rp on rp.id = r.reporter_id
+  left join public.posts    p  on p.id  = r.post_id
+  left join public.profiles pa on pa.id = p.author_id
+  left join public.replies  rl on rl.id = r.reply_id
+  left join public.profiles ra on ra.id = rl.author_id
+  left join public.profiles ru on ru.id = r.reported_user_id
+  left join public.communities c on c.id = r.community_id
+  where status_filter = 'all' or r.status = status_filter
+  order by r.created_at desc
+  limit 100;
+end;
+$$;
+
+grant execute on function public.admin_list_reports(text) to authenticated;
+
+
+-- ################################################################
+-- ### BELOW: supabase/chat_delete_messages_and_contacts.sql (was
+-- ### missing from this combined file entirely — js/chat.js calls
+-- ### delete_message_for_me / delete_message_for_everyone /
+-- ### delete_conversation_with_user, and this also WIDENS
+-- ### messages_has_content_chk to allow already-tombstoned
+-- ### "deleted for everyone" rows through. Without this section,
+-- ### the narrower chat_full_setup.sql version of that same
+-- ### constraint (applied earlier in this file) rejects any message
+-- ### your app has already tombstoned — which is the
+-- ### "messages_has_content_chk is violated by some row" error.
+-- ### Must run after chat_full_setup.sql, which it does here.
+-- ################################################################
+
+-- ============================================================
+-- CHAT — delete message (for me / for everyone) + delete conversation
+-- (removes a contact's messages from your inbox). Run once in the
+-- Supabase SQL editor. Safe to re-run — every statement is
+-- idempotent.
+--
+-- Only covers 1:1 DMs (sender_id/recipient_id rows), not group/
+-- channel messages (conversation_id rows) — those already have their
+-- own "delete your own message" RLS policy from chat_full_setup.sql
+-- (messages_delete_own_conversation), which hard-deletes the row
+-- outright, so there's nothing to add there.
+--
+-- THREE NEW THINGS:
+--   1. "Delete for me"       — hides one message from your own view
+--      only. The other person keeps seeing it normally. Stored as a
+--      per-side flag (deleted_for_sender / deleted_for_recipient)
+--      rather than actually removing the row, since the row still
+--      needs to exist for the OTHER side.
+--   2. "Delete for everyone" — sender-only. Wipes the message content
+--      (body/iv/media/shared post) and tombstones the row so both
+--      sides render "This message was deleted" instead of the real
+--      content. The row itself stays (keeps timestamps/ordering
+--      sane) but nothing readable is left in it.
+--   3. "Delete conversation"  — deleting a contact from your message
+--      list. There's no separate contacts table for DMs — the
+--      conversation list is just derived from the messages table
+--      (see loadConversationList() in js/chat.js) — so "delete this
+--      person" = delete-for-me every message you've exchanged with
+--      them. Once every message between the two of you is hidden on
+--      your side, the conversation naturally disappears from your
+--      inbox. The other person's inbox is untouched — same one-sided
+--      behavior as deleting a single message for yourself, and the
+--      same convention WhatsApp/Instagram/X use for "delete chat".
+--
+-- All three go through SECURITY DEFINER RPCs (same pattern as
+-- delete_own_post/delete_own_reply in fix_delete_via_rpc.sql) rather
+-- than raw client-side UPDATEs, so ownership is checked server-side
+-- regardless of whatever the existing messages RLS policies allow —
+-- this migration doesn't need to know their exact definitions to be
+-- safe.
+--
+-- NOTE ON SELECT RLS: filtering out deleted-for-me rows currently
+-- happens client-side (js/chat.js drops any row where the flag is
+-- set for the current viewer, for both the conversation list and an
+-- open thread). That's enough for the UI to behave correctly, but
+-- it's not defense-in-depth — a network tab could still see the
+-- flagged-hidden row's ciphertext. If you want the SELECT policy
+-- itself to exclude these rows, share its current definition and it
+-- can be tightened in a follow-up migration.
+-- ============================================================
+
+alter table public.messages add column if not exists deleted_for_sender boolean not null default false;
+alter table public.messages add column if not exists deleted_for_recipient boolean not null default false;
+alter table public.messages add column if not exists deleted_for_everyone boolean not null default false;
+
+comment on column public.messages.deleted_for_sender is 'true = the sender chose "Delete for me" on this message; hidden from their view only.';
+comment on column public.messages.deleted_for_recipient is 'true = the recipient chose "Delete for me" on this message; hidden from their view only.';
+comment on column public.messages.deleted_for_everyone is 'true = "Delete for everyone" (sender-only). body/iv/media/shared_post_id are wiped once this is set; both sides render a tombstone instead.';
+
+-- The old "must contain something" constraint (chat_full_setup.sql)
+-- would reject the wipe a delete-for-everyone update performs, since
+-- that update intentionally empties body/media/shared_post_id. Widen
+-- it to also allow a tombstoned row through.
+alter table public.messages drop constraint if exists messages_has_content_chk;
+alter table public.messages add constraint messages_has_content_chk
+  check (deleted_for_everyone or coalesce(body, '') <> '' or media_url is not null or shared_post_id is not null);
+
+-- ── delete_message_for_me ──
+-- Hides a single 1:1 DM message from the caller's own view. Works
+-- for either side of the conversation — whichever one you are is
+-- detected from the row itself, not passed in by the client.
+create or replace function public.delete_message_for_me(message_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  m record;
+begin
+  select sender_id, recipient_id, conversation_id into m
+    from public.messages where id = message_id;
+
+  if not found then
+    raise exception 'Message not found.';
+  end if;
+  if m.conversation_id is not null then
+    raise exception 'This message belongs to a group/channel — use the group delete instead.';
+  end if;
+
+  if auth.uid() = m.sender_id then
+    update public.messages set deleted_for_sender = true where id = message_id;
+  elsif auth.uid() = m.recipient_id then
+    update public.messages set deleted_for_recipient = true where id = message_id;
+  else
+    raise exception 'This is not your message.';
+  end if;
+end;
+$$;
+
+grant execute on function public.delete_message_for_me(uuid) to authenticated;
+
+-- ── delete_message_for_everyone ──
+-- Sender-only. Wipes the message content and tombstones the row so
+-- it renders as "This message was deleted" for both sides. Attached
+-- media's storage object is intentionally left alone here (the row
+-- just stops pointing at it) — if you also want the file itself
+-- removed from the "media" bucket, that needs a follow-up storage
+-- delete call from the client, since SQL alone can't reach into
+-- Storage.
+create or replace function public.delete_message_for_everyone(message_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  m record;
+begin
+  select sender_id, conversation_id into m
+    from public.messages where id = message_id;
+
+  if not found then
+    raise exception 'Message not found.';
+  end if;
+  if m.conversation_id is not null then
+    raise exception 'This message belongs to a group/channel — use the group delete instead.';
+  end if;
+  if auth.uid() <> m.sender_id then
+    raise exception 'Only the sender can delete this for everyone.';
+  end if;
+
+  update public.messages
+    set body = '',
+        iv = null,
+        media_url = null,
+        media_type = null,
+        media_duration_ms = null,
+        shared_post_id = null,
+        deleted_for_everyone = true
+    where id = message_id;
+end;
+$$;
+
+grant execute on function public.delete_message_for_everyone(uuid) to authenticated;
+
+-- ── delete_conversation_with_user ──
+-- "Delete this contact" from your message list — delete-for-me on
+-- every 1:1 message you've ever exchanged with them. Does not touch
+-- messages_for_everyone/anything on the other person's side.
+create or replace function public.delete_conversation_with_user(other_user_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.messages set deleted_for_sender = true
+    where sender_id = auth.uid() and recipient_id = other_user_id;
+  update public.messages set deleted_for_recipient = true
+    where recipient_id = auth.uid() and sender_id = other_user_id;
+end;
+$$;
+
+grant execute on function public.delete_conversation_with_user(uuid) to authenticated;

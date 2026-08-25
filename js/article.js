@@ -12,6 +12,15 @@ let isArticleAuthor = false;
 
 async function loadArticle() {
   const contentEl = document.getElementById('article-content');
+  contentEl.innerHTML = `<div class="skel-article">
+    <div class="skel-cover"></div>
+    <div class="skel-line title w70"></div>
+    <div class="skel-lines">
+      <div class="skel-line w90"></div>
+      <div class="skel-line w90"></div>
+      <div class="skel-line w60"></div>
+    </div>
+  </div>`;
   if (!articleId) {
     contentEl.innerHTML = `<div id="feed-empty">No Article specified.</div>`;
     return;

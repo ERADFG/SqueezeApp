@@ -48,6 +48,7 @@ function notifItemHtml(n) {
 
 async function loadNotifications() {
   const root = document.getElementById('notif-root');
+  root.innerHTML = skeletonFeedHtml();
   const { data: { session } } = await sb.auth.getSession();
 
   if (!session) {

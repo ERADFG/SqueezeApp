@@ -3,6 +3,7 @@
 // ─────────────────────────────────────────────────────────────
 async function loadBookmarks() {
   const feedEl = document.getElementById('feed-posts');
+  feedEl.innerHTML = skeletonFeedHtml();
   const { data: { session } } = await sb.auth.getSession();
 
   if (!session) {

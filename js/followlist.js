@@ -54,7 +54,7 @@ function flRowHtml(profile, viewerId) {
 async function flLoadList() {
   const root = document.getElementById('followlist-root');
   if (!flProfile) return;
-  root.innerHTML = `<span class="spinner">Loading&hellip;</span>`;
+  root.innerHTML = skeletonFeedHtml(3);
 
   const col = flTab === 'followers' ? 'followee_id' : 'follower_id';
   const wantCol = flTab === 'followers' ? 'follower_id' : 'followee_id';

@@ -280,6 +280,15 @@ grant execute on function public.admin_delete_article(uuid) to authenticated;
 -- the browser — they run as SECURITY DEFINER and re-check is_admin()
 -- themselves, same as every other function on this page.
 
+-- Defensive drop: if report_community.sql has already been run on
+-- this project, admin_list_reports() currently has extra
+-- community_id/name/slug OUT columns — CREATE OR REPLACE can't
+-- change a function's return row shape, only DROP + CREATE can, so
+-- this always drops first regardless of which shape currently
+-- exists. Re-run report_community.sql after this file if you need
+-- those columns back.
+drop function if exists public.admin_list_reports(text);
+
 create or replace function public.admin_list_reports(status_filter text default 'open')
 returns table (
   id                     uuid,

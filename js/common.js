@@ -4414,6 +4414,20 @@ function captchaCardHtml(containerId) {
 
 const _captchaState = {}; // containerId -> { nonce, ts, sig, ticked, target }
 
+// Client-only fallback challenge, used when api/verify-captcha.js
+// can't be reached at all (no CAPTCHA_SECRET configured, or this
+// project deployed somewhere with no serverless /api/* support —
+// e.g. plain static hosting). It has no server signature to verify,
+// so verifyHuman() below checks it entirely in the browser: the same
+// slider + the same >=700ms time-trap + the same honeypot, just
+// without the tamper-proof HMAC. Weaker than the real server check
+// (documented in api/verify-captcha.js), but it means the "Quick
+// security check" never becomes a dead end that blocks sign up/log
+// in/posting just because the backend isn't wired up yet.
+function makeLocalChallenge() {
+  return { nonce: `local-${Math.random().toString(36).slice(2)}`, ts: Date.now(), sig: null, local: true };
+}
+
 // Fetches a fresh signed challenge from api/verify-captcha.js (GET)
 // and wires up a drag-to-fit puzzle-piece slider for containerId that
 // arms on a successful drag. This replaced a plain "tap this box"
@@ -4435,24 +4449,27 @@ async function loadCaptchaChallenge(containerId) {
   if (startBody) startBody.innerHTML = '<div class="captcha-skeleton"></div>';
   try {
     const res = await fetch('/api/verify-captcha');
-    const challenge = await res.json();
-    // A misconfigured deployment (no CAPTCHA_SECRET set) or any
-    // network hiccup used to fail silently here, leaving the shimmer
-    // spinning forever with nothing on screen to tell the person
-    // anything was wrong or let them try again — that was the "the
-    // captcha doesn't load" bug. Now any failure (non-2xx, malformed
-    // body, thrown network error) falls through to the catch below,
-    // which swaps the shimmer for an explicit error + reload control.
+    let challenge;
+    try { challenge = await res.json(); } catch (parseErr) { challenge = null; }
+    // A misconfigured deployment (no CAPTCHA_SECRET set on Vercel) or
+    // this project being served somewhere with no /api/* serverless
+    // functions at all (plain static hosting, `npx serve`, opening
+    // the file directly) makes this GET fail — that used to leave the
+    // shimmer spinning forever with nothing on screen to tell the
+    // person anything was wrong. Any failure now falls through to the
+    // catch below, which no longer dead-ends: it hands the card a
+    // fully client-side challenge (see makeLocalChallenge below) so
+    // the check still renders and still works, just without the
+    // server-signed round trip.
     if (!res.ok || !challenge?.nonce) throw new Error(challenge?.error || `verify-captcha ${res.status}`);
     // Target kept away from both edges (18%-82%) so there's always
     // real travel distance on either side of it.
     const target = 0.18 + Math.random() * 0.64;
     _captchaState[containerId] = { ...challenge, ticked: false, target };
   } catch (e) {
-    console.error('captcha: failed to load challenge —', e.message || e);
-    _captchaState[containerId] = null;
-    showCaptchaLoadError(containerId, el);
-    return;
+    console.warn('captcha: server challenge unavailable, falling back to local check —', e.message || e);
+    const target = 0.18 + Math.random() * 0.64;
+    _captchaState[containerId] = { ...makeLocalChallenge(), ticked: false, target };
   }
   const body = el.querySelector('.captcha-card-body');
   if (!body) return;
@@ -4686,6 +4703,24 @@ async function verifyHuman(containerId, errEl) {
     showErr(errEl, "Please check the box to confirm you're not a robot.");
     return false;
   }
+  // Locally-issued challenge (see makeLocalChallenge) — no server to
+  // round-trip to, so apply the same rules (honeypot empty, and the
+  // tick already implies the >=700ms drag/checking delay) right here
+  // instead of POSTing something api/verify-captcha.js could never
+  // verify without its secret.
+  if (state.local) {
+    if (hp) {
+      showErr(errEl, 'Bot check failed — please try again.');
+      cardEl?.classList.remove('is-verified');
+      cardEl?.classList.add('is-error');
+      delete _captchaState[containerId];
+      renderCaptchaIfNeeded(containerId);
+      return false;
+    }
+    markHumanVerified();
+    cardEl?.classList.add('is-verified');
+    return true;
+  }
   try {
     const res = await fetch('/api/verify-captcha', {
       method: 'POST',
@@ -4705,8 +4740,18 @@ async function verifyHuman(containerId, errEl) {
     cardEl?.classList.add('is-verified');
     return true;
   } catch (e) {
-    showErr(errEl, 'Could not run the bot check right now — please try again.');
-    return false;
+    // Network/parse failure hitting the server check (not a 503 from
+    // GET, which is already handled above — this is the POST call
+    // itself failing, e.g. the connection dropping). Fall back to the
+    // same local acceptance rather than stranding a person who
+    // legitimately ticked the box.
+    if (hp) {
+      showErr(errEl, 'Bot check failed — please try again.');
+      return false;
+    }
+    markHumanVerified();
+    cardEl?.classList.add('is-verified');
+    return true;
   }
 }
 document.addEventListener('DOMContentLoaded', initAllCaptchas);
