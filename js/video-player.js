@@ -30,7 +30,7 @@ function ttvHtml(url, opts = {}) {
   const postAttr = opts.postId ? ` data-post-id="${esc(opts.postId)}"` : '';
   return `
 <div class="ttv${cls}" tabindex="0"${postAttr}>
-  <video class="ttv-video" src="${esc(url)}" data-src="${esc(url)}" preload="metadata" playsinline webkit-playsinline disablepictureinpicture disableremoteplayback controlslist="nofullscreen noremoteplayback nodownload noplaybackrate" x-webkit-airplay="deny" ${extraAttrs}></video>
+  <video class="ttv-video" src="${esc(url)}" data-src="${esc(url)}" preload="metadata" playsinline webkit-playsinline disableremoteplayback controlslist="nofullscreen noremoteplayback nodownload noplaybackrate" x-webkit-airplay="deny" ${extraAttrs}></video>
   <div class="ttv-overlay">
     <div class="ttv-spinner" hidden></div>
     <button type="button" class="ttv-big-play" aria-label="Play">${TTV_ICON.playBig}</button>
@@ -184,10 +184,43 @@ function ttvToggleFullscreen(root) {
   if (document.fullscreenElement === root) document.exitFullscreen?.();
   else root.requestFullscreen?.().catch(() => {});
 }
+// Pulls the same handle/caption/avatar a Shorts-mode player reads off
+// the real post card (see ttvShortsSync below) — used to label the
+// floating PiP window so it's not just a bare, anonymous video.
+function ttvPostMetaFor(root) {
+  const pc = root.closest('.pc, .op-detail, .rc');
+  if (!pc) return null;
+  const handleEl = pc.querySelector('.pc-handle');
+  const bodyEl = pc.querySelector('.pb, .op-detail-body');
+  const avatarImg = pc.querySelector('.pc-avatar-lnk img');
+  return {
+    handle: handleEl?.textContent || '',
+    caption: bodyEl?.textContent || '',
+    avatar: avatarImg?.getAttribute('src') || ''
+  };
+}
+
 function ttvTogglePiP(root) {
   const v = ttvVideo(root);
-  if (document.pictureInPictureElement) document.exitPictureInPicture?.().catch(() => {});
-  else v.requestPictureInPicture?.().catch(() => {});
+  if (document.pictureInPictureElement) { document.exitPictureInPicture?.().catch(() => {}); return; }
+  // Desktop Chrome renders MediaSession title/artist right on the
+  // floating PiP window's chrome — that's the only place a username +
+  // description actually has room to show once the video pops out to
+  // the side, so this is desktop-only; phone/tablet PiP overlays don't
+  // have (or reliably honor) that space.
+  if (window.matchMedia('(min-width:701px)').matches && 'mediaSession' in navigator) {
+    const meta = ttvPostMetaFor(root);
+    if (meta) {
+      try {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: meta.handle,
+          artist: meta.caption,
+          artwork: meta.avatar ? [{ src: meta.avatar, sizes: '256x256', type: 'image/png' }] : []
+        });
+      } catch {}
+    }
+  }
+  v.requestPictureInPicture?.().catch(() => {});
 }
 
 // ── document-level click delegation ──
@@ -345,20 +378,22 @@ document.addEventListener('loadedmetadata', (e) => {
   ttvUpdateVolIcon(root);
 }, true);
 
-// Belt-and-suspenders against the browser's own floating PiP/expand
-// bubble (some Chromium-based mobile browsers, Samsung Internet in
-// particular, inject their own round overlay buttons on top of an
-// HTML5 <video> once it starts playing — separate from and on top of
-// our custom .ttv-rail controls). The `disablepictureinpicture`
-// attribute set in ttvHtml() above covers most cases, but setting the
-// IDL property directly here catches browsers that only respect it
-// post-load rather than as a static attribute.
+// Belt-and-suspenders against the browser's own floating remote-
+// playback bubble (some Chromium-based mobile browsers, Samsung
+// Internet in particular, inject their own round overlay buttons on
+// top of an HTML5 <video> once it starts playing — separate from and
+// on top of our custom .ttv-rail controls). This used to also set
+// disablePictureInPicture=true here, which — on top of the
+// `disablepictureinpicture` attribute already in ttvHtml() — was
+// what made the .ttv-pip button's requestPictureInPicture() call
+// silently fail every time (both are removed now so the button
+// actually works).
 new MutationObserver((mutations) => {
   for (const m of mutations) {
     m.addedNodes.forEach(node => {
       if (node.nodeType !== 1) return;
       const vids = node.matches?.('.ttv-video') ? [node] : Array.from(node.querySelectorAll?.('.ttv-video') || []);
-      vids.forEach(v => { try { v.disablePictureInPicture = true; v.disableRemotePlayback = true; } catch {} });
+      vids.forEach(v => { try { v.disableRemotePlayback = true; } catch {} });
     });
   }
 }).observe(document.body, { childList: true, subtree: true });
