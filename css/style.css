@@ -2188,17 +2188,18 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
 #ptr-indicator.ptr-dragging { transition:opacity .22s ease; }
 #ptr-indicator.ptr-visible { opacity:1; }
 .ptr-spinner {
-  width:24px; height:24px; border-radius:50%; flex:none; margin:10px 0;
-  background:conic-gradient(from 0deg, var(--maroon), rgba(255,255,255,0) 78%);
-  -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
-          mask:radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+  width:24px; height:24px; flex:none; margin:10px 0;
   transform:rotate(var(--ptr-rot, 0deg));
 }
+.ptr-spinner svg { display:block; width:100%; height:100%; }
+/* Light-gray full ring "track" underneath, a shorter rounded-cap blue
+   arc on top — the angle you see while dragging is literally the
+   handle rotating (--ptr-rot, set live in onTouchMove), then once the
+   pull commits it switches to a continuous spin below. */
+.ptr-track { fill:none; stroke:var(--line); stroke-width:7; }
+.ptr-arc   { fill:none; stroke:var(--maroon); stroke-width:7; stroke-linecap:round; stroke-dasharray:26 200; transform-origin:25px 25px; transform:rotate(-90deg); }
 #ptr-indicator.ptr-loading .ptr-spinner { animation:ptr-spin .8s cubic-bezier(.5,0,.5,1) infinite; }
 @keyframes ptr-spin { to { transform:rotate(360deg); } }
-html[data-theme="dim"] .ptr-spinner, html[data-theme="dark"] .ptr-spinner {
-  background:conic-gradient(from 0deg, var(--maroon), rgba(0,0,0,0) 78%);
-}
 
 /* ── SKELETON LOADERS — shown the instant a page/feed starts loading,
    swapped for real cards the moment data arrives. Reads as "already
@@ -2842,6 +2843,33 @@ html[data-theme="dim"] .ptr-spinner, html[data-theme="dark"] .ptr-spinner {
 .captcha-card.is-verified .captcha-card-title { color:var(--green); }
 .captcha-card.is-verified .captcha-card-sub { font-size:0; }
 .captcha-card.is-verified .captcha-card-sub::after { content:"You're verified — you're all set."; font-size:11.5px; }
+/* Shown in place of the shimmer when the challenge fails to load
+   (misconfigured server, network hiccup, etc.) — see
+   showCaptchaLoadError() in common.js. */
+.captcha-load-err {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:12px; padding:22px 12px 20px; text-align:center;
+}
+.captcha-load-err-text { font-size:13px; color:var(--muted); }
+.captcha-reload-btn {
+  display:flex; align-items:center; justify-content:center;
+  width:44px; height:44px; padding:0; border:none; background:transparent; cursor:pointer;
+  border-radius:50%; transition:background-color .15s ease, transform .15s ease;
+}
+.captcha-reload-btn:hover { background:var(--hover-bg); }
+.captcha-reload-btn:active { transform:scale(.92); }
+.captcha-reload-btn:disabled { cursor:default; }
+/* Always-spinning ring: light-gray full track underneath, a shorter
+   rounded-cap blue arc riding on top — matches the reference loading
+   spinner exactly, rather than the old fading conic-gradient tail. */
+.captcha-reload-spinner {
+  width:34px; height:34px; display:block;
+  animation:captcha-reload-spin .9s linear infinite;
+}
+.crs-track { fill:none; stroke:var(--line); stroke-width:7; }
+.crs-arc   { fill:none; stroke:var(--maroon); stroke-width:7; stroke-linecap:round; stroke-dasharray:26 200; transform-origin:25px 25px; transform:rotate(-90deg); }
+@keyframes captcha-reload-spin { to { transform:rotate(360deg); } }
+
 .captcha-skeleton {
   width:100%; max-width:300px; height:65px; border-radius:var(--r-sm);
   background:linear-gradient(90deg, var(--line) 25%, var(--hover-bg) 50%, var(--line) 75%);

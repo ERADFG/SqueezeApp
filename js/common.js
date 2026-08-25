@@ -628,6 +628,9 @@ const NAV_ICON = {
   user:     '<svg viewBox="0 0 24 24"><circle cx="12" cy="8.2" r="3.75"/><path d="M4.5 19.6c1.1-4.15 3.9-6.15 7.5-6.15s6.4 2 7.5 6.15"/></svg>',
   gear:     '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.15"/><path d="M8.55 6.02 9.16 3.25h5.68l.61 2.77 2.71-.86L21 10.09 18.9 12l2.1 1.91-2.84 4.93-2.71-.86-.61 2.77H9.16l-.61-2.77-2.71.86L3 13.91 5.1 12 3 10.09l2.84-4.93 2.71.86Z"/></svg>',
   doc:      '<svg viewBox="0 0 24 24"><path d="M6.5 3.5h8l4.5 4.5v11.5a1 1 0 0 1-1 1h-11.5a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z"/><path d="M14.5 3.5V8h4.5"/><path d="M8.5 13h7M8.5 16.5h7"/></svg>',
+  // Open book — used for Blog so it reads distinctly from the
+  // folded-corner "doc" icon shared by Rules/Terms.
+  book:     '<svg viewBox="0 0 24 24"><path d="M4 5.3c2.5-1.05 5.15-1.05 8 .3v13c-2.85-1.35-5.5-1.35-8-.3Z"/><path d="M20 5.3c-2.5-1.05-5.15-1.05-8 .3v13c2.85-1.35 5.5-1.35 8-.3Z"/></svg>',
   dots:     '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.8" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.8" fill="currentColor" stroke="none"/></svg>',
   people:   '<svg viewBox="0 0 24 24"><circle cx="9" cy="8.3" r="3.3"/><path d="M2.8 20c.9-3.7 3.2-5.6 6.2-5.6s5.3 1.9 6.2 5.6"/><path d="M15.6 5.3a3.2 3.2 0 0 1 0 6.1"/><path d="M16.2 14.8c2.4.5 4.1 2.2 4.9 5.2"/></svg>',
   list:     '<svg viewBox="0 0 24 24"><rect x="4" y="5.5" width="3" height="3" rx="0.8"/><rect x="4" y="10.5" width="3" height="3" rx="0.8"/><rect x="4" y="15.5" width="3" height="3" rx="0.8"/><path d="M10 7h10M10 12h10M10 17h10"/></svg>',
@@ -747,7 +750,12 @@ updateFavicon(getTheme());
     if (!feed || !feed.parentNode) return null;
     indicator = document.createElement('div');
     indicator.id = 'ptr-indicator';
-    indicator.innerHTML = '<span class="ptr-spinner"></span>';
+    indicator.innerHTML = `<span class="ptr-spinner">
+      <svg viewBox="0 0 50 50" aria-hidden="true">
+        <circle class="ptr-track" cx="25" cy="25" r="18"></circle>
+        <circle class="ptr-arc" cx="25" cy="25" r="18"></circle>
+      </svg>
+    </span>`;
     feed.parentNode.insertBefore(indicator, feed);
     return indicator;
   }
@@ -861,7 +869,11 @@ let unreadChatCount = 0;
 // filename. Checked in order; first match wins.
 function currentNavKey() {
   const path = location.pathname.replace(/\/+$/, '') || '/';
-  if (path === '/' || path === '/home' || path.endsWith('/index.html')) return 'home';
+  // Order matters: more specific section checks (blog, help, rules, ...)
+  // must run before the generic home check below, since every one of
+  // those sections also has its own index.html — a bare
+  // `path.endsWith('/index.html')` would match all of them and mark
+  // "Home" as current no matter which section you're actually on.
   if (path === '/search' || path.endsWith('/search.html')) return 'search';
   if (path === '/notifications' || path.endsWith('/notifications.html')) return 'notifications';
   if (path === '/messages' || path.startsWith('/messages/') || path.endsWith('/chat.html')) return 'messages';
@@ -875,9 +887,10 @@ function currentNavKey() {
   if (path === '/contact' || path.endsWith('/contact.html')) return 'contact';
   if (path === '/privacy' || path.endsWith('/privacy.html')) return 'privacy';
   if (path === '/terms' || path.endsWith('/terms.html')) return 'terms';
+  if (path === '/blog' || path.startsWith('/blog/')) return 'blog';
   if (path === '/help' || path.startsWith('/help/')) return 'help';
-  if (path === '/blog' || path.startsWith('/blog/') || path.endsWith('/blog/index.html')) return 'blog';
   if (currentSession && currentProfile && path.toLowerCase() === profileUrl(currentProfile.username).toLowerCase()) return 'profile';
+  if (path === '/' || path === '/home' || path.endsWith('/index.html')) return 'home';
   return null;
 }
 
@@ -923,7 +936,7 @@ function renderSideNav() {
       <div class="acct-menu navmore-menu" id="more-menu">
         ${moreItem('/settings', NAV_ICON.gear, t('nav.settings'))}
         ${moreItem(`${lp}/articles`, NAV_ICON.article, t('nav.articles'))}
-        ${moreItem('/blog/index.html', NAV_ICON.doc, 'Blog')}
+        ${moreItem('/blog/index.html', NAV_ICON.book, 'Blog')}
         ${moreItem(`${lp}/rules`, NAV_ICON.doc, t('nav.rules'))}
         ${moreItem(`${lp}/about`, NAV_ICON.info, t('nav.about'))}
         ${moreItem(`${lp}/contact`, NAV_ICON.mail, t('nav.contact'))}
@@ -4415,16 +4428,30 @@ const _captchaState = {}; // containerId -> { nonce, ts, sig, ticked, target }
 async function loadCaptchaChallenge(containerId) {
   const el = document.getElementById(containerId);
   if (!el) return;
+  // Always start from the shimmer, even on a retry — otherwise a
+  // second attempt launched from the reload button would jump
+  // straight from the error state to the slider with no loading cue.
+  const startBody = el.querySelector('.captcha-card-body');
+  if (startBody) startBody.innerHTML = '<div class="captcha-skeleton"></div>';
   try {
     const res = await fetch('/api/verify-captcha');
     const challenge = await res.json();
-    if (!challenge?.nonce) throw new Error('bad challenge');
+    // A misconfigured deployment (no CAPTCHA_SECRET set) or any
+    // network hiccup used to fail silently here, leaving the shimmer
+    // spinning forever with nothing on screen to tell the person
+    // anything was wrong or let them try again — that was the "the
+    // captcha doesn't load" bug. Now any failure (non-2xx, malformed
+    // body, thrown network error) falls through to the catch below,
+    // which swaps the shimmer for an explicit error + reload control.
+    if (!res.ok || !challenge?.nonce) throw new Error(challenge?.error || `verify-captcha ${res.status}`);
     // Target kept away from both edges (18%-82%) so there's always
     // real travel distance on either side of it.
     const target = 0.18 + Math.random() * 0.64;
     _captchaState[containerId] = { ...challenge, ticked: false, target };
   } catch (e) {
+    console.error('captcha: failed to load challenge —', e.message || e);
     _captchaState[containerId] = null;
+    showCaptchaLoadError(containerId, el);
     return;
   }
   const body = el.querySelector('.captcha-card-body');
@@ -4447,6 +4474,32 @@ async function loadCaptchaChallenge(containerId) {
     <input type="text" class="captcha-hp" name="url" tabindex="-1" autocomplete="off" aria-hidden="true">
   `;
   wireCaptchaSlider(containerId, el, body);
+}
+
+// Swaps the captcha card's shimmer for an explicit "couldn't load"
+// message plus a reload control, instead of the old behavior of
+// leaving the shimmer running forever with no way out. The reload
+// control itself always spins (a plain loading-ring look, not a
+// static icon) so it reads as "tap to try loading again" at a glance.
+function showCaptchaLoadError(containerId, el) {
+  const body = el.querySelector('.captcha-card-body');
+  if (!body) return;
+  body.innerHTML = `
+    <div class="captcha-load-err">
+      <span class="captcha-load-err-text">Couldn't load the security check.</span>
+      <button type="button" class="captcha-reload-btn" aria-label="Reload security check">
+        <svg class="captcha-reload-spinner" viewBox="0 0 50 50" aria-hidden="true">
+          <circle class="crs-track" cx="25" cy="25" r="18"></circle>
+          <circle class="crs-arc" cx="25" cy="25" r="18"></circle>
+        </svg>
+      </button>
+    </div>`;
+  const btn = body.querySelector('.captcha-reload-btn');
+  btn?.addEventListener('click', () => {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    loadCaptchaChallenge(containerId);
+  });
 }
 
 // Pointer + keyboard drag logic for the puzzle slider. Kept separate
