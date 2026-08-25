@@ -4266,6 +4266,12 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .ttv.ttv-shorts-active:-webkit-full-screen .ttv-shorts {
   display:block; position:absolute; inset:0; z-index:5; pointer-events:none;
 }
+/* Handle + caption gets its own visibility switch, independent of the
+   rest of .ttv-shorts (avatar/like/reply/share/save rail) — see the
+   "inline preview, desktop only" block further down, which shows
+   *just* the meta text on an ordinary feed video without ever going
+   fullscreen. */
+.ttv-shorts-meta { display:none; }
 
 /* Playback controls (mute/speed/exit-fullscreen/PiP) move to the left
    edge in shorts mode so they don't collide with the action rail,
@@ -4282,14 +4288,34 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .ttv.ttv-shorts-active:fullscreen .ttv-menu,
 .ttv.ttv-shorts-active:-webkit-full-screen .ttv-menu { left:58px; right:auto; }
 
-/* .ttv-shorts-meta (handle/caption) kept its feed-mode left:16px inset,
-   which is exactly where the playback rail lands once it moves to the
-   left edge above — the old mute/speed/exit/PiP button stack sat right
-   on top of the handle and caption text. Give it the same clearance on
-   the left that it already had on the right (84px, sized for the like/
-   reply/share/save rail) so the two don't overlap. */
+/* Handle + caption in true Shorts/fullscreen mode: bottom-anchored,
+   raised well clear of the bottom edge (device home-indicator / safe
+   area) instead of sitting flush against it. .ttv-shorts-meta kept
+   its feed-mode left:16px inset, which is exactly where the playback
+   rail lands once it moves to the left edge above — the old mute/
+   speed/exit/PiP button stack sat right on top of the handle and
+   caption text. Give it the same clearance on the left that it
+   already had on the right (84px, sized for the like/reply/share/
+   save rail) so the two don't overlap. Applies on any device, since
+   real fullscreen playback works the same on phone and desktop. */
 .ttv.ttv-shorts-active:fullscreen .ttv-shorts-meta,
-.ttv.ttv-shorts-active:-webkit-full-screen .ttv-shorts-meta { left:84px; }
+.ttv.ttv-shorts-active:-webkit-full-screen .ttv-shorts-meta {
+  display:flex; position:absolute; left:84px; right:16px; bottom:84px; top:auto;
+  flex-direction:column; gap:5px; pointer-events:auto;
+}
+
+/* Soft bottom scrim behind the handle/caption (and, on mobile, behind
+   the mute/speed/exit/PiP rail too, since it also lives at the
+   bottom-left in shorts mode) — a plain text-shadow was hard to read
+   over busy footage. Painted as ::before so it's always the first
+   thing in .ttv-shorts and sits behind the real (auto-pointer-events)
+   children without needing z-index bookkeeping. */
+.ttv.ttv-shorts-active:fullscreen .ttv-shorts::before,
+.ttv.ttv-shorts-active:-webkit-full-screen .ttv-shorts::before {
+  content:''; position:absolute; left:0; right:0; bottom:0; height:38%;
+  background:linear-gradient(to top, rgba(0,0,0,.65), rgba(0,0,0,0));
+  pointer-events:none;
+}
 
 .ttv-shorts-rail {
   position:absolute; right:14px; bottom:140px;
@@ -4316,18 +4342,37 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .ttv-shorts-bookmark.active svg { fill:#fff; }
 .ttv-shorts-share svg { fill:#fff; stroke:none; }
 
-.ttv-shorts-meta {
-  position:absolute; left:16px; right:84px; bottom:60px;
-  pointer-events:auto;
-}
 .ttv-shorts-handle {
-  display:block; color:#fff; font-weight:700; font-size:14px;
-  text-decoration:none; margin-bottom:6px; text-shadow:0 1px 3px rgba(0,0,0,.5);
+  display:block; color:#fff; font-weight:700; font-size:14.5px;
+  text-decoration:none; text-shadow:0 1px 3px rgba(0,0,0,.6);
 }
 .ttv-shorts-caption {
-  margin:0; color:#f2f2f2; font-size:13px; line-height:1.4;
-  text-shadow:0 1px 3px rgba(0,0,0,.5);
-  display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;
+  margin:0; color:#f2f2f2; font-size:13.5px; line-height:1.4;
+  text-shadow:0 1px 3px rgba(0,0,0,.6);
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+}
+
+/* INLINE PREVIEW, DESKTOP ONLY — the handle + post text now also show
+   directly on an ordinary (not fullscreened) feed video, pinned to
+   the TOP of the video instead of the bottom, so they never collide
+   with the tweet's own reply/repost/like/view row sitting right under
+   the video. Requires post context (data-post-id) and is skipped
+   entirely once the player is actually fullscreened, since that's
+   the Shorts-mode rule above's job. Desktop only — on a phone the
+   video stays exactly as plain as it always was. */
+@media (min-width:701px) {
+  .ttv[data-post-id]:not(:fullscreen):not(:-webkit-full-screen) .ttv-shorts {
+    display:block; position:absolute; inset:0; z-index:2; pointer-events:none;
+  }
+  .ttv[data-post-id]:not(:fullscreen):not(:-webkit-full-screen) .ttv-shorts-meta {
+    display:flex; position:absolute; left:14px; right:14px; top:12px; bottom:auto;
+    flex-direction:column; gap:4px; pointer-events:auto;
+  }
+  .ttv[data-post-id]:not(:fullscreen):not(:-webkit-full-screen) .ttv-shorts::before {
+    content:''; position:absolute; left:0; right:0; top:0; height:34%;
+    background:linear-gradient(to bottom, rgba(0,0,0,.6), rgba(0,0,0,0));
+    pointer-events:none;
+  }
 }
 
 /* ── CROP MODAL — shared "Edit media" step (crop-modal.js) used
