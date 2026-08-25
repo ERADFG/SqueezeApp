@@ -388,30 +388,15 @@ document.addEventListener('loadedmetadata', (e) => {
 // what made the .ttv-pip button's requestPictureInPicture() call
 // silently fail every time (both are removed now so the button
 // actually works).
-//
-// Also fills in the handle/caption text for the desktop inline
-// preview overlay (see the "INLINE PREVIEW, DESKTOP ONLY" CSS block)
-// on every video-bearing post as it's added to the page — that
-// overlay needs real text the moment the card mounts, not just once
-// someone fullscreens it into Shorts mode.
-function ttvSyncInlineMeta(root) {
-  if (!root.dataset.postId) return;
-  const pc = root.closest('.pc, .op-detail, .rc');
-  if (pc) ttvSyncHandleCaption(root, pc);
-}
 new MutationObserver((mutations) => {
   for (const m of mutations) {
     m.addedNodes.forEach(node => {
       if (node.nodeType !== 1) return;
       const vids = node.matches?.('.ttv-video') ? [node] : Array.from(node.querySelectorAll?.('.ttv-video') || []);
       vids.forEach(v => { try { v.disableRemotePlayback = true; } catch {} });
-      const roots = node.matches?.('.ttv') ? [node] : Array.from(node.querySelectorAll?.('.ttv') || []);
-      roots.forEach(ttvSyncInlineMeta);
     });
   }
 }).observe(document.body, { childList: true, subtree: true });
-// Initial pass for players already in the DOM before this script ran.
-document.querySelectorAll('.ttv').forEach(ttvSyncInlineMeta);
 document.addEventListener('volumechange', (e) => {
   if (!e.target.classList?.contains('ttv-video')) return;
   ttvUpdateVolIcon(ttvRoot(e.target));
