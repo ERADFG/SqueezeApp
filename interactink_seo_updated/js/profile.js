@@ -5,14 +5,33 @@
 // (editprofile.html). Followers/following lists live on their own
 // page (followlist.html).
 // ─────────────────────────────────────────────────────────────
-const viewUsername = currentProfileUsername();
+// NOT computed once at module scope on purpose — pjax keeps this
+// script loaded for the lifetime of the tab, so a second (or third)
+// visit to a *different* /<username> page re-fires DOMContentLoaded
+// without profile.js ever being re-parsed. A top-level
+// `const viewUsername = currentProfileUsername()` would freeze on
+// whichever profile was open the first time this file loaded and
+// never notice the URL changed underneath it. Recomputed fresh on
+// every loadProfile() call instead.
 let viewedProfile = null;
 let isOwnProfile = false;
 
 const POST_SELECT = '*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)';
 
 async function loadProfile() {
+  // Guard against pjax's synthetic DOMContentLoaded: that event
+  // re-fires on every navigation for as long as the tab is open, and
+  // every page bundle that ever loaded stays listening for it. If
+  // the user has since pjax'd away to a page that isn't this one
+  // (home, bookmarks, ...), bail out instead of writing into a
+  // #profile-root that no longer exists there (or, worse, DOES exist
+  // because it's a stale leftover, and gets stomped by the wrong
+  // profile's data).
+  if (document.body.dataset.page !== 'profile') return;
+
+  const viewUsername = currentProfileUsername();
   const root = document.getElementById('profile-root');
+  if (!root) return;
   if (!viewUsername) {
     root.innerHTML = `<div class="errmsg">No user specified.</div>`;
     return;
@@ -51,6 +70,30 @@ async function loadProfile() {
       <div class="susp-notice">
         <h1>Account suspended</h1>
         <p>InteractInk suspends accounts which violate the <a href="rules.html">Rules</a>.</p>
+      </div>`;
+    return;
+  }
+
+  // BLOCKED (by the viewer) — same treatment as X: instead of their
+  // timeline, show a dedicated "you've blocked this account" panel
+  // with nothing but an Unblock action. No bio, stats, tabs, message
+  // button, or posts underneath it — those only come back once
+  // they're unblocked (see profileMenuBlock() below, which just
+  // re-runs loadProfile() after a successful block/unblock so this
+  // view and the normal one never drift out of sync).
+  const blockedByMe = !isOwnProfile && session ? await isBlocked(profile.id) : false;
+  if (blockedByMe) {
+    setPageDescription(`@${profile.username} is blocked.`);
+    setCanonical(prettyProfileUrl(profile.username));
+    root.innerHTML = `
+      <div class="sec-bar" id="blocked-hdr">
+        <a class="ep-back" href="index.html" aria-label="Back" onclick="if(history.length>1){history.back();return false;}">${ICON_BACK}</a>
+        <div><b>${esc(profile.display_name || profile.username)}</b><div class="handle" style="font-size:13px;">@${esc(profile.username)}</div></div>
+      </div>
+      <div class="susp-notice">
+        <h1>@${esc(profile.username)} is blocked</h1>
+        <p>You won't see their posts, and they can't follow or message you. Unblocking will follow them again.</p>
+        <button class="follow-btn" id="unblock-btn" onclick="profileMenuBlock(event, '${profile.id}', '${u_(profile.username)}')" style="margin-top:12px;">Unblock @${esc(profile.username)}</button>
       </div>`;
     return;
   }
@@ -150,7 +193,9 @@ async function loadProfile() {
     isFollowing(profile.id).then(f => setFollowBtnState(f));
     loadFollowedBy(profile.id);
     isMuted(profile.id).then(m => { const b = document.getElementById('pm-mute-btn'); if (b && m) b.textContent = 'Unmute'; });
-    isBlocked(profile.id).then(b => { const btn = document.getElementById('pm-block-btn'); if (btn && b) btn.textContent = `Unblock @${profile.username}`; });
+    // (no isBlocked() check needed here — we already returned above
+    // into the dedicated blocked-view if blockedByMe was true, so by
+    // this point it's always false and the menu button stays "Block")
   }
 
   // profiles.posts_count only tracks top-level posts (see the comment
@@ -194,13 +239,19 @@ function truncateLabel(str, maxLen = 26) {
 // a (visible) member of. Share/Copy/Mute/Block/Report are also
 // fully wired.
 function profileMenuItemsHtml(profile) {
+  // @marpe can't be blocked by anyone (see isProtectedFollowUsername()
+  // in common.js, and the matching DB-side guard in
+  // supabase/profile_extras.sql) — the option is simply not offered
+  // here, same treatment as the locked Unfollow button elsewhere.
+  const blockItem = isProtectedFollowUsername(profile.username) ? '' :
+    `<button id="pm-block-btn" class="pc-menu-danger" onclick="profileMenuBlock(event, '${profile.id}', '${u_(profile.username)}')">Block @${esc(profile.username)}</button>`;
   return `
     <button onclick="openAddToListModal(event, '${profile.id}', '${u_(profile.username)}')">Add/remove from Lists</button>
     <a href="${profileListsUrl(profile.username)}" onclick="closeProfileMenu(event)">View Lists</a>
     <button onclick="profileMenuShare(event, '${u_(profile.username)}')">Share @${esc(profile.username)} via&hellip;</button>
     <button onclick="profileMenuCopyLink(event, '${u_(profile.username)}')">Copy link to profile</button>
     <button id="pm-mute-btn" onclick="profileMenuMute(event, '${profile.id}')">Mute</button>
-    <button id="pm-block-btn" class="pc-menu-danger" onclick="profileMenuBlock(event, '${profile.id}', '${u_(profile.username)}')">Block @${esc(profile.username)}</button>
+    ${blockItem}
     <button onclick="profileMenuReport(event, '${profile.id}')">Report @${esc(profile.username)}</button>`;
 }
 
@@ -250,9 +301,21 @@ async function profileMenuMute(ev, userId) {
 async function profileMenuBlock(ev, userId, username) {
   closeProfileMenu(ev);
   if (!requireLogin()) return;
-  const btn = document.getElementById('pm-block-btn');
   const uname = decodeURIComponent(username);
-  const currentlyBlocked = btn && btn.textContent.startsWith('Unblock');
+  // Belt-and-suspenders — the menu item is already hidden on @marpe's
+  // profile (see profileMenuItemsHtml()), and the DB trigger in
+  // supabase/profile_extras.sql rejects it too, but this catches the
+  // dedicated "Unblock" button case with a clean message instead of
+  // a raw error toast.
+  if (isProtectedFollowUsername(uname)) { toast(`You can't block @${uname}.`, 'error'); return; }
+
+  // Two different buttons can call this: the dropdown menu's
+  // "Block @x" item (id pm-block-btn, not shown once blocked) and
+  // the dedicated blocked-view's "Unblock @x" button (id
+  // unblock-btn, only ever rendered when we're already blocking
+  // them — see loadProfile() above). Whichever is present tells us
+  // which state we're in.
+  const currentlyBlocked = !!document.getElementById('unblock-btn');
   if (!currentlyBlocked) {
     const ok = await ocConfirm({
       title: `Block @${uname}?`,
@@ -265,14 +328,16 @@ async function profileMenuBlock(ev, userId, username) {
   try {
     if (currentlyBlocked) {
       await unblockUser(userId);
-      if (btn) btn.textContent = `Block @${uname}`;
-      toast(`Unblocked @${uname}.`);
+      toast(`Unblocked @${uname}. You're following them again.`);
     } else {
       await blockUser(userId);
-      if (btn) btn.textContent = `Unblock @${uname}`;
-      setFollowBtnState(false);
       toast(`Blocked @${uname}.`);
     }
+    // Re-render the whole profile: this is what swaps between the
+    // normal view and the dedicated blocked-view panel, and also
+    // picks up the follow-state flip the block/unblock trigger in
+    // supabase/profile_extras.sql just made server-side.
+    loadProfile();
   } catch (e) { toast(e.message || 'Could not update block status.', 'error'); }
 }
 

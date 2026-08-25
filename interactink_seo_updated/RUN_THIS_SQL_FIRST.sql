@@ -921,3 +921,97 @@ grant execute on function public.admin_unsuspend_user(uuid)                  to 
 notify pgrst, 'reload schema';
 
 
+
+-- ───────────────────────────────────────────────────────────────
+-- FROM: supabase/profile_extras.sql (NEW — block ⇄ follow sync)
+-- ───────────────────────────────────────────────────────────────
+-- Blocking someone now actually unfollows both directions (this was
+-- previously only described in a js/common.js comment, never
+-- shipped as a real trigger); unblocking re-follows them; and nobody
+-- can block @marpe. See supabase/profile_extras.sql for the full
+-- explanation.
+  primary key (blocker_id, blocked_id)
+);
+
+alter table public.blocks enable row level security;
+
+-- Wipe and rebuild policies on `blocks`, same reasoning as
+-- likes_full_fix.sql: dropping every existing policy by name (rather
+-- than assuming what it's called) means this can't silently leave a
+-- stale, differently-named policy blocking reads/writes underneath
+-- the ones added here.
+do $$
+declare pol record;
+begin
+  for pol in
+    select policyname from pg_policies
+    where schemaname = 'public' and tablename = 'blocks'
+  loop
+    execute format('drop policy %I on public.blocks', pol.policyname);
+  end loop;
+end $$;
+
+-- You can only see/manage blocks you created — the person on the
+-- other end never gets to query this table to find out you blocked
+-- them (same as Twitter: they just experience the effects of it).
+create policy "blocks_select_own" on public.blocks
+  for select using (auth.uid() = blocker_id);
+create policy "blocks_insert_own" on public.blocks
+  for insert with check (auth.uid() = blocker_id and blocker_id <> blocked_id);
+create policy "blocks_delete_own" on public.blocks
+  for delete using (auth.uid() = blocker_id);
+
+-- ── 1 & 3: on block, reject @marpe and drop any existing follow
+-- either direction ──
+create or replace function public.handle_block_insert()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if exists (
+    select 1 from public.profiles
+    where id = new.blocked_id and lower(username) = 'marpe'
+  ) then
+    raise exception 'You can''t block @marpe.';
+  end if;
+
+  delete from public.follows
+  where (follower_id = new.blocker_id and followee_id = new.blocked_id)
+     or (follower_id = new.blocked_id and followee_id = new.blocker_id);
+
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_block_insert on public.blocks;
+create trigger trg_block_insert
+  before insert on public.blocks
+  for each row execute function public.handle_block_insert();
+
+-- ── 2: on unblock, the blocker follows the blocked user again ──
+create or replace function public.handle_block_delete()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.follows (follower_id, followee_id)
+  values (old.blocker_id, old.blocked_id)
+  on conflict do nothing;
+  return old;
+end;
+$$;
+
+drop trigger if exists trg_block_delete on public.blocks;
+create trigger trg_block_delete
+  after delete on public.blocks
+  for each row execute function public.handle_block_delete();
+
+-- Retroactive cleanup: if any block row already exists against
+-- @marpe from before this guard existed, remove it now rather than
+-- leaving it in place until someone happens to unblock/reblock.
+delete from public.blocks
+where blocked_id in (select id from public.profiles where lower(username) = 'marpe');

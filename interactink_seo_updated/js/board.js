@@ -581,6 +581,15 @@ function subscribeRealtime() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // Guard against pjax's synthetic DOMContentLoaded: it re-fires on
+  // every navigation for as long as the tab stays open, and this
+  // listener — added once, the first time the home page loaded —
+  // never goes away. Without this check, pjax'ing to any other page
+  // (bookmarks, a profile, ...) that happens to reuse the
+  // #feed-posts id re-triggers loadFeed() here too, and whichever of
+  // the two loaders finishes last silently overwrites the other's
+  // content — e.g. the bookmarks page ends up showing the home feed.
+  if (document.body.dataset.page !== 'home') return;
   await authReady; // see auth.js — otherwise cards can render before we know who's logged in
   positionTabIndicator(true);
   loadFeed();

@@ -217,6 +217,9 @@ async function listMenuBlockOwner(ev) {
   if (!requireLogin()) return;
   const btn = document.getElementById('list-block-btn');
   const uname = list._owner?.username || 'user';
+  // @marpe can't be blocked by anyone — see the matching guard in
+  // js/profile.js and the DB trigger in supabase/profile_extras.sql.
+  if (isProtectedFollowUsername(uname)) { toast(`You can't block @${uname}.`, 'error'); return; }
   const currentlyBlocked = btn && btn.textContent.startsWith('Unblock');
   if (!currentlyBlocked) {
     const ok = await ocConfirm({

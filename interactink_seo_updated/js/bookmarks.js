@@ -31,6 +31,12 @@ async function loadBookmarks() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // Same pjax-relisten guard as board.js/profile.js — this listener
+  // stays attached for the life of the tab once bookmarks.js has
+  // loaded once, so without this check, navigating back to any other
+  // page that reuses #feed-posts would re-run loadBookmarks() there
+  // too and stomp whatever that page just rendered.
+  if (document.body.dataset.page !== 'bookmarks') return;
   await authReady; // see auth.js — otherwise cards can render before we know who's logged in
   loadBookmarks();
 });

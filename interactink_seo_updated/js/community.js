@@ -761,6 +761,13 @@ function wireComposer() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // Same pjax-relisten guard as board.js/profile.js/bookmarks.js —
+  // this listener stays attached for the life of the tab, and
+  // community.js also renders into #feed-posts, so without this
+  // check a later pjax navigation to home/bookmarks/another
+  // community would re-run loadCommunity() on top of whatever that
+  // page just rendered.
+  if (document.body.dataset.page !== 'community') return;
   await authReady; // see auth.js — otherwise the hero/composer can render before we know who's logged in
   loadCommunity();
 });
