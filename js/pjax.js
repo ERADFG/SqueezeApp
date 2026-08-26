@@ -178,6 +178,33 @@
     document.body.style.overflow = '';
   }
 
+  // Detect whether the freshly-fetched page references a NEWER version of
+  // a script this tab already has loaded (same path, different ?v=) — i.e.
+  // a deploy went out since this tab was first opened. loadTrailingScripts()
+  // would otherwise inject that script as a brand new <script> tag, re-
+  // running its top-level `let`/`const` declarations a second time in the
+  // same JS realm — which throws "Identifier has already been declared"
+  // and silently kills the ENTIRE file rather than updating it, since
+  // shared files like auth.js/common.js declare state at the top level
+  // (let currentSession, const authReady, ...). The tab is then stuck
+  // running whichever old copy it started with, no matter how many times
+  // you click around — only a real reload (a fresh JS realm) ever picks
+  // up the fix. Detecting this up front and falling back to a real
+  // navigation avoids the broken half-updated state entirely.
+  function hasNewerScriptVersion(doc) {
+    for (const s of doc.querySelectorAll('script[src]')) {
+      let abs;
+      try { abs = new URL(s.getAttribute('src'), location.href).href; }
+      catch (e) { continue; }
+      if (loadedScripts.has(abs)) continue; // exact URL already loaded — fine
+      const path = abs.split('?')[0];
+      for (const loaded of loadedScripts) {
+        if (loaded.split('?')[0] === path) return true; // same file, different version
+      }
+    }
+    return false;
+  }
+
   async function navigate(url, { push = true, scroll = true } = {}) {
     const myToken = ++navToken;
     if (inFlightAbort) inFlightAbort.abort();
@@ -201,6 +228,9 @@
     const newShell = doc.querySelector(SHELL_SEL);
     const curShell = document.querySelector(SHELL_SEL);
     if (!newShell || !curShell) { location.href = url; return; }
+    // A new deploy went out since this tab loaded — do a real navigation
+    // instead of a soft swap (see hasNewerScriptVersion() above).
+    if (hasNewerScriptVersion(doc)) { location.href = url; return; }
 
     if (push) history.pushState({ pjax: true }, '', url);
     document.title = doc.title || document.title;
