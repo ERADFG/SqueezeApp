@@ -4292,11 +4292,11 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 }
 .ttv-progress-played {
   position:absolute; left:0; top:0; bottom:0; width:0%; border-radius:2.5px;
-  background:#fff;
+  background:var(--share);
 }
 .ttv-progress-handle {
   position:absolute; top:0; left:0%; width:11px; height:11px; border-radius:50%;
-  background:#fff; transform:translate(-50%,-50%) scale(0);
+  background:var(--share); transform:translate(-50%,-50%) scale(0);
   transition:transform .1s; box-shadow:0 0 0 1px rgba(0,0,0,.2);
 }
 .ttv-progress:hover .ttv-progress-handle, .ttv-progress.ttv-dragging .ttv-progress-handle { transform:translate(-50%,-50%) scale(1); }
@@ -4456,7 +4456,7 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
    Move it up to the top-right corner in shorts mode instead, clear
    of both rails entirely. */
 .ttv.ttv-shorts-active:fullscreen .ttv-time,
-.ttv.ttv-shorts-active:-webkit-full-screen .ttv-time { left:16px; right:auto; bottom:auto; top:16px; z-index:6; justify-content:flex-start; }
+.ttv.ttv-shorts-active:-webkit-full-screen .ttv-time { left:8px; right:auto; bottom:auto; top:16px; z-index:6; justify-content:flex-start; }
 .ttv.ttv-shorts-active:fullscreen .ttv-menu,
 .ttv.ttv-shorts-active:-webkit-full-screen .ttv-menu { left:58px; right:auto; }
 
@@ -4472,7 +4472,7 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
    real fullscreen playback works the same on phone and desktop. */
 .ttv.ttv-shorts-active:fullscreen .ttv-shorts-meta,
 .ttv.ttv-shorts-active:-webkit-full-screen .ttv-shorts-meta {
-  display:flex; position:absolute; left:84px; right:16px; bottom:84px; top:auto;
+  display:flex; position:absolute; left:84px; right:16px; bottom:13%; top:auto;
   flex-direction:column; align-items:flex-start; text-align:left; gap:8px; pointer-events:auto;
 }
 
@@ -4490,7 +4490,7 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 }
 
 .ttv-shorts-rail {
-  position:absolute; right:14px; bottom:140px;
+  position:absolute; right:14px; bottom:22%;
   display:flex; flex-direction:column; align-items:center; gap:18px;
   pointer-events:auto;
 }
@@ -4510,13 +4510,17 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 
 .ttv-shorts-like svg { transition:fill .15s, stroke .15s, transform .15s; }
 .ttv-shorts-like.active svg { fill:#fe2c55; stroke:#fe2c55; transform:scale(1.08); }
+.ttv-shorts-like:active svg { animation:oc-like-pop .45s cubic-bezier(.17,.89,.32,1.49); }
 .ttv-shorts-repost svg { transition:stroke .15s, transform .15s; }
 .ttv-shorts-repost.active svg { stroke:var(--repost); transform:scale(1.08); }
 .ttv-shorts-repost.active .ttv-shorts-count { color:var(--repost); }
+.ttv-shorts-repost:active svg { stroke:var(--repost); animation:oc-pop .28s ease; }
 .ttv-shorts-bookmark svg { transition:fill .15s, stroke .15s; }
 .ttv-shorts-bookmark.active svg { fill:var(--save); stroke:var(--save); }
 .ttv-shorts-bookmark.active .ttv-shorts-count { color:var(--save); }
-.ttv-shorts-share svg { fill:#fff; stroke:none; }
+.ttv-shorts-bookmark:active svg { animation:oc-pop .28s ease; }
+.ttv-shorts-share svg { fill:#fff; stroke:none; transition:fill .15s; }
+.ttv-shorts-share:active svg { fill:var(--share); animation:oc-pop .28s ease; }
 
 .ttv-shorts-handle {
   display:block; text-align:left; color:#fff; font-weight:700; font-size:14.5px;
