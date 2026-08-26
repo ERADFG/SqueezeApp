@@ -742,12 +742,14 @@ function ttvSyncFullscreenLayout(root) {
   const controls = root.querySelector('.ttv-controls');
   const overlay = root.querySelector('.ttv-overlay');
   const shorts = root.querySelector('.ttv-shorts');
+  const meta = shorts?.querySelector('.ttv-shorts-meta');
   if (!isFs) {
     // Back to normal layout — drop the inline override so the regular
     // (non-fullscreen) `inset:0` CSS rule takes over again.
     if (controls) controls.style.cssText = '';
     if (overlay) overlay.style.cssText = '';
     if (shorts) shorts.style.cssText = '';
+    if (meta) meta.style.cssText = '';
     return;
   }
   const video = root.querySelector('.ttv-video');
@@ -776,6 +778,22 @@ function ttvSyncFullscreenLayout(root) {
     if (controls) controls.style.cssText = css;
     if (overlay) overlay.style.cssText = css;
     if (pinShorts) shorts.style.cssText = css;
+    // Username + description: when the video doesn't reach the very
+    // bottom of the screen (object-fit:contain letterboxes below it —
+    // e.g. this clip's aspect ratio doesn't match the phone's), put
+    // the text in that empty strip under the video instead of
+    // overlaid on top of the footage. Only makes sense once there's
+    // real room for it (a couple of lines of text); a video that
+    // already reaches the bottom edge falls back to the normal
+    // bottom-left-of-frame overlay from style.css.
+    if (meta) {
+      const gapBelow = rr.bottom - vr.bottom;
+      if (gapBelow > 56) {
+        meta.style.cssText = `display:flex; position:absolute; left:${vr.left - rr.left}px; top:${vr.bottom - rr.top + 10}px; width:${vr.width}px; bottom:auto; right:auto; flex-direction:column; align-items:flex-start; text-align:left; gap:6px; pointer-events:auto;`;
+      } else {
+        meta.style.cssText = ''; // not enough room below — CSS's overlay-on-video rule takes back over
+      }
+    }
   };
   // Fullscreen resize is applied by the browser over a frame or two,
   // so measuring immediately can catch the wrapper mid-transition —

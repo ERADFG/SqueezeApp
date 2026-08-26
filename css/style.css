@@ -4488,8 +4488,15 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
   pointer-events:none;
 }
 
+/* Bottom offset matches .ttv-rail's own fullscreen bottom (24px,
+   set on the base `.ttv:fullscreen .ttv-rail` rule) — this used to be
+   a `bottom:22%` percentage instead, which on a tall fullscreen video
+   put the action rail's bottom-most icon (repost) noticeably higher
+   than the playback rail's bottom-most icon (PiP) on the opposite
+   edge, so the two vertical stacks didn't line up. Same fixed px
+   offset on both sides keeps them level. */
 .ttv-shorts-rail {
-  position:absolute; right:14px; bottom:22%;
+  position:absolute; right:14px; bottom:24px;
   display:flex; flex-direction:column; align-items:center; gap:18px;
   pointer-events:auto;
 }
