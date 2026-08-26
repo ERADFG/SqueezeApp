@@ -44,10 +44,6 @@ function ttvHtml(url, opts = {}) {
         <div class="ttv-progress-handle"></div>
       </div>
     </div>
-    <button type="button" class="ttv-btn ttv-playpause" aria-label="Play/Pause">
-      <span class="ttv-playpause-play">${TTV_ICON.play}</span>
-      <span class="ttv-playpause-pause">${TTV_ICON.pause}</span>
-    </button>
     <span class="ttv-time"><span class="ttv-remain">-0:00</span></span>
     <div class="ttv-rail">
       <button type="button" class="ttv-btn ttv-mute" aria-label="Mute">${TTV_ICON.volHigh}</button>
@@ -254,8 +250,6 @@ document.addEventListener('click', (e) => {
 
   const playBtn = e.target.closest('.ttv-big-play');
   if (playBtn) { ttvTogglePlay(ttvRoot(playBtn)); return; }
-  const playPauseBtn = e.target.closest('.ttv-playpause');
-  if (playPauseBtn) { ttvTogglePlay(ttvRoot(playPauseBtn)); return; }
   const muteBtn = e.target.closest('.ttv-mute');
   if (muteBtn) { ttvToggleMute(ttvRoot(muteBtn)); return; }
   const fsBtn = e.target.closest('.ttv-fs');
@@ -386,7 +380,31 @@ document.addEventListener('loadedmetadata', (e) => {
   const root = ttvRoot(e.target);
   ttvUpdateProgress(root);
   ttvUpdateVolIcon(root);
+  // Bottom/left-anchored controls (time readout, big play triangle)
+  // are positioned against the .ttv wrapper's own box — which, until
+  // the <video> reports real dimensions, can still be sitting at the
+  // browser's collapsed/default size. Painting them before that first
+  // real layout is what let the play button and time readout flash
+  // into a wrong corner for a frame right as a video scrolls into
+  // view; .ttv-sized (see the opacity:0 rule in style.css) keeps them
+  // hidden until there's an actual box to anchor to.
+  root.classList.add('ttv-sized');
 }, true);
+// Video elements loaded from cache (or already past HAVE_METADATA by
+// the time this listener attaches) never fire another 'loadedmetadata'
+// — catch those too so their controls aren't stuck permanently hidden.
+new MutationObserver((mutations) => {
+  for (const m of mutations) {
+    m.addedNodes.forEach(node => {
+      if (node.nodeType !== 1) return;
+      const roots = node.matches?.('.ttv') ? [node] : Array.from(node.querySelectorAll?.('.ttv') || []);
+      roots.forEach(root => {
+        const v = ttvVideo(root);
+        if (v && v.readyState >= 1) root.classList.add('ttv-sized');
+      });
+    });
+  }
+}).observe(document.body, { childList: true, subtree: true });
 
 // Belt-and-suspenders against the browser's own floating remote-
 // playback bubble (some Chromium-based mobile browsers, Samsung
@@ -687,10 +705,20 @@ document.addEventListener('click', (e) => {
     // in the real post card, outside .ttv, so it's invisible while
     // still browser-fullscreened. Exit fullscreen first, then open it
     // exactly like tapping the repost icon anywhere else in the feed.
+    //
+    // Exiting fullscreen tears down the whole shorts overlay on the
+    // same tick, so the purple :active flash on this button never
+    // actually got a chance to paint before it vanished — flash the
+    // "active" class synchronously and hold for one beat before
+    // exiting, so the tap reads as a press instead of nothing at all.
+    shortsBtn.classList.add('ttv-shorts-pressed');
     const pc = ttvShortsPc;
-    (document.exitFullscreen ? document.exitFullscreen() : Promise.resolve()).catch(() => {}).finally(() => {
-      pc?.querySelector('.act.repost')?.click();
-    });
+    setTimeout(() => {
+      shortsBtn.classList.remove('ttv-shorts-pressed');
+      (document.exitFullscreen ? document.exitFullscreen() : Promise.resolve()).catch(() => {}).finally(() => {
+        pc?.querySelector('.act.repost')?.click();
+      });
+    }, 150);
   }
   else if (shortsBtn.classList.contains('ttv-shorts-share')) ttvShortsForward(root, '.act.share');
   else if (shortsBtn.classList.contains('ttv-shorts-bookmark')) ttvShortsForward(root, '.act.bookmark');
@@ -725,16 +753,21 @@ function ttvSyncFullscreenLayout(root) {
   const video = root.querySelector('.ttv-video');
   if (!video) return;
   // The Shorts rail/caption (avatar, like/reply/share/save, handle +
-  // caption — see .ttv-shorts-rail/.ttv-shorts-meta in style.css) only
-  // needs the same rect-pinning treatment on desktop. A portrait video
-  // fullscreened on a phone already fills the screen edge-to-edge, so
-  // the rail sits right against it for free. On a wide desktop monitor
-  // that same portrait video pillarboxes with big black bars on both
-  // sides, and the rail — CSS-anchored to the *screen's* right edge —
-  // ends up stranded out in that empty space instead of next to the
-  // video. Leave phones exactly as they were.
-  const pinShorts = shorts && window.matchMedia('(min-width:701px)').matches;
-  if (shorts && !pinShorts) shorts.style.cssText = '';
+  // caption — see .ttv-shorts-rail/.ttv-shorts-meta in style.css) gets
+  // the same rect-pinning treatment as .ttv-controls, on every device.
+  // This used to only run on desktop, on the assumption that a
+  // portrait video fullscreened on a phone always fills the screen
+  // edge-to-edge — true for most clips, but any video that isn't a
+  // near-exact match for the phone's own aspect ratio (a landscape
+  // clip, a screen recording from a differently-shaped device, a
+  // square video) still letterboxes/pillarboxes on mobile too, and
+  // the handle + caption — anchored to the *screen's* bottom-left
+  // corner via fixed percentages — ended up sitting over black
+  // letterbox space instead of the actual bottom-left corner of the
+  // video. Pinning on every device means the username/caption block
+  // always tracks the video's real rendered box, whatever size or
+  // shape that turns out to be.
+  const pinShorts = !!shorts;
   const place = () => {
     const vr = video.getBoundingClientRect();
     const rr = root.getBoundingClientRect();

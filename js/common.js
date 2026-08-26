@@ -2094,6 +2094,16 @@ function toggleRepostMenu(id, ev) {
   if (ev) ev.stopPropagation();
   const wrap = document.getElementById(`rpmenu-${id}`);
   if (!wrap) return;
+  // Immediate purple tap feedback the moment the icon is pressed —
+  // previously the button only turned purple via the plain CSS
+  // :active pseudo-class (unreliable on touch, and gone the instant
+  // the finger lifts) or after actually completing a repost from the
+  // dropdown, so tapping the icon itself gave no visible response.
+  const btn = wrap.querySelector('.act.repost');
+  if (btn) {
+    btn.classList.add('rp-tapped');
+    setTimeout(() => btn.classList.remove('rp-tapped'), 300);
+  }
   const willOpen = !wrap.classList.contains('open');
   document.querySelectorAll('.rp-menu-wrap.open, .pc-menu-wrap.open').forEach(w => w.classList.remove('open'));
   if (willOpen) {
@@ -2615,7 +2625,7 @@ function postMenuHtml(postId, replyId = null, authorId = null, communityId = nul
         ${canPin ? `<button onclick="togglePin('${postId}', event)">${isPinned ? 'Unpin from profile' : 'Pin to your profile'}</button>` : ''}
         ${canEdit ? `<button onclick="editPost(${editArgs})">Edit</button>` : ''}
         ${isOwner ? `<button class="pc-menu-danger" onclick="deletePost(${deleteArgs})">Delete</button>` : ''}
-        <button onclick="openReport(${target})">${t('action.report')}</button>
+        <button class="pc-menu-danger" onclick="openReport(${target})">${t('action.report')}</button>
       </div>
     </div>`;
 }

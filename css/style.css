@@ -1592,6 +1592,12 @@ a.act:hover, button.act.reply:hover, button.act.reply:active { color:var(--maroo
 .rp-menu-wrap { position:relative; flex:none; }
 .act.repost:hover, .act.repost:active { color:var(--repost); }
 .act.repost.reposted { color:var(--repost); animation:oc-pop .28s ease; }
+/* Tap feedback: fires the instant the icon is pressed (see
+   toggleRepostMenu() in common.js), independent of whether the tap
+   actually ends up reposting — same purple, held for a beat via JS
+   instead of only the fragile, finger-lift-cancels :active state. */
+.act.repost.rp-tapped { color:var(--repost); }
+.act.repost.rp-tapped svg { animation:oc-pop .28s ease; }
 .rp-menu-dd {
   position:absolute; left:0; bottom:calc(100% + 4px); z-index:40; min-width:200px;
   background:var(--cream-card); border:1px solid var(--line); border-radius:18px;
@@ -4308,32 +4314,32 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 }
 .ttv-progress:hover .ttv-progress-preview, .ttv-progress.ttv-dragging .ttv-progress-preview { opacity:1; }
 
-/* small inline play/pause toggle, bottom-left — matches X's own
-   in-card video controls (a compact play/pause glyph sits to the
-   left of the time readout, distinct from the big center overlay
-   button which only shows while paused). Both icons are always in
-   the DOM; only one shows at a time via the .ttv-playing switch
-   below, same trick as .ttv-big-play. */
-.ttv-playpause { position:absolute; left:8px; bottom:12px; }
-.ttv-playpause-play, .ttv-playpause-pause { display:flex; align-items:center; justify-content:center; }
-.ttv-playpause-pause { display:none; }
-.ttv.ttv-playing .ttv-playpause-play { display:none; }
-.ttv.ttv-playing .ttv-playpause-pause { display:flex; }
-
 /* time readout, bottom-left — text-shadow instead of a background
-   chip since there's no scrim bar behind it anymore */
+   chip since there's no scrim bar behind it anymore. The corner
+   play/pause toggle that used to sit to the left of this (a second,
+   redundant play button on top of the big center one and the
+   tap-anywhere overlay) is gone — it was also the button that would
+   flash into view pinned to the *top*-left corner for a moment
+   whenever the video's real box hadn't finished sizing yet (right
+   after it scrolls into view, before metadata loads and the ttv
+   wrapper grows to the video's actual height): bottom:12px on a
+   still-collapsed, not-yet-sized box lands near the top, not the
+   bottom. Dropping the duplicate control removes that glitch outright
+   instead of just timing around it, and frees this readout to sit
+   flush against the left edge instead of leaving room for it. */
 .ttv-time {
-  /* height + flex centering matches .ttv-btn's own height (see
-     .ttv-rail below) so the time readout lines up on the same
-     vertical center as the fullscreen button, on phone and desktop
-     alike — this rule isn't behind any viewport media query. Left
-     offset makes room for .ttv-playpause immediately to its left
-     (8px inset + 32px button + 8px gap). */
-  position:absolute; left:48px; bottom:12px; height:32px; display:flex; align-items:center; pointer-events:none; /* label only — taps under it fall through to tap-to-play */
+  position:absolute; left:8px; bottom:12px; height:32px; display:flex; align-items:center; pointer-events:none; /* label only — taps under it fall through to tap-to-play */
   color:#fff; font-size:12.5px; font-weight:700; user-select:none;
   font-variant-numeric:tabular-nums; white-space:nowrap;
   text-shadow:0 1px 4px rgba(0,0,0,.65), 0 0 1px rgba(0,0,0,.5);
 }
+/* Belt-and-suspenders for that same sizing race: keep the whole
+   controls layer invisible until the player has actually reported a
+   real size at least once (ttv-sized, toggled in JS off
+   loadedmetadata / the ResizeObserver below), so nothing — time
+   readout, play triangle, progress bar — can ever paint at a
+   corner briefly before snapping to its real spot. */
+.ttv:not(.ttv-sized) .ttv-controls, .ttv:not(.ttv-sized) .ttv-overlay { opacity:0 !important; }
 
 /* vertical icon rail, docked to the right edge */
 .ttv-rail { position:absolute; right:8px; bottom:12px; display:flex; flex-direction:column; align-items:center; gap:8px; }
@@ -4409,9 +4415,8 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
   top:9px; height:3px;
 }
 
-.ttv:fullscreen .ttv-playpause, .ttv:-webkit-full-screen .ttv-playpause { left:20px; bottom:24px; }
 .ttv:fullscreen .ttv-time, .ttv:-webkit-full-screen .ttv-time {
-  left:66px; bottom:24px; height:38px; font-size:14px;
+  left:20px; bottom:24px; height:38px; font-size:14px;
 }
 .ttv:fullscreen .ttv-rail, .ttv:-webkit-full-screen .ttv-rail { right:20px; bottom:24px; gap:12px; }
 .ttv:fullscreen .ttv-btn, .ttv:-webkit-full-screen .ttv-btn { width:38px; height:38px; }
@@ -4444,12 +4449,6 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
    which owns the right edge the way it does on TikTok/Shorts. */
 .ttv.ttv-shorts-active:fullscreen .ttv-rail,
 .ttv.ttv-shorts-active:-webkit-full-screen .ttv-rail { right:auto; left:16px; gap:10px; }
-/* The inline play/pause toggle would collide with that same left
-   edge in shorts mode, and tap-anywhere-to-pause (.ttv-overlay)
-   already covers the need there — same reasoning TikTok/Shorts UIs
-   use for not showing a persistent play button over the clip. */
-.ttv.ttv-shorts-active:fullscreen .ttv-playpause,
-.ttv.ttv-shorts-active:-webkit-full-screen .ttv-playpause { display:none; }
 /* Time readout used to sit bottom-right, inherited from the base
    fullscreen rule — directly under the like/reply/share/save rail,
    which the "save" button's label text would render on top of.
@@ -4515,6 +4514,8 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .ttv-shorts-repost.active svg { stroke:var(--repost); transform:scale(1.08); }
 .ttv-shorts-repost.active .ttv-shorts-count { color:var(--repost); }
 .ttv-shorts-repost:active svg { stroke:var(--repost); animation:oc-pop .28s ease; }
+.ttv-shorts-repost.ttv-shorts-pressed svg { stroke:var(--repost); transform:scale(1.15); animation:oc-pop .28s ease; }
+.ttv-shorts-repost.ttv-shorts-pressed .ttv-shorts-count { color:var(--repost); }
 .ttv-shorts-bookmark svg { transition:fill .15s, stroke .15s; }
 .ttv-shorts-bookmark.active svg { fill:var(--save); stroke:var(--save); }
 .ttv-shorts-bookmark.active .ttv-shorts-count { color:var(--save); }

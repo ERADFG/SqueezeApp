@@ -84,7 +84,7 @@ function updateComposerVisibility() {
 function communityMenuItemsHtml() {
   return `
     <button onclick="communityMenuShare(event)">Share community</button>
-    <button onclick="communityMenuReport(event)">Report community</button>`;
+    <button class="pc-menu-danger" onclick="communityMenuReport(event)">Report community</button>`;
 }
 
 function closeCommunityMenu(ev) {

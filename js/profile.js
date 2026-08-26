@@ -262,7 +262,7 @@ function profileMenuItemsHtml(profile) {
     <button onclick="profileMenuCopyLink(event, '${u_(profile.username)}')">Copy link to profile</button>
     <button id="pm-mute-btn" onclick="profileMenuMute(event, '${profile.id}')">Mute</button>
     ${blockItem}
-    <button onclick="profileMenuReport(event, '${profile.id}')">Report @${esc(profile.username)}</button>`;
+    <button class="pc-menu-danger" onclick="profileMenuReport(event, '${profile.id}')">Report @${esc(profile.username)}</button>`;
 }
 
 function closeProfileMenu(ev) {

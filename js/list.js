@@ -157,7 +157,7 @@ function listOptionsMenuHtml(l) {
     <div class="pc-menu-wrap" id="pmenu-list-opts-${l.id}">
       <button class="pc-menu-btn" onclick="togglePostMenu('list-opts-${l.id}', event)" aria-label="More options" title="More">${ICON.menu}</button>
       <div class="pc-menu-dd">
-        <button onclick="listMenuReport(event)">Report List</button>
+        <button class="pc-menu-danger" onclick="listMenuReport(event)">Report List</button>
         <button id="list-block-btn" class="pc-menu-danger" onclick="listMenuBlockOwner(event)">Block @${esc(uname)}</button>
         <button onclick="listMenuHideForYou(event)">Don&rsquo;t show these posts in For you</button>
       </div>
