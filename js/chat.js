@@ -1287,6 +1287,13 @@ function sizeChatThread() {
   if (!wrap) return;
   if (window.matchMedia('(max-width:700px)').matches) {
     wrap.style.height = ''; // CSS handles it (position:fixed + var(--vvh))
+    // The composer stays pinned above the keyboard via --vvh, but the
+    // message list itself was never re-scrolled when the keyboard
+    // opens/closes and the container height changes — that left a
+    // visible gap between the last bubble and the composer (or the
+    // last few messages hidden under the keyboard). Re-pin to the
+    // bottom on every viewport resize, same as a real chat app.
+    scrollChatToBottom();
     return;
   }
   const top = wrap.getBoundingClientRect().top;
