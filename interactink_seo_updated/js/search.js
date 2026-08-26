@@ -4,7 +4,13 @@
 // ─────────────────────────────────────────────────────────────
 const POST_SELECT = '*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)';
 
-const searchParams = new URLSearchParams(location.search);
+// Recomputed on every visit (see the DOMContentLoaded handler below)
+// rather than frozen here at module scope — pjax (js/pjax.js) keeps
+// this script loaded for the life of the tab, so a second search
+// later (a new ?q=, or arriving via a community's search icon)
+// would otherwise silently keep using the very first search's terms
+// forever, since this file only ever gets parsed once.
+let searchParams = new URLSearchParams(location.search);
 let searchQuery = searchParams.get('q') || '';
 
 // ── COMMUNITY-SCOPED SEARCH — search.html?community=<slug>, reached
@@ -13,7 +19,7 @@ let searchQuery = searchParams.get('q') || '';
 // "People" to search) — resolved once and cached, same slug→row
 // lookup community.js itself does in loadCommunity(). Forces the
 // People tab off since a community only has posts to search.
-const searchCommunitySlug = searchParams.get('community') || '';
+let searchCommunitySlug = searchParams.get('community') || '';
 let searchTab = (!searchCommunitySlug && searchParams.get('t') === 'people') ? 'people' : 'posts';
 let exploreTab = 'explore'; // 'explore' | 'trending' | 'news' | 'sports' | 'entertainment'
 
@@ -133,6 +139,14 @@ async function searchPeople(root) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  if (document.body.dataset.page !== 'search') return; // see js/notifications.js
+  // Recompute everything derived from the URL fresh on every visit —
+  // see the comment on searchParams's declaration above.
+  searchParams = new URLSearchParams(location.search);
+  searchQuery = searchParams.get('q') || '';
+  searchCommunitySlug = searchParams.get('community') || '';
+  searchTab = (!searchCommunitySlug && searchParams.get('t') === 'people') ? 'people' : 'posts';
+  searchCommunity = null;
   await authReady; // see auth.js — otherwise cards can render before we know who's logged in
   renderTabs();
   runSearch();

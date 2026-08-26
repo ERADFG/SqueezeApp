@@ -16,6 +16,14 @@
 // ─────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // pjax guard — see js/notifications.js. Extra important here: without
+  // it, this listener (once loaded, on visiting /admin even once)
+  // would keep firing on every later navigation to ANY page, making
+  // a redundant is_admin() RPC call each time and — worse — hijacking
+  // navigation with location.href below if the session ever looked
+  // logged-out while the admin happened to be looking at some
+  // unrelated page.
+  if (document.body.dataset.page !== 'admin') return;
   await authReady;
 
   if (!currentSession) {

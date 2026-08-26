@@ -16,7 +16,12 @@
 // ─────────────────────────────────────────────────────────────
 const POST_SELECT = '*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)';
 
-const listId = currentListId();
+// Recomputed on every visit (see the DOMContentLoaded handler below)
+// rather than frozen here — pjax (js/pjax.js) keeps this script
+// loaded for the life of the tab, so visiting a *second* different
+// List later would otherwise silently keep showing the very first
+// one forever, since this file only ever gets parsed once.
+let listId = null;
 let list = null;       // the loaded list row
 let isOwner = false;
 let isListFollowed = false; // is the viewer following this List (non-owner only) — named to avoid colliding with common.js's isFollowing(userId) helper, which silently killed this whole script (SyntaxError: Identifier 'isFollowing' has already been declared) and left the page stuck on the initial "Loading…" spinner forever
@@ -27,6 +32,7 @@ let listMyFollowing = new Set(); // ids of people the *viewer* personally follow
 
 async function loadList() {
   const heroEl = document.getElementById('list-hero');
+  if (!heroEl) return;
   if (!listId) {
     heroEl.innerHTML = `<div id="feed-empty">No List specified.</div>`;
     return;
@@ -464,6 +470,18 @@ async function removeListMember(memberId, username) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  if (document.body.dataset.page !== 'list') return; // see js/notifications.js
+  // Recompute the id + reset every cached bit of the previous List
+  // fresh on every visit — see the comment on listId's declaration
+  // above.
+  listId = currentListId();
+  list = null;
+  isOwner = false;
+  isListFollowed = false;
+  listTab = 'posts';
+  listMembers = [];
+  listFollowers = [];
+  listMyFollowing = new Set();
   await authReady; // see auth.js — otherwise isOwner/Edit-Delete can render before we know who's logged in
   loadList();
 });

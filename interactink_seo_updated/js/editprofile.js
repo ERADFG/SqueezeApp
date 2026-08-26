@@ -9,7 +9,9 @@ let epAvatarFile = null;
 let epBannerFile = null;
 
 async function loadEditProfile() {
+  if (document.body.dataset.page !== 'editprofile') return; // see js/notifications.js
   const root = document.getElementById('editprofile-root');
+  if (!root) return;
   const { data: { session } } = await sb.auth.getSession();
 
   if (!session) {

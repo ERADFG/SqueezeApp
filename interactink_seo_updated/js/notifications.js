@@ -47,7 +47,14 @@ function notifItemHtml(n) {
 }
 
 async function loadNotifications() {
+  // pjax keeps this listener registered for the life of the tab and
+  // re-fires it on every navigation (see js/pjax.js) — without this
+  // check, leaving the notifications page and going anywhere else
+  // would re-run this on top of that page, and re-mark everything
+  // read again in the background on every single click.
+  if (document.body.dataset.page !== 'notifications') return;
   const root = document.getElementById('notif-root');
+  if (!root) return;
   root.innerHTML = skeletonFeedHtml();
   const { data: { session } } = await sb.auth.getSession();
 

@@ -136,6 +136,7 @@ function wireCommunitySearch() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  if (document.body.dataset.page !== 'communities') return; // see js/notifications.js
   await authReady; // see auth.js — otherwise the join state can render before we know who's logged in
   wireCommunitySearch();
   await loadJoinedIds();

@@ -5,7 +5,14 @@
 // common.js). Comments can reply to the post OR to another comment —
 // both directions work, same as Twitter replies.
 // ─────────────────────────────────────────────────────────────
-const postId = currentStatusId();
+// Recomputed on every page load rather than frozen at module scope —
+// pjax (js/pjax.js) keeps this script loaded for the life of the
+// tab, so visiting a *second* thread later would otherwise silently
+// keep using the very first thread's id forever (this file only
+// ever gets parsed once). Every function below that references
+// `postId` reads this same outer binding, so reassigning it in the
+// DOMContentLoaded handler is enough — nothing else needs to change.
+let postId = null;
 
 const POST_SELECT   = '*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)';
 const REPLY_SELECT  = '*, profile:profiles(username,display_name,avatar_url,verified,verification_type)';
@@ -123,6 +130,7 @@ function rcClick(ev, replyId) {
 
 async function loadThread() {
   const wrap = document.getElementById('thread-root');
+  if (!wrap) return;
   if (!postId) { wrap.innerHTML = `<div class="errmsg">No post specified.</div>`; return; }
   wrap.innerHTML = skeletonThreadHtml();
 
@@ -594,8 +602,18 @@ function insertReplyIntoTree(r) {
   list.insertAdjacentHTML('beforeend', html);
 }
 
+let threadChannel = null; // see subscribeRealtime() below
+
 function subscribeRealtime() {
-  sb.channel(`thread-${postId}`)
+  // Without this, every pjax navigation back to a/any thread page
+  // (see the DOMContentLoaded handler below) opened one more
+  // `thread-<id>` realtime subscription on top of every one already
+  // open, forever — each duplicate re-firing its handlers on every
+  // new reply/like anywhere in the app. That accumulation is exactly
+  // the kind of thing that makes an app feel like it's slowing down
+  // the longer you use it. Same fix as board.js's feedChannel.
+  if (threadChannel) { sb.removeChannel(threadChannel); threadChannel = null; }
+  threadChannel = sb.channel(`thread-${postId}`)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'replies', filter: `post_id=eq.${postId}` }, async payload => {
       if (document.getElementById(`reply-${payload.new.id}`)) return;
       const r = payload.new;
@@ -619,6 +637,12 @@ function subscribeRealtime() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // pjax guard — see the identical comment in js/notifications.js.
+  // Recompute postId fresh on every visit (see the comment on its
+  // declaration above) instead of trusting whatever it was the first
+  // time this file loaded.
+  if (document.body.dataset.page !== 'thread') return;
+  postId = currentStatusId();
   await authReady; // see auth.js — otherwise cards can render before we know who's logged in
   await loadThread();
   if (postId) subscribeRealtime();

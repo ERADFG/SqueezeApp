@@ -59,7 +59,9 @@ function toggleSettingsPanel(id) {
 }
 
 async function loadSettings() {
+  if (document.body.dataset.page !== 'settings') return; // see js/notifications.js
   const root = document.getElementById('settings-root');
+  if (!root) return;
   const { data: { session } } = await sb.auth.getSession();
 
   if (!session) {

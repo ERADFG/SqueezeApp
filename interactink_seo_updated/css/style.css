@@ -2791,10 +2791,27 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
 .dob-input-wrap {
   position:relative; display:flex; align-items:stretch;
   border:1px solid var(--border-input); border-radius:var(--r-sm);
-  background:var(--input-bg); padding-left:38px; overflow:hidden;
+  background:var(--input-bg); padding-left:38px;
+  /* NOT overflow:hidden — .dob-combo-panel below is an absolutely
+     positioned child of one of these flex items and needs to hang
+     below the wrap's own rounded border, not get clipped to it. The
+     wrap's rounded corners still look right without it since every
+     child here shares the same --input-bg background as the wrap
+     itself, so there's nothing with a differing fill to clip. */
 }
 .dob-input-wrap:focus-within { border-color:var(--maroon); box-shadow:0 0 0 1px var(--maroon); }
+/* Calendar icon, fixed: this rule used to only be scoped to
+   .auth-input-wrap .auth-fi, so the identical .auth-fi icon span
+   here (see signup.html) was never actually positioned — it just sat
+   in normal document flow at the top of the flex row instead of
+   centered over the 38px gutter .dob-input-wrap reserves for it. */
+.dob-input-wrap .auth-fi { position:absolute; left:12px; top:50%; transform:translateY(-50%); width:18px; height:18px; color:var(--muted); pointer-events:none; z-index:1; }
+.dob-input-wrap .auth-fi svg { width:100%; height:100%; }
 .dob-input-wrap:focus-within .auth-fi { color:var(--maroon); }
+
+/* Old plain-<select> styling — unused visually now that the three
+   selects are display:none (see signup.html), kept only in case
+   something ever needs to fall back to rendering them directly. */
 .dob-select {
   flex:1 1 0; min-width:0; border:none; background:var(--input-bg);
   color:var(--ink); font-family:inherit; font-size:15px; padding:8px 20px 8px 10px;
@@ -2806,6 +2823,54 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
 .dob-select + .dob-select { border-left:1px solid var(--line); }
 .dob-select.dob-day { flex:0.75 1 0; }
 .dob-select.dob-year { flex:1.15 1 0; }
+
+/* ── Custom month/day/year dropdowns — the actual visible UI now.
+   Each .dob-combo wraps one themed button (.dob-combo-btn) plus its
+   own floating option panel (.dob-combo-panel); setupDobCombo() in
+   signup.html builds/opens/closes these and keeps the hidden
+   .dob-select in sync. Panel styling matches .pc-menu-dd (the post
+   "···" menu) so every floating panel in the app reads the same. ── */
+.dob-combo { position:relative; flex:1 1 0; min-width:0; display:flex; }
+.dob-combo + .dob-combo { border-left:1px solid var(--line); }
+.dob-combo[data-combo="day"] { flex:0.75 1 0; }
+.dob-combo[data-combo="year"] { flex:1.15 1 0; }
+
+.dob-combo-btn {
+  all:unset; box-sizing:border-box; flex:1 1 0; min-width:0;
+  display:flex; align-items:center; justify-content:space-between; gap:6px;
+  padding:8px 10px; font-family:inherit; font-size:15px; line-height:1.3;
+  color:var(--muted); cursor:pointer; border-radius:4px;
+}
+.dob-combo-btn.filled { color:var(--ink); }
+.dob-combo-btn:hover { background:var(--hover-bg); }
+.dob-combo-btn:focus-visible { outline:2px solid var(--maroon); outline-offset:-2px; }
+.dob-combo-label { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dob-combo-caret { width:10px; height:6px; flex:none; color:var(--muted); fill:currentColor; transition:transform .15s cubic-bezier(.2,.8,.2,1); }
+.dob-combo-btn.open .dob-combo-caret { transform:rotate(180deg); color:var(--maroon); }
+
+.dob-combo-panel {
+  display:none; /* toggled to block by the [hidden] rule below —
+                    not set unconditionally so the hidden attribute
+                    setupDobCombo() flips on/off still wins */
+  position:absolute; left:0; right:0; top:calc(100% + 6px); z-index:40;
+  max-height:240px; overflow-y:auto; box-sizing:border-box;
+  background:var(--cream-card); border:1px solid var(--line); border-radius:14px;
+  box-shadow:var(--shadow-pop); padding:6px;
+}
+.dob-combo-panel:not([hidden]) { display:block; }
+/* Year panel is the tallest list by far (100+ options) and the field
+   itself sits on the right edge of the wrap — anchor its panel to
+   the right so it doesn't overflow off the edge of the card. */
+.dob-combo[data-combo="year"] .dob-combo-panel { left:auto; right:0; }
+
+.dob-combo-option {
+  all:unset; box-sizing:border-box; display:block; width:100%;
+  padding:9px 10px; margin:1px 0; font-family:inherit; font-size:14.5px; font-weight:600;
+  color:var(--ink); cursor:pointer; border-radius:10px; text-align:center;
+}
+.dob-combo-option:hover { background:var(--hover-bg); }
+.dob-combo-option.active { background:var(--maroon-tint); color:var(--maroon); font-weight:800; }
+
 .auth-hint-error { color:var(--like); font-weight:700; }
 
 /* ── Gender chip selector (Sign Up) — tappable cards standing in for

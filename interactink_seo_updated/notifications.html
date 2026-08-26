@@ -3,20 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>People — InteractInk</title>
-<meta name="description" content="See who follows and who is followed on InteractInk.">
+<title>Notifications — InteractInk</title>
+<meta name="description" content="Likes, replies, and new followers on InteractInk.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="InteractInk">
-<meta property="og:title" content="People — InteractInk">
-<meta property="og:description" content="See who follows and who is followed on InteractInk.">
+<meta property="og:title" content="Notifications — InteractInk">
+<meta property="og:description" content="Likes, replies, and new followers on InteractInk.">
 <meta property="og:image" content="/img/logo-light.png">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="People — InteractInk">
-<meta name="twitter:description" content="See who follows and who is followed on InteractInk.">
+<meta name="twitter:title" content="Notifications — InteractInk">
+<meta name="twitter:description" content="Likes, replies, and new followers on InteractInk.">
 <meta name="twitter:image" content="/img/logo-light.png">
 <meta name="robots" content="noindex, follow">
-<link rel="canonical">
-<meta property="og:url" content="">
+<link rel="canonical" href="https://interactink.vercel.app/notifications">
+<meta property="og:url" content="https://interactink.vercel.app/notifications">
 <base href="/">
 <link rel="icon" type="image/png" href="img/favicon-32.png" sizes="32x32" id="fav32">
 <link rel="icon" type="image/png" href="img/favicon.png" sizes="512x512" id="fav512">
@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="css/style.css?v=20260823e">
 </head>
-<body>
+<body data-page="notifications">
 
 <div class="xshell">
   <div id="hdr">
@@ -46,15 +46,8 @@
 
   <div id="main">
     <div id="feed" style="max-width:600px;">
-      <div class="sec-bar" id="fl-hdr">
-        <a class="ep-back" href="index.html" id="fl-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
-        <div class="sec-bar-title">
-          <h1 id="fl-name">&nbsp;</h1>
-          <span class="sub" id="fl-handle"></span>
-        </div>
-      </div>
-      <div id="fl-tabs" class="profile-tabs"></div>
-      <div id="followlist-root">
+      <div class="sec-bar"><h1 class="sr-only">Notifications</h1>Notifications</div>
+      <div id="notif-root">
         <div class="skel-card"><div class="skel-avatar"></div><div class="skel-lines"><div class="skel-line w40"></div><div class="skel-line w90"></div><div class="skel-line w60"></div></div></div>
         <div class="skel-card"><div class="skel-avatar"></div><div class="skel-lines"><div class="skel-line w40"></div><div class="skel-line w90"></div><div class="skel-line w60"></div></div></div>
         <div class="skel-card"><div class="skel-avatar"></div><div class="skel-lines"><div class="skel-line w40"></div><div class="skel-line w90"></div><div class="skel-line w60"></div></div></div>
@@ -84,7 +77,7 @@
 <script src="js/common.js?v=20260825a" defer></script>
 <script src="js/video-player.js?v=20260823e" defer></script>
 <script src="js/auth.js?v=20260820" defer></script>
-<script src="js/followlist.js?v=20260825a" defer></script>
+<script src="js/notifications.js?v=20260825a" defer></script>
 <script src="/js/pjax.js?v=20260825a" defer></script>
 </body>
 </html>

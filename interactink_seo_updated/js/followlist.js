@@ -3,13 +3,20 @@
 // Also reachable via the legacy followlist.html?u=<username>&tab=...
 // form — see below.
 // ─────────────────────────────────────────────────────────────
-const { flUsername, flTab: flTabFromUrl } = (() => {
+// Recomputed on every visit (see loadFollowList() below) rather than
+// frozen here — pjax (js/pjax.js) keeps this script loaded for the
+// life of the tab, so viewing a *different* person's followers/
+// following later would otherwise silently keep showing the very
+// first profile's list forever, since this file only ever gets
+// parsed once.
+function flReadUrl() {
   const m = location.pathname.match(/^\/([^/]+)\/(followers|following)\/?$/);
   if (m) return { flUsername: decodeURIComponent(m[1]), flTab: m[2] };
   const params = new URLSearchParams(location.search);
   return { flUsername: params.get('u'), flTab: params.get('tab') === 'following' ? 'following' : 'followers' };
-})();
-let flTab = flTabFromUrl;
+}
+let flUsername = null;
+let flTab = 'followers';
 let flProfile = null;
 let flMyFollowing = new Set(); // ids of people the *viewer* (logged-in user) follows
 
@@ -107,7 +114,18 @@ async function flLoadMyFollowing() {
 }
 
 async function loadFollowList() {
+  // pjax guard — see js/notifications.js. Recompute everything
+  // derived from the URL fresh on every visit — see the comment on
+  // flReadUrl() above.
+  if (document.body.dataset.page !== 'followlist') return;
+  const url = flReadUrl();
+  flUsername = url.flUsername;
+  flTab = url.flTab;
+  flProfile = null;
+  flMyFollowing = new Set();
+
   const root = document.getElementById('followlist-root');
+  if (!root) return;
   if (!flUsername) {
     root.innerHTML = `<div class="errmsg">No user specified.</div>`;
     return;

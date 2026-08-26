@@ -6,12 +6,18 @@
 // only — same shape as list.html's hero, minus members/followers
 // (an article has exactly one author, nothing to curate or follow).
 // ─────────────────────────────────────────────────────────────
-const articleId = currentArticleId();
+// Recomputed on every visit (see the DOMContentLoaded handler below)
+// rather than frozen here — pjax (js/pjax.js) keeps this script
+// loaded for the life of the tab, so visiting a *second* different
+// article later would otherwise silently keep showing the very
+// first one forever, since this file only ever gets parsed once.
+let articleId = null;
 let article = null; // the loaded article row
 let isArticleAuthor = false;
 
 async function loadArticle() {
   const contentEl = document.getElementById('article-content');
+  if (!contentEl) return;
   contentEl.innerHTML = `<div class="skel-article">
     <div class="skel-cover"></div>
     <div class="skel-line title w70"></div>
@@ -147,6 +153,13 @@ async function submitShareArticle() {
 wireStaticModalDismiss('modal-share-article', closeShareArticleModal);
 
 document.addEventListener('DOMContentLoaded', async () => {
+  if (document.body.dataset.page !== 'article') return; // see js/notifications.js
+  // Recompute the id + reset the previous article's cached state
+  // fresh on every visit — see the comment on articleId's
+  // declaration above.
+  articleId = currentArticleId();
+  article = null;
+  isArticleAuthor = false;
   await authReady; // see auth.js — otherwise isArticleAuthor can't be known yet
   loadArticle();
 });

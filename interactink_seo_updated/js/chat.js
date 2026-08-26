@@ -14,16 +14,24 @@
 // or the legacy chat.html?g=<id> query form for local dev without
 // Vercel's rewrite engine — same fallback pattern chatWithUsername
 // already uses for the 1:1 case just below.
-const chatGroupId = (() => {
+// Recomputed on every visit (see loadChat() below) rather than
+// frozen here — pjax (js/pjax.js) keeps this script loaded for the
+// life of the tab, so opening a *different* DM or group thread later
+// would otherwise silently keep showing the very first one forever,
+// since this file only ever gets parsed once.
+function chatReadGroupId() {
   const m = location.pathname.match(/^\/messages\/g\/([^/]+)\/?$/);
   if (m) return decodeURIComponent(m[1]);
   return new URLSearchParams(location.search).get('g');
-})();
-const chatWithUsername = chatGroupId ? null : (() => {
+}
+function chatReadWithUsername(groupId) {
+  if (groupId) return null;
   const m = location.pathname.match(/^\/messages\/([^/]+)\/?$/);
   if (m) return decodeURIComponent(m[1]);
   return new URLSearchParams(location.search).get('u');
-})();
+}
+let chatGroupId = null;
+let chatWithUsername = null;
 function groupMessagesUrl(id) { return `/messages/g/${encodeURIComponent(id)}`; }
 let chatOther = null;   // the other user's profile, once a thread is open
 let chatChannel = null;
@@ -127,7 +135,20 @@ const ICON_TICK2 = '<svg viewBox="0 0 20 16" fill="none" stroke="currentColor" s
 })();
 
 async function loadChat() {
+  // pjax guard — see the identical comment in js/notifications.js.
+  // Without this, leaving the chat page for anywhere else would
+  // still fire this on every later navigation, re-subscribing to
+  // realtime chat channels are already properly torn down (see
+  // convListChannel/chatChannel above) but there's no #chat-root to
+  // write into elsewhere, so it'd throw and silently do nothing.
+  if (document.body.dataset.page !== 'chat') return;
+  // Recompute the thread target fresh on every visit — see the
+  // comment on chatReadGroupId()/chatReadWithUsername() above.
+  chatGroupId = chatReadGroupId();
+  chatWithUsername = chatReadWithUsername(chatGroupId);
+  chatOther = null;
   const root = document.getElementById('chat-root');
+  if (!root) return;
   const { data: { session } } = await sb.auth.getSession();
 
   if (!session) {

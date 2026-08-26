@@ -7,7 +7,12 @@
 // ─────────────────────────────────────────────────────────────
 const POST_SELECT = '*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)';
 
-const communitySlug = currentCommunitySlug();
+// Recomputed on every visit (see the DOMContentLoaded handler below)
+// rather than frozen here — pjax (js/pjax.js) keeps this script
+// loaded for the life of the tab, so visiting a *second* different
+// community later would otherwise silently keep showing the very
+// first one forever, since this file only ever gets parsed once.
+let communitySlug = null;
 let community = null;      // the loaded community row
 let isMember = false;      // whether the current user has joined it
 let communityTab = 'latest'; // 'top' | 'latest' | 'media' | 'about'
@@ -17,6 +22,7 @@ let communityMods = [];          // [{user_id, profile}]
 
 async function loadCommunity() {
   const heroEl = document.getElementById('community-hero');
+  if (!heroEl) return;
   if (!communitySlug) {
     heroEl.innerHTML = `<div id="feed-empty">No community specified.</div>`;
     return;
@@ -768,6 +774,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   // community would re-run loadCommunity() on top of whatever that
   // page just rendered.
   if (document.body.dataset.page !== 'community') return;
+  // Recompute the slug + reset every cached bit of the previous
+  // community fresh on every visit — see the comment on
+  // communitySlug's declaration above.
+  communitySlug = currentCommunitySlug();
+  community = null;
+  isMember = false;
+  communityTab = 'latest';
+  communityAboutLoaded = false;
+  communityRules = [];
+  communityMods = [];
   await authReady; // see auth.js — otherwise the hero/composer can render before we know who's logged in
   loadCommunity();
 });

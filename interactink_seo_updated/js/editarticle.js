@@ -291,6 +291,7 @@ async function submitArticle() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  if (document.body.dataset.page !== 'editarticle') return; // see js/notifications.js
   await authReady; // see auth.js — otherwise requireLogin() below can misfire before session is known
   initEditArticle();
 });

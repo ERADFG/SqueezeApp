@@ -84,7 +84,24 @@
 <label data-i18n="auth.dob" id="su-dob-label">Date of birth</label>
 <div class="dob-input-wrap" id="su-dob-wrap">
 <span class="auth-fi"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24"><rect height="16" rx="2" width="18" x="3" y="5"></rect><path d="M3 10h18"></path><path d="M8 3v4M16 3v4"></path></svg></span>
-<select aria-label="Month" class="dob-select" id="su-dob-month" required="">
+<div class="dob-combo" data-combo="month">
+<button aria-expanded="false" aria-haspopup="listbox" class="dob-combo-btn" id="su-dob-month-btn" type="button"><span class="dob-combo-label" data-i18n="auth.dobMonth">Month</span><svg class="dob-combo-caret" viewbox="0 0 10 6"><path d="M0 0l5 6 5-6z"></path></svg></button>
+<div aria-label="Month" class="dob-combo-panel" hidden="" id="su-dob-month-panel" role="listbox" tabindex="-1"></div>
+</div>
+<div class="dob-combo" data-combo="day">
+<button aria-expanded="false" aria-haspopup="listbox" class="dob-combo-btn" id="su-dob-day-btn" type="button"><span class="dob-combo-label" data-i18n="auth.dobDay">Day</span><svg class="dob-combo-caret" viewbox="0 0 10 6"><path d="M0 0l5 6 5-6z"></path></svg></button>
+<div aria-label="Day" class="dob-combo-panel" hidden="" id="su-dob-day-panel" role="listbox" tabindex="-1"></div>
+</div>
+<div class="dob-combo" data-combo="year">
+<button aria-expanded="false" aria-haspopup="listbox" class="dob-combo-btn" id="su-dob-year-btn" type="button"><span class="dob-combo-label" data-i18n="auth.dobYear">Year</span><svg class="dob-combo-caret" viewbox="0 0 10 6"><path d="M0 0l5 6 5-6z"></path></svg></button>
+<div aria-label="Year" class="dob-combo-panel" hidden="" id="su-dob-year-panel" role="listbox" tabindex="-1"></div>
+</div>
+<!-- Real selects — not shown. Kept only so the existing
+     populateDays()/updateAge() logic below (and auth.js's #su-age
+     check at submit) doesn't need to change; the comboboxes above
+     just set these and dispatch a `change` event, same trick
+     already used for the gender chips further down. -->
+<select aria-hidden="true" class="dob-select" id="su-dob-month" required="" style="display:none" tabindex="-1">
 <option data-i18n="auth.dobMonth" disabled="" selected="" value="">Month</option>
 <option value="1">Jan</option>
 <option value="2">Feb</option>
@@ -99,10 +116,10 @@
 <option value="11">Nov</option>
 <option value="12">Dec</option>
 </select>
-<select aria-label="Day" class="dob-select dob-day" id="su-dob-day" required="">
+<select aria-hidden="true" class="dob-select dob-day" id="su-dob-day" required="" style="display:none" tabindex="-1">
 <option data-i18n="auth.dobDay" disabled="" selected="" value="">Day</option>
 </select>
-<select aria-label="Year" class="dob-select dob-year" id="su-dob-year" required="">
+<select aria-hidden="true" class="dob-select dob-year" id="su-dob-year" required="" style="display:none" tabindex="-1">
 <option data-i18n="auth.dobYear" disabled="" selected="" value="">Year</option>
 </select>
 </div>
@@ -183,6 +200,14 @@
           const MIN_YEAR = CUR_YEAR - 120;
           const MAX_YEAR = CUR_YEAR - 13;
 
+          // Assigned further down, after monthSel/daySel/yearSel are
+          // wired up to custom dropdown panels (see setupDobCombo()).
+          // Declared here so populateDays() below can call
+          // dayCombo.syncLabel() by closure even though it's defined
+          // first — by the time populateDays() actually RUNS,
+          // dayCombo is always already assigned.
+          let monthCombo, dayCombo, yearCombo;
+
           // Most-recent-eligible-year first — closer to what a typical
           // signup skews toward, so less scrolling on average.
           for (let y = MAX_YEAR; y >= MIN_YEAR; y--) {
@@ -214,6 +239,12 @@
             } else {
               placeholder.selected = true;
             }
+            // The Day dropdown's list is rebuilt above without firing a
+            // `change` event (only its underlying <select>'s value/
+            // options change), so the custom button's label needs an
+            // explicit nudge here or it can go stale — e.g. "31" stays
+            // shown after switching to February.
+            if (dayCombo) dayCombo.syncLabel();
           }
           populateDays();
 
@@ -242,6 +273,90 @@
           monthSel.addEventListener('change', function(){ populateDays(); updateAge(); });
           yearSel.addEventListener('change', function(){ populateDays(); updateAge(); });
           daySel.addEventListener('change', updateAge);
+
+          // ── Custom dropdown UI for month/day/year ──
+          // The three <select>s above are hidden (display:none) and
+          // exist purely as the data model everything else here
+          // reads from — populateDays()/updateAge() and auth.js's
+          // #su-age check at submit never had to change. Each one
+          // gets its own themed button + panel instead of relying on
+          // the browser's native <select> popup, which renders with
+          // its own OS/browser styling that doesn't match the rest
+          // of the page (light background, system font, no way to
+          // theme it) regardless of what CSS is applied to the
+          // <select> itself.
+          function setupDobCombo(sel, btn, panel) {
+            const labelEl = btn.querySelector('.dob-combo-label');
+            labelEl.dataset.placeholder = labelEl.textContent;
+
+            function closePanel() {
+              panel.hidden = true;
+              btn.setAttribute('aria-expanded', 'false');
+              btn.classList.remove('open');
+            }
+
+            function syncLabel() {
+              const chosen = sel.options[sel.selectedIndex];
+              const picked = chosen && chosen.value !== '';
+              labelEl.textContent = picked ? chosen.textContent : labelEl.dataset.placeholder;
+              btn.classList.toggle('filled', picked);
+            }
+
+            function renderOptions() {
+              panel.innerHTML = '';
+              Array.from(sel.options).forEach(function(opt) {
+                if (opt.disabled) return; // the "Month"/"Day"/"Year" placeholder
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = 'dob-combo-option';
+                item.setAttribute('role', 'option');
+                item.textContent = opt.textContent;
+                if (opt.value === sel.value) {
+                  item.classList.add('active');
+                  item.setAttribute('aria-selected', 'true');
+                }
+                item.addEventListener('click', function() {
+                  sel.value = opt.value;
+                  sel.dispatchEvent(new Event('change', { bubbles: true }));
+                  syncLabel();
+                  closePanel();
+                  btn.focus();
+                });
+                panel.appendChild(item);
+              });
+            }
+
+            function openPanel() {
+              [monthCombo, dayCombo, yearCombo].forEach(function(c) { if (c && c !== api) c.closePanel(); });
+              renderOptions();
+              panel.hidden = false;
+              btn.setAttribute('aria-expanded', 'true');
+              btn.classList.add('open');
+              const active = panel.querySelector('.dob-combo-option.active');
+              if (active) active.scrollIntoView({ block: 'center' });
+            }
+
+            btn.addEventListener('click', function(ev) {
+              ev.stopPropagation();
+              if (panel.hidden) openPanel(); else closePanel();
+            });
+
+            const api = { closePanel, syncLabel };
+            return api;
+          }
+
+          monthCombo = setupDobCombo(monthSel, document.getElementById('su-dob-month-btn'), document.getElementById('su-dob-month-panel'));
+          dayCombo   = setupDobCombo(daySel,   document.getElementById('su-dob-day-btn'),   document.getElementById('su-dob-day-panel'));
+          yearCombo  = setupDobCombo(yearSel,  document.getElementById('su-dob-year-btn'),  document.getElementById('su-dob-year-panel'));
+
+          document.addEventListener('click', function(e) {
+            if (!e.target.closest('.dob-combo')) {
+              [monthCombo, dayCombo, yearCombo].forEach(function(c) { c.closePanel(); });
+            }
+          });
+          document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') [monthCombo, dayCombo, yearCombo].forEach(function(c) { c.closePanel(); });
+          });
 
           // Gender chips — set the hidden <select> so existing validation
           // and submit logic in auth.js keeps working unchanged.

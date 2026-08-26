@@ -92,6 +92,7 @@ function wireArticlesSearch() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  if (document.body.dataset.page !== 'articles') return; // see js/notifications.js
   await authReady; // see auth.js — otherwise this can render before we know who's logged in
   wireArticlesSearch();
   renderArticles();

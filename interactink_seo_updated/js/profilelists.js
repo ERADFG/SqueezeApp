@@ -9,14 +9,22 @@
 // Also reachable via the legacy profilelists.html?u=<username> form,
 // same fallback pattern as followlist.js.
 // ─────────────────────────────────────────────────────────────
-const plUsername = (() => {
+// Recomputed on every visit (see loadProfileLists() below) rather
+// than frozen here — pjax (js/pjax.js) keeps this script loaded for
+// the life of the tab, so viewing a *different* profile's Lists
+// later would otherwise silently keep showing the first one forever.
+function plReadUrl() {
   const m = location.pathname.match(/^\/([^/]+)\/lists\/?$/);
   if (m) return decodeURIComponent(m[1]);
   return new URLSearchParams(location.search).get('u');
-})();
+}
+let plUsername = null;
 
 async function loadProfileLists() {
+  if (document.body.dataset.page !== 'profilelists') return; // see js/notifications.js
+  plUsername = plReadUrl();
   const root = document.getElementById('profilelists-root');
+  if (!root) return;
   if (!plUsername) {
     root.innerHTML = `<div class="errmsg">No user specified.</div>`;
     return;

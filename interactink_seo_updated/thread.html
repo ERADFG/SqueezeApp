@@ -3,18 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Search — InteractInk</title>
-<meta name="description" content="Search posts and people on InteractInk.">
+<title>Post — InteractInk</title>
+<meta name="description" content="A post and its replies on InteractInk.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="InteractInk">
-<meta property="og:title" content="Search — InteractInk">
-<meta property="og:description" content="Search posts and people on InteractInk.">
+<meta property="og:title" content="Post — InteractInk">
+<meta property="og:description" content="A post and its replies on InteractInk.">
 <meta property="og:image" content="/img/logo-light.png">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Search — InteractInk">
-<meta name="twitter:description" content="Search posts and people on InteractInk.">
+<meta name="twitter:title" content="Post — InteractInk">
+<meta name="twitter:description" content="A post and its replies on InteractInk.">
 <meta name="twitter:image" content="/img/logo-light.png">
-<meta name="robots" content="noindex, follow">
 <link rel="canonical">
 <meta property="og:url" content="">
 <base href="/">
@@ -27,7 +26,7 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="css/style.css?v=20260823e">
 </head>
-<body>
+<body data-page="thread">
 
 <div class="xshell">
   <div id="hdr">
@@ -46,25 +45,31 @@
 
   <div id="main">
     <div id="feed" style="max-width:600px;">
-      <h1 id="page-h1" class="sr-only">Search InteractInk</h1>
-      <div class="search-topbar">
-        <form onsubmit="submitSearchForm();return false;">
-          <div class="xsearch">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
-            <input id="sp-input" placeholder="Search InteractInk" autocomplete="off">
-          </div>
-        </form>
+      <div class="sec-bar" id="thread-hdr">
+        <a class="ep-back" href="index.html" id="thread-back" aria-label="Back" onclick="if(history.length>1){history.back();return false;}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>
+        <div><b>Post</b></div>
       </div>
-      <div id="search-scope"></div>
-      <div id="search-tabs" class="xtabs" style="border-bottom:1px solid var(--line);"></div>
-      <div id="search-root"><span class="spinner">Type something to search&hellip;</span></div>
+      <h1 id="page-h1" class="sr-only">Post</h1>
+      <div id="thread-root">
+        <div class="skel-card skel-op"><div class="skel-avatar"></div><div class="skel-lines"><div class="skel-line w20"></div><div class="skel-line w90 tall"></div><div class="skel-line w60 tall"></div></div></div>
+        <div class="skel-card"><div class="skel-avatar"></div><div class="skel-lines"><div class="skel-line w40"></div><div class="skel-line w90"></div><div class="skel-line w60"></div></div></div>
+        <div class="skel-card"><div class="skel-avatar"></div><div class="skel-lines"><div class="skel-line w40"></div><div class="skel-line w90"></div><div class="skel-line w60"></div></div></div>
+      </div>
     </div>
 
-    <div id="sidebar">
+    <div id="sidebar" class="xright">
+      <div class="xsearch">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+        <input id="side-search" placeholder="Search InteractInk">
+      </div>
+      <div class="trends-box" style="padding:14px 16px;">
+        <div style="font-weight:800;font-size:17px;margin-bottom:6px;">About InteractInk</div>
+        <div style="font-size:13.5px;color:var(--muted);line-height:1.5;">Every post is public and tied to a real account. Read the <a href="rules.html">Rules</a> before posting.</div>
+      </div>
       <div class="who-box" id="who-to-follow"></div>
       <div id="ftr" style="padding:0;">
         [<a href="index.html">&larr; Back to Home</a>]
-        <br><span style="font-size:10px;color:var(--muted);">&copy; 2026 InteractInk &mdash; <a href="about.html">About</a> &mdash; <a href="contact.html">Contact</a> &mdash; <a href="privacy.html">Privacy</a> &mdash; <a href="terms.html">Terms</a></span>
+        <br><span style="font-size:10px;color:var(--muted);">&copy; 2026 InteractInk &mdash; <a href="rules.html">Rules</a> &mdash; <a href="rules.html#dmca">DMCA</a> &mdash; <a href="about.html">About</a> &mdash; <a href="contact.html">Contact</a> &mdash; <a href="privacy.html">Privacy</a> &mdash; <a href="terms.html">Terms</a></span>
       </div>
     </div>
   </div>
@@ -74,7 +79,7 @@
 <div class="modal-bg" id="modal-report">
   <div class="modal">
     <a class="modal-close" href="#" onclick="closeReport();return false;">&#10005;</a>
-    <h2 id="report-modal-title">Report Post</h2>
+    <h2>Report Post</h2>
     <label>Reason</label>
     <select id="report-reason">
       <option value="illegal">Illegal content</option>
@@ -125,7 +130,7 @@
 <script src="js/common.js?v=20260825a" defer></script>
 <script src="js/video-player.js?v=20260823e" defer></script>
 <script src="js/auth.js?v=20260820" defer></script>
-<script src="js/search.js?v=20260820f" defer></script>
+<script src="js/thread.js?v=20260820" defer></script>
 <script src="/js/pjax.js?v=20260825a" defer></script>
 </body>
 </html>

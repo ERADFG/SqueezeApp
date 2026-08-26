@@ -230,6 +230,7 @@ function wireListsSearch() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  if (document.body.dataset.page !== 'lists') return; // see js/notifications.js
   await authReady; // see auth.js — otherwise this can render before we know who's logged in
   wireListsSearch();
   await loadFollowingIds();
