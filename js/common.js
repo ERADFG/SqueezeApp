@@ -1066,6 +1066,19 @@ function renderMobileChrome() {
   // in the topbar instead of being pushed off-center by that pill.)
   const onChatPage = here === 'messages';
 
+  // chat.js appends #chat-fab / #chat-fab-sheet-bg straight to <body>
+  // (not into the pjax-swapped root), so they survive navigating away
+  // from the chat page and end up stacked on top of this #m-fab on
+  // every other page. renderMobileChrome() runs on every page/nav
+  // (see comment above), so this is the one place guaranteed to fire
+  // after leaving chat — tear the chat FAB down here whenever we're
+  // not on the chat page.
+  if (!onChatPage) {
+    document.getElementById('chat-fab')?.remove();
+    document.getElementById('chat-fab-sheet-bg')?.remove();
+    document.body.classList.remove('oc-sheet-open');
+  }
+
   el.innerHTML = `
     <div id="m-topbar">
       <button class="m-menu-btn" onclick="openMobileDrawer();return false;" aria-label="Open menu">${ICON_HAMBURGER}</button>
