@@ -1,7 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // BOARD PAGE — /index.html
 // ─────────────────────────────────────────────────────────────
-const POST_SELECT = '*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)';
 const FEED_PAGE_SIZE = 20; // per-request page size — NOT a total-feed cap; paging can continue indefinitely
 
 let activeTab = 'foryou'; // 'foryou' | 'following'

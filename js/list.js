@@ -14,7 +14,6 @@
 // this page — same division as Twitter, where "Add to Lists" lives
 // on the profile. Following the List itself happens right here.
 // ─────────────────────────────────────────────────────────────
-const POST_SELECT = '*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)';
 
 // Recomputed on every visit (see the DOMContentLoaded handler below)
 // rather than frozen here — pjax (js/pjax.js) keeps this script

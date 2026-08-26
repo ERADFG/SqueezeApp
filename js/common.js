@@ -2,6 +2,26 @@
 // COMMON HELPERS — shared by board.js and thread.js
 // ─────────────────────────────────────────────────────────────
 
+// ── Shared PostgREST select strings ──
+// Declared ONCE here (common.js only ever loads once per tab — see
+// pjax.js's loadedScripts dedup) rather than in each page bundle that
+// uses it. board.js, community.js, list.js, profile.js, search.js and
+// thread.js used to each declare their own `const POST_SELECT = ...`
+// (profile.js/thread.js also each had their own `const REPLY_SELECT`).
+// Because pjax keeps every page bundle's script alive in the same JS
+// realm for the life of the tab instead of tearing it down between
+// navigations, loading a second page bundle that redeclared the same
+// top-level `const` threw "Identifier 'POST_SELECT' has already been
+// declared" the instant it was parsed — which silently kills that
+// ENTIRE script (nothing in it runs, not even its DOMContentLoaded
+// listener), so the destination page's loader never ran and its
+// skeleton placeholder just sat there forever. Only a hard reload
+// (a fresh JS realm with no prior declarations) ever cleared it. E.g.
+// visiting the home feed then tapping into a profile — or any other
+// pair of pages from that list of six — reproduced this every time.
+const POST_SELECT = '*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)';
+const REPLY_SELECT = '*, profile:profiles(username,display_name,avatar_url,verified,verification_type)';
+
 // ── SPECULATIVE PRERENDERING — this is a plain multi-page app (every
 // internal link is a real full navigation, no SPA router), so the
 // single biggest lever for making clicks feel instant is starting the

@@ -16,8 +16,6 @@
 let viewedProfile = null;
 let isOwnProfile = false;
 
-const POST_SELECT = '*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)';
-
 async function loadProfile() {
   // Guard against pjax's synthetic DOMContentLoaded: that event
   // re-fires on every navigation for as long as the tab is open, and
@@ -72,7 +70,7 @@ async function loadProfile() {
     setCanonical(prettyProfileUrl(profile.username));
     root.innerHTML = `
       <div class="sec-bar" id="susp-hdr">
-        <a class="ep-back" href="index.html" aria-label="Back" onclick="if(history.length>1){history.back();return false;}">${ICON_BACK}</a>
+        <a class="ep-back" href="index.html" aria-label="Back" onclick="if(history.length>1){history.back();return false;}">${PROFILE_ICON_BACK}</a>
         <div><b>Profile</b></div>
       </div>
       <div class="susp-notice">
@@ -95,7 +93,7 @@ async function loadProfile() {
     setCanonical(prettyProfileUrl(profile.username));
     root.innerHTML = `
       <div class="sec-bar" id="blocked-hdr">
-        <a class="ep-back" href="index.html" aria-label="Back" onclick="if(history.length>1){history.back();return false;}">${ICON_BACK}</a>
+        <a class="ep-back" href="index.html" aria-label="Back" onclick="if(history.length>1){history.back();return false;}">${PROFILE_ICON_BACK}</a>
         <div><b>${esc(profile.display_name || profile.username)}</b><div class="handle" style="font-size:13px;">@${esc(profile.username)}</div></div>
       </div>
       <div class="susp-notice">
@@ -137,7 +135,7 @@ async function loadProfile() {
 
   root.innerHTML = `
     <div class="profile-hdr" id="profile-hdr" style="${profile.banner_url ? `--banner-img:url('${esc(profile.banner_url)}')` : ''}">
-      <a class="profile-back-btn" href="index.html" aria-label="Back to home">${ICON_BACK}</a>
+      <a class="profile-back-btn" href="index.html" aria-label="Back to home">${PROFILE_ICON_BACK}</a>
       <div class="profile-hdr-top">
         <img class="avatar pfp-lg${avSqClass(profile)}" id="pv-avatar" src="${esc(avatarUrl(profile.avatar_url))}" alt="">
         <div class="profile-hdr-actions">
@@ -225,7 +223,11 @@ async function loadReplyCountIntoStat(userId, basePostsCount) {
 }
 
 // ── HEADER ICONS used only on the profile page ──
-const ICON_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 8 12l7 7"/></svg>';
+// Named PROFILE_ICON_BACK (not the generic ICON_BACK) because chat.js
+// declares its own differently-styled ICON_BACK — see the POST_SELECT
+// comment in common.js for why two page bundles can never safely
+// declare the same top-level identifier under pjax.
+const PROFILE_ICON_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 8 12l7 7"/></svg>';
 const ICON_MESSAGE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="m4 7 8 6 8-6"/></svg>';
 const ICON_LOC_RAW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.5 7-11.5A7 7 0 0 0 5 9.5C5 14.5 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.4"/></svg>';
 const ICON_LOC = `<span class="pmr-icon">${ICON_LOC_RAW}</span>`;
@@ -488,7 +490,6 @@ async function cancelScheduledPost(postId) {
   }
 }
 
-const REPLY_SELECT = '*, profile:profiles(username,display_name,avatar_url,verified,verification_type)';
 
 async function loadUserReplies(userId) {
   const el = document.getElementById('profile-posts');
