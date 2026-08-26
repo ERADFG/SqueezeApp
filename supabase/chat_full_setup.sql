@@ -26,12 +26,12 @@
 -- multiple permissive policies together), so existing 1:1 DM access
 -- keeps working exactly as it does today.
 --
--- ENCRYPTION NOTE: message text stays end-to-end encrypted for 1:1
--- DMs only (per-pair ECDH, see js/chat-crypto.js — unchanged by this
--- file). Group/channel messages are plain text server-side, and
--- media attachments (in any context) are plain public URLs, same
--- trust model as a post's image — see the PART 1 comment below for
--- why.
+-- ENCRYPTION NOTE: see supabase/chat_server_side_encryption.sql,
+-- which must be run AFTER this file (it depends on the columns/
+-- tables created here). That migration encrypts message bodies at
+-- rest server-side for 1:1 DMs, groups, and channels alike — it
+-- superseded the per-pair-ECDH client-side scheme this comment used
+-- to describe.
 -- ============================================================
 
 create extension if not exists pgcrypto;

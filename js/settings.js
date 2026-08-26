@@ -144,16 +144,6 @@ async function loadSettings() {
           </select>
         </div>
         <span id="dm-privacy-st" style="font-size:11px;color:var(--muted);"></span>
-
-        <div class="settings-row" id="chat-backup-anchor" style="margin-top:12px;">
-          <div>
-            <div class="lbl">Chat backup</div>
-            <div class="pf-note" style="margin-top:2px;">Set a passphrase so your encrypted chats can be unlocked on a new phone or browser instead of showing "can't decrypt this message on this device."</div>
-          </div>
-        </div>
-        <button type="button" class="pf-btn" style="margin-top:6px;width:auto;padding:8px 16px;" onclick="setupChatKeyBackup()">Set up chat backup</button>
-        <button type="button" class="pf-btn" style="margin-top:6px;margin-left:8px;width:auto;padding:8px 16px;background:var(--input-bg);color:var(--ink);border:1px solid var(--border-input);" onclick="restoreChatBackupNow()">Restore chat backup</button>
-        <span id="chat-backup-st" style="display:block;font-size:11px;color:var(--muted);margin-top:6px;"></span>
       </div>
 
       ${settingsRowHtml('notifications', NAV_ICON.bell, t('settings.notifications'))}
@@ -208,19 +198,6 @@ async function loadSettings() {
     </div>
   `;
 
-  // Deep link from the chat thread's "Set up chat backup" banner
-  // (settings.html#chat-backup) — that link used to just dump the
-  // person on the top-level settings menu with Privacy collapsed,
-  // leaving them to hunt for a row they didn't know existed. Open
-  // the Privacy panel automatically and draw the eye to the actual
-  // button instead.
-  if (location.hash === '#chat-backup') {
-    toggleSettingsPanel('privacy');
-    const anchor = document.getElementById('chat-backup-anchor');
-    anchor?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    anchor?.classList.add('settings-row-highlight');
-    setTimeout(() => anchor?.classList.remove('settings-row-highlight'), 2200);
-  }
 }
 
 async function saveNotifSetting(id) {

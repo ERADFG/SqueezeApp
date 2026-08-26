@@ -2,12 +2,17 @@
 // CHAT PAGE — /messages (conversation list) or /messages/<username> (thread)
 // Also reachable via the legacy chat.html?u=<username> form.
 //
-// Thread view is end-to-end encrypted (see js/chat-crypto.js): once
-// both sides of a conversation have opened chat at least once (which
-// publishes an ECDH public key to their profile), every new message
-// is AES-GCM ciphertext the moment it leaves the browser — Supabase
-// never sees plaintext. Older/legacy rows (iv is null) still render
-// as plain text.
+// Messages (1:1 DMs, group, and channel) are encrypted at rest
+// server-side — see supabase/chat_server_side_encryption.sql. Reading
+// message bodies always goes through the get_dm_thread / get_dm_list /
+// get_group_thread / get_group_last_messages / get_message RPCs,
+// which decrypt with a key that only exists in Supabase Vault, gated
+// by the same sender/recipient/membership checks the table's RLS
+// already enforces. Nothing here holds or derives any key — there's
+// no per-device state, so chat works identically the instant you open
+// it on any device, no passphrase or backup step involved. See that
+// SQL file's header comment for the trade-off this makes vs. true
+// end-to-end encryption.
 // ─────────────────────────────────────────────────────────────
 // Group/channel thread route: /messages/g/<id> (pretty, added to
 // vercel.json alongside the existing /messages/<username> rewrite),
@@ -35,7 +40,6 @@ let chatWithUsername = null;
 function groupMessagesUrl(id) { return `/messages/g/${encodeURIComponent(id)}`; }
 let chatOther = null;   // the other user's profile, once a thread is open
 let chatChannel = null;
-let chatKey = null;     // this thread's derived AES-GCM key, or null if not (yet) encrypted
 
 // ── GROUP/CHANNEL STATE ──
 let chatGroup = null;        // the conversations row, once a group/channel thread is open
@@ -177,50 +181,17 @@ async function loadChat() {
   return loadConversationList(session, root);
 }
 
-// ── ENCRYPTION KEY HELPERS ──
-// One derived AES-GCM key per conversation partner, cached for the
-// life of the page (cheap to derive, but no reason to redo it for
-// every row in the conversation list). ensureMyKeypair() is also
-// idempotent/cached inside chat-crypto.js itself.
-const chatKeyCache = new Map();
-function getChatKey(myId, otherId, otherPubkey) {
-  if (!otherPubkey || !chatCryptoSupported()) return Promise.resolve(null);
-  if (chatKeyCache.has(otherId)) return chatKeyCache.get(otherId);
-  const p = deriveChatKey(myId, otherPubkey);
-  chatKeyCache.set(otherId, p);
-  return p;
-}
-// Resolves a message row to plaintext for display: unencrypted rows
-// (iv is null — legacy, or sent before either side had a key) pass
-// through as-is; encrypted rows decrypt with the given key, or
-// resolve to null (rendered as an explicit "can't decrypt" bubble
-// instead of silently showing nothing or garbage) if that fails.
-async function decryptForDisplay(key, body, iv) {
-  if (!iv) return body;
-  if (!key) return null;
-  return await chatDecrypt(key, body, iv);
-}
-
 // ── CONVERSATION LIST ──
 async function loadConversationList(session, root) {
   document.body.classList.remove('chat-thread-open'); // see .chat-thread-open note in style.css — list view, not a thread
   document.getElementById('chat-sec-bar').innerHTML = t('nav.chat');
-  if (chatCryptoSupported()) {
-    // Must resolve BEFORE ensureMyKeypair() gets a chance to generate
-    // (and publish) a throwaway key — see resolveChatIdentity() in
-    // js/chat-crypto.js for why that ordering matters.
-    await resolveChatIdentity(session.user.id);
-    ensureMyKeypair(session.user.id); // fire-and-forget: publishes my pubkey so others can start encrypting to me
-  }
   subscribeConversationListRealtime(session, root);
 
+  // get_dm_list() decrypts server-side and returns the same shape the
+  // old embedded-resource select used (sender/recipient nested) — see
+  // supabase/chat_server_side_encryption.sql.
   const [{ data, error }, groupRows] = await Promise.all([
-    sb.from('messages')
-      .select(`*, sender:profiles!messages_sender_id_fkey(id,username,display_name,avatar_url,verified,verification_type,pubkey),
-                  recipient:profiles!messages_recipient_id_fkey(id,username,display_name,avatar_url,verified,verification_type,pubkey)`)
-      .or(`sender_id.eq.${session.user.id},recipient_id.eq.${session.user.id}`)
-      .order('created_at', { ascending: false })
-      .limit(300),
+    sb.rpc('get_dm_list'),
     loadMyGroupRows(session),
   ]);
 
@@ -294,10 +265,6 @@ async function loadConversationList(session, root) {
     let snip;
     if (last.deleted_for_everyone) {
       snip = `<em>${esc(t('chat.messageDeleted'))}</em>`;
-    } else if (last.iv) {
-      const key = other?.id ? await getChatKey(session.user.id, other.id, other.pubkey) : null;
-      const plain = await decryptForDisplay(key, last.body, last.iv);
-      snip = plain != null ? esc(plain.slice(0, 80)) : `${CHAT_ICON_LOCK}<span>${esc(t('chat.encryptedMessage'))}</span>`;
     } else if (last.media_url && !last.body) {
       // Caption-less attachment — show what kind instead of a blank snippet.
       const label = last.media_type === 'video' ? t('chat.video') : last.media_type === 'audio' ? t('chat.voiceMessage') : t('chat.photo');
@@ -344,11 +311,10 @@ async function loadMyGroupRows(session) {
   if (error || !memberRows?.length) return [];
 
   const ids = memberRows.map(r => r.conversation_id);
-  const { data: msgs } = await sb.from('messages')
-    .select('id, conversation_id, sender_id, body, media_type, created_at, sender:profiles!messages_sender_id_fkey(username,display_name)')
-    .in('conversation_id', ids)
-    .order('created_at', { ascending: false })
-    .limit(500);
+  // get_group_last_messages() decrypts server-side (see
+  // supabase/chat_server_side_encryption.sql) and already returns one
+  // row per conversation_id, most recent first.
+  const { data: msgs } = await sb.rpc('get_group_last_messages', { conv_ids: ids });
 
   const lastByGroup = new Map();
   (msgs || []).forEach(m => { if (!lastByGroup.has(m.conversation_id)) lastByGroup.set(m.conversation_id, m); });
@@ -862,10 +828,11 @@ async function loadThread(session, root) {
 
   document.getElementById('chat-sec-bar').innerHTML = `<a class="back" href="chat.html" style="margin:0 10px 0 0;">&larr;</a> ${esc(other.display_name || other.username)}`;
 
-  const { data: msgs, error } = await sb.from('messages').select('*')
-    .or(`and(sender_id.eq.${session.user.id},recipient_id.eq.${other.id}),and(sender_id.eq.${other.id},recipient_id.eq.${session.user.id})`)
-    .order('created_at', { ascending: true })
-    .limit(500);
+  // get_dm_thread() decrypts server-side (see
+  // supabase/chat_server_side_encryption.sql) — no client-side key
+  // material or per-device state involved, so this works identically
+  // on any device the instant it's opened.
+  const { data: msgs, error } = await sb.rpc('get_dm_thread', { other_user_id: other.id });
 
   if (error) { root.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
 
@@ -876,42 +843,17 @@ async function loadThread(session, root) {
     const mine = m.sender_id === session.user.id;
     return mine ? !m.deleted_for_sender : !m.deleted_for_recipient;
   });
+  visibleMsgs.forEach(m => {
+    if (m.deleted_for_everyone) { m._plain = ''; }
+    // Rows still tagged with the old client-side E2E format (iv set,
+    // body_encrypted false) hold ciphertext under a scheme this app no
+    // longer has any key material for — show that plainly instead of
+    // either garbled ciphertext or claiming it decrypted.
+    else if (m.iv && !m.body_encrypted) { m._plain = null; }
+    else { m._plain = m.body; }
+  });
 
-  // Publish my key (if missing) and derive the shared key for this
-  // conversation before rendering anything, so the very first paint
-  // already shows decrypted text instead of a flash of ciphertext/
-  // placeholders.
-  chatKey = null;
-  if (chatCryptoSupported()) {
-    // Same ordering fix as loadConversationList() — resolve any
-    // existing backup before ensureMyKeypair() can generate/publish a
-    // fresh throwaway key. See resolveChatIdentity() in chat-crypto.js.
-    await resolveChatIdentity(session.user.id);
-    await ensureMyKeypair(session.user.id);
-    if (other.pubkey) chatKey = await getChatKey(session.user.id, other.id, other.pubkey);
-  }
-  await Promise.all(visibleMsgs.map(async m => { m._plain = m.deleted_for_everyone ? '' : await decryptForDisplay(chatKey, m.body, m.iv); }));
-
-  let encBanner = chatKey
-    ? `<div class="chat-e2e-banner">${CHAT_ICON_LOCK}<span>${esc(t('chat.e2eActive'))}</span></div>`
-    : (chatCryptoSupported()
-        ? `<div class="chat-e2e-banner pending">${CHAT_ICON_LOCK}<span>${esc(t('chat.e2ePending').replace('{username}', other.username))}</span></div>`
-        : '');
-
-  // Some messages in this thread failed to decrypt with the current
-  // device's key (see the msg-undecryptable bubble in msgBubbleHtml)
-  // — most often because this device generated a fresh keypair at
-  // some point (new browser, cleared site data, etc.) instead of
-  // using the one these messages were actually encrypted with. Surface
-  // one clear way out at the top of the thread rather than leaving the
-  // person to notice and tap the small per-bubble lock icon.
-  const hasUndecryptable = visibleMsgs.some(m => !m.deleted_for_everyone && m._plain == null);
-  if (hasUndecryptable) {
-    const backupExists = await chatBackupExists(session.user.id);
-    encBanner += backupExists
-      ? `<div class="chat-e2e-banner recover"><button type="button" class="chat-e2e-recover-btn" onclick="restoreChatBackupNow().then(()=>location.reload())">${CHAT_ICON_LOCK}<span>${esc(t('chat.cantDecryptBannerUnlock'))} <u>${esc(t('chat.unlockBtn'))}</u></span></button></div>`
-      : `<div class="chat-e2e-banner recover"><a class="chat-e2e-recover-btn" href="settings.html#chat-backup">${CHAT_ICON_LOCK}<span>${esc(t('chat.cantDecryptBannerUnlock'))} <u>${esc(t('chat.setupBackupBtn'))}</u></span></a></div>`;
-  }
+  const encBanner = `<div class="chat-e2e-banner">${CHAT_ICON_LOCK}<span>${esc(t('chat.e2eActive'))}</span></div>`;
 
   // Snapshot which messages are unread *before* we mark them read
   // below — renderMsgsHtml() uses this to drop a WhatsApp-style
@@ -1118,8 +1060,8 @@ function renderMsgsHtml(msgs, myId, unreadIds) {
   return html;
 }
 
-// m._plain must already be set (decryptForDisplay()) before calling
-// this — it never decrypts on its own, since that's async and this
+// m._plain must already be set before calling this (the loaders above
+// set it directly from the already-decrypted RPC result) — this
 // Telegram/WhatsApp-style "meta" (clock time + read ticks) that sits
 // on the same line as the end of the message text, inside the bubble
 // itself, instead of floating outside it as a separate element. For
@@ -1158,7 +1100,7 @@ function msgBubbleHtml(m, myId, group = { start: true, end: true }) {
   const hasCaption = m._plain != null && m._plain !== '';
   const bodyHtml = m._plain != null
     ? (hasCaption ? renderBody(m._plain) : '')
-    : `<button type="button" class="msg-undecryptable" onclick="restoreChatBackupNow().then(()=>location.reload())">${CHAT_ICON_LOCK}<em>Can't decrypt this message on this device — tap to unlock with your chat passphrase</em></button>`;
+    : `<div class="msg-undecryptable">${CHAT_ICON_LOCK}<em>This message used the old encryption system and can't be read anymore.</em></div>`;
   const mediaHtml = chatMediaHtml(m);
   const ticksHtml = mine
     ? `<span class="msg-ticks${m.read ? ' read' : ''}">${m.read ? ICON_TICK2 : ICON_TICK1}</span>`
@@ -1667,61 +1609,33 @@ async function sendMessage() {
   }
   renderChatAttachPreview();
 
-  const insertRow = { sender_id: currentSession.user.id, recipient_id: chatOther.id, media_url, media_type };
+  const insertRow = { sender_id: currentSession.user.id, recipient_id: chatOther.id, media_url, media_type, body };
   if (attachment?.type === 'audio' && attachment.durationMs) insertRow.media_duration_ms = attachment.durationMs;
-  // chatEncrypt() (unlike chatDecrypt()) doesn't guard against WebCrypto
-  // throwing — a stale/mismatched key, a locked-down browser context,
-  // etc. Without this try/catch that exception used to escape sendMessage()
-  // entirely: an uncaught rejection, the message silently never sent, and
-  // the send button stuck disabled. Fall back to sending the plaintext body
-  // instead (same as when chatKey is null/not-yet-established) so a send
-  // always goes through and nothing "can't encrypt"-shaped ever surfaces.
-  if (chatKey && body) {
-    try {
-      const enc = await chatEncrypt(chatKey, body);
-      insertRow.body = enc.body;
-      insertRow.iv = enc.iv;
-    } catch (e) {
-      insertRow.body = body; // encryption failed — send as plaintext rather than losing/blocking the message
-    }
-  } else {
-    insertRow.body = body; // '' when it's a caption-less attachment
-  }
+  // body is sent as plain text over TLS and encrypted server-side by
+  // messages_encrypt_body_trg the moment it's inserted — see
+  // supabase/chat_server_side_encryption.sql. Nothing to do client-side.
 
   const { data, error } = await sb.from('messages').insert(insertRow).select('*').single();
   if (error) { alert(error.message || t('chat.failedToSend')); return; }
-  data._plain = body; // already have the plaintext locally — no need to decrypt what we just encrypted
+  data._plain = body; // already have the plaintext locally — no need to round-trip through the decrypt RPC for our own send
   if (!document.getElementById(`msg-${data.id}`)) {
     appendChatMsg(data, currentSession.user.id);
     scrollChatToBottom();
   }
-  maybeNudgeChatBackup(!!data.iv);
-}
-
-// One-time (per browser) nudge toward Settings → Privacy → "Set up
-// chat backup", the first time someone sends an actually-encrypted
-// message without a backup already saved. The goal is to have a
-// recovery path in place *before* a new device or cleared site data
-// ever makes old messages unreadable, rather than only reacting to it
-// afterward (see the "can't decrypt" banner built in loadThread()).
-// Silent no-op once shown, or once a backup already exists.
-const CHAT_BACKUP_NUDGE_LS = 'oc-e2e-backup-nudge-shown';
-async function maybeNudgeChatBackup(hasIv) {
-  if (!hasIv || !currentSession) return;
-  try { if (localStorage.getItem(CHAT_BACKUP_NUDGE_LS)) return; } catch (e) {}
-  const exists = await chatBackupExists(currentSession.user.id);
-  try { localStorage.setItem(CHAT_BACKUP_NUDGE_LS, '1'); } catch (e) {}
-  if (!exists) toast(t('chat.backupNudge'));
 }
 
 function subscribeChatRealtime(myId, otherId) {
   if (chatChannel) sb.removeChannel(chatChannel);
   chatChannel = sb.channel(`dm-${[myId, otherId].sort().join('-')}`)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `sender_id=eq.${otherId}` }, async payload => {
-      const m = payload.new;
-      if (m.recipient_id !== myId) return;
-      if (document.getElementById(`msg-${m.id}`)) return;
-      m._plain = await decryptForDisplay(chatKey, m.body, m.iv);
+      const incoming = payload.new;
+      if (incoming.recipient_id !== myId) return;
+      if (document.getElementById(`msg-${incoming.id}`)) return;
+      // Realtime streams the raw row (still ciphertext) — get_message()
+      // decrypts it server-side. See supabase/chat_server_side_encryption.sql.
+      const { data: m, error } = await sb.rpc('get_message', { msg_id: incoming.id });
+      if (error || !m) return;
+      m._plain = m.deleted_for_everyone ? '' : (m.iv && !m.body_encrypted ? null : m.body);
       appendChatMsg(m, myId);
       scrollChatToBottom();
       sb.from('messages').update({ read: true }).eq('id', m.id);
@@ -1762,10 +1676,11 @@ function subscribeChatRealtime(myId, otherId) {
 // Same composer/attachment machinery as the 1:1 thread above (voice
 // notes, image/video attach, auto-grow textarea) — all of that is
 // already keyed off the generic `chatAttachment` global rather than
-// `chatOther`, so it works here unchanged. Group/channel messages
-// aren't end-to-end encrypted (see the PART 3 comment in
-// supabase/chat_full_setup.sql) — sendGroupMessage() below just never
-// touches chat-crypto.js.
+// `chatOther`, so it works here unchanged. Group/channel messages are
+// now encrypted at rest server-side too (they weren't before) — see
+// supabase/chat_server_side_encryption.sql; nothing client-side needs
+// to change between the two cases, get_group_thread()/get_message()
+// handle the decryption transparently.
 async function loadGroupThread(session, root) {
   const { data: conv, error: convErr } = await sb.from('conversations').select('*').eq('id', chatGroupId).maybeSingle();
   if (convErr || !conv) { root.innerHTML = `<div class="errmsg">${esc(t('chat.userNotFound') || "This chat doesn't exist.")}</div>`; return; }
@@ -1797,12 +1712,12 @@ async function loadGroupThread(session, root) {
     }
   }
 
-  const { data: msgs, error } = await sb.from('messages').select('*')
-    .eq('conversation_id', conv.id)
-    .order('created_at', { ascending: true })
-    .limit(500);
+  // get_group_thread() decrypts server-side — see
+  // supabase/chat_server_side_encryption.sql. Group/channel messages
+  // are now encrypted at rest too (they weren't before).
+  const { data: msgs, error } = await sb.rpc('get_group_thread', { conv_id: conv.id });
   if (error) { root.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
-  (msgs || []).forEach(m => { m._plain = m.body; }); // never encrypted — see comment above
+  (msgs || []).forEach(m => { m._plain = m.body; });
 
   const canPost = conv.kind === 'group' || chatGroupMyRole === 'owner' || chatGroupMyRole === 'admin';
   const composerHtml = canPost ? `
@@ -1965,10 +1880,14 @@ function appendGroupChatMsg(m, myId) {
 function subscribeGroupRealtime(conversationId, myId) {
   if (chatGroupRealtimeChannel) sb.removeChannel(chatGroupRealtimeChannel);
   chatGroupRealtimeChannel = sb.channel(`group-${conversationId}`)
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` }, payload => {
-      const m = payload.new;
-      if (m.sender_id === myId) return; // already appended optimistically by sendGroupMessage()
-      if (document.getElementById(`msg-${m.id}`)) return;
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` }, async payload => {
+      const incoming = payload.new;
+      if (incoming.sender_id === myId) return; // already appended optimistically by sendGroupMessage()
+      if (document.getElementById(`msg-${incoming.id}`)) return;
+      // Realtime streams the raw row (still ciphertext) — get_message()
+      // decrypts it server-side. See supabase/chat_server_side_encryption.sql.
+      const { data: m, error } = await sb.rpc('get_message', { msg_id: incoming.id });
+      if (error || !m) return;
       m._plain = m.body;
       appendGroupChatMsg(m, myId);
       scrollChatToBottom();
