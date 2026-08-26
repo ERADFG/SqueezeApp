@@ -2198,7 +2198,7 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
    pull commits it switches to a continuous spin below. */
 .ptr-track { fill:none; stroke:var(--line); stroke-width:7; }
 .ptr-arc   { fill:none; stroke:var(--maroon); stroke-width:7; stroke-linecap:round; stroke-dasharray:26 200; transform-origin:25px 25px; transform:rotate(-90deg); }
-#ptr-indicator.ptr-loading .ptr-spinner { animation:ptr-spin .8s cubic-bezier(.5,0,.5,1) infinite; }
+#ptr-indicator.ptr-loading .ptr-spinner { animation:ptr-spin .8s linear infinite; }
 /* Explicit `from` (not just `to`) on purpose: .ptr-spinner's own rule
    above is transform:rotate(var(--ptr-rot,0deg)), which onTouchMove sets
    live while dragging and can leave at/near 360deg. A `to`-only keyframe
@@ -4229,7 +4229,7 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
   background:conic-gradient(from 0deg, var(--maroon), rgba(255,255,255,.9) 40%, rgba(255,255,255,0) 78%);
   -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3.5px));
           mask:radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3.5px));
-  animation:ttv-spin .85s cubic-bezier(.5,0,.5,1) infinite;
+  animation:ttv-spin .85s linear infinite;
   filter:drop-shadow(0 2px 8px rgba(0,0,0,.35));
 }
 .ttv-spinner[hidden] { display:none; }
