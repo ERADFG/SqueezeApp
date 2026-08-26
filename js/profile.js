@@ -37,7 +37,15 @@ async function loadProfile() {
     return;
   }
 
-  const { data: { session } } = await sb.auth.getSession();
+  // currentSession is already known by this point — the DOMContentLoaded
+  // handler below awaits authReady (see auth.js) before ever calling
+  // loadProfile(), which is exactly what settles currentSession. Asking
+  // Supabase for the session *again* here used to add a whole second,
+  // unguarded network round-trip in front of the profile fetch below —
+  // serially, not even in parallel — which is what made this page slow,
+  // and something as small as a slow response on just that one extra
+  // call could freeze the entire page load with no fallback.
+  const session = currentSession;
 
   const { data: profile, error } = await sb.from('profiles')
     .select('*').ilike('username', viewUsername).single();
