@@ -141,6 +141,26 @@ async function setupChatKeyBackup() {
   }
   if (!privJwk) { setStatus('Could not read your chat key on this device.'); return; }
 
+  // Guard against overwriting a real backup with a throwaway key: if
+  // the server already has a backup AND this device never restored it
+  // this session (i.e. resolveChatIdentity() didn't just pull it down
+  // — checked via the same session flag it sets), the local key here
+  // is very likely a fresh, never-backed-up device key rather than the
+  // account's real one. Overwriting the backup with it would orphan
+  // every other device permanently. Confirm explicitly in that case.
+  let sessionRestored = false;
+  try { sessionRestored = !!sessionStorage.getItem(CHAT_RESTORE_PROMPTED_SS); } catch (e) {}
+  const existingBackup = await chatBackupExists(session.user.id);
+  if (existingBackup && !sessionRestored) {
+    const proceed = window.confirm(
+      'This account already has a chat backup saved, but this device hasn\'t restored it. ' +
+      'Setting up a new backup now will REPLACE it, and any device using the old one will ' +
+      'permanently lose access to older messages.\n\nIf you just want to unlock old messages ' +
+      'here, cancel and use "Restore chat backup" instead. Continue anyway?'
+    );
+    if (!proceed) { setStatus('Cancelled — try "Restore chat backup" instead.'); return; }
+  }
+
   const pass = window.prompt('Choose a chat backup passphrase. You\'ll enter this on any new device to unlock your old messages there. Keep it somewhere safe — it can\'t be recovered if you lose it.');
   if (!pass) { setStatus('Cancelled.'); return; }
   const confirmPass = window.prompt('Enter the same passphrase again to confirm.');
@@ -189,6 +209,57 @@ async function restoreChatBackupNow() {
 
 function chatCryptoSupported() {
   return !!(window.crypto && window.crypto.subtle);
+}
+
+const CHAT_RESTORE_PROMPTED_SS = 'oc-e2e-restore-prompted';
+
+// ── THE FIX FOR "CAN'T DECRYPT" DATA LOSS ──
+// Root cause: ensureMyKeypair() used to generate AND PUBLISH a brand
+// new keypair the instant a device had no local key — even if this
+// account already had a real backup on the server. That created a
+// race: for however many seconds it took the person to find Settings
+// → "Restore chat backup", their profile's public key was a throwaway
+// one, so anything sent to them in that window got encrypted to a key
+// that's now gone forever (never backed up). Worse, hitting "Set up
+// chat backup" on such a device would wrap that throwaway key and
+// silently overwrite the real backup, orphaning it too.
+//
+// resolveChatIdentity() closes that race: called once, before
+// ensureMyKeypair(), it checks the SERVER for an existing backup
+// first. If one exists, it prompts to restore right then — no new
+// key is generated or published until that's resolved (or explicitly
+// skipped). Only when there's genuinely nothing to restore does it
+// fall through to ensureMyKeypair()'s normal fresh-key path.
+//
+// Prompts at most once per browser tab session (sessionStorage, not
+// localStorage) so it doesn't nag on every navigation within one visit.
+async function resolveChatIdentity(myUserId) {
+  if (!chatCryptoSupported() || !myUserId) return;
+  let hasLocalKey = false;
+  try { hasLocalKey = !!(localStorage.getItem(CHAT_PRIV_KEY_LS) && localStorage.getItem(CHAT_PUB_KEY_LS)); } catch (e) {}
+  if (hasLocalKey) return; // normal device, nothing to resolve
+
+  try { if (sessionStorage.getItem(CHAT_RESTORE_PROMPTED_SS)) return; } catch (e) {}
+
+  let backupStr = null;
+  try {
+    const { data } = await sb.from('profiles').select('key_backup').eq('id', myUserId).maybeSingle();
+    backupStr = data?.key_backup || null;
+  } catch (e) {}
+  if (!backupStr) return; // nothing to restore — safe for ensureMyKeypair() to generate a fresh key
+
+  try { sessionStorage.setItem(CHAT_RESTORE_PROMPTED_SS, '1'); } catch (e) {}
+  const restored = await restoreKeyBackup(backupStr);
+  if (restored) {
+    try {
+      localStorage.setItem(CHAT_PRIV_KEY_LS, JSON.stringify(restored.privJwk));
+      localStorage.setItem(CHAT_PUB_KEY_LS, JSON.stringify(restored.pubJwk));
+    } catch (e) {}
+  }
+  // If the person cancels or every attempt fails, we fall through and
+  // ensureMyKeypair() generates a fresh device key — but now that's a
+  // conscious "start fresh here" outcome reached only after being
+  // offered the real key, not a silent race won by default.
 }
 
 // Cheap, non-prompting check for whether this ACCOUNT has a chat

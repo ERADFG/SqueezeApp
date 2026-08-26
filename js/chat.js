@@ -205,7 +205,13 @@ async function decryptForDisplay(key, body, iv) {
 async function loadConversationList(session, root) {
   document.body.classList.remove('chat-thread-open'); // see .chat-thread-open note in style.css — list view, not a thread
   document.getElementById('chat-sec-bar').innerHTML = t('nav.chat');
-  if (chatCryptoSupported()) ensureMyKeypair(session.user.id); // fire-and-forget: publishes my pubkey so others can start encrypting to me
+  if (chatCryptoSupported()) {
+    // Must resolve BEFORE ensureMyKeypair() gets a chance to generate
+    // (and publish) a throwaway key — see resolveChatIdentity() in
+    // js/chat-crypto.js for why that ordering matters.
+    await resolveChatIdentity(session.user.id);
+    ensureMyKeypair(session.user.id); // fire-and-forget: publishes my pubkey so others can start encrypting to me
+  }
   subscribeConversationListRealtime(session, root);
 
   const [{ data, error }, groupRows] = await Promise.all([
@@ -877,6 +883,10 @@ async function loadThread(session, root) {
   // placeholders.
   chatKey = null;
   if (chatCryptoSupported()) {
+    // Same ordering fix as loadConversationList() — resolve any
+    // existing backup before ensureMyKeypair() can generate/publish a
+    // fresh throwaway key. See resolveChatIdentity() in chat-crypto.js.
+    await resolveChatIdentity(session.user.id);
     await ensureMyKeypair(session.user.id);
     if (other.pubkey) chatKey = await getChatKey(session.user.id, other.id, other.pubkey);
   }
