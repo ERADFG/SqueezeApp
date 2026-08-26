@@ -23,6 +23,13 @@ let currentProfile = null;
 // race happens to land.
 let resolveAuthReady;
 const authReady = new Promise(res => { resolveAuthReady = res; });
+// Belt-and-suspenders: every page's loader blocks on authReady before
+// rendering anything, so if some future code path fails to call
+// resolveAuthReady() (the way the unguarded getSession() call used to),
+// the whole page would hang forever with nothing but its skeleton
+// showing, silently. A hard timeout guarantees pages always get to
+// render — worst case, briefly as if logged out.
+setTimeout(() => resolveAuthReady(), 8000);
 
 async function getProfile(userId) {
   const { data } = await sb.from('profiles').select('*').eq('id', userId).single();
@@ -54,9 +61,25 @@ async function renderAuthArea() {
   const el = document.getElementById('auth-area');
   renderSideNav(); renderMobileChrome(); // paint immediately with whatever we knew last; repainted below once session settles
 
-  const { data: { session } } = await sb.auth.getSession();
+  // getSession() can throw or hang (network hiccup, an extension
+  // blocking the Supabase domain, a slow/dropped connection, etc).
+  // Every page's own loader (board.js/profile.js/search.js/...)
+  // awaits authReady before rendering anything, so if this call
+  // never settles and resolveAuthReady() is never reached, the
+  // *entire page* is stuck forever showing nothing but its initial
+  // skeleton/placeholder — no error, no fallback. Wrapping this in
+  // try/catch/finally guarantees authReady always resolves (falling
+  // back to "logged out" on failure) so a bad network never wedges
+  // the whole page.
+  let session = null;
+  try {
+    ({ data: { session } } = await sb.auth.getSession());
+  } catch (e) {
+    console.error('getSession failed, continuing as logged out:', e);
+  } finally {
+    resolveAuthReady();
+  }
   currentSession = session;
-  resolveAuthReady();
 
   if (!session) {
     currentProfile = null;
