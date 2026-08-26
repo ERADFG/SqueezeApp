@@ -3571,6 +3571,32 @@ body.chat-thread-open #chat-fab { display:none; }
 .chat-hdr-info-btn { margin-left:auto; flex:none; width:34px; height:34px; border-radius:50%; border:none; background:none; color:var(--muted); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background .12s ease; }
 .chat-hdr-info-btn:hover { background:var(--hover-bg); }
 .chat-hdr-info-btn svg { width:19px; height:19px; }
+
+/* Thread "···" menu (search / clear chat / block) — sits at the far
+   right of .chat-hdr, same pc-menu-btn/pc-menu-dd machinery as every
+   other "···" menu in the app, just pinned to the end of a flex row
+   instead of sitting inline in a card. */
+.chat-hdr-menu-wrap { margin-left:auto; flex:none; }
+.chat-hdr-menu-wrap .pc-menu-dd { min-width:200px; }
+
+/* In-thread search bar — same visual language as .xsearch (the
+   sidebar's own search field) so it doesn't look like a bolted-on
+   third style of input. */
+.chat-search-bar { display:flex; align-items:center; gap:8px; padding:8px 16px; border-bottom:1px solid var(--line); flex:none; background:var(--translucent-bg); }
+.chat-search-bar svg { width:17px; height:17px; flex:none; color:var(--muted); }
+.chat-search-bar input { flex:1; border:none; background:none; outline:none; font-size:14.5px; color:var(--ink); min-width:0; }
+.chat-search-bar input::placeholder { color:var(--muted); }
+.chat-search-close { flex:none; width:26px; height:26px; border-radius:50%; border:none; background:none; color:var(--muted); display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.chat-search-close:hover { background:var(--hover-bg); }
+.chat-search-close svg { width:15px; height:15px; }
+.chat-search-empty { text-align:center; padding:24px 16px; color:var(--muted); font-size:13.5px; }
+/* .msg-row's own `display:flex` (below) otherwise beats the browser's
+   built-in [hidden] rule, since author CSS always wins over the UA
+   stylesheet regardless of specificity — filterChatSearch() sets the
+   `hidden` attribute on non-matching rows, so this needs to be
+   explicit or search filtering would silently do nothing. */
+.msg-row[hidden] { display:none; }
+.chat-unread-divider[hidden] { display:none; }
 .chat-channel-notice { display:flex; align-items:center; gap:8px; justify-content:center; padding:12px 16px; margin:0 16px 10px; border-radius:var(--r-sm); background:var(--hover-bg); color:var(--muted); font-size:13px; text-align:center; }
 .chat-channel-notice svg { width:16px; height:16px; flex:none; }
 .gm-sender-name { font-size:12px; font-weight:700; color:var(--maroon); margin:0 0 2px 2px; }

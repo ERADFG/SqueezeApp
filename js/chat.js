@@ -39,6 +39,7 @@ let chatGroupId = null;
 let chatWithUsername = null;
 function groupMessagesUrl(id) { return `/messages/g/${encodeURIComponent(id)}`; }
 let chatOther = null;   // the other user's profile, once a thread is open
+let chatOtherBlockedByMe = false; // whether *I've* blocked chatOther — drives the "···" menu label and the composer-vs-blocked-notice swap in loadThread()
 let chatChannel = null;
 
 // ── GROUP/CHANNEL STATE ──
@@ -862,6 +863,16 @@ async function loadThread(session, root) {
   // instead of just dumping you at the bottom.
   const unreadMsgIds = new Set(visibleMsgs.filter(m => m.recipient_id === session.user.id && !m.read).map(m => m.id));
 
+  // Belt-and-suspenders same as the profile "···" menu — @marpe can't
+  // be blocked (see isProtectedFollowUsername() / the DB trigger in
+  // supabase/profile_extras.sql), so the option is simply left out of
+  // the dropdown here rather than offered and then rejected.
+  chatOtherBlockedByMe = currentSession ? await isBlocked(other.id) : false;
+  const chatBlockItem = isProtectedFollowUsername(other.username) ? '' :
+    `<button type="button" class="pc-menu-danger" onclick="chatToggleBlock(event, '${other.id}', '${u_(other.username)}')">${esc((chatOtherBlockedByMe ? t('chat.unblockUser') : t('chat.blockUser')).replace('{username}', '@' + other.username))}</button>`;
+  const blockedNotice = chatOtherBlockedByMe ? `
+      <div class="chat-channel-notice">${ICON_LOCK_SMALL}<span>${esc(t('chat.blockedNotice').replace('{username}', '@' + other.username))}</span></div>` : '';
+
   root.innerHTML = `
     <div class="chat-thread">
       <div class="chat-hdr">
@@ -871,8 +882,23 @@ async function loadThread(session, root) {
           <a class="nm" href="${profileUrl(other.username)}">${esc(other.display_name || other.username)}${vBadge(other)}</a>
           <span class="pc-handle">@${esc(other.username)}</span>
         </div>
+        <div class="pc-menu-wrap chat-hdr-menu-wrap" id="cmenu-thread-${other.id}">
+          <button type="button" class="pc-menu-btn" aria-label="${esc(t('chat.chatOptions'))}" onclick="toggleConvMenu('thread-${other.id}', event)">${ICON.menu}</button>
+          <div class="pc-menu-dd">
+            <button type="button" onclick="toggleChatSearch(event)">${esc(t('chat.searchInConversation'))}</button>
+            <button type="button" class="pc-menu-danger" onclick="clearChatWithUser('${other.id}', '${u_(other.username)}', event)">${esc(t('chat.clearChat'))}</button>
+            ${chatBlockItem}
+          </div>
+        </div>
+      </div>
+      <div class="chat-search-bar" id="chat-search-bar" hidden>
+        ${ICON_SEARCH}
+        <input type="text" id="chat-search-input" placeholder="${esc(t('chat.searchPlaceholder'))}" oninput="filterChatSearch(this.value)">
+        <button type="button" class="chat-search-close" aria-label="${esc(t('chat.back'))}" onclick="toggleChatSearch(event)">${ICON_CLOSE}</button>
       </div>
       <div class="chat-msgs" id="chat-msgs">${encBanner}${renderMsgsHtml(visibleMsgs, session.user.id, unreadMsgIds)}</div>
+      <div id="chat-search-empty" class="chat-search-empty" hidden>${esc(t('chat.noSearchResults'))}</div>
+      ${blockedNotice}
       <div id="chat-attach-preview" class="chat-attach-preview" hidden></div>
       <div id="chat-record-bar" class="chat-record-bar" hidden>
         <span class="chat-record-dot"></span>
@@ -881,6 +907,7 @@ async function loadThread(session, root) {
         <button type="button" class="chat-record-cancel" title="${esc(t('chat.cancelRecording'))}" aria-label="${esc(t('chat.cancelRecording'))}" onclick="cancelVoiceRecording()">${ICON_TRASH}</button>
         <button type="button" class="chat-record-stop" title="${esc(t('chat.stopRecording'))}" aria-label="${esc(t('chat.stopRecording'))}" onclick="stopVoiceRecording()">${ICON_STOP}</button>
       </div>
+      ${chatOtherBlockedByMe ? '' : `
       <div class="chat-composer" id="chat-composer">
         <input type="file" id="chat-file" accept="image/*,video/*" style="display:none;" onchange="onChatFileChosen(this)">
         <button type="button" class="chat-tool-btn" id="chat-attach-btn" title="${esc(t('chat.attachMedia'))}" aria-label="${esc(t('chat.attachMedia'))}" onclick="document.getElementById('chat-file').click()">${ICON_ATTACH}</button>
@@ -889,7 +916,7 @@ async function loadThread(session, root) {
           oninput="autoGrowChatInput(this)"
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"></textarea>
         <button class="chat-send-btn" id="chat-send-btn" title="${esc(t('chat.send'))}" aria-label="${esc(t('chat.send'))}" disabled onclick="sendMessage()">${ICON_SEND}</button>
-      </div>
+      </div>`}
     </div>`;
 
   sizeChatThread();
@@ -1087,7 +1114,7 @@ function msgBubbleHtml(m, myId, group = { start: true, end: true }) {
   if (m.deleted_for_everyone) {
     const meta = msgMetaHtml(m.created_at, '', false);
     return `
-  <div class="${cls.join(' ')}" id="msg-${m.id}" data-day="${esc(chatDayLabel(m.created_at))}" data-sender="${esc(m.sender_id)}" data-ts="${esc(m.created_at)}">
+  <div class="${cls.join(' ')}" id="msg-${m.id}" data-day="${esc(chatDayLabel(m.created_at))}" data-sender="${esc(m.sender_id)}" data-ts="${esc(m.created_at)}" data-search="">
     ${msgMenuHtml(m, mine)}
     <div class="msg-bubble">${CHAT_ICON_LOCK}<em class="msg-deleted-note">${esc(t('chat.messageDeleted'))}</em>${meta}</div>
   </div>`;
@@ -1118,8 +1145,9 @@ function msgBubbleHtml(m, myId, group = { start: true, end: true }) {
   // center column — before the bubble for "mine" (row is packed to
   // the right, so this lands just left of it), after the bubble for
   // "theirs" (row packed left, lands just right of it).
+  const searchText = hasCaption ? esc(m._plain.toLowerCase()) : '';
   return `
-  <div class="${cls.join(' ')}" id="msg-${m.id}" data-day="${esc(chatDayLabel(m.created_at))}" data-sender="${esc(m.sender_id)}" data-ts="${esc(m.created_at)}">
+  <div class="${cls.join(' ')}" id="msg-${m.id}" data-day="${esc(chatDayLabel(m.created_at))}" data-sender="${esc(m.sender_id)}" data-ts="${esc(m.created_at)}" data-search="${searchText}">
     ${mine ? menu : ''}
     <div class="msg-bubble${bareMedia ? ' msg-bubble-bare-media' : ''}">${bubbleInner}</div>
     ${mine ? '' : menu}
@@ -1224,6 +1252,122 @@ async function deleteConversationWithUser(otherId, uname, ev) {
   } catch (e) {
     toast(e.message || 'Could not delete that conversation.', 'error');
   }
+}
+
+// ── THREAD "···" MENU: search / clear chat / block ──
+// Same delete_conversation_with_user RPC as deleteConversationWithUser()
+// above (delete-for-me, other side untouched) — just triggered from
+// inside an already-open thread instead of a conversation-list row,
+// and re-labeled "Clear chat" since that's the more accurate name for
+// what it does when you're looking at the thread itself: it empties
+// the thread you're looking at rather than removing a row from a list.
+async function clearChatWithUser(otherId, uname, ev) {
+  if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+  document.getElementById(`cmenu-thread-${otherId}`)?.classList.remove('open');
+  const decoded = decodeURIComponent(uname);
+  const ok = await ocConfirm({
+    title: t('chat.clearChatTitle'),
+    desc: t('chat.clearChatDesc').replace(/\{username\}/g, decoded),
+    confirmLabel: t('chat.clearChat'),
+  });
+  if (!ok) return;
+  try {
+    const { error } = await sb.rpc('delete_conversation_with_user', { other_user_id: otherId });
+    if (error) throw error;
+    // Re-run the normal page loader rather than hand-rolling an empty
+    // state here — it re-fetches get_dm_thread(), which now comes
+    // back empty (every row is deleted_for_sender for me), so this
+    // naturally lands on the same empty-thread view a brand new
+    // conversation would show.
+    await loadChat();
+    toast(t('chat.chatCleared'));
+  } catch (e) {
+    toast(e.message || 'Could not clear this chat.', 'error');
+  }
+}
+
+// Blocks (or unblocks) the person I'm currently chatting with, right
+// from the thread's "···" menu — same blockUser()/unblockUser()/
+// isBlocked() used by the profile page's own block button (see
+// profileMenuBlock() in profile.js), just re-entered here so it's
+// reachable without leaving the chat. @marpe is exempt (see
+// isProtectedFollowUsername()) same as everywhere else blocking is
+// offered.
+async function chatToggleBlock(ev, userId, uname) {
+  if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+  document.getElementById(`cmenu-thread-${userId}`)?.classList.remove('open');
+  if (!requireLogin()) return;
+  const decoded = decodeURIComponent(uname);
+  if (isProtectedFollowUsername(decoded)) { toast(`You can't block @${decoded}.`, 'error'); return; }
+
+  const currentlyBlocked = chatOtherBlockedByMe;
+  if (!currentlyBlocked) {
+    const ok = await ocConfirm({
+      title: t('chat.blockTitle').replace('{username}', '@' + decoded),
+      desc: t('chat.blockDesc'),
+      confirmLabel: t('action.block'),
+      danger: true
+    });
+    if (!ok) return;
+  }
+  try {
+    if (currentlyBlocked) {
+      await unblockUser(userId);
+      toast(`Unblocked @${decoded}.`);
+    } else {
+      await blockUser(userId);
+      toast(`Blocked @${decoded}.`);
+    }
+    // Re-render: this both flips the menu's Block/Unblock label and
+    // swaps the composer for the "you've blocked them" notice (or
+    // back), same as loadProfile() re-rendering after a block toggle
+    // on the profile page.
+    await loadChat();
+  } catch (e) {
+    toast(e.message || 'Could not update block status.', 'error');
+  }
+}
+
+// Reveals/hides the in-thread search bar. Closing it also clears
+// whatever filter was applied, so re-opening the menu later starts
+// from a full, unfiltered thread rather than remembering a stale query.
+function toggleChatSearch(ev) {
+  if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+  document.querySelectorAll('.pc-menu-wrap.open').forEach(w => w.classList.remove('open'));
+  const bar = document.getElementById('chat-search-bar');
+  if (!bar) return;
+  const opening = bar.hidden;
+  if (opening) {
+    bar.hidden = false;
+    document.getElementById('chat-search-input')?.focus();
+  } else {
+    bar.hidden = true;
+    const input = document.getElementById('chat-search-input');
+    if (input) input.value = '';
+    filterChatSearch('');
+  }
+}
+
+// Plain substring match against each bubble's data-search (already
+// lower-cased at render time) — no fuzzy matching, same as every
+// other in-app search (see e.g. side-search). Day dividers and the
+// unread divider are hidden while a query is active since they'd
+// otherwise float above whatever handful of messages happen to match,
+// which reads as a rendering bug rather than a filtered view.
+function filterChatSearch(query) {
+  const q = query.trim().toLowerCase();
+  const msgsBox = document.getElementById('chat-msgs');
+  const emptyEl = document.getElementById('chat-search-empty');
+  if (!msgsBox) return;
+  const rows = msgsBox.querySelectorAll('.msg-row');
+  let visibleCount = 0;
+  rows.forEach(row => {
+    const match = !q || (row.dataset.search || '').includes(q);
+    row.hidden = !match;
+    if (match) visibleCount++;
+  });
+  msgsBox.querySelectorAll('.chat-daydivider, .chat-unread-divider').forEach(el => { el.hidden = !!q; });
+  if (emptyEl) emptyEl.hidden = !(q && visibleCount === 0);
 }
 
 // Renders a message row's attachment, if any. Images/video reuse the
