@@ -65,11 +65,13 @@ function ttvHtml(url, opts = {}) {
   <div class="ttv-shorts">
     <div class="ttv-shorts-rail">
       <a class="ttv-shorts-avatar" href="#"><img src="" alt=""></a>
-      <button type="button" class="ttv-shorts-btn ttv-shorts-repost" aria-label="Repost">${SHORTS_ICON.repost}<span class="ttv-shorts-count">0</span></button>
       <button type="button" class="ttv-shorts-btn ttv-shorts-like" aria-label="Like">${SHORTS_ICON.heart}<span class="ttv-shorts-count">0</span></button>
       <button type="button" class="ttv-shorts-btn ttv-shorts-reply" aria-label="Comment">${SHORTS_ICON.reply}<span class="ttv-shorts-count">0</span></button>
       <button type="button" class="ttv-shorts-btn ttv-shorts-bookmark" aria-label="Save">${SHORTS_ICON.bookmark}<span class="ttv-shorts-count">Save</span></button>
       <button type="button" class="ttv-shorts-btn ttv-shorts-share" aria-label="Share">${SHORTS_ICON.share}<span class="ttv-shorts-count">Share</span></button>
+      <!-- Repost sits last (bottom of the rail, since it's a column)
+           to match X's own vertical video-action ordering. -->
+      <button type="button" class="ttv-shorts-btn ttv-shorts-repost" aria-label="Repost">${SHORTS_ICON.repost}<span class="ttv-shorts-count">0</span></button>
     </div>
     <div class="ttv-shorts-meta">
       <a class="ttv-shorts-handle" href="#"></a>
