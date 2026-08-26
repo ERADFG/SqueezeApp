@@ -2199,7 +2199,15 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
 .ptr-track { fill:none; stroke:var(--line); stroke-width:7; }
 .ptr-arc   { fill:none; stroke:var(--maroon); stroke-width:7; stroke-linecap:round; stroke-dasharray:26 200; transform-origin:25px 25px; transform:rotate(-90deg); }
 #ptr-indicator.ptr-loading .ptr-spinner { animation:ptr-spin .8s cubic-bezier(.5,0,.5,1) infinite; }
-@keyframes ptr-spin { to { transform:rotate(360deg); } }
+/* Explicit `from` (not just `to`) on purpose: .ptr-spinner's own rule
+   above is transform:rotate(var(--ptr-rot,0deg)), which onTouchMove sets
+   live while dragging and can leave at/near 360deg. A `to`-only keyframe
+   would start from whatever that already is — 360deg -> 360deg is no
+   visible motion, i.e. a spinner that looks frozen/static instead of
+   spinning. Declaring `from` here pins the start of every iteration to
+   0deg regardless of any leftover --ptr-rot (onTouchEnd/resetIndicator()
+   in common.js also clear it directly, belt-and-suspenders). */
+@keyframes ptr-spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
 
 /* ── SKELETON LOADERS — shown the instant a page/feed starts loading,
    swapped for real cards the moment data arrives. Reads as "already

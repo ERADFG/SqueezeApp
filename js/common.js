@@ -788,6 +788,11 @@ updateFavicon(getTheme());
     if (!indicator) return;
     indicator.classList.remove('ptr-loading', 'ptr-visible', 'ptr-dragging');
     indicator.style.height = '0px';
+    // Drop the drag-tracking rotation too — see the ptr-loading branch of
+    // onTouchEnd() below for why a leftover --ptr-rot is what makes the
+    // "loading" spin freeze instead of actually spinning.
+    const spinnerEl = indicator.querySelector('.ptr-spinner');
+    if (spinnerEl) spinnerEl.style.removeProperty('--ptr-rot');
     lastPull = 0;
   }
 
@@ -842,6 +847,19 @@ updateFavicon(getTheme());
     if (lastPull >= THRESHOLD) {
       const fn = feedRefreshFn();
       refreshing = true;
+      // .ptr-spinner's own (non-animated) CSS rule is
+      // `transform:rotate(var(--ptr-rot, 0deg))`, and onTouchMove above
+      // just spent the whole drag setting that inline --ptr-rot to track
+      // the finger — commonly landing at/near 360deg for any pull that
+      // reached MAX_PULL. The ptr-loading animation below only declares a
+      // `to { rotate(360deg) }` keyframe, so its implicit starting point
+      // is whatever the element's rotation already is. Left at 360deg,
+      // that animates 360deg -> 360deg: no visible motion at all — a
+      // spinner frozen in place instead of spinning, exactly like a
+      // static image. Clearing it here first means the animation always
+      // starts from the CSS default (0deg), so it actually spins.
+      const spinnerEl = ind.querySelector('.ptr-spinner');
+      if (spinnerEl) spinnerEl.style.removeProperty('--ptr-rot');
       ind.classList.add('ptr-loading');
       ind.style.height = '48px';
       try { if (fn) await fn(); } finally {
