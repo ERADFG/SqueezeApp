@@ -231,7 +231,7 @@ async function loadConversationList(session, root) {
     <div class="chat-new" id="chat-new" style="display:none;">
       <div class="xsearch">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
-        <input id="chat-new-user" placeholder="${esc(t('chat.searchUserPlaceholder'))}" oninput="chatNewSearchUsers(this.value)" onkeydown="if(event.key==='Enter'){startChat();}if(event.key==='Escape'){toggleNewChat(false);}">
+        <input id="chat-new-user" placeholder="${esc(t('chat.searchUserPlaceholder'))}" autocomplete="off" oninput="chatNewSearchUsers(this.value)" onkeydown="if(event.key==='Enter'){startChat();}if(event.key==='Escape'){toggleNewChat(false);}">
       </div>
       <button type="button" class="chat-new-close" onclick="toggleNewChat(false)">${esc(t('compose.cancel'))}</button>
     </div>
@@ -463,32 +463,76 @@ async function chatEligibleContactIds() {
   return ids;
 }
 
+// "New chat" search covers two very different result kinds sharing
+// one box: people (scoped to chatEligibleContactIds() — folks you've
+// already DMed, who follow you, or who you follow, mutual or not —
+// same restriction as before) and public groups/channels (open to
+// everyone, per the conversations_select RLS policy: `is_public =
+// true` is readable by any authenticated user regardless of
+// membership — see supabase/fix_conversation_members_recursion.sql).
+// Tapping either kind jumps straight into that chat: a user goes to
+// their DM thread, a public group/channel goes to loadGroupThread()
+// which auto-joins on arrival if you're not a member yet (same
+// Telegram-style "subscribe by opening" flow used there).
 let chatNewSearchDebounce = null;
-let chatNewSearchResults = new Map();
+let chatNewSearchResults = new Map();      // username -> profile
+let chatNewSearchGroupResults = new Map(); // id -> conversation row
+let chatNewSearchFirstHit = null;          // { type: 'user'|'group', key } — whatever Enter should open
 function chatNewSearchUsers(q) {
   clearTimeout(chatNewSearchDebounce);
   const resultsEl = document.getElementById('chat-new-results');
   const errEl = document.getElementById('chat-new-err');
   if (!resultsEl) return;
   clearErr(errEl);
+  chatNewSearchFirstHit = null;
   if (!q.trim()) { resultsEl.innerHTML = ''; return; }
   chatNewSearchDebounce = setTimeout(async () => {
+    const uname = q.trim().replace(/^@/, '');
     const ids = [...await chatEligibleContactIds()];
-    if (!ids.length) {
-      resultsEl.innerHTML = `<div class="gcv-member-row" style="cursor:default;"><div class="ulrow-txt"><span class="ulrow-name">${esc(t('chat.noContactsYet'))}</span></div></div>`;
+    const [peopleRes, groupsRes] = await Promise.all([
+      ids.length
+        ? sb.from('profiles').select('id,username,display_name,avatar_url,verified,verification_type')
+            .or(`username.ilike.%${uname}%,display_name.ilike.%${uname}%`)
+            .in('id', ids)
+            .limit(6)
+        : Promise.resolve({ data: [] }),
+      sb.from('conversations').select('id,kind,name,description,avatar_url')
+        .eq('is_public', true)
+        .in('kind', ['group', 'channel'])
+        .ilike('name', `%${uname}%`)
+        .limit(6),
+    ]);
+    const people = peopleRes.data || [];
+    const groups = groupsRes.data || [];
+    chatNewSearchResults = new Map(people.map(p => [p.username, p]));
+    chatNewSearchGroupResults = new Map(groups.map(g => [g.id, g]));
+    chatNewSearchFirstHit = people.length ? { type: 'user', key: people[0].username }
+      : groups.length ? { type: 'group', key: groups[0].id }
+      : null;
+
+    if (!people.length && !groups.length) {
+      const msg = ids.length ? t('chat.userNotFound') : t('chat.noContactsYet');
+      resultsEl.innerHTML = `<div class="gcv-member-row" style="cursor:default;"><div class="ulrow-txt"><span class="ulrow-name">${esc(msg)}</span></div></div>`;
       return;
     }
-    const uname = q.trim().replace(/^@/, '');
-    const { data } = await sb.from('profiles').select('id,username,display_name,avatar_url,verified,verification_type')
-      .or(`username.ilike.%${uname}%,display_name.ilike.%${uname}%`)
-      .in('id', ids)
-      .limit(8);
-    chatNewSearchResults = new Map((data || []).map(p => [p.username, p]));
-    resultsEl.innerHTML = (data || []).map(p => `
+
+    const peopleHtml = people.map(p => `
       <div class="gcv-member-row" onclick="chatNewPickUser('${esc(p.username)}')">
         <img src="${esc(avatarUrl(p.avatar_url))}" alt="">
         <div class="ulrow-txt"><span class="ulrow-name">${esc(p.display_name || p.username)}${vBadge(p)}</span><span class="ulrow-handle">@${esc(p.username)}</span></div>
-      </div>`).join('') || `<div class="gcv-member-row" style="cursor:default;"><div class="ulrow-txt"><span class="ulrow-name">${esc(t('chat.userNotFound'))}</span></div></div>`;
+      </div>`).join('');
+    const groupsHtml = groups.map(g => `
+      <div class="gcv-member-row" onclick="chatNewPickGroup('${esc(g.id)}')">
+        <div class="chat-search-group-avatar">${g.avatar_url ? `<img src="${esc(avatarUrl(g.avatar_url))}" alt="">` : esc((g.name || '?').slice(0, 1).toUpperCase())}</div>
+        <div class="ulrow-txt"><span class="ulrow-name">${esc(g.name)}</span><span class="ulrow-handle">${g.kind === 'channel' ? ICON_CHANNEL : ICON_GROUP}${g.kind === 'channel' ? 'Channel' : 'Group'} &middot; Public</span></div>
+      </div>`).join('');
+
+    // Only bother labeling the two sections when both are present —
+    // a single-kind result list reads fine with no header at all.
+    const showHeaders = peopleHtml && groupsHtml;
+    resultsEl.innerHTML =
+      (peopleHtml ? (showHeaders ? '<div class="chat-search-section-hdr">People</div>' : '') + peopleHtml : '') +
+      (groupsHtml ? (showHeaders ? '<div class="chat-search-section-hdr">Groups &amp; channels</div>' : '') + groupsHtml : '');
   }, 250);
 }
 function chatNewPickUser(username) {
@@ -496,17 +540,28 @@ function chatNewPickUser(username) {
   if (!p) return;
   location.href = messagesUrl(p.username);
 }
+function chatNewPickGroup(id) {
+  const g = chatNewSearchGroupResults.get(id);
+  if (!g) return;
+  location.href = groupMessagesUrl(g.id);
+}
 
-// Enter-to-send fallback for the same box — kept scoped to the same
-// contact list as the live search above so it can't be used to jump
-// straight to an arbitrary stranger's DMs by typing their exact
-// username.
+// Enter-to-send fallback for the same box — opens whichever result
+// the live search above ranked first (a person or a public group/
+// channel), so Enter behaves like tapping the top row. Falls back to
+// an exact-username lookup (still scoped to chatEligibleContactIds())
+// if no live search has run yet, e.g. paste-then-Enter before the
+// debounce fires.
 async function startChat() {
   const input = document.getElementById('chat-new-user');
   const errEl = document.getElementById('chat-new-err');
   clearErr(errEl);
   const uname = input.value.trim().replace(/^@/, '');
   if (!uname) return;
+  if (chatNewSearchFirstHit) {
+    if (chatNewSearchFirstHit.type === 'user') return chatNewPickUser(chatNewSearchFirstHit.key);
+    return chatNewPickGroup(chatNewSearchFirstHit.key);
+  }
   const ids = [...await chatEligibleContactIds()];
   if (!ids.length) { showErr(errEl, t('chat.userNotFound')); return; }
   const { data: profile, error } = await sb.from('profiles').select('id,username').ilike('username', uname).in('id', ids).maybeSingle();
