@@ -107,7 +107,11 @@ async function flToggleFollow(userId, btn) {
 
 async function flLoadMyFollowing() {
   flMyFollowing = new Set();
-  const { data: { session } } = await sb.auth.getSession();
+  // Reuses the already-resolved session from auth.js instead of calling
+  // sb.auth.getSession() again — see the note in ensureLikesLoaded()
+  // (js/common.js).
+  await authReady;
+  const session = currentSession;
   if (!session) return;
   const { data } = await sb.from('follows').select('followee_id').eq('follower_id', session.user.id);
   flMyFollowing = new Set((data || []).map(r => r.followee_id));

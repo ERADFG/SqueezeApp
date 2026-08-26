@@ -31,6 +31,29 @@ const authReady = new Promise(res => { resolveAuthReady = res; });
 // render — worst case, briefly as if logged out.
 setTimeout(() => resolveAuthReady(), 8000);
 
+// Safe wrapper around sb.auth.getSession() for the handful of call
+// sites that deliberately want a fresh check against Supabase itself
+// (e.g. right before a delete/edit, to catch a session that expired or
+// was signed out in another tab) rather than the cached currentSession.
+// A plain sb.auth.getSession() call can hang forever if supabase-js's
+// internal navigator.locks-based auth lock ever gets stuck (a known
+// upstream issue, especially when multiple tabs or multiple concurrent
+// auth calls are involved) — this races it against a timeout and falls
+// back to the cached currentSession so a stuck lock can never wedge
+// the calling action indefinitely.
+async function getSessionSafe(timeoutMs = 6000) {
+  try {
+    const { data } = await Promise.race([
+      sb.auth.getSession(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('getSession timed out')), timeoutMs))
+    ]);
+    return data.session;
+  } catch (e) {
+    console.error('getSession failed/timed out, falling back to cached session:', e);
+    return currentSession;
+  }
+}
+
 async function getProfile(userId) {
   const { data } = await sb.from('profiles').select('*').eq('id', userId).single();
   return data || null;

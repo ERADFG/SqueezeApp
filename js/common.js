@@ -1779,7 +1779,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 let liked = new Set();
 
 async function ensureLikesLoaded() {
-  const { data: { session } } = await sb.auth.getSession();
+  // Reuses the already-resolved session from auth.js instead of calling
+  // sb.auth.getSession() again here — see the note above
+  // ensureFeedPrereqsLoaded() for why: four of these used to each call
+  // getSession() independently and run concurrently via Promise.all,
+  // which is exactly the pattern that can deadlock supabase-js's
+  // internal navigator.locks-based auth lock (a known upstream issue —
+  // concurrent getSession() calls can queue behind each other and never
+  // resolve). authReady/currentSession are already the single source of
+  // truth for "who's logged in" everywhere else in this file (see
+  // renderWhoToFollow() above), so just reading them here removes the
+  // redundant network+lock round trip entirely, not just the race.
+  if (typeof authReady !== 'undefined') await authReady;
+  const session = currentSession;
   if (!session) { liked = new Set(); return; }
   // Likes can point at either a post or a reply (see toggleLike() below),
   // so both columns come back and we fold them into one Set — `liked`
@@ -1900,7 +1912,10 @@ async function toggleLike(id, btn, isReply = false) {
 let bookmarked = new Set();
 
 async function ensureBookmarksLoaded() {
-  const { data: { session } } = await sb.auth.getSession();
+  // See the comment in ensureLikesLoaded() above — reuses the shared
+  // session instead of calling sb.auth.getSession() again.
+  if (typeof authReady !== 'undefined') await authReady;
+  const session = currentSession;
   if (!session) { bookmarked = new Set(); return; }
   const { data } = await sb.from('bookmarks').select('post_id').eq('user_id', session.user.id);
   bookmarked = new Set((data || []).map(b => b.post_id));
@@ -1954,7 +1969,10 @@ async function toggleBookmark(postId, btn) {
 let reposted = new Set();
 
 async function ensureRepostsLoaded() {
-  const { data: { session } } = await sb.auth.getSession();
+  // See the comment in ensureLikesLoaded() above — reuses the shared
+  // session instead of calling sb.auth.getSession() again.
+  if (typeof authReady !== 'undefined') await authReady;
+  const session = currentSession;
   if (!session) { reposted = new Set(); return; }
   const { data } = await sb.from('reposts').select('post_id').eq('user_id', session.user.id);
   reposted = new Set((data || []).map(r => r.post_id));
@@ -1968,7 +1986,10 @@ async function ensureRepostsLoaded() {
 let ownedCommunities = new Set();
 
 async function ensureOwnedCommunitiesLoaded() {
-  const { data: { session } } = await sb.auth.getSession();
+  // See the comment in ensureLikesLoaded() above — reuses the shared
+  // session instead of calling sb.auth.getSession() again.
+  if (typeof authReady !== 'undefined') await authReady;
+  const session = currentSession;
   if (!session) { ownedCommunities = new Set(); return; }
   const { data } = await sb.from('communities').select('id').eq('created_by', session.user.id);
   ownedCommunities = new Set((data || []).map(c => c.id));
@@ -2003,8 +2024,13 @@ async function ensureFeedPrereqsLoaded() {
 // to this tab" is enough to pick up state changed elsewhere, without
 // needing a full page reload.
 async function resyncFeedPrereqsUi() {
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session) return;
+  // See the comment in ensureLikesLoaded() above — reuses the shared
+  // session instead of calling sb.auth.getSession() again. currentSession
+  // already tracks sign-in/out from other tabs via auth.js's
+  // onAuthStateChange listener, so this stays accurate without its own
+  // network+lock round trip.
+  if (typeof authReady !== 'undefined') await authReady;
+  if (!currentSession) return;
   await ensureFeedPrereqsLoaded();
   document.querySelectorAll('.act.like[data-id]').forEach(btn => {
     btn.classList.toggle('liked', liked.has(btn.dataset.id));
@@ -2659,7 +2685,10 @@ async function confirmDeletePost() {
     // in auth.js), so a session that expired or was signed out in
     // another tab since this page loaded would otherwise go undetected
     // until the delete itself fails with a confusing RLS error.
-    const { data: { session } } = await sb.auth.getSession();
+    // getSessionSafe() (see auth.js) races this against a timeout and
+    // falls back to currentSession, so a stuck Supabase auth lock can
+    // never wedge the delete button forever.
+    const session = await getSessionSafe();
     if (!session) {
       alert('Your session has expired. Please log in again and retry.');
       closeDeleteConfirm();
@@ -2845,7 +2874,9 @@ async function confirmEditPost() {
     // above, for the same reason: currentSession is only ever set once
     // at page load, so an expired/signed-out-elsewhere session would
     // otherwise surface as a confusing RPC error instead of this.
-    const { data: { session } } = await sb.auth.getSession();
+    // getSessionSafe() (see auth.js) protects against a stuck Supabase
+    // auth lock hanging this forever.
+    const session = await getSessionSafe();
     if (!session) {
       alert('Your session has expired. Please log in again and retry.');
       closeEditPost();

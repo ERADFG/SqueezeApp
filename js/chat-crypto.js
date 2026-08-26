@@ -124,7 +124,11 @@ async function setupChatKeyBackup() {
   const statusEl = document.getElementById('chat-backup-st');
   const setStatus = (msg) => { if (statusEl) statusEl.textContent = msg; };
   if (!chatCryptoSupported()) { setStatus('Not supported in this browser.'); return; }
-  const { data: { session } } = await sb.auth.getSession();
+  // Reuses the already-resolved shared session instead of calling
+  // sb.auth.getSession() again — see the note in ensureLikesLoaded()
+  // (js/common.js). This is a button click well after page load, so
+  // currentSession is reliable.
+  const session = currentSession;
   if (!session) { setStatus('Log in first.'); return; }
 
   let privJwk;
@@ -160,7 +164,9 @@ async function restoreChatBackupNow() {
   const statusEl = document.getElementById('chat-backup-st');
   const setStatus = (msg) => { if (statusEl) statusEl.textContent = msg; };
   if (!chatCryptoSupported()) { setStatus('Not supported in this browser.'); return; }
-  const { data: { session } } = await sb.auth.getSession();
+  // Reuses the already-resolved shared session — see the note in
+  // setupChatKeyBackup() above.
+  const session = currentSession;
   if (!session) { setStatus('Log in first.'); return; }
 
   setStatus('Checking for a backup…');

@@ -4,7 +4,12 @@
 async function loadBookmarks() {
   const feedEl = document.getElementById('feed-posts');
   feedEl.innerHTML = skeletonFeedHtml();
-  const { data: { session } } = await sb.auth.getSession();
+  // Reuses the already-resolved session from auth.js instead of calling
+  // sb.auth.getSession() again — see the note in ensureLikesLoaded()
+  // (js/common.js) for why: independent concurrent getSession() calls
+  // are what can trigger supabase-js's internal auth-lock deadlock.
+  await authReady;
+  const session = currentSession;
 
   if (!session) {
     feedEl.innerHTML = `<div class="post-login-gate" style="border-top:none;">You need an account to save bookmarks. <a href="login.html">Log in</a> or <a href="signup.html">sign up</a>.</div>`;

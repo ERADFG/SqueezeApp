@@ -149,7 +149,15 @@ async function loadChat() {
   chatOther = null;
   const root = document.getElementById('chat-root');
   if (!root) return;
-  const { data: { session } } = await sb.auth.getSession();
+  // Reuses the already-resolved session from auth.js instead of calling
+  // sb.auth.getSession() again — see the note in ensureLikesLoaded()
+  // (js/common.js). This file's own DOMContentLoaded listener used to
+  // fire its own independent getSession() call at the same time as
+  // auth.js's renderAuthArea() did, which is exactly the concurrent-call
+  // pattern that can deadlock supabase-js's internal auth lock and hang
+  // this page's loading spinner forever.
+  await authReady;
+  const session = currentSession;
 
   if (!session) {
     document.body.classList.remove('chat-thread-open');

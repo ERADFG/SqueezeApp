@@ -12,7 +12,15 @@ async function loadEditProfile() {
   if (document.body.dataset.page !== 'editprofile') return; // see js/notifications.js
   const root = document.getElementById('editprofile-root');
   if (!root) return;
-  const { data: { session } } = await sb.auth.getSession();
+  // Reuses the already-resolved session from auth.js instead of calling
+  // sb.auth.getSession() again — see the note in ensureLikesLoaded()
+  // (js/common.js). This file's own DOMContentLoaded listener used to
+  // fire its own independent getSession() call at the same time as
+  // auth.js's renderAuthArea() did, which is exactly the concurrent-call
+  // pattern that can deadlock supabase-js's internal auth lock and hang
+  // this page's loading spinner forever.
+  await authReady;
+  const session = currentSession;
 
   if (!session) {
     root.innerHTML = `<div class="post-login-gate" style="border-top:none;">Log in to edit your profile. <a href="login.html">Log in</a> or <a href="signup.html">sign up</a>.</div>`;
