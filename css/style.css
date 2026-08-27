@@ -3187,14 +3187,14 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
 html[data-theme="dim"] .auth-ok, html[data-theme="dark"] .auth-ok { background:rgba(0,186,124,.14); color:#4ADE80; }
 
 /* ── AUTH SKY/CLOUD HERO — the banner used at the top of the
-   "Create account" chooser (start.html) and the Log In page, styled
-   after the reference mockup: a blue-sky gradient with a soft cloud
-   drifting near the bottom edge, a white rounded app-mark badge, and
-   (chooser page only) a short tagline. Pure CSS/SVG — no hotlinked
-   photo, so it never breaks and never depends on a third-party image
-   host being reachable. Only .auth-shell/.auth-card/etc. above are
-   reused elsewhere (nothing outside login.html/signup.html/start.html
-   touches this), so all of this is safe to add net-new. ── */
+   "Create account" chooser (start.html), Log In, and Sign Up pages:
+   a blue-sky gradient with a soft cloud drifting near the bottom
+   edge, a back button top-left, and (chooser page only) a short
+   tagline. Pure CSS/SVG — no hotlinked photo, so it never breaks and
+   never depends on a third-party image host being reachable. Only
+   .auth-shell/.auth-card/etc. above are reused elsewhere (nothing
+   outside login.html/signup.html/start.html touches this), so all of
+   this is safe to add net-new. ── */
 .auth-wrap-hero {
   padding:0; align-items:flex-start; display:block; overflow-x:hidden;
 }
@@ -3211,12 +3211,20 @@ html[data-theme="dim"] .auth-hero, html[data-theme="dark"] .auth-hero {
   position:absolute; left:50%; bottom:-26px; transform:translateX(-50%);
   width:min(520px, 92%); height:auto; filter:drop-shadow(0 8px 18px rgba(15,20,25,.12));
 }
-.auth-hero-badge {
-  width:64px; height:64px; border-radius:22px; background:#fff;
-  display:flex; align-items:center; justify-content:center; flex:none;
-  box-shadow:0 6px 18px rgba(15,20,25,.16); position:relative; z-index:1;
+/* Floating circular back button, overlaid top-left on the hero —
+   same translucent dark/blurred treatment as .profile-back-btn so it
+   reads consistently with the rest of the app. Sits inside .auth-hero
+   (position:relative) so its `top` offset is easy to push below the
+   fixed mobile topbar — see the max-width:700px rule further down. */
+.auth-back-btn {
+  position:absolute; top:16px; left:16px; z-index:3;
+  width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  background:rgba(15,20,25,.38); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+  color:#fff; text-decoration:none; box-shadow:0 1px 5px rgba(15,20,25,.2);
+  transition:background .12s ease;
 }
-.auth-hero-badge .logo-mark { width:36px; height:36px; }
+.auth-back-btn:hover { background:rgba(15,20,25,.58); }
+.auth-back-btn svg { width:19px; height:19px; }
 .auth-hero-tagline {
   position:relative; z-index:1; margin:16px 0 0; text-align:center;
   color:#fff; font-weight:800; font-size:23px; line-height:1.28;
@@ -3235,7 +3243,7 @@ html[data-theme="dim"] .auth-hero, html[data-theme="dark"] .auth-hero {
   box-shadow:0 -6px 0 0 var(--bg); /* squares off the top corners against the card below without a visible seam */
 }
 .auth-wrap-hero .auth-card { padding:32px 28px 36px; }
-.auth-wrap-hero .auth-card-logo { display:none; } /* the hero badge above already carries the logo */
+.auth-wrap-hero .auth-card-logo { display:none; } /* the fixed mobile topbar / desktop sidebar already carries the logo */
 
 /* Pill-shaped inputs — only .auth-input-wrap/.dob-input-wrap are
    touched (both exclusive to login/signup), so nothing outside these
@@ -3302,6 +3310,35 @@ a.auth-submit { text-align:center; text-decoration:none; }
   .auth-wrap { padding:0; border-left:none; }
   .auth-shell { min-height:100vh; border-radius:0; border:none; }
   .auth-card { padding:28px 22px; justify-content:flex-start; padding-top:15vh; }
+}
+
+/* Chooser page (start.html) — full-bleed hero that fills the screen,
+   Bluesky-app style: the sky gradient covers the whole page and the
+   Sign up / social buttons sit low, blended straight into it (no
+   separate white card floating on top), instead of a short banner
+   with a boxed card pulled up over it. Login/signup keep the compact
+   banner + card look above — this modifier only ever applies where
+   start.html adds the extra class. */
+.auth-wrap-hero-full { min-height:100dvh; display:flex; flex-direction:column; }
+.auth-wrap-hero-full .auth-hero { flex:1 1 auto; min-height:0; justify-content:center; }
+.auth-wrap-hero-full .auth-shell {
+  margin:0; max-width:420px; box-shadow:none;
+}
+.auth-wrap-hero-full .auth-card { background:transparent; padding:24px 28px calc(28px + env(safe-area-inset-bottom)); }
+
+/* Mobile: .auth-wrap-hero sits outside #main, so it never picked up
+   #main's own padding-top/padding-bottom compensation for the fixed,
+   translucent #m-topbar (53px) and #m-tabbar — the hero's badge/back
+   button were rendering half-hidden right under the fixed topbar, and
+   on the full-bleed chooser page the bottom buttons could end up
+   under the fixed tab bar too. The hero's gradient background still
+   runs edge-to-edge behind the blurred topbar (matching how every
+   other sticky bar in the app overlays scrolling content) — only the
+   inner content gets pushed clear of it. */
+@media (max-width:700px) {
+  .auth-hero { padding-top:calc(53px + 20px); }
+  .auth-back-btn { top:calc(53px + 12px); }
+  .auth-wrap-hero-full { padding-bottom:calc(66px + env(safe-area-inset-bottom)); }
 }
 
 /* ── profile page ── */
