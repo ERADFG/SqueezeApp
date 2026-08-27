@@ -35,8 +35,19 @@ function chatReadWithUsername(groupId) {
   if (m) return decodeURIComponent(m[1]);
   return new URLSearchParams(location.search).get('u');
 }
-let chatGroupId = null;
-let chatWithUsername = null;
+// Computed immediately (not left null) — the address-bar-upgrade IIFE
+// just below reads these synchronously at parse time, before loadChat()
+// ever runs, so if they weren't set from the real URL right here, that
+// IIFE would always see "no thread open" and rewrite a freshly-loaded
+// /messages/<username> or /messages/g/<id> straight back to the bare
+// /messages list before loadChat() got a chance to see the real path —
+// which is exactly what silently sent every deep link (including the
+// "New chat" search's location.href navigation, chatNewPickUser() below)
+// back to the conversation list instead of opening the tapped user's
+// thread. loadChat() still recomputes both fresh on every visit (see its
+// own comment) since pjax keeps this script alive across navigations.
+let chatGroupId = chatReadGroupId();
+let chatWithUsername = chatReadWithUsername(chatGroupId);
 function groupMessagesUrl(id) { return `/messages/g/${encodeURIComponent(id)}`; }
 let chatOther = null;   // the other user's profile, once a thread is open
 let chatOtherBlockedByMe = false; // whether *I've* blocked chatOther — drives the "···" menu label and the composer-vs-blocked-notice swap in loadThread()
@@ -132,10 +143,15 @@ const ICON_TICK1 = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" s
 const ICON_TICK2 = '<svg viewBox="0 0 20 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8.4l3.3 3.3L11.5 4"/><path d="M7.2 8.4l3.3 3.3L18 4"/></svg>';
 
 // Same address-bar upgrade as profile.js/thread.js/followlist.js —
-// safe to run immediately since chatWithUsername (if any) already
-// came off the URL itself, no data load needed to know it.
+// safe to run immediately since chatGroupId/chatWithUsername (if any)
+// already came off the URL itself above, no data load needed to know
+// it. Group threads canonicalize to /messages/g/<id>, DM threads to
+// /messages/<username>, so this has to check chatGroupId first — the
+// old version always canonicalized against chatWithUsername alone,
+// which stripped a freshly-loaded group-thread URL back to the list
+// too.
 (function () {
-  const canonical = prettyMessagesUrl(chatWithUsername);
+  const canonical = chatGroupId ? groupMessagesUrl(chatGroupId) : prettyMessagesUrl(chatWithUsername);
   if (location.pathname + location.search !== canonical) { try { history.replaceState(null, '', canonical); } catch (e) {} }
 })();
 
