@@ -3596,6 +3596,15 @@ body.chat-thread-open #chat-fab { display:none; }
    sidebar's own search field) so it doesn't look like a bolted-on
    third style of input. */
 .chat-search-bar { display:flex; align-items:center; gap:8px; padding:8px 16px; border-bottom:1px solid var(--line); flex:none; background:var(--translucent-bg); }
+/* The bar's own `display:flex` above is an author-stylesheet rule,
+   which always beats the browser's built-in `[hidden] { display:none }`
+   rule regardless of source order (author styles outrank the UA
+   stylesheet at equal specificity) — so toggleChatSearch()'s `hidden`
+   attribute was being silently ignored and the bar stayed visible all
+   the time, instead of only appearing once "Search in conversation" is
+   tapped from the ⋯ menu. This selector is more specific than the bare
+   class rule above, so it wins and the attribute actually hides it. */
+.chat-search-bar[hidden] { display:none; }
 .chat-search-bar svg { width:17px; height:17px; flex:none; color:var(--muted); }
 .chat-search-bar input { flex:1; border:none; background:none; outline:none; font-size:14.5px; color:var(--ink); min-width:0; }
 .chat-search-bar input::placeholder { color:var(--muted); }
