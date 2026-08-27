@@ -4139,7 +4139,7 @@ function cardClick(ev, postId, username = null) {
 // Block, Report. Wired once here via delegated listeners so it works
 // on every `.pc` card the app ever renders (feed, profile, search,
 // bookmarks, lists) with no per-page setup.
-const LP_HOLD_MS = 2200;
+const LP_HOLD_MS = 480; // ~half a second — a deliberate hold, not a sluggish wait
 const LP_MOVE_TOLERANCE = 10; // px of finger drift before we treat it as a scroll, not a hold
 let _lpTimer = null;
 let _lpStartX = 0, _lpStartY = 0;
@@ -4211,9 +4211,10 @@ const ICON_LP = {
 function openLongPressPreview(postId) {
   const p = postCache[postId];
   if (!p) return;
+  const overlay = lpOverlayEl();
+  if (overlay.classList.contains('open')) return; // already showing one — ignore a stray re-trigger
   if (navigator.vibrate) navigator.vibrate(12);
   const isOwn = currentSession && p.author_id === currentSession.user.id;
-  const overlay = lpOverlayEl();
   overlay.innerHTML = `
     <div class="lp-card-wrap"><div class="lp-card">${postCardHtml(p)}</div></div>
     <div class="lp-actions">
@@ -4237,7 +4238,7 @@ function closeLongPressPreview() {
   el.classList.remove('open');
   unlockScroll();
   document.body.classList.remove('oc-sheet-open');
-  setTimeout(() => { el.innerHTML = ''; }, 200);
+  setTimeout(() => { el.innerHTML = ''; }, 260);
 }
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLongPressPreview(); });
 

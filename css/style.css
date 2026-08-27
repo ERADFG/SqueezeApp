@@ -2384,30 +2384,33 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
    long-press timer is running — also kills text-selection/iOS
    callout so the hold doesn't fight with the browser's own gesture. */
 .pc.lp-pressing {
-  transform:scale(.985); transition:transform .18s ease;
+  transform:scale(.976); transition:transform .38s cubic-bezier(.22,.7,.34,1);
   -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
 }
 /* The card's own remove animation when Hide is confirmed. */
 .pc.lp-hidden-out { opacity:0; transform:scale(.96); transition:opacity .16s ease, transform .16s ease; }
 
+/* Always in the DOM as a flex layer (never display:none) so opacity /
+   transform can transition cleanly on BOTH open and close — toggling
+   display would snap the state instantly and skip the animation. */
 .lp-overlay {
-  position:fixed; inset:0; z-index:4000; display:none;
-  flex-direction:column; align-items:center; justify-content:center; gap:22px;
+  position:fixed; inset:0; z-index:4000;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px;
   padding:24px 16px calc(24px + env(safe-area-inset-bottom, 0px));
-  background:rgba(15,20,25,.4);
-  backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
-  opacity:0; transition:opacity .18s ease;
+  background:rgba(15,20,25,.46);
+  backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+  opacity:0; pointer-events:none;
+  transition:opacity .26s cubic-bezier(.22,.7,.34,1);
 }
-.lp-overlay.open { display:flex; opacity:1; }
-.lp-overlay:empty { display:none; }
+.lp-overlay.open { opacity:1; pointer-events:auto; }
 
 .lp-card-wrap {
   width:min(94vw, 420px); max-height:60vh;
   pointer-events:none; /* it's a peek, not a functional card — see openLongPressPreview() */
-  transform:scale(.86); opacity:0;
-  transition:transform .22s cubic-bezier(.2,.9,.32,1.15), opacity .18s ease;
+  transform:scale(.8) translateY(8px); opacity:0;
+  transition:transform .38s cubic-bezier(.34,1.4,.4,1), opacity .22s ease;
 }
-.lp-overlay.open .lp-card-wrap { transform:scale(1); opacity:1; }
+.lp-overlay.open .lp-card-wrap { transform:scale(1) translateY(0); opacity:1; }
 .lp-card {
   background:var(--cream-card); border:1px solid var(--line); border-radius:var(--r-lg);
   box-shadow:0 24px 60px rgba(0,0,0,.35); overflow:auto; max-height:60vh;
@@ -2417,19 +2420,19 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
 .lp-actions {
   display:flex; gap:6px; background:var(--cream-card); border:1px solid var(--line);
   border-radius:999px; padding:8px; box-shadow:var(--shadow-pop);
-  transform:translateY(10px); opacity:0;
-  transition:transform .22s ease .05s, opacity .18s ease .05s;
+  transform:translateY(16px) scale(.9); opacity:0;
+  transition:transform .34s cubic-bezier(.34,1.4,.4,1) .07s, opacity .22s ease .07s;
 }
-.lp-overlay.open .lp-actions { transform:translateY(0); opacity:1; }
+.lp-overlay.open .lp-actions { transform:translateY(0) scale(1); opacity:1; }
 .lp-act {
   display:flex; flex-direction:column; align-items:center; gap:5px;
   min-width:64px; background:none; border:none; color:var(--ink);
   font-size:11px; font-weight:600; padding:8px 6px 7px; cursor:pointer;
-  border-radius:16px; transition:background .12s ease;
+  border-radius:16px; transition:background .12s ease, transform .12s ease;
 }
 .lp-act svg { width:22px; height:22px; }
 .lp-act:hover { background:var(--hover-bg); }
-.lp-act:active { background:var(--hover-bg); transform:scale(.95); }
+.lp-act:active { background:var(--hover-bg); transform:scale(.92); }
 .lp-act-danger { color:var(--like); }
 @media (max-width: 460px) {
   .lp-act { min-width:56px; font-size:10.5px; }
