@@ -139,7 +139,7 @@ function adminUserRowHtml(p) {
   return `
   <div class="adm-row" id="adm-user-${p.id}">
     <a href="${profileUrl(uname)}" target="_blank" rel="noopener">
-      <img class="avatar pfp-md${avSqClass(p)}" src="${esc(avatarUrl(p.avatar_url))}" alt="">
+      <img class="avatar pfp-md${avSqClass(p)}" src="${esc(avatarUrl(p.avatar_url))}" loading="lazy" decoding="async" alt="">
     </a>
     <div class="adm-row-txt">
       <span class="adm-row-name">${name}${vBadge(p)}${p.banned ? '<span class="adm-tag adm-tag-banned">Suspended</span>' : ''}</span>
@@ -307,7 +307,7 @@ function adminPostRowHtml(p) {
   const name = esc(p.profile?.display_name || uname);
   return `
   <div class="adm-row adm-post-row${p.is_deleted ? ' adm-row-deleted' : ''}" id="adm-post-${p.id}">
-    <img class="avatar pfp-md${avSqClass(p.profile)}" src="${esc(avatarUrl(p.profile?.avatar_url))}" alt="">
+    <img class="avatar pfp-md${avSqClass(p.profile)}" src="${esc(avatarUrl(p.profile?.avatar_url))}" loading="lazy" decoding="async" alt="">
     <div class="adm-row-txt">
       <span class="adm-row-name">${name}${vBadge(p.profile)} <span class="adm-row-handle">@${esc(uname)}</span> &middot; <span class="adm-row-dt">${timeAgo(p.created_at)}</span>${p.is_deleted ? '<span class="adm-tag adm-tag-banned">Deleted</span>' : ''}</span>
       <a class="adm-post-body" href="${postUrl(p)}" target="_blank" rel="noopener">${esc((p.body || '').slice(0, 200))}</a>
@@ -415,7 +415,7 @@ function adminReplyRowHtml(r) {
   const name = esc(r.profile?.display_name || uname);
   return `
   <div class="adm-row adm-post-row${r.is_deleted ? ' adm-row-deleted' : ''}" id="adm-reply-${r.id}">
-    <img class="avatar pfp-md${avSqClass(r.profile)}" src="${esc(avatarUrl(r.profile?.avatar_url))}" alt="">
+    <img class="avatar pfp-md${avSqClass(r.profile)}" src="${esc(avatarUrl(r.profile?.avatar_url))}" loading="lazy" decoding="async" alt="">
     <div class="adm-row-txt">
       <span class="adm-row-name">${name}${vBadge(r.profile)} <span class="adm-row-handle">@${esc(uname)}</span> &middot; <span class="adm-row-dt">${timeAgo(r.created_at)}</span>${r.is_deleted ? '<span class="adm-tag adm-tag-banned">Deleted</span>' : ''}</span>
       <a class="adm-post-body" href="${postUrlById(r.post_id)}" target="_blank" rel="noopener">${esc((r.body || '').slice(0, 200))}</a>
@@ -523,7 +523,7 @@ function adminArticleRowHtml(a) {
   const name = esc(a.profile?.display_name || uname);
   return `
   <div class="adm-row adm-post-row${a.is_deleted ? ' adm-row-deleted' : ''}" id="adm-article-${a.id}">
-    <img class="avatar pfp-md${avSqClass(a.profile)}" src="${esc(avatarUrl(a.profile?.avatar_url))}" alt="">
+    <img class="avatar pfp-md${avSqClass(a.profile)}" src="${esc(avatarUrl(a.profile?.avatar_url))}" loading="lazy" decoding="async" alt="">
     <div class="adm-row-txt">
       <span class="adm-row-name">${name}${vBadge(a.profile)} <span class="adm-row-handle">@${esc(uname)}</span> &middot; <span class="adm-row-dt">${timeAgo(a.created_at)}</span>${a.is_deleted ? '<span class="adm-tag adm-tag-banned">Deleted</span>' : ''}</span>
       <a class="adm-post-body" href="${articleUrl(a.id)}" target="_blank" rel="noopener">${esc(a.title || '(untitled)')}</a>

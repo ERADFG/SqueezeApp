@@ -50,11 +50,22 @@ function renderSearchScope(root) {
     </div>`;
 }
 
+// One small icon per Explore tab so the tab bar reads at a glance
+// instead of as plain text — Trending reuses the same fire icon as
+// the "Hot" badge on the rows underneath it, so the two visually tie
+// together instead of Trending looking unrelated to what's Hot.
+const EXPLORE_TAB_ICON = {
+  explore: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m14.5 9.5-2 5-5 2 2-5 5-2Z"/></svg>',
+  trending: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1 3-2 4.5-2 7.5a2 2 0 0 0 4 0c0-1-.5-1.5-.5-1.5 2 1 3.5 3.5 3.5 6a5 5 0 0 1-10 0c0-4 2.5-5.5 5-12Z"/></svg>',
+  news: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h13a2 2 0 0 1 2 2v11a1.5 1.5 0 0 1-1.5 1.5H6a2 2 0 0 1-2-2V5Z"/><path d="M8 9h7M8 12.5h7M8 16h4"/><path d="M20 8v10a1.5 1.5 0 0 1-1.5 1.5"/></svg>',
+  sports: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M7 5H4v1a3 3 0 0 0 3 3M17 5h3v1a3 3 0 0 1-3 3"/><path d="M12 13v3M9 20h6M10 17h4v3h-4z"/></svg>',
+  entertainment: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 19.5 5 21 9.5 4.5 14 3 9.5Z"/><path d="m7 6.5 2 3M11.5 5.3l2 3M16 4.2l2 3"/><path d="M4.5 14h15v4.5A1.5 1.5 0 0 1 18 20H6a1.5 1.5 0 0 1-1.5-1.5V14Z"/></svg>',
+};
 function renderTabs() {
   const el = document.getElementById('search-tabs');
   if (!searchQuery.trim()) {
     el.innerHTML = ['explore', 'trending', 'news', 'sports', 'entertainment'].map(t => `
-      <button class="xtab${exploreTab === t ? ' active' : ''}" onclick="setExploreTab('${t}')">${t[0].toUpperCase()}${t.slice(1)}</button>`).join('');
+      <button class="xtab xtab-icon${exploreTab === t ? ' active' : ''}" onclick="setExploreTab('${t}')">${EXPLORE_TAB_ICON[t]}<span>${t[0].toUpperCase()}${t.slice(1)}</span></button>`).join('');
     return;
   }
   el.innerHTML = searchCommunitySlug
@@ -236,12 +247,21 @@ async function fetchTopPostsToday(limit = 3) {
     .slice(0, limit);
 }
 
-function explorePostHtml(p) {
+// Same rank-based Hot/New treatment as the Trending rows below (see
+// trendBadgeHtml) applied to actual posts here: the #1 post by
+// engagement score reads as "Hot" (i.e. viral), anything posted in
+// the last hour that isn't already #1 reads as "New", everything else
+// just shows a plain timestamp — so the one badge language is used
+// consistently for both "what's trending" and "what's viral right now".
+function explorePostHtml(p, rank = 0) {
   const title = (p.body || '').trim().slice(0, 140) || (p.media_url ? '' : '(no text)');
   const engagement = (p.reply_count || 0) + (p.like_count || 0);
   return `
     <a class="expl-post" href="${postUrl(p)}">
-      ${title ? `<div class="expl-post-title">${esc(title)}</div>` : ''}
+      <div class="expl-post-top">
+        ${title ? `<div class="expl-post-title">${esc(title)}</div>` : '<span></span>'}
+        ${trendBadgeHtml(rank, p.created_at)}
+      </div>
       ${explorePostThumbHtml(p)}
       <div class="expl-post-meta">
         <img class="avatar${avSqClass(p.profile)}" src="${esc(avatarUrl(p.profile?.avatar_url))}" alt="" loading="lazy" decoding="async">
@@ -341,7 +361,7 @@ async function renderExploreTab(root) {
   ]);
 
   const postsHtml = topPosts.length
-    ? topPosts.map(explorePostHtml).join('')
+    ? topPosts.map((p, i) => explorePostHtml(p, i)).join('')
     : `<div class="no-t">Nothing popular yet today.</div>`;
 
   const trendHtml = trending.length

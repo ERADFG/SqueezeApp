@@ -87,7 +87,7 @@ async function loadSettings() {
 
   root.innerHTML = `
     <div class="settings-header-card">
-      <a href="${profileUrl(uname)}"><img class="avatar${avSqClass(profile)}" src="${esc(avatarUrl(profile?.avatar_url))}" alt="" style="width:52px;height:52px;"></a>
+      <a href="${profileUrl(uname)}"><img class="avatar${avSqClass(profile)}" src="${esc(avatarUrl(profile?.avatar_url))}" decoding="async" alt="" style="width:52px;height:52px;"></a>
       <div>
         <div class="settings-header-name">${esc(profile?.display_name || uname)}</div>
         <div class="settings-header-handle">@${esc(uname)}</div>

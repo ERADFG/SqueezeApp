@@ -134,10 +134,10 @@ async function loadProfile() {
   const locationLabel = truncateLabel(locationFull);
 
   root.innerHTML = `
-    <div class="profile-hdr" id="profile-hdr" style="${profile.banner_url ? `--banner-img:url('${esc(profile.banner_url)}')` : ''}">
+    <div class="profile-hdr${profile.banner_url ? ' banner-loading' : ''}" id="profile-hdr" style="${profile.banner_url ? `--banner-img:url('${esc(profile.banner_url)}')` : ''}">
       <a class="profile-back-btn" href="index.html" aria-label="Back to home">${PROFILE_ICON_BACK}</a>
       <div class="profile-hdr-top">
-        <img class="avatar pfp-lg${avSqClass(profile)}" id="pv-avatar" src="${esc(avatarUrl(profile.avatar_url))}" alt="">
+        <img class="avatar pfp-lg${avSqClass(profile)}" id="pv-avatar" src="${esc(avatarUrl(profile.avatar_url))}" width="96" height="96" decoding="async" fetchpriority="high" alt="">
         <div class="profile-hdr-actions">
           ${!isOwnProfile && session ? `
             <a class="profile-icon-btn" href="${messagesUrl(profile.username)}" title="Message" aria-label="Message">${ICON_MESSAGE}</a>
@@ -188,9 +188,16 @@ async function loadProfile() {
   // fallback if it can't actually be displayed.
   if (profile.banner_url) {
     const bannerCheck = new Image();
+    // Also drives the fade-in below: 'load' flips --banner-img from
+    // invisible to visible with a transition once it's actually
+    // decoded, instead of popping in the instant bytes arrive.
+    bannerCheck.onload = () => {
+      const hdrEl = document.getElementById('profile-hdr');
+      if (hdrEl) hdrEl.classList.add('banner-loaded');
+    };
     bannerCheck.onerror = () => {
       const hdrEl = document.getElementById('profile-hdr');
-      if (hdrEl) hdrEl.style.removeProperty('--banner-img');
+      if (hdrEl) { hdrEl.style.removeProperty('--banner-img'); hdrEl.classList.remove('banner-loading'); }
     };
     bannerCheck.src = profile.banner_url;
   }

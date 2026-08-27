@@ -630,7 +630,7 @@ async function runModSearch(q) {
   if (!candidates.length) { resultsEl.innerHTML = `<div class="comm-about-empty">No matching members found.</div>`; return; }
   resultsEl.innerHTML = candidates.map(p => `
     <div class="who-row comm-mod-search-row">
-      <img class="avatar pfp-md${avSqClass(p)}" src="${esc(avatarUrl(p.avatar_url))}" alt="">
+      <img class="avatar pfp-md${avSqClass(p)}" src="${esc(avatarUrl(p.avatar_url))}" loading="lazy" decoding="async" alt="">
       <span class="who-row-txt">
         <span class="who-row-name">${esc(p.display_name || p.username)}${vBadge(p)}</span>
         <span class="who-row-handle">@${esc(p.username)}</span>

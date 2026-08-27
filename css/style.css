@@ -574,6 +574,11 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
 }
 #search-tabs.xtabs::-webkit-scrollbar { display:none; }
 #search-tabs .xtab { flex:none; padding:9px 14px; white-space:nowrap; }
+/* Explore-only tabs (Explore/Trending/News/Sports/Entertainment) get a
+   small leading icon so the bar reads at a glance instead of as a row
+   of plain labels — see EXPLORE_TAB_ICON in js/search.js. */
+.xtab-icon { display:inline-flex; align-items:center; gap:6px; }
+.xtab-icon svg { width:15px; height:15px; flex:none; }
 /* Fallback fill for the active tab — the sliding maroon pill
    (.xtabs-indicator) only exists in the DOM on the home page
    (index.html) and is only ever positioned by board.js's
@@ -1268,8 +1273,10 @@ select {
 
 
 /* ── SEARCH BOX (right column, decorative like the reference) ── */
-.xsearch { display:flex; align-items:center; gap:8px; background:var(--hover-bg); border-radius:999px; padding:10px 16px; margin:4px 0 16px; }
-.xsearch svg { width:16px; height:16px; color:var(--muted); flex:none; }
+.xsearch { display:flex; align-items:center; gap:8px; background:var(--hover-bg); border-radius:999px; padding:10px 16px; margin:4px 0 16px; border:1.5px solid transparent; transition:border-color .15s ease, background-color .15s ease; }
+.xsearch:focus-within { border-color:var(--maroon); background:var(--bg); }
+.xsearch svg { width:16px; height:16px; color:var(--muted); flex:none; transition:color .15s ease; }
+.xsearch:focus-within svg { color:var(--maroon); }
 .xsearch input { background:transparent; border:none; outline:none; font-size:15px; width:100%; color:var(--ink); }
 .xsearch input::placeholder { color:var(--muted); }
 
@@ -2157,7 +2164,9 @@ html:has(> body.oc-sheet-open) { overflow:hidden; }
 .expl-post { display:block; padding:12px 16px; border-top:1px solid var(--line); text-decoration:none; color:var(--ink); transition:background-color .12s ease; }
 .expl-post:first-child { border-top:none; }
 .expl-post:hover { background:var(--hover-bg); text-decoration:none; }
-.expl-post-title { font-size:15px; font-weight:800; line-height:1.3; margin-bottom:8px; word-wrap:break-word; }
+.expl-post-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:8px; }
+.expl-post-title { font-size:15px; font-weight:800; line-height:1.3; word-wrap:break-word; }
+.expl-post-top .trend-badge { flex:none; margin-top:1px; }
 .expl-post-thumb { border-radius:12px; overflow:hidden; margin-bottom:8px; background:var(--hover-bg); max-height:220px; }
 .expl-post-thumb img, .expl-post-thumb video { display:block; width:100%; max-height:220px; object-fit:cover; }
 .expl-post-thumb-video { position:relative; }
@@ -3202,6 +3211,13 @@ html[data-theme="dim"] .auth-ok, html[data-theme="dark"] .auth-ok { background:r
   padding:0 16px 14px; margin-bottom:0;
 }
 .profile-hdr::before { content:""; display:block; height:170px; margin:0 -16px 0; background:var(--banner-img, linear-gradient(135deg,#3F4B5A,#98A2AE)) center/cover no-repeat; }
+/* Banner fades in once actually decoded (see the bannerCheck.onload in
+   profile.js) instead of popping in mid-scroll — while it's loading,
+   .banner-loading keeps the neutral gradient showing through so the
+   header never looks broken or empty on a slow connection. */
+.profile-hdr.banner-loading::before { background-image:none; background-color:var(--hover-bg); transition:opacity .35s ease; }
+.profile-hdr.banner-loading.banner-loaded::before { background-image:var(--banner-img); background-color:transparent; animation:oc-fade-in-opacity .35s ease both; }
+#pv-avatar { transition:opacity .2s ease; }
 .profile-id { flex:1; min-width:180px; padding-top:10px; }
 .uname-row { display:flex; align-items:flex-start; gap:10px; flex-wrap:wrap; }
 .profile-id .uname { font-family:inherit; font-size:20px; font-weight:800; color:var(--ink); overflow-wrap:anywhere; word-break:break-word; min-width:0; flex:1 1 auto; }
@@ -3344,31 +3360,39 @@ html[data-theme="dim"] .auth-ok, html[data-theme="dark"] .auth-ok { background:r
   padding:16px 16px 8px; letter-spacing:-.01em;
 }
 .notif-group-hdr:first-child { padding-top:12px; }
-.notif-item { display:flex; gap:12px; align-items:center; padding:11px 16px; border-bottom:1px solid var(--line); text-decoration:none; color:var(--ink); transition:background-color .12s ease; animation:oc-fade-in .2s ease both; }
+.notif-item { display:flex; gap:12px; align-items:center; padding:12px 16px; border-bottom:1px solid var(--line); text-decoration:none; color:var(--ink); transition:background-color .15s ease; animation:oc-fade-in .25s ease both; }
 .notif-item:hover { background:var(--hover-bg); text-decoration:none; }
 .notif-item.unread { background:var(--maroon-tint); }
-.notif-item.unread:hover { background:rgba(14,165,233,.16); }
-/* Avatar with a small colored icon badge overlapping its bottom-right
-   corner (like/reply/repost/quote/follow) instead of a separate icon
-   chip floating next to it — reads as one glance-able unit per row,
-   the same pattern iOS/Android system notification lists use. */
-.notif-avatar-wrap { position:relative; flex:none; width:44px; height:44px; }
-.notif-avatar-wrap .avatar { width:44px; height:44px; }
+.notif-item.unread:hover { background:rgba(11,111,224,.16); }
+/* Stagger the first screenful of rows in slightly so the list settles
+   in smoothly on load instead of every row popping in at once. */
+.notif-item:nth-child(1) { animation-delay:.02s; }
+.notif-item:nth-child(2) { animation-delay:.05s; }
+.notif-item:nth-child(3) { animation-delay:.08s; }
+.notif-item:nth-child(4) { animation-delay:.11s; }
+.notif-item:nth-child(5) { animation-delay:.14s; }
+.notif-item:nth-child(6) { animation-delay:.17s; }
+.notif-item:nth-child(7) { animation-delay:.2s; }
+.notif-item:nth-child(8) { animation-delay:.23s; }
+/* Avatar with a small icon badge overlapping its bottom-right corner
+   (like/reply/repost/quote/follow) instead of a separate icon chip
+   floating next to it — reads as one glance-able unit per row, the
+   same pattern iOS/Android system notification lists use. Every badge
+   uses the app's single blue accent (var(--maroon)) rather than a
+   different color per notification type, so the whole page reads as
+   one consistent brand color instead of a mix of red/green/blue. */
+.notif-avatar-wrap { position:relative; flex:none; width:46px; height:46px; transition:transform .15s ease; }
+.notif-avatar-wrap .avatar { width:46px; height:46px; }
+.notif-item:hover .notif-avatar-wrap { transform:scale(1.03); }
 .notif-badge {
   position:absolute; right:-3px; bottom:-3px; width:20px; height:20px;
   border-radius:50%; display:flex; align-items:center; justify-content:center;
   border:2.5px solid var(--cream-card); box-sizing:content-box;
+  background:var(--maroon); color:#fff;
 }
 .notif-item.unread .notif-badge { border-color:var(--maroon-tint); }
 .notif-badge svg { width:11px; height:11px; fill:none; stroke:currentColor; stroke-width:2.4; }
-.notif-badge.like { background:var(--like); color:#fff; }
-.notif-badge.like svg { fill:#fff; stroke:none; }
-.notif-badge.reply { background:var(--maroon); color:#fff; }
-.notif-badge.follow { background:var(--green); color:#fff; }
-.notif-badge.repost { background:var(--green); color:#fff; }
-.notif-badge.quote { background:var(--maroon); color:#fff; }
-.notif-badge.quote svg { fill:#fff; stroke:none; }
-.notif-badge.mention { background:var(--maroon); color:#fff; }
+.notif-badge.like svg, .notif-badge.quote svg { fill:#fff; stroke:none; }
 .notif-body { flex:1; min-width:0; }
 .notif-body .notif-txt { font-size:14.5px; color:var(--ink); line-height:1.35; }
 .notif-body .notif-txt b { font-weight:800; }
@@ -3376,8 +3400,11 @@ html[data-theme="dim"] .auth-ok, html[data-theme="dark"] .auth-ok { background:r
 .notif-body .notif-time { font-size:12.5px; color:var(--muted); margin-top:3px; }
 /* Small unread dot on the far right of the row — the row's own tint
    already carries most of the "new" signal, this is just the quick
-   glanceable dot every notification list uses on top of it. */
-.notif-dot { flex:none; width:9px; height:9px; border-radius:50%; background:var(--maroon); align-self:center; }
+   glanceable dot every notification list uses on top of it. Blue to
+   match the badges, with a soft pulse so unread rows draw the eye
+   without being distracting. */
+.notif-dot { flex:none; width:9px; height:9px; border-radius:50%; background:var(--maroon); align-self:center; animation:notif-dot-pulse 2s ease-in-out infinite; }
+@keyframes notif-dot-pulse { 0%,100% { box-shadow:0 0 0 0 var(--maroon-tint); } 50% { box-shadow:0 0 0 4px var(--maroon-tint); } }
 
 /* ═══════════════════════════════════════════════════════════════
    CHAT PAGE

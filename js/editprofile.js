@@ -42,7 +42,7 @@ async function loadEditProfile() {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h3l2-2h6l2 2h3v12H4V7Z"/><circle cx="12" cy="13" r="3.5"/></svg>
       </label>
       <input type="file" id="ep-banner-file" accept="image/*" style="display:none;">
-      <img class="avatar ep-avatar${avSqClass(epProfile)}" id="ep-avatar-preview" src="${esc(avatarUrl(epProfile.avatar_url))}" alt="">
+      <img class="avatar ep-avatar${avSqClass(epProfile)}" id="ep-avatar-preview" src="${esc(avatarUrl(epProfile.avatar_url))}" decoding="async" alt="">
       <label class="ep-avatar-pick" for="ep-avatar-file">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h3l2-2h6l2 2h3v12H4V7Z"/><circle cx="12" cy="13" r="3.5"/></svg>
       </label>

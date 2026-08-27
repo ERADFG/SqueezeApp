@@ -1093,7 +1093,7 @@ function renderMobileChrome() {
       <a class="${cur('search')}" href="search.html"><span class="m-tab-hit">${NAV_ICON.search}</span><span class="m-tab-label">Search</span></a>
       <a class="${cur('messages')}" href="chat.html"><span class="m-tab-hit">${NAV_ICON.chat}${chatBadge}</span><span class="m-tab-label">Chat</span></a>
       <a class="${cur('notifications')}" href="notifications.html"><span class="m-tab-hit">${NAV_ICON.bell}${badge}</span><span class="m-tab-label">Notifications</span></a>
-      <a class="${cur('profile')} m-tab-avatar" href="${ownHref}"><span class="m-tab-hit"><img class="avatar${avSqClass(currentProfile)}" src="${esc(avatar)}" alt=""></span><span class="m-tab-label">Profile</span></a>
+      <a class="${cur('profile')} m-tab-avatar" href="${ownHref}"><span class="m-tab-hit"><img class="avatar${avSqClass(currentProfile)}" src="${esc(avatar)}" decoding="async" alt=""></span><span class="m-tab-label">Profile</span></a>
     </div>
 
     ${currentSession && !onChatPage ? `<button id="m-fab" onclick="mobileCompose();return false;" aria-label="Post">${ICON_COMPOSE}</button>` : ''}
@@ -1101,7 +1101,7 @@ function renderMobileChrome() {
     <div class="m-drawer-bg" id="m-drawer-bg" onclick="if(event.target===this)closeMobileDrawer();">
       <div class="m-drawer">
         ${currentSession ? `
-          <a href="${ownHref}"><img class="avatar m-drawer-avatar${avSqClass(currentProfile)}" src="${esc(avatar)}" alt=""></a>
+          <a href="${ownHref}"><img class="avatar m-drawer-avatar${avSqClass(currentProfile)}" src="${esc(avatar)}" loading="lazy" decoding="async" alt=""></a>
           <a href="${ownHref}" style="text-decoration:none;">
             <span class="m-drawer-name">${esc(currentProfile?.display_name || currentProfile?.username || 'You')}</span>
             <span class="m-drawer-handle">@${esc(currentProfile?.username || '')}</span>
@@ -1139,7 +1139,7 @@ function renderMobileChrome() {
           <hr>
           <button class="m-drawer-logout" onclick="closeMobileDrawer();logOut();"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4.5H6a1.5 1.5 0 0 0-1.5 1.5v12A1.5 1.5 0 0 0 6 19.5h3"/><path d="M15.5 16.5 20 12l-4.5-4.5"/><path d="M20 12H9"/></svg>Log out</button>
         ` : `
-          <img class="avatar m-drawer-avatar" src="${DEFAULT_AVATAR}" alt="">
+          <img class="avatar m-drawer-avatar" src="${DEFAULT_AVATAR}" loading="lazy" decoding="async" alt="">
           <span class="m-drawer-name">Welcome to InteractInk</span>
           <span class="m-drawer-handle">Log in to follow, post, and reply.</span>
           <hr>
@@ -3133,7 +3133,7 @@ function renderCcForm() {
       <label style="margin-top:16px;">Moderators</label>
       ${ccWiz.mods.length ? `<div class="comm-mods-list" id="cc-mods-list">${ccWiz.mods.map(m => `
         <div class="who-row comm-mod-row">
-          <img class="avatar pfp-md${avSqClass(m)}" src="${esc(avatarUrl(m.avatar_url))}" alt="">
+          <img class="avatar pfp-md${avSqClass(m)}" src="${esc(avatarUrl(m.avatar_url))}" loading="lazy" decoding="async" alt="">
           <span class="who-row-txt">
             <span class="who-row-name">${esc(m.display_name || m.username)}</span>
             <span class="who-row-handle">@${esc(m.username)}</span>
@@ -3221,7 +3221,7 @@ async function ccRunModSearch(q) {
   if (!candidates.length) { resultsEl.innerHTML = `<div class="comm-about-empty">No matching members found.</div>`; return; }
   resultsEl.innerHTML = candidates.map(p => `
     <div class="who-row comm-mod-search-row">
-      <img class="avatar pfp-md${avSqClass(p)}" src="${esc(avatarUrl(p.avatar_url))}" alt="">
+      <img class="avatar pfp-md${avSqClass(p)}" src="${esc(avatarUrl(p.avatar_url))}" loading="lazy" decoding="async" alt="">
       <span class="who-row-txt">
         <span class="who-row-name">${esc(p.display_name || p.username)}${vBadge(p)}</span>
         <span class="who-row-handle">@${esc(p.username)}</span>
@@ -5627,7 +5627,7 @@ function renderLbSidebar(owner) {
     ${actions}
     <div class="op-detail-divider"></div>
     <a class="lb-sb-replybox" href="${href}">
-      <img class="avatar pfp-sm${avSqClass(currentProfile)}" src="${esc(avatarUrl(currentProfile?.avatar_url))}" alt="">
+      <img class="avatar pfp-sm${avSqClass(currentProfile)}" src="${esc(avatarUrl(currentProfile?.avatar_url))}" decoding="async" alt="">
       <span>${t('compose.reply')}</span>
     </a>
     <a class="lb-sb-viewall" href="${href}">View full conversation &rsaquo;</a>`;

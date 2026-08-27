@@ -79,7 +79,7 @@ function renderArticle() {
           ${article._author ? `
           <div class="article-hero-byline">
             <a class="who-row" style="padding:0;" href="${profileUrl(article._author.username)}">
-              <img class="avatar${avSqClass(article._author)}" style="width:32px;height:32px;" src="${esc(avatarUrl(article._author.avatar_url))}" alt="">
+              <img class="avatar${avSqClass(article._author)}" style="width:32px;height:32px;" src="${esc(avatarUrl(article._author.avatar_url))}" decoding="async" alt="">
               <span class="who-row-txt">
                 <span class="who-row-name">${esc(article._author.display_name || article._author.username)}${vBadge(article._author)}</span>
               </span>

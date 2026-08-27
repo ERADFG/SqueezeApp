@@ -178,7 +178,7 @@ async function renderAuthArea() {
   if (el) el.innerHTML = `
     <div class="acct" id="acct-wrap">
       <button class="acct-btn" id="acct-btn" onclick="toggleAcctMenu();return false;">
-        <img class="avatar pfp-md${avSqClass(currentProfile)}" src="${esc(avatar)}" alt="">
+        <img class="avatar pfp-md${avSqClass(currentProfile)}" src="${esc(avatar)}" decoding="async" alt="">
         <span class="acct-txt">
           <span class="acct-name">${esc(currentProfile?.display_name || uname)}</span>
           <span class="acct-handle">@${esc(uname)}</span>
