@@ -1315,6 +1315,21 @@ select {
   content-visibility:auto;
   contain-intrinsic-size:auto 180px;
 }
+/* `.pc`'s own user-select:none above only covers plain text — Chrome
+   on Android ships anchor tags (<a>) with a UA-stylesheet
+   user-select that can win over an *inherited* none, so a long-press
+   started on or near a #hashtag/@mention/link inside the body could
+   still kick off Android's native text-selection gesture (magnifier
+   handles + the "Copy / Translate / Select all" toolbar) racing
+   alongside our own long-press preview instead of being suppressed by
+   it. Setting user-select:none directly on every descendant — not
+   just inherited from the card — closes that gap for good. The
+   card's own tap/press handling (cardClick(), the long-press timer)
+   is untouched since none of this affects click/pointer events. */
+.pc, .pc * {
+  -webkit-user-select:none !important; user-select:none !important;
+  -webkit-touch-callout:none !important;
+}
 /* content-visibility:auto above gives the card its own containment
    box, which silently clips anything a descendant tries to paint
    outside it — including the "···" and repost popovers, which are
