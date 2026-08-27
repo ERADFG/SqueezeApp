@@ -132,10 +132,24 @@ const ICON_TICK1 = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" s
 const ICON_TICK2 = '<svg viewBox="0 0 20 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8.4l3.3 3.3L11.5 4"/><path d="M7.2 8.4l3.3 3.3L18 4"/></svg>';
 
 // Same address-bar upgrade as profile.js/thread.js/followlist.js —
-// safe to run immediately since chatWithUsername (if any) already
-// came off the URL itself, no data load needed to know it.
+// safe to run immediately since the group id / username (if any) is
+// parsed directly off the URL right here, no data load needed to know
+// it. IMPORTANT: this must NOT read chatGroupId/chatWithUsername —
+// those module-level vars are only populated later, inside loadChat()
+// on DOMContentLoaded. Reading them here (while still their initial
+// `null`) previously rewrote a freshly-loaded /messages/<username> (or
+// /messages/g/<id>) URL back down to bare /messages via
+// history.replaceState BEFORE loadChat() ever got a chance to read the
+// real username/id off the original URL — so a hard navigation into a
+// thread (e.g. chatNewPickUser()'s `location.href = messagesUrl(...)`,
+// a shared deep link, or even just refreshing an open thread) silently
+// bounced back to showing the plain conversation list instead. Parsing
+// straight from location here, independent of those vars, keeps this
+// canonicalization a no-op on exactly the URLs it should be.
 (function () {
-  const canonical = prettyMessagesUrl(chatWithUsername);
+  const gid = chatReadGroupId();
+  const uname = chatReadWithUsername(gid);
+  const canonical = gid ? groupMessagesUrl(gid) : prettyMessagesUrl(uname);
   if (location.pathname + location.search !== canonical) { try { history.replaceState(null, '', canonical); } catch (e) {} }
 })();
 
