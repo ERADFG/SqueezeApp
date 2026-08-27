@@ -4083,6 +4083,14 @@ function pagerHtml(page, totalPages, onPageFnName) {
 
 function postCardHtml(p, flash = false) {
   cachePost(p);
+  // A post the person hid via the long-press preview (see hidePost() /
+  // isPostHidden() below) renders as nothing at all, everywhere
+  // postCardHtml() is called from — feed, profile, search, bookmarks,
+  // lists — since this is the one shared render path all of those go
+  // through. The hidden-id list lives client-side only (localStorage),
+  // so it's a per-browser "don't show me this again", not a real
+  // delete or block.
+  if (isPostHidden(p.id)) return '';
   return `
   <div class="pc${flash ? ' flash' : ''}" id="post-${p.id}" data-post-id="${p.id}" data-view="post:${p.id}" onclick="cardClick(event, '${p.id}', ${p.profile?.username ? `'${u_(p.profile.username)}'` : 'null'})" onpointerover="prefetchHref('${postUrl(p)}')" ontouchstart="prefetchHref('${postUrl(p)}')">
     ${repostBannerHtml(p._repostedBy)}
@@ -4113,7 +4121,193 @@ function postCardHtml(p, flash = false) {
 // input, all of which handle themselves.
 function cardClick(ev, postId, username = null) {
   if (ev.target.closest('a, button, input, textarea, .pc-menu-wrap, .rp-menu-wrap, .pm')) return;
+  // A press that just triggered the long-press preview (see below)
+  // still ends in a pointerup + synthesized click on this same card
+  // (touch implicitly captures to whatever element the press started
+  // on) — without this check that click would fire right after the
+  // preview opens and immediately navigate to the thread underneath
+  // it. _lpFired is set the instant the preview opens and cleared
+  // here so it never leaks into the next, unrelated tap.
+  if (_lpFired) { _lpFired = false; ev.preventDefault(); return; }
   location.href = postUrlById(postId, username);
+}
+
+// ── LONG-PRESS POST PREVIEW ──────────────────────────────────────
+// Holding a post card for ~2 seconds pops it up front-and-center over
+// a blurred backdrop (like iOS's "peek" / Android's long-press card
+// preview) with a row of quick actions underneath: Hide, Copy text,
+// Block, Report. Wired once here via delegated listeners so it works
+// on every `.pc` card the app ever renders (feed, profile, search,
+// bookmarks, lists) with no per-page setup.
+const LP_HOLD_MS = 2200;
+const LP_MOVE_TOLERANCE = 10; // px of finger drift before we treat it as a scroll, not a hold
+let _lpTimer = null;
+let _lpStartX = 0, _lpStartY = 0;
+let _lpPressedCard = null;
+let _lpFired = false; // true from the moment the preview opens until cardClick() consumes it
+
+function lpClearTimer() {
+  clearTimeout(_lpTimer);
+  _lpTimer = null;
+  if (_lpPressedCard) { _lpPressedCard.classList.remove('lp-pressing'); _lpPressedCard = null; }
+}
+
+document.addEventListener('pointerdown', (ev) => {
+  if (ev.pointerType === 'mouse' && ev.button !== 0) return; // ignore right/middle click
+  const card = ev.target.closest('.pc[data-post-id]');
+  if (!card) return;
+  // Don't hijack presses that land on already-interactive bits of the
+  // card (like/reply/share/bookmark, the "···" menu, links) — those
+  // have their own tap behavior and shouldn't also arm a long-press.
+  if (ev.target.closest('a, button, input, textarea, .pc-menu-wrap, .acts')) return;
+  lpClearTimer();
+  _lpStartX = ev.clientX;
+  _lpStartY = ev.clientY;
+  const postId = card.dataset.postId;
+  _lpPressedCard = card;
+  card.classList.add('lp-pressing');
+  _lpTimer = setTimeout(() => {
+    _lpFired = true;
+    openLongPressPreview(postId);
+    lpClearTimer();
+  }, LP_HOLD_MS);
+});
+document.addEventListener('pointermove', (ev) => {
+  if (!_lpTimer) return;
+  if (Math.abs(ev.clientX - _lpStartX) > LP_MOVE_TOLERANCE || Math.abs(ev.clientY - _lpStartY) > LP_MOVE_TOLERANCE) lpClearTimer();
+}, { passive: true });
+['pointerup', 'pointercancel', 'pointerleave', 'scroll'].forEach(evt => {
+  document.addEventListener(evt, lpClearTimer, { passive: true, capture: evt === 'scroll' });
+});
+// Stops the OS's own text-selection/callout menu from popping up
+// mid-hold on mobile browsers and racing our own preview.
+document.addEventListener('contextmenu', (ev) => {
+  if (ev.target.closest('.pc[data-post-id]')) ev.preventDefault();
+});
+
+function lpOverlayEl() {
+  let el = document.getElementById('lp-overlay');
+  if (el) return el;
+  el = document.createElement('div');
+  el.id = 'lp-overlay';
+  el.className = 'lp-overlay';
+  el.addEventListener('click', (e) => { if (e.target === el) closeLongPressPreview(); });
+  document.body.appendChild(el);
+  return el;
+}
+
+const ICON_LP = {
+  hide:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.75-7 10-7 10 7 10 7-3.75 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/></svg>',
+  copy:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 15V6a2 2 0 0 1 2-2h9"/></svg>',
+  block:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="m5.5 5.5 13 13"/></svg>',
+  report: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18"/><path d="M5 4h11l-2.5 4L16 12H5"/></svg>'
+};
+
+// Renders the popped-up card + action row for `postId` and fades the
+// blurred backdrop in. The card inside is a plain re-render of the
+// same postCardHtml() markup, but wrapped in a pointer-events:none
+// layer — it's a peek, not a functional card, so nothing inside it
+// (like/reply/menu/links) is tappable; only the action row below is.
+function openLongPressPreview(postId) {
+  const p = postCache[postId];
+  if (!p) return;
+  if (navigator.vibrate) navigator.vibrate(12);
+  const isOwn = currentSession && p.author_id === currentSession.user.id;
+  const overlay = lpOverlayEl();
+  overlay.innerHTML = `
+    <div class="lp-card-wrap"><div class="lp-card">${postCardHtml(p)}</div></div>
+    <div class="lp-actions">
+      <button class="lp-act" data-act="hide">${ICON_LP.hide}<span>Hide post</span></button>
+      <button class="lp-act" data-act="copy">${ICON_LP.copy}<span>Copy text</span></button>
+      ${isOwn ? '' : `<button class="lp-act" data-act="block">${ICON_LP.block}<span>Block user</span></button>
+      <button class="lp-act lp-act-danger" data-act="report">${ICON_LP.report}<span>Report</span></button>`}
+    </div>`;
+  overlay.querySelector('.lp-actions').addEventListener('click', (e) => {
+    const btn = e.target.closest('.lp-act');
+    if (btn) handleLpAction(btn.dataset.act, postId);
+  });
+  document.body.classList.add('oc-sheet-open');
+  lockScroll();
+  requestAnimationFrame(() => overlay.classList.add('open'));
+}
+
+function closeLongPressPreview() {
+  const el = document.getElementById('lp-overlay');
+  if (!el || !el.classList.contains('open')) return;
+  el.classList.remove('open');
+  unlockScroll();
+  document.body.classList.remove('oc-sheet-open');
+  setTimeout(() => { el.innerHTML = ''; }, 200);
+}
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLongPressPreview(); });
+
+function handleLpAction(action, postId) {
+  closeLongPressPreview();
+  if (action === 'hide') hidePost(postId);
+  else if (action === 'copy') copyPostText(postId);
+  else if (action === 'block') lpBlockAuthor(postId);
+  else if (action === 'report') openReport(postId);
+}
+
+// ── HIDE POST — a per-browser "don't show me this again", stored in
+// localStorage (no server round-trip, nothing to sync between
+// devices). isPostHidden()/postCardHtml() above make sure a hidden
+// post simply never renders again anywhere in the app.
+function getHiddenPostIds() {
+  try { return new Set(JSON.parse(localStorage.getItem('oc_hidden_posts') || '[]')); }
+  catch { return new Set(); }
+}
+function isPostHidden(id) {
+  return getHiddenPostIds().has(id);
+}
+function hidePost(postId) {
+  const hidden = getHiddenPostIds();
+  hidden.add(postId);
+  localStorage.setItem('oc_hidden_posts', JSON.stringify([...hidden]));
+  document.querySelectorAll(`[data-post-id="${postId}"]`).forEach(el => {
+    el.classList.add('lp-hidden-out');
+    setTimeout(() => el.remove(), 160);
+  });
+  toast("Post hidden. You won't see it again.");
+}
+
+// Copies just the post's text (no link, no metadata) to the clipboard.
+function copyPostText(postId) {
+  const p = postCache[postId];
+  const text = (p?.body || '').trim();
+  if (!text) { toast('This post has no text to copy.', 'error'); return; }
+  const done = () => toast('Post text copied.');
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(() => prompt('Copy text:', text));
+  } else {
+    prompt('Copy text:', text);
+  }
+}
+
+// Blocks the post's author from the long-press menu — same
+// confirm-then-blockUser() flow as profile.js's profileMenuBlock(),
+// just reached from a post card instead of a profile page.
+async function lpBlockAuthor(postId) {
+  const p = postCache[postId];
+  if (!p) return;
+  if (!requireLogin()) return;
+  const uname = p.profile?.username;
+  if (currentSession && p.author_id === currentSession.user.id) return;
+  if (uname && isProtectedFollowUsername(uname)) { toast(`You can't block @${uname}.`, 'error'); return; }
+  const ok = await ocConfirm({
+    title: uname ? `Block @${uname}?` : 'Block this user?',
+    desc: `They won't be able to follow or message you, and you'll stop following each other.`,
+    confirmLabel: 'Block',
+    danger: true
+  });
+  if (!ok) return;
+  try {
+    await blockUser(p.author_id);
+    toast(uname ? `Blocked @${uname}.` : 'User blocked.');
+    document.querySelectorAll(`[data-post-id="${postId}"]`).forEach(el => el.remove());
+  } catch (e) {
+    toast(e.message || 'Could not block user.', 'error');
+  }
 }
 
 // A random per-browser id used only to stop the same visitor
