@@ -36,14 +36,43 @@ function notifItemHtml(n) {
   const snippet = (n.type !== 'follow' && n.post && !n.post.is_deleted) ? `<div class="notif-snip">${renderBody((n.post.body || '').slice(0, 140))}</div>` : '';
   return `
   <a class="notif-item${n.read ? '' : ' unread'}" href="${notifHref(n)}">
-    <span class="notif-icon ${n.type}">${NOTIF_ICON[n.type] || ''}</span>
-    <img class="avatar pfp-sm${avSqClass(n.actor)}" style="width:20px;height:20px;margin-top:2px;" src="${esc(actorAvatar)}" alt="" loading="lazy" decoding="async">
+    <span class="notif-avatar-wrap">
+      <img class="avatar${avSqClass(n.actor)}" src="${esc(actorAvatar)}" alt="" loading="lazy" decoding="async">
+      <span class="notif-badge ${n.type}">${NOTIF_ICON[n.type] || ''}</span>
+    </span>
     <div class="notif-body">
-      <div class="notif-time">${timeAgo(n.created_at)}</div>
       <div class="notif-txt">${notifText(n)}</div>
       ${snippet}
+      <div class="notif-time">${timeAgo(n.created_at)}</div>
     </div>
+    ${n.read ? '' : '<span class="notif-dot" aria-hidden="true"></span>'}
   </a>`;
+}
+
+// Buckets rows the way most notification inboxes do: anything unread
+// jumps to its own "New" group regardless of age, then everything
+// else (already read — from an earlier visit) is grouped by day so a
+// long list doesn't read as one undifferentiated wall. Order matters:
+// New always leads, then reverse-chronological day buckets.
+function notifDayBucket(dateStr) {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfYesterday = new Date(startOfToday); startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+  const startOfWeek = new Date(startOfToday); startOfWeek.setDate(startOfWeek.getDate() - 7);
+  if (d >= startOfToday) return 'Today';
+  if (d >= startOfYesterday) return 'Yesterday';
+  if (d >= startOfWeek) return 'This week';
+  return 'Earlier';
+}
+function renderNotifGroups(root, data) {
+  const order = ['New', 'Today', 'Yesterday', 'This week', 'Earlier'];
+  const groups = { New: [], Today: [], Yesterday: [], 'This week': [], Earlier: [] };
+  for (const n of data) groups[n.read ? notifDayBucket(n.created_at) : 'New'].push(n);
+  root.innerHTML = order
+    .filter(label => groups[label].length)
+    .map(label => `<div class="notif-group-hdr">${label}</div>${groups[label].map(notifItemHtml).join('')}`)
+    .join('');
 }
 
 async function loadNotifications() {
@@ -82,7 +111,7 @@ async function loadNotifications() {
     return;
   }
 
-  root.innerHTML = data.map(notifItemHtml).join('');
+  renderNotifGroups(root, data);
 
   const unreadIds = data.filter(n => !n.read).map(n => n.id);
   if (unreadIds.length) {

@@ -4184,6 +4184,17 @@ document.addEventListener('pointermove', (ev) => {
 document.addEventListener('contextmenu', (ev) => {
   if (ev.target.closest('.pc[data-post-id]')) ev.preventDefault();
 });
+// Belt-and-suspenders for the same thing: some Android/Chrome builds
+// still start a native text selection (the "Copy / Translate / Select
+// all" toolbar) on a long-press even with user-select:none set in
+// CSS — the CSS property stops the selection from becoming visible/
+// draggable, but a couple of WebView versions fire `selectstart`
+// once before that's fully honored. Killing the event itself here is
+// a second, independent line of defense so nothing can ever slip
+// through, on any browser.
+document.addEventListener('selectstart', (ev) => {
+  if (ev.target.closest && ev.target.closest('.pc[data-post-id]')) ev.preventDefault();
+});
 
 function lpOverlayEl() {
   let el = document.getElementById('lp-overlay');

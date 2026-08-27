@@ -146,6 +146,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   searchCommunitySlug = searchParams.get('community') || '';
   searchTab = (!searchCommunitySlug && searchParams.get('t') === 'people') ? 'people' : 'posts';
   searchCommunity = null;
+  exploreJoinedIds = null;
   await authReady; // see auth.js — otherwise cards can render before we know who's logged in
   renderTabs();
   runSearch();
@@ -190,24 +191,34 @@ function tokenizePostBody(body) {
 
 async function fetchTrendingWords(limit = 8) {
   const since = new Date(Date.now() - 48 * 3600 * 1000).toISOString();
-  const { data } = await sb.from('posts').select('body')
+  const { data } = await sb.from('posts').select('body, created_at, profile:profiles!posts_author_id_fkey(username, avatar_url, verification_type)')
     .eq('is_deleted', false)
     .gte('created_at', since)
     .order('created_at', { ascending: false })
     .limit(300);
 
-  const counts = new Map();
+  // Per word: how many distinct posts mention it, the most recent
+  // time it was posted about (drives the Hot/New/time badge), and up
+  // to 3 distinct posters' avatars for the little avatar stack.
+  const stats = new Map(); // word -> { count, latest, avatars:Set-like array of {url,username} }
   for (const p of (data || [])) {
-    for (const w of tokenizePostBody(p.body)) {
-      counts.set(w, (counts.get(w) || 0) + 1);
+    const words = tokenizePostBody(p.body);
+    for (const w of words) {
+      let s = stats.get(w);
+      if (!s) { s = { count: 0, latest: p.created_at, avatars: [] }; stats.set(w, s); }
+      s.count++;
+      if (p.created_at > s.latest) s.latest = p.created_at;
+      if (s.avatars.length < 3 && p.profile?.username && !s.avatars.some(a => a.username === p.profile.username)) {
+        s.avatars.push({ url: p.profile.avatar_url, username: p.profile.username });
+      }
     }
   }
 
-  let ranked = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  let ranked = [...stats.entries()].sort((a, b) => b[1].count - a[1].count);
   // Only call something "trending" if more than one person is
   // actually posting about it — falls back to whatever exists so the
   // page isn't empty on a quiet site.
-  const multi = ranked.filter(([, c]) => c >= 2);
+  const multi = ranked.filter(([, s]) => s.count >= 2);
   return (multi.length ? multi : ranked).slice(0, limit);
 }
 
@@ -264,27 +275,82 @@ function explorePostThumbHtml(p) {
 }
 const ICON_PLAY_MINI = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72c0 .6.66.96 1.17.65l10.9-6.86a.75.75 0 000-1.28L9.17 4.49A.75.75 0 008 5.14z"/></svg>';
 
-function trendRowHtml([word, count], label = 'Trending') {
+// Rank-1/2 reads as "Hot" (whatever's most talked-about right now),
+// the next couple as "New" if the most recent post about it landed
+// within the last hour (genuinely fresh, not just lower-volume), and
+// everything else just shows how long ago the last post about it
+// went up — same three-badge pattern most trending-topics UIs use,
+// derived here from real data instead of a canned label.
+function trendBadgeHtml(rank, latestCreatedAt) {
+  if (rank < 2) return `<span class="trend-badge trend-badge-hot">${ICON_FIRE} Hot</span>`;
+  const isFresh = (Date.now() - new Date(latestCreatedAt).getTime()) < 3600 * 1000;
+  if (isFresh) return `<span class="trend-badge trend-badge-new">${ICON_UP} New</span>`;
+  return `<span class="trend-badge trend-badge-time">${timeAgo(latestCreatedAt)}</span>`;
+}
+const ICON_FIRE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1 3-2 4.5-2 7.5a2 2 0 0 0 4 0c0-1-.5-1.5-.5-1.5 2 1 3.5 3.5 3.5 6a5 5 0 0 1-10 0c0-4 2.5-5.5 5-12Z"/></svg>';
+const ICON_UP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m17 7-10 10"/><path d="M9 7h8v8"/></svg>';
+
+function trendAvatarsHtml(avatars) {
+  if (!avatars?.length) return '';
+  return `<span class="trend-avatars">${avatars.map(a => `<img src="${esc(avatarUrl(a.url))}" alt="" loading="lazy" decoding="async">`).join('')}</span>`;
+}
+
+function trendRowHtml([word, stat], rank = null) {
+  const { count, latest, avatars } = typeof stat === 'object' ? stat : { count: stat, latest: null, avatars: [] };
   return `
     <a class="trend-row" href="search.html?q=${encodeURIComponent(word)}">
-      <div class="trend-row-txt">
-        <span class="trend-cat">${esc(label)}</span>
-        <span class="trend-word">${esc(word)}</span>
+      ${rank !== null ? `<span class="trend-rank">${rank + 1}</span>` : ''}
+      <div class="trend-row-main">
+        <div class="trend-row-top">
+          <span class="trend-word">${esc(word)}</span>
+          ${latest ? trendBadgeHtml(rank ?? 0, latest) : ''}
+        </div>
+        <div class="trend-row-sub">
+          ${trendAvatarsHtml(avatars)}
+          <span class="trend-count">${fmtCount(count)} post${count === 1 ? '' : 's'}</span>
+        </div>
       </div>
-      <span class="trend-count">${fmtCount(count)} posts</span>
     </a>`;
 }
 
+// Local, search-page-only "which communities am I already in" lookup
+// — communities.js (and its own `joinedIds`) isn't loaded on this
+// page, so this can't reuse that global; a small self-contained
+// fetch keeps the Discover Communities section from suggesting
+// communities the person has already joined.
+let exploreJoinedIds = null; // Set, resolved once per page load
+async function getExploreJoinedIds() {
+  if (exploreJoinedIds) return exploreJoinedIds;
+  if (!currentSession) return (exploreJoinedIds = new Set());
+  const { data } = await sb.from('community_members').select('community_id').eq('user_id', currentSession.user.id);
+  return (exploreJoinedIds = new Set((data || []).map(r => r.community_id)));
+}
+
+async function fetchDiscoverCommunities(limit = 3) {
+  const joined = await getExploreJoinedIds();
+  const { data } = await sb.from('communities').select('id,name,slug,avatar_url,member_count')
+    .order('member_count', { ascending: false })
+    .limit(limit + joined.size); // overfetch a bit so filtering out joined ones still leaves enough
+  const list = (data || []).filter(c => !joined.has(c.id));
+  return list.slice(0, limit);
+}
+
 async function renderExploreTab(root) {
-  const [topPosts, trending] = await Promise.all([fetchTopPostsToday(3), fetchTrendingWords(6)]);
+  const [topPosts, trending, communities] = await Promise.all([
+    fetchTopPostsToday(3), fetchTrendingWords(5), fetchDiscoverCommunities(3)
+  ]);
 
   const postsHtml = topPosts.length
     ? topPosts.map(explorePostHtml).join('')
     : `<div class="no-t">Nothing popular yet today.</div>`;
 
   const trendHtml = trending.length
-    ? trending.map(t => trendRowHtml(t)).join('')
+    ? trending.map((t, i) => trendRowHtml(t, i)).join('')
     : `<div class="no-t">Nothing trending yet.</div>`;
+
+  const commHtml = communities.length
+    ? communities.map(c => communityRowHtml(c, false)).join('')
+    : '';
 
   root.innerHTML = `
     <div class="expl-section">
@@ -295,13 +361,19 @@ async function renderExploreTab(root) {
       <div class="expl-hdr">Trending</div>
       ${trendHtml}
       <a class="expl-showmore" href="#" onclick="setExploreTab('trending');return false;">Show more</a>
-    </div>`;
+    </div>
+    ${commHtml ? `
+    <div class="expl-section">
+      <div class="expl-hdr">Discover Communities</div>
+      ${commHtml}
+      <a class="expl-showmore" href="communities.html">Browse all communities</a>
+    </div>` : ''}`;
 }
 
 async function renderTrendingTab(root) {
   const trending = await fetchTrendingWords(20);
   root.innerHTML = trending.length
-    ? trending.map(t => trendRowHtml(t)).join('')
+    ? `<div class="trend-list">${trending.map((t, i) => trendRowHtml(t, i)).join('')}</div>`
     : `<div class="no-t">Nothing trending yet.</div>`;
 }
 
