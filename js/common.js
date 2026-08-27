@@ -4957,13 +4957,12 @@ function renderCaptchaIfNeeded(containerId) {
   loadCaptchaChallenge(containerId);
 }
 function initAllCaptchas() {
-  // Only the login/signup checks render eagerly — those pages exist
-  // for that one action, so showing the box right away is normal.
-  // Every "post/reply/publish" captcha (pf, cf, rf, ea, sa, gc, rpc,
-  // qm) instead stays hidden until the person actually taps
-  // Post/Reply/Publish — see ensureCaptchaRevealed() — so composers
-  // open clean instead of leading with a security check.
-  ['su-captcha', 'li-captcha'].forEach(renderCaptchaIfNeeded);
+  // Log in / sign up no longer show a security check (removed — see
+  // login.html/signup.html). Every "post/reply/publish" captcha (pf,
+  // cf, rf, ea, sa, gc, rpc, qm) instead stays hidden until the
+  // person actually taps Post/Reply/Publish — see
+  // ensureCaptchaRevealed() — so composers open clean instead of
+  // leading with a security check.
 }
 
 // First tap of Post/Reply/Publish on a form whose captcha hasn't been
