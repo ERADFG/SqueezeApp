@@ -20,7 +20,7 @@ let searchQuery = searchParams.get('q') || '';
 // People tab off since a community only has posts to search.
 let searchCommunitySlug = searchParams.get('community') || '';
 let searchTab = (!searchCommunitySlug && searchParams.get('t') === 'people') ? 'people' : 'posts';
-let exploreTab = 'explore'; // 'explore' | 'trending' | 'news' | 'sports' | 'entertainment'
+let exploreTab = 'explore'; // 'explore' | 'news' | 'sports' | 'entertainment'
 
 let searchCommunity = null; // {id,name,slug} once resolved, or false if it doesn't exist
 async function resolveSearchCommunity() {
@@ -50,22 +50,14 @@ function renderSearchScope(root) {
     </div>`;
 }
 
-// One small icon per Explore tab so the tab bar reads at a glance
-// instead of as plain text — Trending reuses the same fire icon as
-// the "Hot" badge on the rows underneath it, so the two visually tie
-// together instead of Trending looking unrelated to what's Hot.
-const EXPLORE_TAB_ICON = {
-  explore: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m14.5 9.5-2 5-5 2 2-5 5-2Z"/></svg>',
-  trending: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1 3-2 4.5-2 7.5a2 2 0 0 0 4 0c0-1-.5-1.5-.5-1.5 2 1 3.5 3.5 3.5 6a5 5 0 0 1-10 0c0-4 2.5-5.5 5-12Z"/></svg>',
-  news: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h13a2 2 0 0 1 2 2v11a1.5 1.5 0 0 1-1.5 1.5H6a2 2 0 0 1-2-2V5Z"/><path d="M8 9h7M8 12.5h7M8 16h4"/><path d="M20 8v10a1.5 1.5 0 0 1-1.5 1.5"/></svg>',
-  sports: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M7 5H4v1a3 3 0 0 0 3 3M17 5h3v1a3 3 0 0 1-3 3"/><path d="M12 13v3M9 20h6M10 17h4v3h-4z"/></svg>',
-  entertainment: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 19.5 5 21 9.5 4.5 14 3 9.5Z"/><path d="m7 6.5 2 3M11.5 5.3l2 3M16 4.2l2 3"/><path d="M4.5 14h15v4.5A1.5 1.5 0 0 1 18 20H6a1.5 1.5 0 0 1-1.5-1.5V14Z"/></svg>',
-};
+// Plain-text Explore tabs — no per-tab icon (used to have one apiece,
+// including a fire icon on Trending, but the icons just added visual
+// noise next to a label that already says what the tab is).
 function renderTabs() {
   const el = document.getElementById('search-tabs');
   if (!searchQuery.trim()) {
-    el.innerHTML = ['explore', 'trending', 'news', 'sports', 'entertainment'].map(t => `
-      <button class="xtab xtab-icon${exploreTab === t ? ' active' : ''}" onclick="setExploreTab('${t}')">${EXPLORE_TAB_ICON[t]}<span>${t[0].toUpperCase()}${t.slice(1)}</span></button>`).join('');
+    el.innerHTML = ['explore', 'news', 'sports', 'entertainment'].map(t => `
+      <button class="xtab${exploreTab === t ? ' active' : ''}" onclick="setExploreTab('${t}')">${t[0].toUpperCase()}${t.slice(1)}</button>`).join('');
     return;
   }
   el.innerHTML = searchCommunitySlug
@@ -165,73 +157,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // ─────────────────────────────────────────────────────────────
 // EXPLORE — shown on search.html with no query, Twitter-Explore-style:
-//   • "Today's Posts": the 3 most popular posts of the last 24h
-//   • "Trending": words that show up across a lot of different posts
-//     right now, each with how many posts mention it — same idea as
-//     Twitter's trending topics, just derived straight from post text
-//     instead of a curated feed.
+//   • "Today's Posts": the 3 most popular posts of the last 24h,
+//     each badged Hot / New / age — see postBadgeHtml() below.
 // ─────────────────────────────────────────────────────────────
-
-// Small, boring words that would otherwise dominate every trending
-// list (function words, not topics). Not exhaustive — just enough to
-// keep "the/and/that" from beating out things people are actually
-// talking about.
-const TREND_STOPWORDS = new Set([
-  'the','and','for','are','but','not','you','your','with','this','that','have','has','had',
-  'was','were','been','being','from','they','them','their','what','when','where','which','who',
-  'whom','why','how','all','any','both','each','few','more','most','other','some','such','only',
-  'own','same','than','too','very','just','can','will','would','could','should','about','into',
-  'over','after','before','again','once','here','there','because','while','during','above','below',
-  'out','off','then','once','also','get','got','let','its','it\'s','im','i\'m','dont','don\'t',
-  'youre','you\'re','thats','that\'s','ive','i\'ve','theyre','they\'re','were\'re','one','two',
-  'like','yeah','yes','no','okay','lol','lmao','omg','still','even','back','well','really','much',
-  'many','make','made','know','think','going','gonna','want','need','say','said','see','look',
-  'come','came','way','new','now','today','right','good','bad','thing','things','someone',
-  'something','anything','everyone','everything','people','http','https','www','com','html',
-  'was','are','has','are','did','does','doing','done','been','being','who\'s','whats','what\'s',
-  'him','her','she','he\'s','she\'s','his','hers','our','ours','ourselves','myself','yourself',
-]);
-
-// True per-post tokenization: lowercase, strip punctuation, unique
-// per post so a word repeated 10x in one post still only counts once
-// toward "how many posts mention this" — that's the number we show.
-function tokenizePostBody(body) {
-  const words = (body || '').toLowerCase().match(/[a-z0-9][a-z0-9'-]{2,}/g) || [];
-  return new Set(words.filter(w => !TREND_STOPWORDS.has(w) && !/^\d+$/.test(w)));
-}
-
-async function fetchTrendingWords(limit = 8) {
-  const since = new Date(Date.now() - 48 * 3600 * 1000).toISOString();
-  const { data } = await sb.from('posts').select('body, created_at, profile:profiles!posts_author_id_fkey(username, avatar_url, verification_type)')
-    .eq('is_deleted', false)
-    .gte('created_at', since)
-    .order('created_at', { ascending: false })
-    .limit(300);
-
-  // Per word: how many distinct posts mention it, the most recent
-  // time it was posted about (drives the Hot/New/time badge), and up
-  // to 3 distinct posters' avatars for the little avatar stack.
-  const stats = new Map(); // word -> { count, latest, avatars:Set-like array of {url,username} }
-  for (const p of (data || [])) {
-    const words = tokenizePostBody(p.body);
-    for (const w of words) {
-      let s = stats.get(w);
-      if (!s) { s = { count: 0, latest: p.created_at, avatars: [] }; stats.set(w, s); }
-      s.count++;
-      if (p.created_at > s.latest) s.latest = p.created_at;
-      if (s.avatars.length < 3 && p.profile?.username && !s.avatars.some(a => a.username === p.profile.username)) {
-        s.avatars.push({ url: p.profile.avatar_url, username: p.profile.username });
-      }
-    }
-  }
-
-  let ranked = [...stats.entries()].sort((a, b) => b[1].count - a[1].count);
-  // Only call something "trending" if more than one person is
-  // actually posting about it — falls back to whatever exists so the
-  // page isn't empty on a quiet site.
-  const multi = ranked.filter(([, s]) => s.count >= 2);
-  return (multi.length ? multi : ranked).slice(0, limit);
-}
 
 async function fetchTopPostsToday(limit = 3) {
   const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
@@ -247,20 +175,14 @@ async function fetchTopPostsToday(limit = 3) {
     .slice(0, limit);
 }
 
-// Same rank-based Hot/New treatment as the Trending rows below (see
-// trendBadgeHtml) applied to actual posts here: the #1 post by
-// engagement score reads as "Hot" (i.e. viral), anything posted in
-// the last hour that isn't already #1 reads as "New", everything else
-// just shows a plain timestamp — so the one badge language is used
-// consistently for both "what's trending" and "what's viral right now".
-function explorePostHtml(p, rank = 0) {
+function explorePostHtml(p) {
   const title = (p.body || '').trim().slice(0, 140) || (p.media_url ? '' : '(no text)');
-  const engagement = (p.reply_count || 0) + (p.like_count || 0);
+  const engagement = (p.reply_count || 0) + (p.like_count || 0) + (p.repost_count || 0) + (p.bookmark_count || 0);
   return `
     <a class="expl-post" href="${postUrl(p)}">
       <div class="expl-post-top">
         ${title ? `<div class="expl-post-title">${esc(title)}</div>` : '<span></span>'}
-        ${trendBadgeHtml(rank, p.created_at)}
+        ${postBadgeHtml(p)}
       </div>
       ${explorePostThumbHtml(p)}
       <div class="expl-post-meta">
@@ -269,13 +191,13 @@ function explorePostHtml(p, rank = 0) {
         <span class="dot"></span>
         <span>${timeAgo(p.created_at)}</span>
         <span class="dot"></span>
-        <span>${fmtCount(engagement)} posts</span>
+        <span>${fmtCount(engagement)} interactions</span>
       </div>
     </a>`;
 }
 
 // Compact, non-interactive thumbnail for a post's attached media on
-// the Explore page's "Today's Posts"/Trending cards. Deliberately NOT
+// the Explore page's "Today's Posts" cards. Deliberately NOT
 // the full renderMedia()/ttvHtml() treatment used in the feed — that
 // wires up its own click-to-play and lightbox handlers, which would
 // fight with the fact that the whole card here is already one big
@@ -295,43 +217,39 @@ function explorePostThumbHtml(p) {
 }
 const ICON_PLAY_MINI = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72c0 .6.66.96 1.17.65l10.9-6.86a.75.75 0 000-1.28L9.17 4.49A.75.75 0 008 5.14z"/></svg>';
 
-// Rank-1/2 reads as "Hot" (whatever's most talked-about right now),
-// the next couple as "New" if the most recent post about it landed
-// within the last hour (genuinely fresh, not just lower-volume), and
-// everything else just shows how long ago the last post about it
-// went up — same three-badge pattern most trending-topics UIs use,
-// derived here from real data instead of a canned label.
-function trendBadgeHtml(rank, latestCreatedAt) {
-  if (rank < 2) return `<span class="trend-badge trend-badge-hot">${ICON_FIRE} Hot</span>`;
-  const isFresh = (Date.now() - new Date(latestCreatedAt).getTime()) < 3600 * 1000;
-  if (isFresh) return `<span class="trend-badge trend-badge-new">${ICON_UP} New</span>`;
-  return `<span class="trend-badge trend-badge-time">${timeAgo(latestCreatedAt)}</span>`;
+// A post only earns "Hot" from real engagement — views, likes,
+// replies, reposts (shares) and bookmarks (saves) it has actually
+// gathered — never just from being newest or from being #1 in a
+// short "Today's Posts" list (that used to say Hot even for a post
+// with zero engagement, just for landing first). Reposts and
+// bookmarks count for the most since sharing or saving something is
+// a stronger signal that it resonated than a quick like; a view
+// counts for the least since it costs the reader nothing. Tune
+// VIRAL_THRESHOLD if Hot ends up feeling too common or too rare for
+// how much traffic the site actually gets.
+const VIRAL_THRESHOLD = 60;
+function engagementScore(p) {
+  return (p.view_count || 0)
+    + (p.like_count || 0) * 8
+    + (p.reply_count || 0) * 8
+    + (p.repost_count || 0) * 12
+    + (p.bookmark_count || 0) * 12;
+}
+function isViralPost(p) {
+  return engagementScore(p) >= VIRAL_THRESHOLD;
+}
+
+// Hot when the numbers back it up (see isViralPost above), New for
+// anything posted within the last hour that hasn't earned Hot yet,
+// and otherwise just how long ago it went up.
+function postBadgeHtml(p) {
+  if (isViralPost(p)) return `<span class="trend-badge trend-badge-hot">${ICON_FIRE} Hot</span>`;
+  const ageMs = Date.now() - new Date(p.created_at).getTime();
+  if (ageMs < 3600 * 1000) return `<span class="trend-badge trend-badge-new">${ICON_UP} New</span>`;
+  return `<span class="trend-badge trend-badge-time">${timeAgo(p.created_at)}</span>`;
 }
 const ICON_FIRE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1 3-2 4.5-2 7.5a2 2 0 0 0 4 0c0-1-.5-1.5-.5-1.5 2 1 3.5 3.5 3.5 6a5 5 0 0 1-10 0c0-4 2.5-5.5 5-12Z"/></svg>';
 const ICON_UP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m17 7-10 10"/><path d="M9 7h8v8"/></svg>';
-
-function trendAvatarsHtml(avatars) {
-  if (!avatars?.length) return '';
-  return `<span class="trend-avatars">${avatars.map(a => `<img src="${esc(avatarUrl(a.url))}" alt="" loading="lazy" decoding="async">`).join('')}</span>`;
-}
-
-function trendRowHtml([word, stat], rank = null) {
-  const { count, latest, avatars } = typeof stat === 'object' ? stat : { count: stat, latest: null, avatars: [] };
-  return `
-    <a class="trend-row" href="search.html?q=${encodeURIComponent(word)}">
-      ${rank !== null ? `<span class="trend-rank">${rank + 1}</span>` : ''}
-      <div class="trend-row-main">
-        <div class="trend-row-top">
-          <span class="trend-word">${esc(word)}</span>
-          ${latest ? trendBadgeHtml(rank ?? 0, latest) : ''}
-        </div>
-        <div class="trend-row-sub">
-          ${trendAvatarsHtml(avatars)}
-          <span class="trend-count">${fmtCount(count)} post${count === 1 ? '' : 's'}</span>
-        </div>
-      </div>
-    </a>`;
-}
 
 // Local, search-page-only "which communities am I already in" lookup
 // — communities.js (and its own `joinedIds`) isn't loaded on this
@@ -356,17 +274,13 @@ async function fetchDiscoverCommunities(limit = 3) {
 }
 
 async function renderExploreTab(root) {
-  const [topPosts, trending, communities] = await Promise.all([
-    fetchTopPostsToday(3), fetchTrendingWords(5), fetchDiscoverCommunities(3)
+  const [topPosts, communities] = await Promise.all([
+    fetchTopPostsToday(3), fetchDiscoverCommunities(3)
   ]);
 
   const postsHtml = topPosts.length
-    ? topPosts.map((p, i) => explorePostHtml(p, i)).join('')
+    ? topPosts.map(p => explorePostHtml(p)).join('')
     : `<div class="no-t">Nothing popular yet today.</div>`;
-
-  const trendHtml = trending.length
-    ? trending.map((t, i) => trendRowHtml(t, i)).join('')
-    : `<div class="no-t">Nothing trending yet.</div>`;
 
   const commHtml = communities.length
     ? communities.map(c => communityRowHtml(c, false)).join('')
@@ -377,24 +291,12 @@ async function renderExploreTab(root) {
       <div class="expl-hdr">Today's Posts</div>
       ${postsHtml}
     </div>
-    <div class="expl-section">
-      <div class="expl-hdr">Trending</div>
-      ${trendHtml}
-      <a class="expl-showmore" href="#" onclick="setExploreTab('trending');return false;">Show more</a>
-    </div>
     ${commHtml ? `
     <div class="expl-section">
       <div class="expl-hdr">Discover Communities</div>
       ${commHtml}
       <a class="expl-showmore" href="communities.html">Browse all communities</a>
     </div>` : ''}`;
-}
-
-async function renderTrendingTab(root) {
-  const trending = await fetchTrendingWords(20);
-  root.innerHTML = trending.length
-    ? `<div class="trend-list">${trending.map((t, i) => trendRowHtml(t, i)).join('')}</div>`
-    : `<div class="no-t">Nothing trending yet.</div>`;
 }
 
 // News / Sports / Entertainment: best-effort — shows the latest posts
@@ -425,6 +327,5 @@ async function runExplore() {
   const root = document.getElementById('search-root');
   root.innerHTML = skeletonFeedHtml(3);
   if (exploreTab === 'explore') return renderExploreTab(root);
-  if (exploreTab === 'trending') return renderTrendingTab(root);
   return renderCategoryTab(root, exploreTab);
 }
