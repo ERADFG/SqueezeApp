@@ -50,7 +50,15 @@
 </div>
 <span class="auth-area" id="auth-area"></span>
 </div>
-<div class="auth-wrap">
+<div class="auth-wrap auth-wrap-hero">
+<div class="auth-hero">
+<span class="auth-hero-badge">
+<img alt="" class="logo-mark logo-mark-light" height="36" src="img/logo-light.png" width="36"/>
+</span>
+<svg class="auth-hero-cloud" viewbox="0 0 500 140" xmlns="http://www.w3.org/2000/svg">
+<path d="M40 120c-16 0-30-12-30-28 0-14 10-25 24-27 3-19 20-33 40-33 12 0 23 5 30 13 6-9 17-15 29-15 18 0 33 13 36 30h1c22 0 40 17 40 39 0 3 0 6-1 9 15 3 26 16 26 32 0 18-15 33-33 33H45c-2 0-4 0-5-1" fill="#ffffff" opacity="0.95"></path>
+</svg>
+</div>
 <div class="auth-shell">
 <div class="auth-card">
 <a class="auth-card-logo" href="/">
@@ -60,8 +68,8 @@
 </span>
 <span class="wordmark">Interact<em>Ink</em></span>
 </a>
-<h1 data-i18n="auth.logIn">Log In</h1>
-<p class="auth-sub" data-i18n="auth.logInSub">Good to see you again.</p>
+<h1>Welcome back</h1>
+<p class="auth-sub">Sign in to continue to your account.</p>
 <div class="auth-body">
 <div class="errmsg" id="li-err" style="display:none;"></div>
 <form id="li-form" onsubmit="doLogIn(event)">
@@ -82,6 +90,7 @@
 <svg class="eye-off" viewbox="0 0 24 24"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z"></path><circle cx="12" cy="12" r="3"></circle><path d="M3 3l18 18"></path></svg>
 </button>
 </div>
+<div class="auth-forgot"><a href="/help/managing-your-account/login-issues">Forgot password?</a></div>
 </div>
 <div class="captcha-card" id="li-captcha" style="display:none;">
 <div class="captcha-card-head">
@@ -96,11 +105,16 @@
 </div>
 <div class="captcha-card-body"><div class="captcha-skeleton"></div></div>
 </div>
-<input class="auth-submit" data-i18n-value="auth.logIn" id="li-btn" type="submit" value="Log In"/>
+<input class="auth-submit" id="li-btn" type="submit" value="Sign In"/>
 </form>
-<div class="auth-switch"><span data-i18n="auth.noAccount">No account yet?</span> <a data-i18n="nav.signUp" href="signup.html">Sign up</a></div>
-<div class="auth-legal" data-i18n="auth.legal">By continuing you agree to InteractInk's <a href="rules.html">rules</a>.</div>
-<div class="auth-legal" style="margin-top:4px;"><a href="/es/login">Español</a> — <a href="/fr/login">Français</a> — <a href="/de/login">Deutsch</a> — <a href="/pt/login">Português</a> — <a href="/ja/login">日本語</a> — <a href="/ru/login">Русский</a></div>
+<div class="auth-divider">or</div>
+<button class="auth-social-full" onclick="doOAuth('google', this)" type="button">
+<svg viewbox="0 0 24 24"><path d="M23.52 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.47a5.53 5.53 0 0 1-2.4 3.63v3h3.87c2.27-2.09 3.58-5.17 3.58-8.82Z" fill="#4285F4"></path><path d="M12 24c3.24 0 5.96-1.07 7.94-2.91l-3.87-3c-1.08.72-2.45 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.27v3.1A12 12 0 0 0 12 24Z" fill="#34A853"></path><path d="M5.27 14.28A7.2 7.2 0 0 1 4.89 12c0-.79.14-1.56.38-2.28v-3.1H1.27A12 12 0 0 0 0 12c0 1.94.46 3.77 1.27 5.38l4-3.1Z" fill="#FBBC05"></path><path d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.18 15.23 0 12 0 7.31 0 3.26 2.69 1.27 6.62l4 3.1C6.22 6.86 8.87 4.75 12 4.75Z" fill="#EA4335"></path></svg>
+<span>Continue with Google</span>
+</button>
+<div class="auth-switch auth-switch-center"><span>Don't have an account?</span> <a href="signup.html">Sign up</a></div>
+<div class="auth-legal auth-legal-center">By continuing you agree to InteractInk's <a href="rules.html">rules</a>.</div>
+<div class="auth-legal auth-legal-center" style="margin-top:4px;"><a href="/es/login">Español</a> — <a href="/fr/login">Français</a> — <a href="/de/login">Deutsch</a> — <a href="/pt/login">Português</a> — <a href="/ja/login">日本語</a> — <a href="/ru/login">Русский</a></div>
 </div>
 </div>
 </div>

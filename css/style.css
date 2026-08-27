@@ -484,8 +484,11 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
 .auth-area .divider { display:none; }
 .auth-cta { display:flex; flex-direction:column; gap:8px; padding:4px; }
 .auth-cta a {
-  display:block; text-align:center; border-radius:999px; padding:9px 14px; font-size:15px; font-weight:700;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  text-align:center; border-radius:999px; padding:10px 14px; font-size:15px; font-weight:700;
+  text-decoration:none;
 }
+.auth-cta a svg { width:17px; height:17px; flex:none; }
 .auth-cta a.cta-primary { background:var(--maroon); color:#fff; }
 .auth-cta a.cta-primary:hover { background:var(--maroon-dk); text-decoration:none; }
 .auth-cta a.cta-ghost { border:1px solid var(--border-input); color:var(--ink); }
@@ -2495,7 +2498,9 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
   .acct-btn .acct-txt, .acct-btn .acct-dots { display:none; }
   .acct-menu { left:0; }
   .auth-cta { align-items:center; }
-  .auth-cta a { width:44px; height:44px; padding:0; display:flex; align-items:center; justify-content:center; font-size:11px; }
+  .auth-cta a { width:44px; height:44px; padding:0; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+  .auth-cta a span { display:none; }
+  .auth-cta a svg { width:20px; height:20px; }
   #sidebar, .xright { display:none; }
 }
 
@@ -2883,6 +2888,9 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
 .auth-field { margin-bottom:15px; }
 .auth-field label { display:block; font-size:13px; font-weight:700; color:var(--muted); margin-bottom:5px; }
 .auth-hint { font-size:11.5px; color:var(--muted); margin-top:4px; display:block; }
+.auth-forgot { text-align:right; margin-top:6px; }
+.auth-forgot a { font-size:12.5px; font-weight:700; color:var(--maroon); text-decoration:none; }
+.auth-forgot a:hover { text-decoration:underline; }
 
 .auth-input-wrap { position:relative; }
 .auth-input-wrap .auth-fi { position:absolute; left:12px; top:50%; transform:translateY(-50%); width:18px; height:18px; color:var(--muted); pointer-events:none; }
@@ -3178,9 +3186,117 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
 .auth-ok { background:#E8F5EA; border:1px solid var(--green); border-radius:var(--r-sm); color:#0A7A44; font-size:13px; padding:10px 12px; margin-bottom:12px; }
 html[data-theme="dim"] .auth-ok, html[data-theme="dark"] .auth-ok { background:rgba(0,186,124,.14); color:#4ADE80; }
 
+/* ── AUTH SKY/CLOUD HERO — the banner used at the top of the
+   "Create account" chooser (start.html) and the Log In page, styled
+   after the reference mockup: a blue-sky gradient with a soft cloud
+   drifting near the bottom edge, a white rounded app-mark badge, and
+   (chooser page only) a short tagline. Pure CSS/SVG — no hotlinked
+   photo, so it never breaks and never depends on a third-party image
+   host being reachable. Only .auth-shell/.auth-card/etc. above are
+   reused elsewhere (nothing outside login.html/signup.html/start.html
+   touches this), so all of this is safe to add net-new. ── */
+.auth-wrap-hero {
+  padding:0; align-items:flex-start; display:block; overflow-x:hidden;
+}
+.auth-hero {
+  position:relative; width:100%; min-height:220px; overflow:hidden;
+  background:linear-gradient(180deg, #4FA8ED 0%, #7FC1F5 38%, #CFE7FB 72%, var(--bg) 100%);
+  display:flex; flex-direction:column; align-items:center;
+  padding:36px 24px 64px;
+}
+html[data-theme="dim"] .auth-hero, html[data-theme="dark"] .auth-hero {
+  background:linear-gradient(180deg, #0B4A82 0%, #12609F 38%, #1B3C57 72%, var(--bg) 100%);
+}
+.auth-hero-cloud {
+  position:absolute; left:50%; bottom:-26px; transform:translateX(-50%);
+  width:min(520px, 92%); height:auto; filter:drop-shadow(0 8px 18px rgba(15,20,25,.12));
+}
+.auth-hero-badge {
+  width:64px; height:64px; border-radius:22px; background:#fff;
+  display:flex; align-items:center; justify-content:center; flex:none;
+  box-shadow:0 6px 18px rgba(15,20,25,.16); position:relative; z-index:1;
+}
+.auth-hero-badge .logo-mark { width:36px; height:36px; }
+.auth-hero-tagline {
+  position:relative; z-index:1; margin:16px 0 0; text-align:center;
+  color:#fff; font-weight:800; font-size:23px; line-height:1.28;
+  text-shadow:0 2px 10px rgba(8,30,55,.22);
+}
+.auth-hero-sub {
+  position:relative; z-index:1; margin:6px 0 0; text-align:center;
+  color:rgba(255,255,255,.92); font-size:14px; font-weight:600;
+  text-shadow:0 1px 6px rgba(8,30,55,.2);
+}
+
+/* Card sits pulled up over the hero's rounded bottom edge so the two
+   read as one continuous surface, same trick the mockup uses. */
+.auth-wrap-hero .auth-shell {
+  max-width:420px; margin:-40px auto 40px; position:relative; z-index:2;
+  box-shadow:0 -6px 0 0 var(--bg); /* squares off the top corners against the card below without a visible seam */
+}
+.auth-wrap-hero .auth-card { padding:32px 28px 36px; }
+.auth-wrap-hero .auth-card-logo { display:none; } /* the hero badge above already carries the logo */
+
+/* Pill-shaped inputs — only .auth-input-wrap/.dob-input-wrap are
+   touched (both exclusive to login/signup), so nothing outside these
+   three pages changes shape. */
+.auth-input-wrap input, .auth-input-wrap select,
+.dob-input-wrap, .auth-submit { border-radius:999px; }
+.auth-input-wrap input, .auth-input-wrap select { background:var(--hover-bg); border-color:transparent; }
+.auth-input-wrap input:focus, .auth-input-wrap select:focus { background:var(--input-bg); }
+.dob-input-wrap { background:var(--hover-bg); border-color:transparent; }
+.dob-input-wrap:focus-within { background:var(--input-bg); }
+
+.auth-divider {
+  display:flex; align-items:center; gap:10px; margin:18px 0;
+  color:var(--muted); font-size:13px; font-weight:600;
+}
+.auth-divider::before, .auth-divider::after {
+  content:""; flex:1; height:1px; background:var(--line);
+}
+
+/* Chooser page (start.html): row of round social icon buttons under
+   the primary "Sign up" pill — Google / Apple / Email, same layout
+   as the reference mockup's left screen. */
+.auth-social-row { display:flex; gap:10px; justify-content:center; }
+.auth-social-btn {
+  width:52px; height:52px; border-radius:999px; flex:none;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--hover-bg); border:1px solid var(--border-input);
+  color:var(--ink); cursor:pointer; transition:background-color .12s ease, border-color .12s ease, transform .08s ease;
+}
+.auth-social-btn svg, .auth-social-btn img { width:22px; height:22px; }
+.auth-social-btn:hover { background:var(--maroon-tint); border-color:var(--maroon); }
+.auth-social-btn:active { transform:translateY(1px); }
+
+/* Full-width bordered social button (Log In page's "Continue with
+   Google" — one option, so it reads better as a full row than a
+   lone circle). */
+.auth-social-full {
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  width:100%; padding:12px 10px; border-radius:999px; margin-top:10px;
+  background:var(--input-bg); border:1px solid var(--border-input); color:var(--ink);
+  font-family:inherit; font-size:14.5px; font-weight:700; cursor:pointer;
+  transition:background-color .12s ease, border-color .12s ease, transform .05s ease;
+}
+.auth-social-full svg, .auth-social-full img { width:19px; height:19px; flex:none; }
+.auth-social-full:hover { background:var(--hover-bg); }
+.auth-social-full:active { transform:translateY(1px); }
+
+.auth-switch-center { text-align:center; }
+.auth-legal-center { text-align:center; }
+
+/* Landing chooser's own primary CTA reuses .auth-submit but as an <a>
+   (there's no form to submit — it just navigates to signup.html), so
+   it needs the same base but without any submit-specific defaults. */
+a.auth-submit { text-align:center; text-decoration:none; }
+
 @media (max-width:900px) {
   .auth-wrap { padding:28px 18px; }
   .auth-card { padding:36px 30px; }
+  .auth-hero { min-height:180px; padding:28px 20px 54px; }
+  .auth-hero-tagline { font-size:20px; }
+  .auth-wrap-hero .auth-shell { margin-top:-32px; }
 }
 @media (max-width:480px) {
   .auth-wrap { padding:0; border-left:none; }

@@ -1157,8 +1157,7 @@ function renderMobileChrome() {
             <a href="${lp}/terms">${NAV_ICON.doc}Terms of Service</a>
           </div>
           <div class="m-drawer-cta">
-            <a class="cta-primary" href="${lp}/signup">Sign up</a>
-            <a class="cta-ghost" href="${lp}/login">Log in</a>
+            <a class="cta-primary" href="/start">Create account</a>
           </div>
         `}
       </div>

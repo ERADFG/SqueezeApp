@@ -35,6 +35,7 @@
     { "src": "^/terms$",              "dest": "/terms.html" },
     { "src": "^/login$",              "dest": "/login.html" },
     { "src": "^/signup$",             "dest": "/signup.html" },
+    { "src": "^/start$",              "dest": "/start.html" },
     { "src": "^/communities$",        "dest": "/communities.html" },
     { "src": "^/help$",                          "dest": "/help/index.html" },
     { "src": "^/help/(?<cat>[^/]+)$",            "dest": "/help/$cat/index.html" },

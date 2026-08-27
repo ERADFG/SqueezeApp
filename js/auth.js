@@ -109,7 +109,7 @@ async function renderAuthArea() {
     unreadNotifCount = 0;
     unreadChatCount = 0;
     renderSideNav(); renderMobileChrome();
-    if (el) el.innerHTML = `<div class="auth-cta"><a class="cta-primary" href="signup.html">Sign up</a><a class="cta-ghost" href="login.html">Log in</a></div>`;
+    if (el) el.innerHTML = `<div class="auth-cta"><a class="cta-primary" href="start.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"></path></svg><span>Create account</span></a></div>`;
     refreshPostGates();
     return;
   }
@@ -130,7 +130,7 @@ async function renderAuthArea() {
     unreadNotifCount = 0;
     unreadChatCount = 0;
     renderSideNav(); renderMobileChrome();
-    if (el) el.innerHTML = `<div class="auth-cta"><a class="cta-primary" href="signup.html">Sign up</a><a class="cta-ghost" href="login.html">Log in</a></div>`;
+    if (el) el.innerHTML = `<div class="auth-cta"><a class="cta-primary" href="start.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"></path></svg><span>Create account</span></a></div>`;
     refreshPostGates();
     alert('This device/network has been banned from InteractInk.');
     return;
@@ -160,7 +160,7 @@ async function renderAuthArea() {
     unreadNotifCount = 0;
     unreadChatCount = 0;
     renderSideNav(); renderMobileChrome();
-    if (el) el.innerHTML = `<div class="auth-cta"><a class="cta-primary" href="signup.html">Sign up</a><a class="cta-ghost" href="login.html">Log in</a></div>`;
+    if (el) el.innerHTML = `<div class="auth-cta"><a class="cta-primary" href="start.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"></path></svg><span>Create account</span></a></div>`;
     refreshPostGates();
     const until = suspendedUntil ? ` until ${new Date(suspendedUntil).toLocaleString()}` : '';
     alert(`This account has been suspended${until}.`);
@@ -284,6 +284,34 @@ function togglePwVis(inputId, btn) {
   input.type = showing ? 'password' : 'text';
   btn.classList.toggle('showing', !showing);
   btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+}
+
+// ── OAuth (Google / Apple) — used by the "Create account" chooser
+// (start.html) and the Log In page's "Continue with Google" button.
+// Supabase handles the actual redirect/callback; this just kicks it
+// off and comes back to the current site (so a person starting from
+// start.html or login.html lands back on the home feed once the
+// provider round-trip finishes and a session exists).
+// NOTE: this only works once Google/Apple are turned on as providers
+// in the Supabase dashboard (Authentication → Providers), each with
+// its own client ID/secret — the button itself doesn't need any
+// setup beyond that.
+async function doOAuth(provider, btn) {
+  if (btn) { btn.disabled = true; btn.style.opacity = '.6'; }
+  try {
+    const { error } = await sb.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: location.origin + '/' }
+    });
+    if (error) throw error;
+    // On success the browser navigates away to the provider — nothing
+    // else to do here. Only reachable on failure (provider not
+    // enabled, network error, popup blocked, etc).
+  } catch (err) {
+    console.error('OAuth sign-in failed:', err);
+    alert(`Couldn't continue with ${provider === 'google' ? 'Google' : 'Apple'} right now. Try email instead, or try again in a moment.`);
+    if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+  }
 }
 
 // ── SIGN UP ──

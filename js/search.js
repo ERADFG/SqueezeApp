@@ -20,7 +20,7 @@ let searchQuery = searchParams.get('q') || '';
 // People tab off since a community only has posts to search.
 let searchCommunitySlug = searchParams.get('community') || '';
 let searchTab = (!searchCommunitySlug && searchParams.get('t') === 'people') ? 'people' : 'posts';
-let exploreTab = 'explore'; // 'explore' | 'news' | 'sports' | 'entertainment'
+let exploreTab = 'explore'; // 'explore' | 'news' | 'sports' | 'entertainment' | 'gaming' | 'technology' | 'music' | 'science'
 
 let searchCommunity = null; // {id,name,slug} once resolved, or false if it doesn't exist
 async function resolveSearchCommunity() {
@@ -56,7 +56,7 @@ function renderSearchScope(root) {
 function renderTabs() {
   const el = document.getElementById('search-tabs');
   if (!searchQuery.trim()) {
-    el.innerHTML = ['explore', 'news', 'sports', 'entertainment'].map(t => `
+    el.innerHTML = ['explore', 'news', 'sports', 'entertainment', 'gaming', 'technology', 'music', 'science'].map(t => `
       <button class="xtab${exploreTab === t ? ' active' : ''}" onclick="setExploreTab('${t}')">${t[0].toUpperCase()}${t.slice(1)}</button>`).join('');
     return;
   }
