@@ -2855,10 +2855,22 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
    theme tokens as the rest of the app, so it follows Dim/Lights out
    and the 5 accent colors automatically. */
 .auth-wrap {
-  flex:1; min-width:0; margin:0; padding:40px 24px; border-left:1px solid var(--line);
+  flex:1; min-width:0; margin:0 0 0 275px; padding:40px 24px; border-left:1px solid var(--line);
   min-height:100vh; display:flex; align-items:center; justify-content:center;
   background:var(--bg);
 }
+/* #hdr is position:fixed and pulled out of .xshell's flex flow (see the
+   APP SHELL comment above #hdr), so .auth-wrap — the only other child of
+   .xshell on login/signup/start — was rendering from the very left edge
+   of the viewport with nothing reserving the 275px/88px the sidebar
+   actually occupies. On any screen wide enough to show the sidebar, it
+   simply sat on top of the auth card/hero, clipping the left portion of
+   the sign-up/login form behind the nav column. #main (used by every
+   other page) already carries this exact margin-left at each of these
+   same breakpoints — mirroring it here keeps the three auth pages in
+   sync with the rest of the app instead of drifting out of step. */
+@media (max-width:1150px) { .auth-wrap { margin-left:88px; } }
+@media (max-width:700px) { .auth-wrap { margin-left:0; } }
 .auth-shell {
   display:flex; width:100%; max-width:400px;
   background:var(--cream-card); border:1px solid var(--line); border-radius:var(--r-md);
@@ -3218,11 +3230,27 @@ html[data-theme="dim"] .auth-hero, html[data-theme="dark"] .auth-hero {
 .auth-hero-scene {
   position:absolute; left:0; right:0; bottom:0; width:100%; height:auto;
   color:#0B6FE0; opacity:.65;
+  display:none; /* light theme uses the illustrated .auth-hero-illustration bitmap instead — see below */
 }
-html[data-theme="dim"] .auth-hero-scene, html[data-theme="dark"] .auth-hero-scene { color:#3B9EFF; opacity:.55; }
+html[data-theme="dim"] .auth-hero-scene, html[data-theme="dark"] .auth-hero-scene { color:#3B9EFF; opacity:.55; display:block; }
 .auth-hero-scene .scene-fill { fill:var(--bg); stroke:none; opacity:1; }
 .auth-hero-scene .scene-cloud { fill:#fff; stroke:none; opacity:.9; }
 html[data-theme="dim"] .auth-hero-scene .scene-cloud, html[data-theme="dark"] .auth-hero-scene .scene-cloud { fill:#EAF4FF; opacity:.12; }
+/* Custom illustrated skyline artwork (designed for InteractInk), used
+   in place of the line-art SVG scene on light theme. The source image
+   is a tall portrait crop: sky+skyline in the top ~40%, fading to a
+   flat white bottom ~60% that's meant to blend straight into the page
+   background — so it's pinned to the *top* of .auth-hero (not the
+   bottom, like the SVG) and left to run past the hero's bottom edge;
+   .auth-hero's overflow:hidden crops off whatever's left, and since
+   that leftover is just flat white matching light theme's --bg, the
+   crop line is invisible. No dark-theme version of the artwork exists,
+   so dark/dim keep the original tinted line-art SVG above instead of
+   showing a light illustration against a dark gradient. */
+.auth-hero-illustration {
+  position:absolute; top:0; left:0; width:100%; height:auto; display:block;
+}
+html[data-theme="dim"] .auth-hero-illustration, html[data-theme="dark"] .auth-hero-illustration { display:none; }
 /* Floating circular back button, overlaid top-left on the hero —
    same translucent dark/blurred treatment as .profile-back-btn so it
    reads consistently with the rest of the app. Sits inside .auth-hero
