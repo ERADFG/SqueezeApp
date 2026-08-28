@@ -3247,15 +3247,17 @@ html[data-theme="dim"] .auth-hero-scene .scene-cloud, html[data-theme="dark"] .a
    artwork instead of image. `inset:0` + `object-fit:cover` always
    scales the image to fully cover .auth-hero in both dimensions
    (cropping whichever axis overflows) so there's never a gap, the same
-   way a full-bleed photo background behaves. object-position:top keeps
-   the sky/skyline anchored at the top edge so it's the buildings (not
-   the blank space below them in the source image) that stay visible
-   as more or less of the box is cropped away. No dark-theme version of
+   way a full-bleed photo background behaves. object-position:bottom
+   anchors the skyline to the bottom edge so it's the buildings (not
+   the empty sky above them in the source image) that stay visible —
+   on very tall containers (tall phone screens) any overflow gets
+   cropped from the top of the sky instead, which is never noticed. No
+   dark-theme version of
    the artwork exists, so dark/dim keep the original tinted line-art
    SVG above instead of showing a light illustration against a dark
    gradient. */
 .auth-hero-illustration {
-  position:absolute; top:0; left:0; right:0; bottom:0; width:100%; height:100%; object-fit:cover; object-position:center top; display:block;
+  position:absolute; top:0; left:0; right:0; bottom:0; width:100%; height:100%; object-fit:cover; object-position:center bottom; display:block;
 }
 html[data-theme="dim"] .auth-hero-illustration, html[data-theme="dark"] .auth-hero-illustration { display:none; }
 /* Floating circular back button, overlaid top-left on the hero —
