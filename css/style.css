@@ -3202,7 +3202,7 @@ html[data-theme="dim"] .auth-ok, html[data-theme="dark"] .auth-ok { background:r
   position:relative; width:100%; min-height:220px; overflow:hidden;
   background:linear-gradient(180deg, #CFE6FB 0%, #E4F1FC 42%, #F5FAFE 75%, var(--bg) 100%);
   display:flex; flex-direction:column; align-items:center;
-  padding:36px 24px 64px;
+  padding:36px 0 0;
 }
 html[data-theme="dim"] .auth-hero, html[data-theme="dark"] .auth-hero {
   background:linear-gradient(180deg, #123152 0%, #16324F 42%, #17293B 75%, var(--bg) 100%);
@@ -3211,8 +3211,10 @@ html[data-theme="dim"] .auth-hero, html[data-theme="dark"] .auth-hero {
    clouds, birds) — sits pinned to the bottom edge of .auth-hero so it
    reads as one continuous drawing regardless of how tall the hero
    ends up being; the gradient above simply extends to fill whatever
-   space is left, so nothing is ever cropped on tall screens. Single
-   monoline blue stroke to match InteractInk's "ink" mark. */
+   space is left, so nothing is ever cropped on tall screens. Edge to
+   edge (.auth-hero has no side padding — see above) so it spans the
+   full width like the reference. Single monoline blue stroke to
+   match InteractInk's "ink" mark. */
 .auth-hero-scene {
   position:absolute; left:0; right:0; bottom:0; width:100%; height:auto;
   color:#0B6FE0; opacity:.65;
@@ -3236,11 +3238,11 @@ html[data-theme="dim"] .auth-hero-scene .scene-cloud, html[data-theme="dark"] .a
 .auth-back-btn:hover { background:rgba(15,20,25,.58); }
 .auth-back-btn svg { width:19px; height:19px; }
 .auth-hero-tagline {
-  position:relative; z-index:1; margin:16px 0 0; text-align:center;
+  position:relative; z-index:1; margin:16px 0 0; padding:0 24px; text-align:center;
   color:var(--ink); font-weight:800; font-size:23px; line-height:1.28;
 }
 .auth-hero-sub {
-  position:relative; z-index:1; margin:6px 0 0; text-align:center;
+  position:relative; z-index:1; margin:6px 0 0; padding:0 24px; text-align:center;
   color:var(--muted); font-size:14px; font-weight:600;
 }
 
@@ -3330,10 +3332,32 @@ a.auth-submit { text-align:center; text-decoration:none; }
    it. Used on start.html and login.html; signup.html's longer form
    keeps the compact banner + card look above so its fields don't get
    squeezed. */
-.auth-wrap-hero-full { min-height:100dvh; display:flex; flex-direction:column; }
+/* Full-bleed hero, Bluesky-app style: the illustrated scene covers
+   the whole screen and the form/buttons sit low, blended straight
+   into it (no separate white card floating on top), instead of a
+   short banner with a boxed card pulled up over it. .auth-hero grows
+   to fill whatever vertical space the shell/card below doesn't need,
+   which is what pushes the card down toward the bottom of the page —
+   the taller the screen, the more of the illustration shows above
+   it. A *fixed* viewport height (not min-height) is deliberate: with
+   min-height, this box could grow taller than the actual screen
+   (e.g. once the mobile tabbar clearance below was added on top of
+   it), leaving a dead blank gap below the card that only showed up
+   on scroll — the card looked "too high up" with empty space under
+   it instead of sitting flush at the true bottom. Locking the height
+   and letting the hero shrink (flex, min-height:0) to make room
+   guarantees the card always lands exactly at the bottom edge with
+   nothing left over. Used on start.html and login.html; signup.html's
+   longer form keeps the compact banner + card look above so its
+   fields don't get squeezed. */
+.auth-wrap-hero-full {
+  height:100vh; height:100dvh; height:100svh;
+  display:flex; flex-direction:column; overflow:hidden; padding:0;
+}
 .auth-wrap-hero-full .auth-hero { flex:1 1 auto; min-height:0; justify-content:flex-start; }
 .auth-wrap-hero-full .auth-shell {
-  margin:0; max-width:420px; box-shadow:none;
+  margin:0; max-width:420px; min-height:0; box-shadow:none; width:100%; flex:none;
+  background:transparent; border:none; border-radius:0;
 }
 .auth-wrap-hero-full .auth-card { background:transparent; padding:24px 28px calc(28px + env(safe-area-inset-bottom)); }
 
@@ -3349,7 +3373,7 @@ a.auth-submit { text-align:center; text-decoration:none; }
 @media (max-width:700px) {
   .auth-hero { padding-top:calc(53px + 20px); }
   .auth-back-btn { top:calc(53px + 12px); }
-  .auth-wrap-hero-full { padding-bottom:calc(66px + env(safe-area-inset-bottom)); }
+  .auth-wrap-hero-full .auth-shell { padding-bottom:calc(66px + env(safe-area-inset-bottom)); }
 }
 
 /* ── profile page ── */
