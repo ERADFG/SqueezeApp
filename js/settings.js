@@ -104,8 +104,9 @@ async function loadSettings() {
       <div class="settings-panel" id="panel-account">
         <div class="errmsg" id="set-uname-err" style="display:none;"></div>
         <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin:0 0 4px;">Username</label>
-        <input type="text" id="set-uname" value="${esc(uname)}" maxlength="20">
+        <input type="text" id="set-uname" value="${esc(uname)}" maxlength="20" oninput="document.getElementById('set-uname-count').textContent = this.value.length + '/20'">
         <span class="auth-hint">3–20 characters: letters, numbers, and underscores only.</span>
+        <span class="pf-note" id="set-uname-count">${uname.length}/20</span>
         <div style="margin-top:8px;">
           <input type="submit" class="pf-btn" value="Update Username" onclick="updateUsername();return false;">
           <span id="set-uname-st" style="font-size:11px;color:var(--muted);margin-left:8px;"></span>

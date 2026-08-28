@@ -278,7 +278,7 @@ function opBlockHtml(p) {
         </div>
         ${postMenuHtml(p.id, null, p.author_id, p.community_id, p.created_at)}
       </div>
-      <div class="op-detail-body" data-pb="${p.id}">${renderBody(p.body)}</div>
+      <div class="op-detail-body" data-pb="${p.id}">${renderBodyToggle(p.body)}</div>
       ${p.quote_of ? quotedPostHtml(p.quoted) : ''}
       ${p.article_id ? articleCardHtml(p._promoArticle) : ''}
       ${renderMedia(p.media_url, p.media_type, '', p)}
@@ -315,7 +315,7 @@ function ancestorRowHtml(r) {
       ${pcAvatarHtml(r.profile)}
       <div class="pc-main">
         <div class="ph">${pcNameHtml(r.profile)}<span class="dt" data-dt="${r.id}">${timeAgo(r.created_at)}${editedSuffix(r)}</span></div>
-        <div class="pb" data-pb="${r.id}">${renderBody(r.body)}</div>
+        <div class="pb" data-pb="${r.id}">${renderBodyToggle(r.body)}</div>
         ${renderMedia(r.media_url, r.media_type, '', r)}
         ${linkCardHtml(r.body, !!r.media_url)}
       </div>
@@ -376,7 +376,7 @@ function renderConversation() {
         </div>
         ${postMenuHtml(postId, focused.id, focused.author_id, null, focused.created_at)}
       </div>
-      <div class="op-detail-body" data-pb="${focused.id}">${renderBody(focused.body)}</div>
+      <div class="op-detail-body" data-pb="${focused.id}">${renderBodyToggle(focused.body)}</div>
       ${renderMedia(focused.media_url, focused.media_type, '', focused)}
       ${linkCardHtml(focused.body, !!focused.media_url)}
       <div class="op-detail-meta"><span data-dt="${focused.id}">${fullDateTime(focused.created_at)}${editedSuffix(focused)}</span></div>
@@ -467,7 +467,7 @@ function replyHtml(r, depth) {
           <span class="dt" data-dt="${r.id}">${timeAgo(r.created_at)}${editedSuffix(r)}</span>
           ${postMenuHtml(postId, r.id, r.author_id, null, r.created_at)}
         </div>
-        <div class="pb" data-pb="${r.id}">${renderBody(r.body)}</div>
+        <div class="pb" data-pb="${r.id}">${renderBodyToggle(r.body)}</div>
         ${renderMedia(r.media_url, r.media_type, '', r)}
         ${postActionsHtml(r, { replyOnclick: `toggleReplyBox('${r.id}')`, replyCount: kids.length, bookmarkable: false, repostable: false, isReply: true })}
       </div>

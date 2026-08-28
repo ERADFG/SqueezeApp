@@ -2977,7 +2977,7 @@ function markEditedTag(dtEl) {
 // nav, changing comment sort) doesn't revert to the pre-edit body.
 function applyEditToDom(id, newBody, updatedAt) {
   if (postCache[id]) { postCache[id].body = newBody; postCache[id].updated_at = updatedAt; }
-  document.querySelectorAll(`[data-pb="${id}"]`).forEach(elx => { elx.innerHTML = renderBody(newBody); });
+  document.querySelectorAll(`[data-pb="${id}"]`).forEach(elx => { elx.innerHTML = renderBodyToggle(newBody); });
   document.querySelectorAll(`[data-dt="${id}"]`).forEach(markEditedTag);
   if (typeof onPostBodyEdited === 'function') onPostBodyEdited(id, newBody, updatedAt);
 }
@@ -4103,7 +4103,7 @@ function postCardHtml(p, flash = false) {
           <span class="dt" data-dt="${p.id}">${timeAgo(p.created_at)}${editedSuffix(p)}</span>
           ${postMenuHtml(p.id, null, p.author_id, p.community_id, p.created_at)}
         </div>
-        ${p.body ? `<div class="pb" data-pb="${p.id}">${renderBody(p.body)}</div>` : ''}
+        ${p.body ? `<div class="pb" data-pb="${p.id}">${renderBodyToggle(p.body)}</div>` : ''}
         ${p.quote_of ? quotedPostHtml(p.quoted) : ''}
         ${p.article_id ? articleCardHtml(p._promoArticle) : ''}
         ${renderMedia(p.media_url, p.media_type, '', p)}
@@ -4407,6 +4407,51 @@ function renderBody(body) {
     .split('\n')
     .map(line => line.trim().startsWith('&gt;') ? `<span class="gt">${line}</span>` : line)
     .join('\n');
+}
+
+// Posts can run up to 500 characters (see the maxlength on every
+// compose/reply textarea), but a card full of 500 characters of text
+// makes the feed feel like a wall of text — so anything over this
+// gets collapsed behind a "View more" toggle, Twitter/X-style.
+const BODY_TRUNCATE_LEN = 200;
+
+// Same job as renderBody() above, but for the "full" render spots
+// (feed cards, thread detail, profile replies, lightbox caption) as
+// opposed to the already-short preview snippets (board.js tsnip,
+// notification snippets, quoted-post embeds) that truncate to their
+// own, shorter length on purpose and don't need a toggle.
+//
+// Renders BOTH the short and full text up front and just flips which
+// one is visible on click (see togglePostBody() below) — no need to
+// track ids or re-render, and it works correctly even when the same
+// post appears more than once on the page (feed + lightbox, etc.)
+// since the toggle finds its own state via .closest('.pb-wrap')
+// rather than matching on the post id.
+function renderBodyToggle(body) {
+  body = body || '';
+  if (body.length <= BODY_TRUNCATE_LEN) return renderBody(body);
+  // Cut on a word boundary when there's a reasonably close one, so the
+  // truncated preview doesn't end mid-word.
+  let cut = body.slice(0, BODY_TRUNCATE_LEN);
+  const lastSpace = cut.lastIndexOf(' ');
+  if (lastSpace > BODY_TRUNCATE_LEN - 40) cut = cut.slice(0, lastSpace);
+  return `<span class="pb-wrap">` +
+    `<span class="pb-short">${renderBody(cut)}&hellip;</span>` +
+    `<span class="pb-full" hidden>${renderBody(body)}</span>` +
+    `<button type="button" class="pb-toggle" onclick="event.stopPropagation();togglePostBody(this)">${t ? t('post.viewMore') : 'View more'}</button>` +
+    `</span>`;
+}
+
+function togglePostBody(btn) {
+  const wrap = btn.closest('.pb-wrap');
+  if (!wrap) return;
+  const short = wrap.querySelector('.pb-short');
+  const full = wrap.querySelector('.pb-full');
+  if (!short || !full) return;
+  const expanding = full.hidden; // currently collapsed -> this click expands it
+  short.hidden = expanding;
+  full.hidden = !expanding;
+  btn.textContent = (expanding ? (t ? t('post.viewLess') : 'View less') : (t ? t('post.viewMore') : 'View more'));
 }
 
 // Turns already-HTML-escaped text into Twitter-style rich text:
@@ -5619,7 +5664,7 @@ function renderLbSidebar(owner) {
       </div>
       ${postMenuHtml(isReply ? owner.post_id : owner.id, isReply ? owner.id : null, owner.author_id, isReply ? null : owner.community_id, owner.created_at)}
     </div>
-    <div class="op-detail-body" data-pb="${owner.id}">${renderBody(owner.body || '')}</div>
+    <div class="op-detail-body" data-pb="${owner.id}">${renderBodyToggle(owner.body || '')}</div>
     <div class="op-detail-meta"><span data-dt="${owner.id}">${fullDateTime(owner.created_at)}${editedSuffix(owner)}</span> &middot; <span class="op-detail-views">${ICON.views}<b>${fmtCount(owner.view_count)}</b> Views</span></div>
     <div class="op-detail-divider"></div>
     ${actions}

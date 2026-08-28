@@ -567,7 +567,7 @@ function replyCardHtml(r, replyingToProfile, opUsername = null) {
           <span class="dt" data-dt="${r.id}">${timeAgo(r.created_at)}${editedSuffix(r)}</span>
           ${postMenuHtml(r.post_id, r.id, r.author_id, null, r.created_at)}
         </div>
-        <div class="pb" data-pb="${r.id}">${renderBody(r.body)}</div>
+        <div class="pb" data-pb="${r.id}">${renderBodyToggle(r.body)}</div>
         ${renderMedia(r.media_url, r.media_type, '', r)}
         ${linkCardHtml(r.body, !!r.media_url)}
         ${postActionsHtml(r, { replyHref: threadHref, bookmarkable: false, repostable: false, isReply: true })}

@@ -1500,6 +1500,21 @@ select {
 
 .pb { line-height:1.4; word-wrap:break-word; font-size:15px; white-space:pre-wrap; color:var(--ink); margin-top:1px; }
 .gt { color:var(--green); }
+
+/* "View more" / "View less" toggle for posts over 200 characters —
+   see renderBodyToggle()/togglePostBody() in js/common.js. .pb-short
+   and .pb-full share the exact same font/line-height as .pb so
+   swapping which one is [hidden] causes no layout jump. */
+.pb-wrap { display:inline; }
+.pb-short, .pb-full { white-space:pre-wrap; }
+.pb-short[hidden], .pb-full[hidden] { display:none; }
+.pb-toggle {
+  display:block; margin-top:2px; padding:0; border:none; background:none;
+  font-family:inherit; font-size:15px; font-weight:700; line-height:1.4;
+  color:var(--link); cursor:pointer;
+}
+.pb-toggle:hover { text-decoration:underline; }
+.qp-embed .pb-toggle { font-size:14.5px; }
 .body-link, .body-mention, .body-hashtag { color:var(--link); text-decoration:none; }
 .body-link:hover, .body-mention:hover, .body-hashtag:hover { text-decoration:underline; }
 

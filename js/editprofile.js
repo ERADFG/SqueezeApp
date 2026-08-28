@@ -54,6 +54,7 @@ async function loadEditProfile() {
 
       <label>Display name</label>
       <input type="text" id="ep-display" maxlength="50" value="${esc(epProfile.display_name || '')}" placeholder="${esc(epProfile.username)}">
+      <span class="pf-note" id="ep-display-count">${(epProfile.display_name || '').length}/50</span>
 
       <label>Bio</label>
       <textarea id="ep-bio" maxlength="200" placeholder="Tell people about yourself&hellip;">${esc(epProfile.bio || '')}</textarea>
@@ -101,6 +102,10 @@ async function loadEditProfile() {
 
   document.getElementById('ep-bio').addEventListener('input', (e) => {
     document.getElementById('ep-bio-count').textContent = `${e.target.value.length}/200`;
+  });
+
+  document.getElementById('ep-display').addEventListener('input', (e) => {
+    document.getElementById('ep-display-count').textContent = `${e.target.value.length}/50`;
   });
 }
 
