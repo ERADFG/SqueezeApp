@@ -314,6 +314,26 @@ async function doOAuth(provider, btn) {
   }
 }
 
+// signInWithOAuth() only ever resolves on failure (see comment above)
+// — on success the whole page navigates away to the provider, so the
+// button is deliberately left disabled and never re-enabled by the
+// function itself. The gap: if the person backs out of Google/Apple
+// instead of completing sign-in, mobile browsers commonly restore
+// this exact page (including its JS state) from the back-forward
+// cache rather than reloading it — so the button comes back on
+// screen still disabled from before they left, with no error ever
+// having fired to reset it. `pageshow`'s `event.persisted` flag is
+// true specifically for that bfcache-restore case, so re-enable every
+// OAuth button then. Harmless to also run on a normal fresh load,
+// since the buttons already start enabled at that point.
+window.addEventListener('pageshow', function (event) {
+  if (!event.persisted) return;
+  document.querySelectorAll('.auth-social-full, .auth-social-btn').forEach(function (btn) {
+    btn.disabled = false;
+    btn.style.opacity = '';
+  });
+});
+
 // ── SIGN UP ──
 // No email verification step at all — signUp() creates the auth.users
 // row (and, via the DB trigger, the profiles row + auto-follow of
