@@ -3237,18 +3237,25 @@ html[data-theme="dim"] .auth-hero-scene, html[data-theme="dark"] .auth-hero-scen
 .auth-hero-scene .scene-cloud { fill:#fff; stroke:none; opacity:.9; }
 html[data-theme="dim"] .auth-hero-scene .scene-cloud, html[data-theme="dark"] .auth-hero-scene .scene-cloud { fill:#EAF4FF; opacity:.12; }
 /* Custom illustrated skyline artwork (designed for InteractInk), used
-   in place of the line-art SVG scene on light theme. The source image
-   is a tall portrait crop: sky+skyline in the top ~40%, fading to a
-   flat white bottom ~60% that's meant to blend straight into the page
-   background — so it's pinned to the *top* of .auth-hero (not the
-   bottom, like the SVG) and left to run past the hero's bottom edge;
-   .auth-hero's overflow:hidden crops off whatever's left, and since
-   that leftover is just flat white matching light theme's --bg, the
-   crop line is invisible. No dark-theme version of the artwork exists,
-   so dark/dim keep the original tinted line-art SVG above instead of
-   showing a light illustration against a dark gradient. */
+   in place of the line-art SVG scene on light theme. object-fit:cover
+   (not width:100%/height:auto) is deliberate: .auth-hero's own height
+   varies a lot — a short fixed banner on signup.html vs. nearly the
+   full viewport on the full-bleed login/start layout — and a plain
+   auto-height image only fills that box when the box happens to match
+   the image's own aspect ratio. On taller boxes it fell short, leaving
+   a blank gap of .auth-hero's own background showing beneath the
+   artwork instead of image. `inset:0` + `object-fit:cover` always
+   scales the image to fully cover .auth-hero in both dimensions
+   (cropping whichever axis overflows) so there's never a gap, the same
+   way a full-bleed photo background behaves. object-position:top keeps
+   the sky/skyline anchored at the top edge so it's the buildings (not
+   the blank space below them in the source image) that stay visible
+   as more or less of the box is cropped away. No dark-theme version of
+   the artwork exists, so dark/dim keep the original tinted line-art
+   SVG above instead of showing a light illustration against a dark
+   gradient. */
 .auth-hero-illustration {
-  position:absolute; top:0; left:0; width:100%; height:auto; display:block;
+  position:absolute; top:0; left:0; right:0; bottom:0; width:100%; height:100%; object-fit:cover; object-position:center top; display:block;
 }
 html[data-theme="dim"] .auth-hero-illustration, html[data-theme="dark"] .auth-hero-illustration { display:none; }
 /* Floating circular back button, overlaid top-left on the hero —
