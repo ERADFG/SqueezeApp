@@ -9,9 +9,17 @@
 -- without touching anyone's already-unlocked rows.
 --
 -- WHAT THIS ADDS
---   1. public.achievements       — the read-only catalog (162 seed
+--   1. public.achievements       — the read-only catalog (189 seed
 --                                   rows across ~20 metrics + a
 --                                   handful of one-off specials).
+--                                   A block of extra high-end tiers
+--                                   is stacked on top of several
+--                                   metrics — most visibly Sharing,
+--                                   which now climbs past reaching
+--                                   10,000 people through reposts —
+--                                   so the grind doesn't cap out as
+--                                   quickly for people who unlock
+--                                   everything else.
 --   2. public.user_achievements  — which of those each person has
 --                                   actually unlocked, and when.
 --   3. public.ii_achv_metrics(uid)     — SECURITY DEFINER helper that
@@ -41,9 +49,9 @@
 --   a steadily steeper climb the same way the reference screenshots
 --   show ("Level 1  150/150XP" → "Level 3  55/450XP"). Levels are
 --   clamped to 0–100; unlocking literally every achievement in this
---   seed set lands a bit past level 30, so 100 stays a long-term
---   ceiling with room for this catalog to grow rather than
---   something everyone maxes out immediately.
+--   seed set (189 rows, 19,580 XP) lands a bit past level 43, so 100
+--   stays a long-term ceiling with room for this catalog to grow
+--   rather than something everyone maxes out immediately.
 -- ============================================================
 
 create extension if not exists pgcrypto;
@@ -276,7 +284,42 @@ insert into public.achievements (id, category, metric, threshold, tier, title, d
   ('nested_reply', 'Comments', 'nested_reply', 1, 'Special', 'Thread Diver', 'Replied inside a reply thread.', '🧵', 15, 158),
   ('got_quoted', 'Sharing', 'got_quoted', 1, 'Special', 'Quotable', 'One of your posts got quoted.', '🗣️', 25, 159),
   ('chat_key_backup', 'Chat', 'chat_key_backup', 1, 'Special', 'Secured', 'Backed up your chat encryption key.', '🔐', 20, 160),
-  ('bio_written', 'Getting Started', 'bio_written', 1, 'Special', 'Tell Us About You', 'Wrote a bio for your profile.', '📝', 10, 161)
+  ('bio_written', 'Getting Started', 'bio_written', 1, 'Special', 'Tell Us About You', 'Wrote a bio for your profile.', '📝', 10, 161),
+
+  -- ── HARDER TOP-END TIERS ──────────────────────────────────
+  -- Extra tiers stacked on top of several existing metrics so the
+  -- climb keeps going well past what the original 162-row set
+  -- topped out at — sharing especially (10 → 100 → 10,000 people
+  -- reached), but spread across other categories too so no single
+  -- metric is the only "endgame" grind.
+  ('reposts_given_10', 'Sharing', 'reposts_given', 2500, 'Eternal', 'Share Machine', 'Reposted 2,500 posts.', '🔁', 515, 200),
+  ('reposts_given_11', 'Sharing', 'reposts_given', 10000, 'Ascendant', 'Shared With The World', 'Shared a post with 10,000 people.', '🔁', 800, 201),
+  ('reposts_received_10', 'Sharing', 'reposts_received', 2500, 'Eternal', 'Everywhere You Look', 'Your posts were reposted 2,500 times.', '📢', 515, 202),
+  ('reposts_received_11', 'Sharing', 'reposts_received', 10000, 'Ascendant', 'Cultural Moment', 'Your posts reached 10,000 people through reposts.', '📢', 800, 203),
+  ('quotes_given_7', 'Sharing', 'quotes_given', 250, 'Grandmaster', 'Commentary King', 'Quoted 250 posts.', '💭', 140, 204),
+  ('quotes_given_8', 'Sharing', 'quotes_given', 500, 'Legendary', 'Take Machine', 'Quoted 500 posts.', '💭', 215, 205),
+  ('quotes_given_9', 'Sharing', 'quotes_given', 1000, 'Mythic', 'Quote Legend', 'Quoted 1,000 posts.', '💭', 335, 206),
+  ('following_count_7', 'Community', 'following_count', 1000, 'Grandmaster', 'Follows the Whole Timeline', 'Following 1,000 people.', '🤝', 140, 207),
+  ('following_count_8', 'Community', 'following_count', 2500, 'Legendary', 'Feed Completionist', 'Following 2,500 people.', '🤝', 215, 208),
+  ('dm_partners_count_6', 'Chat', 'dm_partners_count', 100, 'Master', 'Social Butterfly', 'Chatted with 100 different people.', '📇', 90, 209),
+  ('dm_partners_count_7', 'Chat', 'dm_partners_count', 250, 'Grandmaster', 'Everyone Knows You', 'Chatted with 250 different people.', '📇', 140, 210),
+  ('communities_joined_6', 'Communities', 'communities_joined', 50, 'Master', 'Community Collector', 'Joined 50 communities.', '🏘️', 90, 211),
+  ('communities_joined_7', 'Communities', 'communities_joined', 100, 'Grandmaster', 'Everywhere at Once', 'Joined 100 communities.', '🏘️', 140, 212),
+  ('bookmarks_count_6', 'Saving', 'bookmarks_count', 500, 'Master', 'Digital Hoarder', 'Bookmarked 500 posts.', '🔖', 90, 213),
+  ('bookmarks_count_7', 'Saving', 'bookmarks_count', 1000, 'Grandmaster', 'Archive of Everything', 'Bookmarked 1,000 posts.', '🔖', 140, 214),
+  ('polls_voted_5', 'Polls', 'polls_voted', 250, 'Diamond', 'Poll Addict', 'Voted in 250 polls.', '🗳️', 60, 215),
+  ('polls_voted_6', 'Polls', 'polls_voted', 500, 'Master', 'Democracy in Action', 'Voted in 500 polls.', '🗳️', 90, 216),
+  ('articles_written_6', 'Articles', 'articles_written', 50, 'Master', 'Prolific Writer', 'Published 50 articles.', '📰', 90, 217),
+  ('articles_written_7', 'Articles', 'articles_written', 100, 'Grandmaster', 'Staff Writer', 'Published 100 articles.', '📰', 140, 218),
+  ('lists_created_5', 'Lists', 'lists_created', 25, 'Diamond', 'List Enthusiast', 'Created 25 lists.', '📋', 60, 219),
+  ('lists_created_6', 'Lists', 'lists_created', 50, 'Master', 'Organizer Extraordinaire', 'Created 50 lists.', '📋', 90, 220),
+  ('messages_sent_8', 'Chat', 'messages_sent', 10000, 'Legendary', 'Never Offline', 'Sent 10,000 messages.', '💌', 215, 221),
+  ('streak_days_9', 'Streaks', 'streak_days', 730, 'Mythic', 'Two Year Streak', 'Active 730 days in a row.', '🔥', 335, 222),
+  ('streak_days_10', 'Streaks', 'streak_days', 1000, 'Eternal', 'Unbroken', 'Active 1,000 days in a row.', '🔥', 515, 223),
+  ('replies_given_9', 'Comments', 'replies_given', 2500, 'Mythic', 'Reply Guy Supreme', 'Left 2,500 replies.', '💬', 335, 224),
+  ('replies_received_8', 'Comments', 'replies_received', 1000, 'Legendary', 'Conversation Starter', 'Got 1,000 replies.', '🗨️', 215, 225),
+  ('replies_received_9', 'Comments', 'replies_received', 2500, 'Mythic', 'Discussion Magnet', 'Got 2,500 replies.', '🗨️', 335, 226),
+  ('likes_given_10', 'Likes', 'likes_given', 10000, 'Eternal', 'Serial Liker', 'Liked 10,000 posts.', '❤️', 515, 227)
 on conflict (id) do update set
   category = excluded.category, metric = excluded.metric, threshold = excluded.threshold,
   tier = excluded.tier, title = excluded.title, description = excluded.description,
