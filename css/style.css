@@ -4060,6 +4060,16 @@ body.chat-thread-open #chat-fab { display:none; }
    selector guarantees this wins over `.modal label` regardless of
    source order. */
 #gi-avatar-wrap label { margin:0; display:block; line-height:0; }
+/* That rule's ID selector `#gi-avatar-wrap label` — (1,0,1) — outranks
+   even the earlier `.gi-avatar-wrap .gi-avatar-pick` — (0,2,0) — fix
+   above, since an ID beats any number of classes. So its
+   `display:block` was silently winning again and re-breaking this
+   badge's flex centering (the white-color fix stuck because this rule
+   never touches color, only display/margin/line-height — which is why
+   the glyph turned white but stayed shifted toward the top-left).
+   Re-declare display here with an ID+class selector — (1,1,0) — which
+   finally outranks it. */
+#gi-avatar-wrap .gi-avatar-pick { display:flex; align-items:center; justify-content:center; }
 .gi-avatar-pick:hover { background:var(--maroon-dk); }
 .gi-avatar-pick svg { width:13px; height:13px; }
 .gi-edit-details-btn {
