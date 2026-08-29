@@ -5426,30 +5426,69 @@ html[data-theme="dim"], html[data-theme="dark"] {
 .achv-cat-head { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:10px; }
 .achv-cat-title { font-size:15px; font-weight:800; color:var(--ink); }
 .achv-cat-count { font-size:12px; color:var(--muted); font-weight:600; }
-.achv-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr)); gap:10px; }
+.achv-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(104px, 1fr)); gap:16px 6px; }
 
 .achv-badge {
-  display:flex; flex-direction:column; align-items:center; gap:6px;
-  padding:12px 8px 10px; border-radius:var(--r-md); border:1px solid var(--line);
-  background:var(--cream-card); cursor:pointer; font-family:inherit; text-align:center;
-  transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+  display:flex; flex-direction:column; align-items:center; gap:8px;
+  padding:8px 6px; border-radius:16px; border:none;
+  background:transparent; cursor:pointer; font-family:inherit; text-align:center;
+  transition:transform .12s ease;
 }
-.achv-badge:hover { transform:translateY(-2px); box-shadow:var(--shadow-pop, 0 6px 18px rgba(0,0,0,.08)); }
-.achv-badge:active { transform:translateY(0) scale(.97); }
+.achv-badge:hover { transform:translateY(-2px); }
+.achv-badge:active { transform:translateY(0) scale(.96); }
+
+/* ── MEDAL — a glossy enameled coin instead of a flat squircle: a
+   two-tone conic rim (::before) gives it a beveled edge, a layered
+   radial-gradient face gives it a top-left sheen + bottom-right core
+   shadow, and inset box-shadows fake the light catching the metal.
+   Colored per-badge via --achv-c (tier color, set inline). Locked
+   badges reuse the exact same shape in a desaturated gunmetal tone
+   so the whole grid reads as one consistent medal system. ──────── */
 .achv-badge-icon {
-  width:44px; height:44px; border-radius:14px; display:flex; align-items:center; justify-content:center;
-  flex:none;
+  width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  flex:none; position:relative; margin:0 auto;
 }
-.achv-badge-icon svg { width:22px; height:22px; color:#fff; }
+.achv-badge-icon::before {
+  content:""; position:absolute; inset:-5px; border-radius:50%; z-index:-1;
+  background: conic-gradient(from 220deg,
+    color-mix(in srgb, var(--achv-c, #8b95a1) 55%, white 25%),
+    color-mix(in srgb, var(--achv-c, #8b95a1) 90%, black 25%) 45%,
+    color-mix(in srgb, var(--achv-c, #8b95a1) 55%, white 25%) 75%,
+    color-mix(in srgb, var(--achv-c, #8b95a1) 90%, black 25%) 100%);
+  box-shadow: 0 4px 10px rgba(0,0,0,.25), 0 1px 0 rgba(255,255,255,.35) inset;
+}
 .achv-badge.unlocked .achv-badge-icon {
-  background:linear-gradient(145deg, color-mix(in srgb, var(--achv-c) 85%, white 15%), var(--achv-c));
-  box-shadow:0 3px 10px color-mix(in srgb, var(--achv-c) 45%, transparent);
+  background:
+    radial-gradient(circle at 34% 26%, rgba(255,255,255,.6), rgba(255,255,255,0) 32%),
+    radial-gradient(circle at 65% 82%, color-mix(in srgb, var(--achv-c) 85%, black 40%), transparent 55%),
+    radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--achv-c) 45%, white 25%), var(--achv-c) 60%, color-mix(in srgb, var(--achv-c) 78%, black 22%) 100%);
+  box-shadow:
+    inset 0 1.5px 2px rgba(255,255,255,.45),
+    inset 0 -6px 10px rgba(0,0,0,.28),
+    inset 0 0 0 2px color-mix(in srgb, var(--achv-c) 55%, white 20%),
+    0 4px 9px color-mix(in srgb, var(--achv-c) 45%, transparent);
 }
-.achv-badge.locked .achv-badge-icon { background:var(--line); color:var(--muted); }
-.achv-badge.locked .achv-badge-icon svg { width:20px; height:20px; color:var(--muted); }
+.achv-badge-icon svg {
+  width:28px; height:28px; color:#fff; position:relative; z-index:1;
+  filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.4));
+}
+.achv-badge.locked .achv-badge-icon::before {
+  background: conic-gradient(from 220deg, #7b8894, #4a525b 45%, #7b8894 75%, #4a525b 100%);
+}
+.achv-badge.locked .achv-badge-icon {
+  background:
+    radial-gradient(circle at 34% 26%, rgba(255,255,255,.22), rgba(255,255,255,0) 32%),
+    radial-gradient(circle at 40% 35%, #7d8994, #5a636c 55%, #3c434a 100%);
+  box-shadow:
+    inset 0 1.5px 2px rgba(255,255,255,.15),
+    inset 0 -6px 10px rgba(0,0,0,.32),
+    0 3px 8px rgba(0,0,0,.28);
+}
+.achv-badge.locked .achv-badge-icon svg { width:23px; height:23px; color:#b8c0c8; opacity:.9; filter:none; }
+
 .achv-badge-title { font-size:11.5px; font-weight:700; color:var(--ink); line-height:1.25; }
 .achv-badge.locked .achv-badge-title { color:var(--muted); letter-spacing:.06em; }
-.achv-badge-progress { display:block; width:100%; height:4px; border-radius:99px; background:var(--line); overflow:hidden; margin-top:2px; }
+.achv-badge-progress { display:block; width:74%; height:4px; border-radius:99px; background:var(--line); overflow:hidden; margin:0 auto; }
 .achv-badge-progress-fill { display:block; height:100%; background:var(--maroon); border-radius:99px; }
 
 /* Newly-unlocked badge: a brief pop + glow-pulse when the page first
@@ -5471,11 +5510,29 @@ html[data-theme="dim"], html[data-theme="dark"] {
 
 .achv-modal { width:320px; padding-top:28px; text-align:center; }
 .achv-modal-icon {
-  width:76px; height:76px; margin:0 auto 14px; border-radius:22px; display:flex; align-items:center; justify-content:center;
-  font-size:36px; background:linear-gradient(145deg, color-mix(in srgb, var(--achv-c, var(--maroon)) 85%, white 15%), var(--achv-c, var(--maroon)));
-  box-shadow:0 6px 20px color-mix(in srgb, var(--achv-c, var(--maroon)) 45%, transparent);
+  --achv-c: var(--achv-c, var(--maroon));
+  width:88px; height:88px; margin:0 auto 14px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  position:relative;
+  background:
+    radial-gradient(circle at 34% 26%, rgba(255,255,255,.6), rgba(255,255,255,0) 32%),
+    radial-gradient(circle at 65% 82%, color-mix(in srgb, var(--achv-c) 85%, black 40%), transparent 55%),
+    radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--achv-c) 45%, white 25%), var(--achv-c) 60%, color-mix(in srgb, var(--achv-c) 78%, black 22%) 100%);
+  box-shadow:
+    inset 0 2px 3px rgba(255,255,255,.45),
+    inset 0 -8px 14px rgba(0,0,0,.28),
+    inset 0 0 0 3px color-mix(in srgb, var(--achv-c) 55%, white 20%),
+    0 6px 18px color-mix(in srgb, var(--achv-c) 45%, transparent);
 }
-.achv-modal-icon svg { width:32px; height:32px; color:#fff; }
+.achv-modal-icon::before {
+  content:""; position:absolute; inset:-6px; border-radius:50%; z-index:-1;
+  background: conic-gradient(from 220deg,
+    color-mix(in srgb, var(--achv-c) 55%, white 25%),
+    color-mix(in srgb, var(--achv-c) 90%, black 25%) 45%,
+    color-mix(in srgb, var(--achv-c) 55%, white 25%) 75%,
+    color-mix(in srgb, var(--achv-c) 90%, black 25%) 100%);
+  box-shadow: 0 5px 14px rgba(0,0,0,.25);
+}
+.achv-modal-icon svg { width:38px; height:38px; color:#fff; position:relative; z-index:1; filter:drop-shadow(0 1.5px 2px rgba(0,0,0,.4)); }
 .achv-modal-title { font-size:19px; font-weight:900; color:var(--ink); padding:0 20px; }
 .achv-modal-tier { font-size:12.5px; font-weight:800; letter-spacing:.02em; margin-top:4px; }
 .achv-modal-desc { font-size:14px; color:var(--muted); padding:0 24px; margin-top:10px; line-height:1.4; }
@@ -5489,7 +5546,10 @@ html[data-theme="dim"], html[data-theme="dark"] {
   .achv-ring { width:78px; height:78px; }
   .achv-ring-level { font-size:21px; }
   .achv-cats { padding:4px 10px 24px; }
-  .achv-grid { grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); gap:8px; }
+  .achv-grid { grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); gap:14px 4px; }
+  .achv-badge-icon { width:56px; height:56px; }
+  .achv-badge-icon svg { width:25px; height:25px; }
+  .achv-badge.locked .achv-badge-icon svg { width:20px; height:20px; }
 }
 
 /* ── UNLOCK TOASTS — stacks top-center, one at a time, tap to open
@@ -5509,11 +5569,26 @@ html[data-theme="dim"], html[data-theme="dark"] {
 .achv-toast.show { opacity:1; transform:translateY(0) scale(1); }
 .achv-toast.hide { opacity:0; transform:translateY(-10px) scale(.97); }
 .achv-toast-icon {
-  width:38px; height:38px; border-radius:12px; flex:none; display:flex; align-items:center; justify-content:center;
-  background:linear-gradient(145deg, color-mix(in srgb, var(--achv-c) 85%, white 15%), var(--achv-c));
-  box-shadow:0 3px 10px color-mix(in srgb, var(--achv-c) 45%, transparent);
+  width:40px; height:40px; border-radius:50%; flex:none; display:flex; align-items:center; justify-content:center;
+  position:relative;
+  background:
+    radial-gradient(circle at 34% 26%, rgba(255,255,255,.6), rgba(255,255,255,0) 32%),
+    radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--achv-c) 45%, white 25%), var(--achv-c) 60%, color-mix(in srgb, var(--achv-c) 78%, black 22%) 100%);
+  box-shadow:
+    inset 0 1.5px 2px rgba(255,255,255,.45),
+    inset 0 -4px 7px rgba(0,0,0,.28),
+    inset 0 0 0 2px color-mix(in srgb, var(--achv-c) 55%, white 20%),
+    0 3px 8px color-mix(in srgb, var(--achv-c) 45%, transparent);
 }
-.achv-toast-icon svg { width:19px; height:19px; color:#fff; }
+.achv-toast-icon::before {
+  content:""; position:absolute; inset:-3px; border-radius:50%; z-index:-1;
+  background: conic-gradient(from 220deg,
+    color-mix(in srgb, var(--achv-c) 55%, white 25%),
+    color-mix(in srgb, var(--achv-c) 90%, black 25%) 45%,
+    color-mix(in srgb, var(--achv-c) 55%, white 25%) 75%,
+    color-mix(in srgb, var(--achv-c) 90%, black 25%) 100%);
+}
+.achv-toast-icon svg { width:18px; height:18px; color:#fff; position:relative; z-index:1; filter:drop-shadow(0 1px 1px rgba(0,0,0,.4)); }
 .achv-toast-body { flex:1; min-width:0; display:flex; flex-direction:column; }
 .achv-toast-kicker { font-size:10.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--achv-c); }
 .achv-toast-title { font-size:13.5px; font-weight:800; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
