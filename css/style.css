@@ -2761,7 +2761,19 @@ body[data-page="auth"] #m-topbar, body[data-page="auth"] #m-tabbar, body[data-pa
      .sec-bar like the profile page's version does, so it was left
      out of the list above and kept bleeding "Followers / Following"
      through on top of the open drawer. */
-  html.oc-drawer-open .profile-tabs { display:none !important; }
+  html.oc-drawer-open .profile-tabs,
+  /* Same bug again on the Achievements page: the medal badges use
+     several stacked box-shadows plus conic/radial gradients per
+     badge (see .achv-badge-icon) to get their glossy coin look —
+     enough layered paint effects that some mobile browsers promote
+     each one to its own compositing layer, and that layer paints
+     above the drawer regardless of the drawer's z-index (the exact
+     compositing quirk described on .m-drawer-bg's isolation:isolate
+     above). .sec-bar above the grid was already hidden, but the
+     badge grid itself (#achv-root) wasn't, so the medals kept
+     bleeding through the open drawer as faint padlock/icon ghosts
+     over the menu items. */
+  html.oc-drawer-open #achv-root { display:none !important; }
   /* Extra safety net for the same leak: #pv-avatar and .profile-hdr-top
      each open their own local stacking context (position:relative +
      z-index:1) so the avatar can sit over the banner photo — neutralize
@@ -5426,11 +5438,11 @@ html[data-theme="dim"], html[data-theme="dark"] {
 .achv-cat-head { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:10px; }
 .achv-cat-title { font-size:15px; font-weight:800; color:var(--ink); }
 .achv-cat-count { font-size:12px; color:var(--muted); font-weight:600; }
-.achv-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(104px, 1fr)); gap:16px 6px; }
+.achv-grid { display:grid; grid-template-columns:repeat(auto-fill, 88px); justify-content:start; gap:16px 10px; }
 
 .achv-badge {
   display:flex; flex-direction:column; align-items:center; gap:8px;
-  padding:8px 6px; border-radius:16px; border:none;
+  width:88px; max-width:88px; padding:8px 4px; border-radius:16px; border:none;
   background:transparent; cursor:pointer; font-family:inherit; text-align:center;
   transition:transform .12s ease;
 }
@@ -5443,9 +5455,13 @@ html[data-theme="dim"], html[data-theme="dark"] {
    shadow, and inset box-shadows fake the light catching the metal.
    Colored per-badge via --achv-c (tier color, set inline). Locked
    badges reuse the exact same shape in a desaturated gunmetal tone
-   so the whole grid reads as one consistent medal system. ──────── */
+   so the whole grid reads as one consistent medal system.
+   Fixed px width/height (not %/em/fr) on every rule below, on
+   purpose — this shape must never be able to stretch to fill a grid
+   track or flex cell no matter what container it ends up in. ────── */
 .achv-badge-icon {
-  width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  width:64px; height:64px; max-width:64px; max-height:64px; min-width:64px; min-height:64px;
+  border-radius:50%; display:flex; align-items:center; justify-content:center;
   flex:none; position:relative; margin:0 auto;
 }
 .achv-badge-icon::before {
@@ -5469,7 +5485,7 @@ html[data-theme="dim"], html[data-theme="dark"] {
     0 4px 9px color-mix(in srgb, var(--achv-c) 45%, transparent);
 }
 .achv-badge-icon svg {
-  width:28px; height:28px; color:#fff; position:relative; z-index:1;
+  width:28px; height:28px; max-width:28px; max-height:28px; color:#fff; position:relative; z-index:1;
   filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.4));
 }
 .achv-badge.locked .achv-badge-icon::before {
@@ -5546,8 +5562,9 @@ html[data-theme="dim"], html[data-theme="dark"] {
   .achv-ring { width:78px; height:78px; }
   .achv-ring-level { font-size:21px; }
   .achv-cats { padding:4px 10px 24px; }
-  .achv-grid { grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); gap:14px 4px; }
-  .achv-badge-icon { width:56px; height:56px; }
+  .achv-grid { grid-template-columns:repeat(auto-fill, 78px); justify-content:start; gap:14px 8px; }
+  .achv-badge { width:78px; max-width:78px; }
+  .achv-badge-icon { width:56px; height:56px; max-width:56px; max-height:56px; min-width:56px; min-height:56px; }
   .achv-badge-icon svg { width:25px; height:25px; }
   .achv-badge.locked .achv-badge-icon svg { width:20px; height:20px; }
 }
