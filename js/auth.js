@@ -286,6 +286,25 @@ function togglePwVis(inputId, btn) {
   btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
 }
 
+// Tapping the eye button used to steal focus away from the password
+// input a split second before the click handler ran. That blurred the
+// input, which dismissed the on-screen keyboard, which resized the
+// page — so the button visually "jumped" right as you tapped it, and
+// the first tap or two would land on its old position instead of the
+// new one (hence needing several taps to actually toggle visibility).
+// Both mouse taps and touch taps fire a real "mousedown" event before
+// "click" (touch devices synthesize one), and that's the event whose
+// default action focuses the tapped element — so blocking just that
+// default keeps focus on the input the whole time. The keyboard never
+// closes, the layout never reflows, and "click" still fires normally
+// right after, so the toggle itself is untouched and fires on the
+// very first tap. (Deliberately not touching touchstart/touchend here
+// — preventing those can suppress the click entirely on some mobile
+// browsers, which would break the toggle instead of fixing it.)
+document.addEventListener('mousedown', e => {
+  if (e.target.closest('.pw-toggle')) e.preventDefault();
+});
+
 // ── OAuth (Google / Apple) — used by the "Create account" chooser
 // (start.html) and the Log In page's "Continue with Google" button.
 // Supabase handles the actual redirect/callback; this just kicks it
