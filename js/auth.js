@@ -281,9 +281,30 @@ function togglePwVis(inputId, btn) {
   const input = document.getElementById(inputId);
   if (!input) return;
   const showing = input.type === 'text';
+  const wasFocused = document.activeElement === input;
+  const caret = input.selectionEnd != null ? input.selectionEnd : input.value.length;
   input.type = showing ? 'password' : 'text';
   btn.classList.toggle('showing', !showing);
   btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+  // Flipping an input's type between password/text while it's focused
+  // makes some mobile keyboards (notably Android) briefly close and
+  // reopen on their own — nothing to do with what else is happening on
+  // the page, it's the type switch itself. Left alone, that shows up
+  // as the whole layout (and the eye button along with it) jumping,
+  // and often drops focus entirely so the next tap on the button
+  // misses because the field/button have already resettled elsewhere.
+  // Forcing focus straight back onto the field, with the caret back
+  // where it was, closes that gap — done twice (immediately, and again
+  // next frame in case the keyboard's own close/reopen cycle wins the
+  // race) so it holds regardless of the exact timing on a given device.
+  if (wasFocused) {
+    const restore = () => {
+      if (document.activeElement !== input) input.focus({ preventScroll: true });
+      try { input.setSelectionRange(caret, caret); } catch (e) {}
+    };
+    restore();
+    requestAnimationFrame(restore);
+  }
 }
 
 // Tapping the eye button used to steal focus away from the password
