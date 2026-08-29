@@ -1159,7 +1159,7 @@ function renderMobileChrome() {
         ` : `
           <img class="avatar m-drawer-avatar" src="${DEFAULT_AVATAR}" loading="lazy" decoding="async" alt="">
           <span class="m-drawer-name">Welcome to InteractInk</span>
-          <span class="m-drawer-handle">Log in to follow, post, and reply.</span>
+          <span class="m-drawer-handle">You need an account to post.</span>
           <hr>
           <div class="m-drawer-menu" style="margin-top:8px;">
             <a href="search.html">${NAV_ICON.search}Explore</a>

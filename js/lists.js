@@ -120,7 +120,7 @@ async function renderLists() {
   listEl.innerHTML = skeletonFeedHtml();
 
   if (!currentSession) {
-    listEl.innerHTML = `<div class="post-login-gate" style="border-top:none;">You need an account to create, follow, and view Lists. <a href="login.html">Log in</a> or <a href="signup.html">create an account</a>.</div>`;
+    listEl.innerHTML = `<div class="post-login-gate" style="border-top:none;">You need an account to post. <a href="signup.html">Create an account</a> — it takes a minute.</div>`;
     return;
   }
 

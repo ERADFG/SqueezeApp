@@ -249,7 +249,7 @@ async function loadAchievements() {
   const session = currentSession;
 
   if (!session) {
-    root.innerHTML = `<div class="post-login-gate" style="border-top:none;">Log in to see your level and achievements. <a href="login.html">Log in</a> or <a href="signup.html">create an account</a>.</div>`;
+    root.innerHTML = `<div class="post-login-gate" style="border-top:none;">You need an account to post. <a href="signup.html">Create an account</a> — it takes a minute.</div>`;
     return;
   }
 

@@ -268,7 +268,7 @@ function refreshPostGates() {
 
 function requireLogin() {
   if (!currentSession) {
-    toast('You need an account to do that. Log in or create an account first.', 'error');
+    toast('You need an account to post. Create an account — it takes a minute.', 'error');
     return false;
   }
   return true;

@@ -215,7 +215,6 @@ async function loadChat() {
   if (!session) {
     document.body.classList.remove('chat-thread-open');
     const gate = t('chat.loginGate')
-      .replace('{login}', `<a href="login.html">${t('nav.logIn')}</a>`)
       .replace('{signup}', `<a href="signup.html">${t('nav.signUp')}</a>`);
     root.innerHTML = `<div class="post-login-gate" style="border-top:none;">${gate}</div>`;
     return;
