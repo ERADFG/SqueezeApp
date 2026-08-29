@@ -998,16 +998,7 @@ select {
    specificity so they win instead. */
 .cc-modal .cc-step-body label.cc-avatar-pick,
 .cc-modal .cc-step-body label.cc-banner-pick {
-  /* Same `.modal label` specificity fight as the comment above
-     describes — that rule also sets `color:var(--muted)` and
-     `display:block`, both of which out-rank the bare `.cc-avatar-pick`/
-     `.cc-banner-pick` class rules. `display:block` was already being
-     re-declared here (fixing the flex-centering, i.e. the icon sitting
-     off in the corner instead of centered), but `color` wasn't, so the
-     camera glyph was still rendering muted-gray instead of white.
-     Re-declaring both, plus the centering properties explicitly, wins
-     outright and needs no !important. */
-  display:flex; align-items:center; justify-content:center; margin:0; color:#fff;
+  display:flex; margin:0;
 }
 
 /* Single community header (community.html) */
@@ -2661,17 +2652,6 @@ body[data-page="auth"] #m-topbar, body[data-page="auth"] #m-tabbar, body[data-pa
     padding:8px 4px calc(8px + env(safe-area-inset-bottom));
     background:var(--bg); border-top:1px solid var(--line);
     border-radius:0; box-shadow:none;
-    /* Force this fixed bar onto its own opaque compositing layer.
-       Without this, some Chromium-based mobile browsers (Samsung
-       Internet in particular) can composite a position:fixed bar
-       *underneath* scrolled page content once another fixed element
-       on the page (here, #m-topbar) uses backdrop-filter — the bar's
-       own solid background stops actually painting on top, and
-       whatever is scrolled behind it (e.g. the achievements grid's
-       locked badges) shows through. Giving it an explicit stacking
-       context + its own GPU layer stops that mis-composite. */
-    backdrop-filter:none; -webkit-backdrop-filter:none;
-    isolation:isolate; transform:translateZ(0); will-change:transform;
   }
   #m-tabbar a {
     flex:1; display:flex; align-items:center; justify-content:center;
@@ -3082,31 +3062,12 @@ body[data-page="auth"] #m-topbar, body[data-page="auth"] #m-tabbar, body[data-pa
   width:28px; height:28px; display:flex; align-items:center; justify-content:center;
   background:none; border:none; padding:0; margin:0; color:var(--muted); cursor:pointer;
   border-radius:50%; transition:background .12s ease, color .12s ease;
-  z-index:2; /* sit above any native browser password-reveal/credential
-    icon Chromium-based mobile browsers (Chrome, Samsung Internet) can
-    inject inside a password field on focus — without this the native
-    icon can render on top of/behind ours at nearly the same spot,
-    which is what reads as "the eye icon moves". */
 }
 .pw-toggle:hover { background:var(--maroon-tint); color:var(--maroon); }
 .pw-toggle svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 .pw-toggle .eye-off { display:none; }
 .pw-toggle.showing .eye-on { display:none; }
 .pw-toggle.showing .eye-off { display:block; }
-/* Kill every browser-native in-field password decoration (Chrome's
-   saved-credential "key" button, Edge's reveal button, Samsung
-   Internet/Samsung Pass's own eye icon) so only our custom .pw-toggle
-   ever shows in the right-hand corner of the password field — having
-   two overlapping icons on focus was the real cause of the "moving
-   eye" bug, not a layout shift. */
-.auth-input-wrap input[type="password"]::-ms-reveal,
-.auth-input-wrap input[type="password"]::-ms-clear { display:none; width:0; height:0; }
-.auth-input-wrap input[type="password"]::-webkit-credentials-auto-fill-button,
-.auth-input-wrap input[type="password"]::-webkit-strong-password-auto-fill-button,
-.auth-input-wrap input[type="password"]::-webkit-caps-lock-indicator,
-.auth-input-wrap input[type="text"].has-pw-toggle::-webkit-credentials-auto-fill-button {
-  visibility:hidden; display:none !important; pointer-events:none; position:absolute; right:0;
-}
 
 /* "I'm not a robot" reCAPTCHA widget — shared container used on
    signup/login and every post/reply composer (js/common.js
@@ -3883,13 +3844,14 @@ body.chat-thread-open #chat-fab { display:none; }
    `margin:0` here was silently losing and leaving the badge shifted
    off its corner. Scoping under `.gcv-upload-box` (like the avatar
    circle fix above) wins outright instead of relying on !important. */
-/* `.modal label { color:var(--muted) }` is a class+type selector,
-   which outranks the plain `.gcv-avatar-badge { color:#fff }` class
-   selector above — same specificity fight as the margin one this rule
-   already fixes, just for color instead. It was silently winning and
-   turning the white plus glyph a muted gray. Re-declaring color here
-   (scoped the same way) wins outright, no !important needed. */
-.gcv-upload-box .gcv-avatar-badge { margin:0; color:#fff; }
+/* `.modal label` also sets `display:block` and `color:var(--muted)`,
+   both of which beat the bare `.gcv-avatar-badge` class rule on
+   specificity the same way its `margin` did above. `display:block`
+   silently killed the flex centering, so the plus glyph rendered
+   top-left-ish inside the circle instead of dead-center, and
+   `color:var(--muted)` turned the "white" plus dark gray. Re-declare
+   all three here, scoped the same way, so they actually win. */
+.gcv-upload-box .gcv-avatar-badge { margin:0; display:flex; align-items:center; justify-content:center; color:#fff; }
 .gcv-avatar-badge:hover { background:var(--maroon-dk); }
 .gcv-avatar-badge svg { width:10px; height:10px; flex-shrink:0; }
 .gcv-upload-txt { font-size:14.5px; font-weight:700; color:var(--ink); }
@@ -4081,7 +4043,13 @@ body.chat-thread-open #chat-fab { display:none; }
    `.modal label { margin:0 16px 5px }` (class+type) outranks a bare
    `.gi-avatar-pick` class rule, so its margin was nudging this badge
    off the avatar's corner. Scoping under `.gi-avatar-wrap` wins. */
-.gi-avatar-wrap .gi-avatar-pick { margin:0; }
+/* Same `.modal label` specificity gotcha as `.gcv-upload-box
+   .gcv-avatar-badge` above: its `display:block` was overriding this
+   badge's `display:flex`, so the camera glyph sat off-center inside
+   the circle, and its `color:var(--muted)` was overriding this
+   badge's `color:#fff`, turning the glyph dark gray instead of
+   white. Re-declared here, scoped the same way, so they win. */
+.gi-avatar-wrap .gi-avatar-pick { margin:0; display:flex; align-items:center; justify-content:center; color:#fff; }
 /* The avatar picture itself is *also* wrapped in its own plain
    <label for="gi-avatar-file"> (no class) so a click anywhere on the
    picture opens the file picker too — and that label was catching
@@ -5606,7 +5574,18 @@ html[data-theme="dim"], html[data-theme="dark"] {
   .achv-ring-wrap { width:78px; height:78px; }
   .achv-ring { width:78px; height:78px; }
   .achv-ring-level { font-size:21px; }
-  .achv-cats { padding:4px 10px 24px; }
+  /* The fixed #m-tabbar (~56px + safe-area) plus the floating compose
+     FAB sit on top of this page's content. #main's own bottom padding
+     (padding-bottom:calc(66px + safe-area), set globally for the
+     mobile chrome) wasn't leaving enough real clearance here — the
+     last row of badges in the final category was scrolling to a stop
+     partly *behind* the tabbar instead of fully above it, so it got
+     visually sliced in half by the tabbar's opaque background and
+     read as "blended into" the nav icons below it. Give this specific
+     grid extra bottom breathing room so its last row always clears
+     both the FAB and the tabbar with room to spare, independent of
+     that shared calculation. */
+  .achv-cats { padding:4px 10px calc(110px + env(safe-area-inset-bottom)); }
   .achv-grid { grid-template-columns:repeat(auto-fill, 78px); justify-content:start; gap:14px 8px; }
   .achv-badge { width:78px; max-width:78px; }
   .achv-badge-icon { width:56px; height:56px; max-width:56px; max-height:56px; min-width:56px; min-height:56px; }
