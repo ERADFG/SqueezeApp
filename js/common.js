@@ -807,10 +807,19 @@ updateFavicon(getTheme());
     if (refreshing || !e.touches || e.touches.length !== 1) return;
     if (!feedRefreshFn() || !document.getElementById('feed-posts')) return;
     if (!atTop()) return;
-    // Ignore drags starting inside anything with its own scroll/gestures
-    // (sidebar, modals, chat panes, the mobile topbar) so this only
-    // ever fires over the main feed column.
-    if (e.target.closest && e.target.closest('#sidebar, .modal, .chat-msgs, #m-topbar, .gif-grid, .cx-emoji-grid')) return;
+    // The mobile hamburger drawer (.m-drawer, inside the fixed
+    // .m-drawer-bg overlay) locks the underlying page's scroll via
+    // html.oc-drawer-open{overflow:hidden}, so atTop() above stays true
+    // the entire time the drawer is open — a downward drag to scroll
+    // back up through a long drawer menu was getting misread as a
+    // pull-to-refresh gesture and had its touchmove default suppressed,
+    // which is exactly what made the drawer's own overflow-y:auto
+    // scroll stop working. Bail out immediately whenever the drawer is
+    // open, and also skip drags starting inside anything else with its
+    // own scroll/gestures (sidebar, modals, chat panes, the mobile
+    // topbar) so this only ever fires over the main feed column.
+    if (document.documentElement.classList.contains('oc-drawer-open')) return;
+    if (e.target.closest && e.target.closest('#sidebar, .modal, .chat-msgs, #m-topbar, .gif-grid, .cx-emoji-grid, .m-drawer, .m-drawer-bg')) return;
     startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
     phase = 'watching';
