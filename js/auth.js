@@ -441,6 +441,9 @@ async function doSignUp(e) {
     return;
   }
 
+  if (!ensureCaptchaRevealed('su-captcha')) return;
+  if (!(await verifyHuman('su-captcha', errEl))) return;
+
   btn.disabled = true; btn.value = 'Creating account…';
   try {
     const { data, error } = await sb.auth.signUp({
@@ -510,16 +513,38 @@ async function doSignUp(e) {
 }
 
 // ── LOG IN ──
+// The identifier field (#li-email) accepts either an email address or
+// a username — Supabase Auth itself only ever signs in by email, so a
+// username has to be resolved to its account's email first. That
+// lookup is done server-side by the email_for_login() RPC (see
+// supabase/username_login.sql): it's a SECURITY DEFINER function
+// because the browser's anon key has no read access to auth.users
+// directly (profiles doesn't store email at all — see
+// add_age_gender.sql's neighbor comments on that). Simple '@' check
+// mirrors how every "username or email" login field decides which
+// one it's looking at — usernames are validated elsewhere (signup) to
+// disallow '@' entirely, so this is unambiguous.
+async function resolveLoginEmail(identifier) {
+  if (identifier.includes('@')) return identifier;
+  const { data, error } = await sb.rpc('email_for_login', { p_username: identifier });
+  if (error || !data) throw new Error('Incorrect username or password.');
+  return data;
+}
+
 async function doLogIn(e) {
   e?.preventDefault();
-  const email    = document.getElementById('li-email').value.trim();
-  const password = document.getElementById('li-password').value;
+  const identifier = document.getElementById('li-email').value.trim();
+  const password    = document.getElementById('li-password').value;
   const btn = document.getElementById('li-btn');
   const errEl = document.getElementById('li-err');
   clearErr(errEl);
 
+  if (!ensureCaptchaRevealed('li-captcha')) return;
+  if (!(await verifyHuman('li-captcha', errEl))) return;
+
   btn.disabled = true; btn.value = 'Logging in…';
   try {
+    const email = await resolveLoginEmail(identifier);
     const { data, error } = await sb.auth.signInWithPassword({ email, password });
     if (error) throw error;
 

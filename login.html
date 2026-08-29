@@ -107,10 +107,10 @@
 <div class="errmsg" id="li-err" style="display:none;"></div>
 <form id="li-form" onsubmit="doLogIn(event)">
 <div class="auth-field">
-<label data-i18n="auth.email" for="li-email">Email</label>
+<label data-i18n="auth.emailOrUsername" for="li-email">Email or username</label>
 <div class="auth-input-wrap">
 <span class="auth-fi"><svg viewbox="0 0 24 24"><path d="M4 6h16v12H4z"></path><path d="m4 7 8 6 8-6"></path></svg></span>
-<input autocomplete="email" id="li-email" placeholder="you@example.com" required="" type="email"/>
+<input autocomplete="username" id="li-email" placeholder="you@example.com or username" required="" type="text"/>
 </div>
 </div>
 <div class="auth-field">
@@ -120,6 +120,19 @@
 <input autocomplete="current-password" id="li-password" placeholder="••••••••" required="" type="password"/>
 </div>
 <div class="auth-forgot"><a href="/help/managing-your-account/login-issues">Forgot password?</a></div>
+</div>
+<div id="li-captcha" class="captcha-card" style="display:none;">
+<div class="captcha-card-head">
+<span class="captcha-card-icon">
+<svg class="cci-shield" viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6l7-3Z"></path><path d="m9 12 2 2 4-4"></path></svg>
+<svg class="cci-check" viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 9.5 17 19 7"></path></svg>
+</span>
+<span class="captcha-card-text">
+<span class="captcha-card-title">Quick security check</span>
+<span class="captcha-card-sub">Confirm you're human to continue</span>
+</span>
+</div>
+<div class="captcha-card-body"><div class="captcha-skeleton"></div></div>
 </div>
 <input class="auth-submit" id="li-btn" type="submit" value="Sign In"/>
 </form>
