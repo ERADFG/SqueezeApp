@@ -126,6 +126,32 @@ const GCV_NAME_MAX = 20;
 // failed with "new row for relation conversations violates check
 // constraint conversations_desc_len_chk" on create/edit.
 const GCV_DESC_MAX = 50;
+
+// ── PUBLIC NAME UNIQUENESS — public groups/channels are discoverable
+// and joinable by name (same as a username), so two of them sharing a
+// name is confusing/ambiguous the same way two accounts sharing a
+// username would be. Private groups aren't discoverable by name at
+// all (you can only get in via invite), so this only checks when
+// "Public" is on. excludeId lets the edit-details save skip matching
+// against itself. Backed by a case-insensitive unique index — see
+// supabase/chat_unique_public_names.sql — so this pre-check is just
+// for a fast, friendly message; isDuplicateNameError() below is the
+// real guard against a race between two people claiming the same
+// name at once.
+async function isPublicNameTaken(name, excludeId) {
+  let q = sb.from('conversations').select('id').eq('is_public', true).ilike('name', name).limit(1);
+  if (excludeId) q = q.neq('id', excludeId);
+  const { data } = await q;
+  return !!(data && data.length);
+}
+// Postgres unique_violation on the conversations_public_name_uniq
+// index — surfaced as a friendly message instead of the raw DB error
+// (same idea as the existing "That username or email is already
+// taken." message in auth.js) if the pre-check above raced with
+// someone else claiming the name in between.
+function isDuplicateNameError(error) {
+  return error?.code === '23505' && /conversations_public_name/i.test(error.message || '');
+}
 // Camera glyph for the group/channel avatar picker overlay — mirrors
 // the .cc-avatar-pick / .cc-banner-pick icon used for community/List
 // pictures (js/common.js's createCommunity wizard), kept local here
@@ -868,6 +894,12 @@ async function createConversation() {
   const btn = document.getElementById('gcv-create-btn');
   btn.disabled = true;
 
+  if (isPublic && await isPublicNameTaken(name)) {
+    showErr(errEl, 'That name is already taken by another public group or channel. Try another.');
+    btn.disabled = false;
+    return;
+  }
+
   let avatar_url = null;
   if (gcvAvatarBlob) {
     try {
@@ -882,7 +914,11 @@ async function createConversation() {
   const { data: conv, error } = await sb.from('conversations')
     .insert({ kind, name, description: description || null, is_public: isPublic, avatar_url })
     .select('id').single();
-  if (error || !conv) { showErr(errEl, error?.message || 'Could not create it — try again.'); btn.disabled = false; return; }
+  if (error || !conv) {
+    showErr(errEl, isDuplicateNameError(error) ? 'That name is already taken by another public group or channel. Try another.' : (error?.message || 'Could not create it — try again.'));
+    btn.disabled = false;
+    return;
+  }
 
   const extraMembers = [...gcvPickedMembers.values()];
   if (extraMembers.length) {
@@ -2243,8 +2279,12 @@ async function giSaveDetails() {
   if (!name) { showErr(errEl, 'Give it a name first.'); return; }
   if (name.length > GCV_NAME_MAX) { showErr(errEl, `Name must be ${GCV_NAME_MAX} characters or less.`); return; }
   if (description.length > GCV_DESC_MAX) { showErr(errEl, `Description must be ${GCV_DESC_MAX} characters or less.`); return; }
+  if (is_public && (name.toLowerCase() !== chatGroup.name.toLowerCase() || !chatGroup.is_public) && await isPublicNameTaken(name, chatGroup.id)) {
+    showErr(errEl, 'That name is already taken by another public group or channel. Try another.');
+    return;
+  }
   const { error } = await sb.from('conversations').update({ name, description: description || null, is_public }).eq('id', chatGroup.id);
-  if (error) { showErr(errEl, error.message || 'Could not save changes.'); return; }
+  if (error) { showErr(errEl, isDuplicateNameError(error) ? 'That name is already taken by another public group or channel. Try another.' : (error.message || 'Could not save changes.')); return; }
   chatGroup.name = name;
   chatGroup.description = description || null;
   chatGroup.is_public = is_public;

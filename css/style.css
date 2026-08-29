@@ -4090,9 +4090,15 @@ body.chat-thread-open #chat-fab { display:none; }
    Description box all sat right on top of each other. Widen the
    gaps in this panel only, so the create-group modal is untouched. */
 #gi-details-edit .gcv-field { margin-bottom:20px; }
-#gi-details-edit .gcv-charcount { margin-top:6px; }
+/* Centered to match .gi-hdr's centered avatar/name above it — these
+   used to inherit .gcv-charcount's text-align:right (tuned for the
+   left-aligned "New group/channel" wizard) and .gi-edit-actions'
+   justify-content:flex-end, which pinned the char counters and the
+   Cancel/Save buttons over on the right, out of step with everything
+   else in this centered panel. */
+#gi-details-edit .gcv-charcount { margin-top:6px; text-align:center; }
 #gi-details-edit .gcv-toggle-row { padding-top:8px; }
-.gi-edit-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:6px; }
+.gi-edit-actions { display:flex; justify-content:center; gap:8px; margin-top:6px; }
 .gi-edit-cancel, .gi-edit-save {
   border:none; border-radius:999px; padding:7px 14px; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer;
 }
