@@ -167,6 +167,13 @@ async function renderAuthArea() {
     return;
   }
 
+  // Remembers this account on this device for the tab bar's
+  // long-press account switcher — see upsertSavedAccount() in
+  // common.js. Placed here (past the IP-ban/suspension early-returns
+  // above) so only accounts that actually resolved to a clean, usable
+  // session ever land in the switcher.
+  upsertSavedAccount(session, currentProfile);
+
   const uname = currentProfile?.username || 'user';
   const avatar = avatarUrl(currentProfile?.avatar_url);
   renderSideNav(); renderMobileChrome();
@@ -188,6 +195,7 @@ async function renderAuthArea() {
       <div class="acct-menu" id="acct-menu">
         <a href="${profileUrl(uname)}">My Profile</a>
         <a href="editprofile.html">Edit Profile</a>
+        <button onclick="toggleAcctMenu();openAccountSwitchSheet();">Switch accounts</button>
         <button onclick="logOut()">Log out</button>
       </div>
     </div>`;

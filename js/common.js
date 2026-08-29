@@ -1226,6 +1226,199 @@ document.addEventListener('click', (e) => {
 });
 
 // ─────────────────────────────────────────────────────────────
+// ACCOUNT SWITCHER — holding down the tab bar's Profile icon (the
+// same gesture Instagram uses on its own bottom-nav avatar) pops an
+// X/IG-style sheet listing every account that's ever logged in on
+// *this device*, so switching between them is one tap instead of a
+// full log out → log back in round trip. Every account that
+// successfully authenticates gets remembered here — see
+// upsertSavedAccount(), called from auth.js's renderAuthArea() once a
+// session+profile resolve cleanly.
+//
+// Storage: localStorage, one row per account (id/username/display
+// name/avatar + that account's current access+refresh token pair so
+// switching can call sb.auth.setSession() directly instead of asking
+// for a password again). Hard-capped at ACCT_SWITCH_MAX (10, per
+// spec) — once full, upsertSavedAccount() silently leaves a brand
+// new account out of the list (it's still logged in and usable, just
+// not fast-switchable) rather than quietly evicting an old one, and
+// the sheet's own "Add account" row turns into an explicit "limit
+// reached" notice so the cap is never a surprise. The small "×" on
+// each non-active row is the only way to free a slot.
+// ─────────────────────────────────────────────────────────────
+const ACCT_SWITCH_KEY = 'ii-saved-accounts';
+const ACCT_SWITCH_MAX = 10;
+
+function loadSavedAccounts() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(ACCT_SWITCH_KEY) || '[]');
+    return Array.isArray(raw) ? raw : [];
+  } catch (e) { return []; }
+}
+function saveSavedAccounts(list) {
+  try { localStorage.setItem(ACCT_SWITCH_KEY, JSON.stringify(list.slice(0, ACCT_SWITCH_MAX))); } catch (e) {}
+}
+
+// Called once per successful renderAuthArea() resolution (real
+// session + profile, already past the IP-ban/suspension checks).
+// Refreshes that account's saved row (name/avatar/tokens can all
+// change between visits) and bumps it to the front — most-recently-
+// used first, so the sheet always opens on a useful order. A
+// genuinely new account only gets added while there's room under the
+// strict 10 cap; see the block comment above for why it isn't
+// auto-evicted instead.
+function upsertSavedAccount(session, profile) {
+  if (!session?.user?.id) return;
+  const list = loadSavedAccounts();
+  const idx = list.findIndex(a => a.id === session.user.id);
+  const row = {
+    id: session.user.id,
+    username: profile?.username || '',
+    display_name: profile?.display_name || '',
+    avatar_url: profile?.avatar_url || '',
+    verified: !!profile?.verified,
+    verification_type: profile?.verification_type || null,
+    access_token: session.access_token,
+    refresh_token: session.refresh_token,
+  };
+  if (idx !== -1) {
+    list.splice(idx, 1);
+    list.unshift(row);
+  } else if (list.length < ACCT_SWITCH_MAX) {
+    list.unshift(row);
+  } // else: at the cap and this is a not-yet-saved account — leave it unsaved, don't evict.
+  saveSavedAccounts(list);
+}
+
+function removeSavedAccount(id) {
+  saveSavedAccounts(loadSavedAccounts().filter(a => a.id !== id));
+  renderAccountSwitchSheet();
+}
+
+function acctSwitchSheetEl() {
+  let bg = document.getElementById('acctswitch-sheet-bg');
+  if (!bg) {
+    bg = document.createElement('div');
+    bg.id = 'acctswitch-sheet-bg';
+    bg.className = 'acctswitch-sheet-bg';
+    bg.onclick = (e) => { if (e.target === bg) closeAccountSwitchSheet(); };
+    document.body.appendChild(bg);
+  }
+  return bg;
+}
+
+function renderAccountSwitchSheet() {
+  const bg = acctSwitchSheetEl();
+  const list = loadSavedAccounts();
+  const activeId = currentSession?.user?.id || null;
+
+  const rows = list.map(a => {
+    const isActive = a.id === activeId;
+    const badge = a.verified ? vBadge({ verified: true, verification_type: a.verification_type }) : '';
+    const trailing = isActive
+      ? `<span class="acctswitch-row-check">${CHECK_ICON}</span>`
+      : `<button class="acctswitch-remove" onclick="event.stopPropagation();removeSavedAccount('${a.id}');" aria-label="Remove account" title="Remove">&times;</button>`;
+    return `<div class="acctswitch-row${isActive ? ' active' : ''}" role="menuitem" onclick="${isActive ? '' : `switchAccount('${a.id}');`}">
+      <img class="avatar${a.verification_type === 'gold' ? ' avatar-square' : ''}" src="${esc(avatarUrl(a.avatar_url))}" alt="" loading="lazy" decoding="async">
+      <span class="acctswitch-row-txt">
+        <span class="acctswitch-row-name">${esc(a.display_name || a.username || 'Account')}${badge}</span>
+        <span class="acctswitch-row-handle">@${esc(a.username || '')}</span>
+      </span>
+      ${trailing}
+    </div>`;
+  }).join('');
+
+  const lp = esPrefix();
+  const addRow = list.length >= ACCT_SWITCH_MAX
+    ? `<div class="acctswitch-row acctswitch-limit" role="note">
+        <span class="acctswitch-row-txt">
+          <span class="acctswitch-row-name">Account limit reached (${ACCT_SWITCH_MAX}/${ACCT_SWITCH_MAX})</span>
+          <span class="acctswitch-row-handle">Remove an account above to add another</span>
+        </span>
+      </div>`
+    : `<div class="acctswitch-row acctswitch-add" role="menuitem" onclick="closeAccountSwitchSheet();location.href='${lp}/login';">
+        <span class="acctswitch-add-icon">${PLUS_ICON}</span>
+        <span class="acctswitch-row-txt"><span class="acctswitch-row-name">Add account</span></span>
+      </div>`;
+
+  bg.innerHTML = `<div class="acctswitch-sheet" role="menu" aria-label="Switch accounts">
+    <div class="acctswitch-title">Switch accounts</div>
+    <div class="acctswitch-list">${rows}</div>
+    ${addRow}
+  </div>`;
+}
+
+function openAccountSwitchSheet() {
+  if (!currentSession) return;
+  renderAccountSwitchSheet();
+  acctSwitchSheetEl().classList.add('open');
+  document.body.classList.add('oc-sheet-open');
+}
+function closeAccountSwitchSheet() {
+  document.getElementById('acctswitch-sheet-bg')?.classList.remove('open');
+  document.body.classList.remove('oc-sheet-open');
+}
+
+// Swaps the live Supabase session to a saved account's tokens —
+// setSession() re-authenticates in place and fires onAuthStateChange,
+// which auth.js already listens for. Once it lands, a full
+// navigation to the home feed (same as doLogIn()) guarantees every
+// page's own cached per-user state (likes, bookmarks, feed) repaints
+// clean for whoever's now signed in, instead of leaving stale bits
+// from the previous account on screen.
+async function switchAccount(id) {
+  if (!currentSession || id === currentSession.user.id) { closeAccountSwitchSheet(); return; }
+  const list = loadSavedAccounts();
+  const acct = list.find(a => a.id === id);
+  if (!acct) { closeAccountSwitchSheet(); return; }
+  closeAccountSwitchSheet();
+  try {
+    const { error } = await sb.auth.setSession({ access_token: acct.access_token, refresh_token: acct.refresh_token });
+    if (error) throw error;
+    location.href = esPrefix() || '/';
+  } catch (e) {
+    console.error('Account switch failed:', e);
+    removeSavedAccount(id);
+    toast("That account's session expired — log in again to switch to it.", 'error');
+  }
+}
+
+// Long-press (mirrors Instagram's own bottom-nav gesture) on the tab
+// bar's Profile icon. Delegated on document rather than bound to the
+// anchor itself since renderMobileChrome() tears down and rebuilds
+// #m-tabbar's markup on every page/nav — a direct listener would be
+// lost the moment that happens.
+let acctLpTimer = null, acctLpFired = false, acctLpX = 0, acctLpY = 0;
+const ACCT_LP_MS = 500, ACCT_LP_TOL = 10;
+document.addEventListener('pointerdown', (e) => {
+  if (!e.target.closest || !e.target.closest('.m-tab-avatar') || !currentSession) return;
+  acctLpFired = false;
+  acctLpX = e.clientX; acctLpY = e.clientY;
+  clearTimeout(acctLpTimer);
+  acctLpTimer = setTimeout(() => {
+    acctLpFired = true;
+    if (navigator.vibrate) navigator.vibrate(10);
+    openAccountSwitchSheet();
+  }, ACCT_LP_MS);
+});
+document.addEventListener('pointermove', (e) => {
+  if (!acctLpTimer) return;
+  if (Math.abs(e.clientX - acctLpX) > ACCT_LP_TOL || Math.abs(e.clientY - acctLpY) > ACCT_LP_TOL) {
+    clearTimeout(acctLpTimer); acctLpTimer = null;
+  }
+});
+['pointerup', 'pointercancel'].forEach(ev => document.addEventListener(ev, () => { clearTimeout(acctLpTimer); acctLpTimer = null; }));
+// The long-press already opened the sheet by the time the browser's
+// own click fires right after pointerup — swallow just that one click
+// so it doesn't also navigate to the profile page out from under the
+// sheet.
+document.addEventListener('click', (e) => {
+  if (acctLpFired && e.target.closest && e.target.closest('.m-tab-avatar')) {
+    e.preventDefault(); e.stopPropagation(); acctLpFired = false;
+  }
+}, true);
+
+// ─────────────────────────────────────────────────────────────
 // GLOBAL COMPOSE MODAL — the sidebar "Post" button, mobile top-bar
 // "Post" pill, and mobile "+" FAB all open this, same as tapping
 // the Post button in the real X app pops a compose modal over

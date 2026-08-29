@@ -3764,6 +3764,61 @@ body.chat-thread-open #chat-fab { display:none; }
   .chat-fab-sheet button { padding:13px 16px; font-size:15px; }
 }
 
+/* ── Account switcher sheet — long-press the tab bar's Profile icon
+   (mobile) or "Switch accounts" in the desktop avatar dropdown to
+   open. Same popover/bottom-sheet shell as .chat-fab-sheet above,
+   listing every account saved on this device (localStorage, capped
+   strictly at 10 — see ACCT_SWITCH_MAX in js/common.js) for one-tap
+   switching. */
+.acctswitch-sheet-bg { display:none; position:fixed; inset:0; z-index:1000; background:rgba(91,112,131,0); transition:background-color .2s ease; }
+.acctswitch-sheet-bg.open { display:block; background:rgba(91,112,131,.4); }
+.acctswitch-sheet {
+  position:fixed; right:24px; bottom:96px; z-index:1001; width:280px; max-height:min(70vh,520px);
+  background:var(--cream-card); border:1px solid var(--line); border-radius:18px; box-shadow:var(--shadow-pop);
+  overflow:hidden; padding:6px; opacity:0; visibility:hidden; pointer-events:none;
+  display:flex; flex-direction:column;
+  transform:translateY(6px) scale(.97); transform-origin:bottom right;
+  transition:opacity .15s ease, transform .15s cubic-bezier(.2,.8,.2,1), visibility 0s linear .15s;
+}
+.acctswitch-sheet-bg.open .acctswitch-sheet {
+  opacity:1; visibility:visible; pointer-events:auto; transform:translateY(0) scale(1);
+  transition:opacity .16s ease, transform .16s cubic-bezier(.2,.8,.2,1);
+}
+.acctswitch-title { font-size:12px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.03em; padding:10px 12px 6px; flex:none; }
+.acctswitch-list { overflow-y:auto; flex:1 1 auto; }
+.acctswitch-row { display:flex; align-items:center; gap:10px; width:100%; text-align:left; border-radius:12px; padding:9px 10px; transition:background .1s ease; cursor:pointer; }
+.acctswitch-row:hover, .acctswitch-row.active { background:var(--hover-bg); }
+.acctswitch-row.acctswitch-limit, .acctswitch-row.acctswitch-limit:hover { cursor:default; opacity:.65; background:none; }
+.acctswitch-row .avatar { width:34px; height:34px; flex:none; }
+.acctswitch-row-txt { flex:1 1 auto; min-width:0; display:flex; flex-direction:column; }
+.acctswitch-row-name { font-size:14px; font-weight:700; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:flex; align-items:center; gap:3px; }
+.acctswitch-row-handle { font-size:12px; font-weight:500; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.acctswitch-row-check { flex:none; width:18px; height:18px; color:var(--maroon); }
+.acctswitch-row-check svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; }
+.acctswitch-remove {
+  flex:none; width:24px; height:24px; border-radius:50%; border:none; background:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:18px; line-height:1; padding:0;
+  transition:background .1s ease, color .1s ease;
+}
+.acctswitch-remove:hover { background:rgba(179,53,47,.12); color:#b3352f; }
+.acctswitch-add { color:var(--maroon); }
+.acctswitch-add-icon { flex:none; width:34px; height:34px; border-radius:50%; background:var(--hover-bg); display:flex; align-items:center; justify-content:center; }
+.acctswitch-add-icon svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; }
+@media (max-width:600px) {
+  .acctswitch-sheet {
+    right:0; left:0; bottom:0; width:auto; max-height:75vh; border-radius:20px 20px 0 0;
+    padding-bottom:calc(10px + env(safe-area-inset-bottom, 0px));
+    transform:translateY(100%); transform-origin:bottom center;
+  }
+  .acctswitch-sheet-bg.open .acctswitch-sheet { transform:translateY(0); }
+  .acctswitch-sheet::before { content:""; display:block; width:36px; height:4px; border-radius:99px; background:var(--div); margin:8px auto 6px; flex:none; }
+  .acctswitch-row { padding:11px 12px; }
+}
+/* Long-press affordance on the tab bar's Profile icon — stops the
+   hold gesture from triggering text-select/native-callout/context
+   menus instead of the account switcher. */
+.m-tab-avatar { -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; touch-action:manipulation; }
+
 /* ── create group/channel modal — "modern card" redesign, styled
    after a WeTransfer-style create-transfer sheet: bold oversized
    title with a filled circular close button, a segmented Group/
