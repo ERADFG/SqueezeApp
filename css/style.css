@@ -691,7 +691,7 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
 .pf-ic:disabled { color:#9EC8DE; cursor:default; }
 
 input[type="text"], input[type="email"], input[type="password"], textarea, select {
-  font-family:inherit; font-size:15px; border-radius:var(--r-sm);
+  font-family:inherit; font-size:16px; border-radius:var(--r-sm);
   border:1px solid var(--border-input); padding:8px 10px; background:var(--input-bg); width:100%; color:var(--ink);
 }
 input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus, textarea:focus, select:focus { border-color:var(--maroon); outline:none; box-shadow:0 0 0 1px var(--maroon); }
@@ -1275,7 +1275,7 @@ select {
 .xsearch:focus-within { border-color:var(--maroon); background:var(--bg); }
 .xsearch svg { width:16px; height:16px; color:var(--muted); flex:none; transition:color .15s ease; }
 .xsearch:focus-within svg { color:var(--maroon); }
-.xsearch input { background:transparent; border:none; outline:none; font-size:15px; width:100%; color:var(--ink); }
+.xsearch input { background:transparent; border:none; outline:none; font-size:16px; width:100%; color:var(--ink); }
 .xsearch input::placeholder { color:var(--muted); }
 
 /* ── POST CARD (tweet-style) ── */
