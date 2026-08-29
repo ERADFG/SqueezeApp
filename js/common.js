@@ -639,29 +639,34 @@ const ICON = {
 // "which link is Profile" / unread-count logic doesn't get copy-pasted
 // across every HTML file. auth.js calls this once it knows who (if
 // anyone) is logged in.
+// Minimalist/modern pass: chunkier uniform strokes, generous rounded
+// corners, blunt rather than sharp terminals — matches the squircle
+// "flower" settings glyph and continuous-outline home glyph used as
+// the style reference for this set. home/gear are fully redesigned;
+// the rest are re-drafted with the same rounder, bolder language.
 const NAV_ICON = {
-  home:     '<svg viewBox="0 0 24 24"><path d="M4 12.3 11.15 5.7a1.3 1.3 0 0 1 1.7 0L20 12.3"/><path d="M6.3 10.6V18a1.6 1.6 0 0 0 1.6 1.6h8.2A1.6 1.6 0 0 0 17.7 18v-7.4"/><path d="M10 19.5v-4.2c0-.75.65-1.3 1.4-1.3h1.2c.75 0 1.4.55 1.4 1.3v4.2"/></svg>',
-  search:   '<svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.75"/><path d="m20 20-4.55-4.55"/></svg>',
-  bell:     '<svg viewBox="0 0 24 24"><path d="M12 3.25a5.75 5.75 0 0 0-5.75 5.75v2.6c0 .85-.32 1.67-.9 2.3l-1.05 1.13c-.9.97-.2 2.57 1.13 2.57h13.14c1.33 0 2.03-1.6 1.13-2.57l-1.05-1.13a3.4 3.4 0 0 1-.9-2.3V9A5.75 5.75 0 0 0 12 3.25Z"/><path d="M9.6 19.3a2.4 2.4 0 0 0 4.8 0"/></svg>',
-  chat:     '<svg viewBox="0 0 24 24"><path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2Z"/><path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"/></svg>',
-  bookmark: '<svg viewBox="0 0 24 24"><path d="M6.5 5.3A1.8 1.8 0 0 1 8.3 3.5h7.4a1.8 1.8 0 0 1 1.8 1.8V20a.6.6 0 0 1-.95.48L12 16.3l-4.55 4.18A.6.6 0 0 1 6.5 20V5.3Z"/></svg>',
-  user:     '<svg viewBox="0 0 24 24"><circle cx="12" cy="8.2" r="3.75"/><path d="M4.5 19.6c1.1-4.15 3.9-6.15 7.5-6.15s6.4 2 7.5 6.15"/></svg>',
-  gear:     '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.15"/><path d="M8.55 6.02 9.16 3.25h5.68l.61 2.77 2.71-.86L21 10.09 18.9 12l2.1 1.91-2.84 4.93-2.71-.86-.61 2.77H9.16l-.61-2.77-2.71.86L3 13.91 5.1 12 3 10.09l2.84-4.93 2.71.86Z"/></svg>',
-  doc:      '<svg viewBox="0 0 24 24"><path d="M6.5 3.5h8l4.5 4.5v11.5a1 1 0 0 1-1 1h-11.5a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z"/><path d="M14.5 3.5V8h4.5"/><path d="M8.5 13h7M8.5 16.5h7"/></svg>',
+  home:     '<svg viewBox="0 0 24 24"><path d="M5.6 19.2V12.4C5.6 11.6 5.95 10.85 6.55 10.35L11.15 6.35C11.65 5.9 12.35 5.9 12.85 6.35L17.45 10.35C18.05 10.85 18.4 11.6 18.4 12.4V19.2"/><path d="M9.9 19.2V14.6C9.9 13.5 10.6 12.9 11.6 12.9H12.4C13.4 12.9 14.1 13.5 14.1 14.6V19.2"/></svg>',
+  search:   '<svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.9"/><path d="m19.5 19.5-4.35-4.35"/></svg>',
+  bell:     '<svg viewBox="0 0 24 24"><path d="M12 3.1a5.9 5.9 0 0 0-5.9 5.9v2.5c0 .95-.35 1.85-1 2.55l-.85.95c-1 1.1-.2 2.85 1.28 2.85h13.94c1.48 0 2.28-1.75 1.28-2.85l-.85-.95c-.65-.7-1-1.6-1-2.55V9A5.9 5.9 0 0 0 12 3.1Z"/><path d="M9.3 19.5a2.7 2.7 0 0 0 5.4 0"/></svg>',
+  chat:     '<svg viewBox="0 0 24 24"><path d="M14.3 8.6a2.3 2.3 0 0 1-2.3 2.3H6.4l-3.65 3.4V4.3a2.3 2.3 0 0 1 2.3-2.3h6.95a2.3 2.3 0 0 1 2.3 2.3Z"/><path d="M18.1 8.6H20a2 2 0 0 1 2 2v10.5l-3.65-3.4h-5.75a2 2 0 0 1-2-2v-.7"/></svg>',
+  bookmark: '<svg viewBox="0 0 24 24"><path d="M6.4 5.6A2.2 2.2 0 0 1 8.6 3.4h6.8a2.2 2.2 0 0 1 2.2 2.2V20a.75.75 0 0 1-1.2.6L12 16.7l-4.4 3.9A.75.75 0 0 1 6.4 20Z"/></svg>',
+  user:     '<svg viewBox="0 0 24 24"><circle cx="12" cy="8.1" r="4"/><path d="M4.3 19.7c1.05-4.3 3.95-6.4 7.7-6.4s6.65 2.1 7.7 6.4"/></svg>',
+  gear:     '<svg viewBox="0 0 24 24"><path d="M12.00 3.40C11.15 3.40 10.45 5.39 9.44 5.81C8.42 6.23 6.52 5.31 5.92 5.92C5.31 6.52 6.23 8.42 5.81 9.44C5.39 10.45 3.40 11.15 3.40 12.00C3.40 12.85 5.39 13.55 5.81 14.56C6.23 15.58 5.31 17.48 5.92 18.08C6.52 18.69 8.42 17.77 9.44 18.19C10.45 18.61 11.15 20.60 12.00 20.60C12.85 20.60 13.55 18.61 14.56 18.19C15.58 17.77 17.48 18.69 18.08 18.08C18.69 17.48 17.77 15.58 18.19 14.56C18.61 13.55 20.60 12.85 20.60 12.00C20.60 11.15 18.61 10.45 18.19 9.44C17.77 8.42 18.69 6.52 18.08 5.92C17.48 5.31 15.58 6.23 14.56 5.81C13.55 5.39 12.85 3.40 12.00 3.40Z"/><circle cx="12" cy="12" r="3.3"/></svg>',
+  doc:      '<svg viewBox="0 0 24 24"><path d="M6.5 3.5h7.2a1.7 1.7 0 0 1 1.2.5l3.6 3.6a1.7 1.7 0 0 1 .5 1.2V19a1.6 1.6 0 0 1-1.6 1.6h-10.9a1.6 1.6 0 0 1-1.6-1.6V5.1a1.6 1.6 0 0 1 1.6-1.6Z"/><path d="M14.3 3.6V7.4a1.5 1.5 0 0 0 1.5 1.5h3.8"/><path d="M8.3 13.2h7.4M8.3 16.6h5.2"/></svg>',
   // Open book — used for Blog so it reads distinctly from the
   // folded-corner "doc" icon shared by Rules/Terms.
-  book:     '<svg viewBox="0 0 24 24"><path d="M4 5.3c2.5-1.05 5.15-1.05 8 .3v13c-2.85-1.35-5.5-1.35-8-.3Z"/><path d="M20 5.3c-2.5-1.05-5.15-1.05-8 .3v13c2.85-1.35 5.5-1.35 8-.3Z"/></svg>',
-  dots:     '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.8" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.8" fill="currentColor" stroke="none"/></svg>',
-  people:   '<svg viewBox="0 0 24 24"><circle cx="9" cy="8.3" r="3.3"/><path d="M2.8 20c.9-3.7 3.2-5.6 6.2-5.6s5.3 1.9 6.2 5.6"/><path d="M15.6 5.3a3.2 3.2 0 0 1 0 6.1"/><path d="M16.2 14.8c2.4.5 4.1 2.2 4.9 5.2"/></svg>',
-  list:     '<svg viewBox="0 0 24 24"><rect x="4" y="5.5" width="3" height="3" rx="0.8"/><rect x="4" y="10.5" width="3" height="3" rx="0.8"/><rect x="4" y="15.5" width="3" height="3" rx="0.8"/><path d="M10 7h10M10 12h10M10 17h10"/></svg>',
-  article:  '<svg viewBox="0 0 24 24"><path d="M5.5 4.5h13a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-13a1 1 0 0 1 1-1Z"/><path d="M8 8.5h8M8 12h8M8 15.5h5"/></svg>',
-  info:     '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg>',
-  mail:     '<svg viewBox="0 0 24 24"><rect x="3.5" y="5.5" width="17" height="13" rx="2.5"/><path d="m4.3 6.7 7.7 6 7.7-6"/></svg>',
-  shield:   '<svg viewBox="0 0 24 24"><path d="M12 3.3 5.3 5.9v5.4c0 4.7 2.9 7.9 6.7 8.9 3.8-1 6.7-4.2 6.7-8.9V5.9Z"/><path d="m9 12 2 2 4-4"/></svg>',
-  globe:    '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.5 2.5 3.8 5.8 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.8-3.8-9s1.3-6.5 3.8-9Z"/></svg>',
-  palette:  '<svg viewBox="0 0 24 24"><path d="M12 3.3a8.7 8.7 0 1 0 0 17.4c1 0 1.7-.8 1.7-1.7 0-.45-.18-.86-.46-1.16-.28-.3-.46-.7-.46-1.14 0-.9.75-1.65 1.7-1.65h1.9c2.3 0 4.2-1.85 4.2-4.15 0-4.2-4.2-7.6-8.58-7.6Z"/><circle cx="7.7" cy="11.3" r="1.15" fill="currentColor" stroke="none"/><circle cx="10.3" cy="7.5" r="1.15" fill="currentColor" stroke="none"/><circle cx="15" cy="7.9" r="1.15" fill="currentColor" stroke="none"/><circle cx="17" cy="12" r="1.15" fill="currentColor" stroke="none"/></svg>',
-  help:     '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.3 9.3a2.7 2.7 0 1 1 3.9 2.4c-.7.4-1.2 1-1.2 1.8v.4"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></svg>',
-  trophy:   '<svg viewBox="0 0 24 24"><path d="M7 4.5h10v4.3c0 3.1-2.24 5.4-5 5.4s-5-2.3-5-5.4V4.5Z"/><path d="M7 5.5H4.6c0 2.4.9 4 2.85 4.4M17 5.5h2.4c0 2.4-.9 4-2.85 4.4"/><path d="M12 14.2V18M9 19.5h6"/></svg>'
+  book:     '<svg viewBox="0 0 24 24"><path d="M4 5.6c2.5-1.15 5.15-1.15 8 .3v12.8c-2.85-1.4-5.5-1.4-8-.3Z" stroke-linejoin="round"/><path d="M20 5.6c-2.5-1.15-5.15-1.15-8 .3v12.8c2.85-1.4 5.5-1.4 8-.3Z" stroke-linejoin="round"/></svg>',
+  dots:     '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="2" fill="currentColor" stroke="none"/></svg>',
+  people:   '<svg viewBox="0 0 24 24"><circle cx="9" cy="8.1" r="3.6"/><path d="M2.5 20.1c1-4 3.4-6 6.5-6s5.5 2 6.5 6"/><path d="M15.4 5a3.5 3.5 0 0 1 0 6.7"/><path d="M16.1 14.7c2.5.55 4.3 2.4 5.1 5.4"/></svg>',
+  list:     '<svg viewBox="0 0 24 24"><rect x="3.7" y="5.2" width="3.6" height="3.6" rx="1.3"/><rect x="3.7" y="10.2" width="3.6" height="3.6" rx="1.3"/><rect x="3.7" y="15.2" width="3.6" height="3.6" rx="1.3"/><path d="M10.5 7h10M10.5 12h10M10.5 17h10"/></svg>',
+  article:  '<svg viewBox="0 0 24 24"><rect x="4.5" y="3.5" width="15" height="17" rx="2.4"/><path d="M8 8.3h8M8 12h8M8 15.7h5"/></svg>',
+  info:     '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.1"/><path d="M12 10.8v6.1"/><circle cx="12" cy="7.4" r="1.15" fill="currentColor" stroke="none"/></svg>',
+  mail:     '<svg viewBox="0 0 24 24"><rect x="3.2" y="5.2" width="17.6" height="13.6" rx="3.2"/><path d="m4 6.5 7.55 5.9a.75.75 0 0 0 .9 0L20 6.5"/></svg>',
+  shield:   '<svg viewBox="0 0 24 24"><path d="M12 3.1 5.1 5.75v5.55c0 4.85 3 8.15 6.9 9.2 3.9-1.05 6.9-4.35 6.9-9.2V5.75Z" stroke-linejoin="round"/><path d="m8.8 12.1 2.1 2.1 4.3-4.3"/></svg>',
+  globe:    '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.1"/><path d="M2.9 12h18.2"/><path d="M12 2.9c2.6 2.6 3.95 6 3.95 9.1s-1.35 6.5-3.95 9.1c-2.6-2.6-3.95-6-3.95-9.1S9.4 5.5 12 2.9Z"/></svg>',
+  palette:  '<svg viewBox="0 0 24 24"><path d="M12 3.1a8.9 8.9 0 1 0 0 17.8c1.05 0 1.85-.85 1.85-1.85 0-.5-.2-.95-.5-1.28-.32-.32-.5-.76-.5-1.24 0-.98.8-1.78 1.85-1.78h2c2.45 0 4.4-1.95 4.4-4.4C21 6.35 16.6 3.1 12 3.1Z" stroke-linejoin="round"/><circle cx="7.5" cy="11.2" r="1.3" fill="currentColor" stroke="none"/><circle cx="10.2" cy="7.2" r="1.3" fill="currentColor" stroke="none"/><circle cx="15.1" cy="7.6" r="1.3" fill="currentColor" stroke="none"/><circle cx="17.2" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg>',
+  help:     '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.1"/><path d="M9.1 9.35a2.9 2.9 0 1 1 4.2 2.6c-.75.4-1.3 1.05-1.3 1.9v.35"/><circle cx="12" cy="17.2" r="1.15" fill="currentColor" stroke="none"/></svg>',
+  trophy:   '<svg viewBox="0 0 24 24"><path d="M6.8 4.3h10.4v4.5c0 3.25-2.35 5.65-5.2 5.65s-5.2-2.4-5.2-5.65Z" stroke-linejoin="round"/><path d="M6.8 5.4H4.2c0 2.5.95 4.2 3 4.6M17.2 5.4h2.6c0 2.5-.95 4.2-3 4.6"/><path d="M12 14.45V18.3M8.6 19.7h6.8" stroke-linecap="round"/></svg>'
 };
 
 // ── THEME — Default (light) / Dim / Lights out (dark), applied via

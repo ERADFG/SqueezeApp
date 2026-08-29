@@ -431,7 +431,7 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
 #hdr nav a:visited { color:var(--ink); }
 #hdr nav a.cur { font-weight:800; }
 #hdr nav a .navicon { width:24px; height:24px; flex:none; position:relative; display:flex; }
-#hdr nav a .navicon svg { width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; transition:transform .18s cubic-bezier(.34,1.56,.64,1), fill .12s ease; }
+#hdr nav a .navicon svg { width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:2.1; stroke-linecap:round; stroke-linejoin:round; transition:transform .18s cubic-bezier(.34,1.56,.64,1), fill .12s ease; }
 #hdr nav a.cur .navicon svg { fill:currentColor; transform:scale(1.08); }
 .navbadge { margin-left:auto; background:var(--like); color:#fff; font-size:11px; font-weight:800; line-height:1; border-radius:999px; padding:3px 6px; flex:none; }
 #hdr nav a .navicon .navbadge {
@@ -450,7 +450,7 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
 .navmore-btn:active { background:var(--hover-bg); filter:brightness(.93); }
 .navmore-btn.cur { font-weight:800; }
 .navmore-btn .navicon { width:24px; height:24px; flex:none; }
-.navmore-btn .navicon svg { width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.navmore-btn .navicon svg { width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:2.1; stroke-linecap:round; stroke-linejoin:round; }
 /* The "More" flyout reuses .acct-menu's box/animation/outside-click
    machinery wholesale (see auth.js). #more-wrap sits near the bottom
    of the nav list (just above the Post button), so opening *down*
@@ -462,7 +462,7 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
 #more-wrap .acct-menu { bottom:calc(100% + 4px); }
 #more-wrap.open .acct-menu { transform:translateY(0) scale(1); }
 .navmore-menu a, #more-menu a { display:flex; align-items:center; gap:12px; }
-.navmore-menu a svg, #more-menu a svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; flex:none; }
+.navmore-menu a svg, #more-menu a svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2.1; stroke-linecap:round; stroke-linejoin:round; flex:none; }
 
 /* Big rounded "Post" pill under the nav items, X-style */
 .sidebar-post-btn {
@@ -2659,7 +2659,7 @@ body[data-page="auth"] #m-topbar, body[data-page="auth"] #m-tabbar, body[data-pa
     color:var(--muted); text-decoration:none;
     transition:color .15s ease;
   }
-  #m-tabbar a svg { width:24px; height:24px; flex:none; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  #m-tabbar a svg { width:24px; height:24px; flex:none; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
   /* Icon-only bar, same as Bluesky's — the active tab is just a
      bolder/filled icon in ink, no growing pill or revealed label. */
   #m-tabbar a .m-tab-label { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
@@ -2829,7 +2829,7 @@ body[data-page="auth"] #m-topbar, body[data-page="auth"] #m-tabbar, body[data-pa
   }
   .m-drawer-menu a:hover, .m-drawer-menu button:hover { background:var(--hover-bg); text-decoration:none; }
   .m-drawer-menu a:active, .m-drawer-menu button:active { background:var(--maroon-tint); }
-  .m-drawer-menu svg { width:23px; height:23px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+  .m-drawer-menu svg { width:23px; height:23px; fill:none; stroke:currentColor; stroke-width:2.1; stroke-linecap:round; stroke-linejoin:round; flex:none; }
   .m-drawer-cta { display:flex; flex-direction:column; gap:10px; margin-top:8px; }
   .m-drawer-cta a { text-align:center; padding:10px; border-radius:999px; font-weight:800; font-size:14.5px; text-decoration:none; }
   .m-drawer-cta a.cta-primary { background:var(--ink); color:var(--bg); }
@@ -3522,7 +3522,7 @@ a.auth-submit { text-align:center; text-decoration:none; }
 }
 .profile-icon-btn:hover { background:var(--hover-bg); border-color:var(--muted); }
 .profile-icon-btn:active { background:var(--maroon-tint); }
-.profile-icon-btn svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.profile-icon-btn svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2.1; stroke-linecap:round; stroke-linejoin:round; }
 .profile-hdr-actions .pc-menu-wrap { margin-left:0; }
 .profile-hdr-actions .pc-menu-dd { min-width:220px; }
 
@@ -4379,7 +4379,7 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 }
 .settings-menu-row:first-child { border-top:none; }
 .settings-menu-row .smr-icon { flex:none; width:22px; height:22px; color:var(--muted); }
-.settings-menu-row .smr-icon svg { width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:1.8; }
+.settings-menu-row .smr-icon svg { width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:2.1; stroke-linecap:round; stroke-linejoin:round; }
 .settings-menu-row .smr-label { flex:1; }
 .settings-menu-row .smr-chevron { flex:none; width:18px; height:18px; color:var(--muted); transition:transform .15s ease; }
 .settings-menu-row .smr-chevron svg { width:100%; height:100%; }
@@ -5293,7 +5293,7 @@ html[data-theme="dim"], html[data-theme="dark"] {
   transition:background-color .15s ease, color .15s ease;
 }
 .help-card:hover .help-card-icon { background:var(--cat-c,var(--ink)); color:#fff; border-color:transparent; }
-.help-card-icon svg { width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:1.8; }
+.help-card-icon svg { width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:2.1; stroke-linecap:round; stroke-linejoin:round; }
 .help-card h3 { margin:0 0 5px; font-size:16.5px; font-weight:800; letter-spacing:-.01em; }
 .help-card p { margin:0; font-size:13.5px; color:var(--muted); line-height:1.5; }
 .help-card .help-card-count {
