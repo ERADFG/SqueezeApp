@@ -6730,3 +6730,98 @@ async function submitReport() {
     toast('Could not submit report: ' + e.message, 'error');
   }
 }
+
+// ── UPDATE CHECKER — notices when a newer deploy has gone live and
+// offers a one-tap refresh, instead of leaving someone stuck on old
+// code until they happen to close and reopen the tab.
+//
+// Why this is needed at all: pjax.js (see that file's own header
+// comment) keeps the JS runtime alive across every in-app link click
+// — it deliberately never re-fetches <script> tags already sitting in
+// the page, that's the whole point of pjax. That's great for feel,
+// but it also means a tab someone opened before you published an
+// update will keep running the OLD common.js/auth.js/etc. FOREVER —
+// clicking around the app never re-triggers a real page load, so it
+// never has a reason to pick up the new files. This is what actually
+// fixes that: a small, cheap, uncached poll that notices a new
+// version exists and lets the person choose to grab it, without
+// yanking the page out from under them mid-action (e.g. mid-post).
+//
+// version.json (see vercel.json's explicit "no-store" rule for it) is
+// the one file in this project that's never cached anywhere, by
+// anyone, at all — so every poll genuinely reaches the server. Bump
+// its "v" value every time you publish an update; nothing else needs
+// to change for this to work. (The per-file "?v=" query strings on
+// <script>/<link> tags are a separate, independent mechanism — they
+// control whether a *fresh page load* fetches new file contents or
+// reuses the browser's long-lived cache of js/css/img. This checker
+// is only about tabs that are already open and would otherwise never
+// reload at all.)
+const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000; // every 5 minutes
+let _knownAppVersion = null;
+let _updateBannerShown = false;
+
+async function fetchAppVersion() {
+  try {
+    const res = await fetch('/version.json', { cache: 'no-store' });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data && typeof data.v === 'string' ? data.v : null;
+  } catch (e) {
+    return null; // offline / blocked — just skip this round, try again next interval
+  }
+}
+
+function showUpdateBanner() {
+  if (_updateBannerShown) return;
+  _updateBannerShown = true;
+  const el = document.createElement('div');
+  el.id = 'oc-update-banner';
+  el.className = 'oc-update-banner';
+  el.innerHTML = `
+    <span class="oc-update-text">A new version of InteractInk is available.</span>
+    <button type="button" class="oc-update-btn" id="oc-update-refresh">Refresh</button>
+    <button type="button" class="oc-update-dismiss" id="oc-update-dismiss" aria-label="Dismiss">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>`;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  document.getElementById('oc-update-refresh').addEventListener('click', () => location.reload());
+  document.getElementById('oc-update-dismiss').addEventListener('click', () => {
+    // Dismissing only hides the banner for the rest of this tab's
+    // session — it does NOT cancel the update, and does not stop
+    // future polls from firing again (so if they dismiss and keep
+    // using the stale tab, they aren't left with no way back to it;
+    // in practice the banner just won't re-add itself a second time —
+    // see the _updateBannerShown guard above, which is intentionally
+    // one-way: once shown, the person has made their choice for this
+    // tab and the next real prompt is their own next full reload).
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 250);
+  });
+}
+
+async function checkForUpdate() {
+  const latest = await fetchAppVersion();
+  if (!latest) return;
+  if (_knownAppVersion === null) {
+    // First check this tab has ever done — this is the baseline for
+    // "what am I currently running", not a signal that anything
+    // changed. Nothing to show yet.
+    _knownAppVersion = latest;
+    return;
+  }
+  if (latest !== _knownAppVersion) showUpdateBanner();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  checkForUpdate();
+  setInterval(checkForUpdate, UPDATE_CHECK_INTERVAL_MS);
+  // Also check right away whenever someone comes back to a tab
+  // they'd left in the background — the common "left it open
+  // overnight, came back the next morning" case, without waiting for
+  // the next scheduled interval tick.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') checkForUpdate();
+  });
+});

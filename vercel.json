@@ -7,6 +7,9 @@
   "routes": [
     { "src": "^/(.+)/$", "status": 308, "headers": { "Location": "/$1" } },
 
+    { "src": "^/.*$", "headers": { "Cache-Control": "no-cache, must-revalidate" }, "continue": true },
+    { "src": "^/version\\.json$", "headers": { "Cache-Control": "no-store" }, "continue": true },
+
     { "src": "^/$", "dest": "/api/prerender?type=home" },
 
     { "src": "^/admin$", "dest": "/admin.html", "headers": { "X-Robots-Tag": "noindex, nofollow, noarchive" } },

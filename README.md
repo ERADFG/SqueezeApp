@@ -496,3 +496,44 @@ their own post or reply shortly after posting it:
   (client-side check, instant feedback) **and** `supabase/schema.sql`'s
   storage bucket insert (server-side enforcement — this is the one that
   actually matters).
+
+## Publishing an update so everyone actually gets it
+
+Deploying new code to Vercel doesn't, by itself, make it show up for
+someone who already has the site open — see below for why, and what
+to do about it every time you publish.
+
+**Every time you publish an update, bump the `v` value in
+`version.json`** (e.g. `"20260829-1"` → `"20260829-2"`, or just use
+today's date/time). That's the one required step. Nothing else needs
+to change for people to get the update — this repo already has two
+separate mechanisms that both key off that file:
+
+1. **Brand-new page loads** (someone opening the site for the first
+   time, or hitting refresh) — `vercel.json` sets every HTML page to
+   `Cache-Control: no-cache, must-revalidate`, so the browser always
+   asks the server for the current page instead of reusing an old
+   cached copy. `/js`, `/css`, `/img` stay aggressively cached
+   (`immutable`, a full year) because every file in them is loaded
+   with a `?v=...` query string in the HTML — when you change a JS/CSS
+   file's contents, bump its `?v=` in every `<script>`/`<link>` tag
+   that references it (already the convention throughout this repo —
+   search for `?v=` to see the pattern), and the new query string
+   naturally points at a URL that's never been cached before.
+
+2. **Tabs someone already has open** — this app keeps its JS runtime
+   alive across in-app navigation (see `js/pjax.js`), so clicking
+   around never re-triggers a normal page load and never re-fetches
+   `<script>` tags on its own. `js/common.js` polls `version.json`
+   (which `vercel.json` marks `no-store` — never cached, anywhere) every
+   few minutes and whenever the tab regains focus; if the value has
+   changed since the tab loaded, a small "A new version is available —
+   Refresh" banner appears. It never force-reloads anyone
+   mid-action — the person taps Refresh (or dismisses it) on their own
+   schedule.
+
+None of this uses cookies — cookies aren't part of how a browser
+decides whether to reuse a cached file, so they wouldn't have fixed
+this. The two things that actually control that are HTTP
+`Cache-Control` headers (above) and giving each new build a URL the
+browser has genuinely never seen before (the `?v=` query strings).
