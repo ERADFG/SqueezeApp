@@ -185,8 +185,9 @@ async function eaInsertImageFromFile(file, fileInput) {
   eaRestoreSelection();
 
   const placeholderId = `ea-img-${crypto.randomUUID()}`;
+  const placeholderUrl = URL.createObjectURL(file);
   document.execCommand('insertHTML', false,
-    `<img id="${placeholderId}" class="ea-img-uploading" src="${URL.createObjectURL(file)}" alt="">`);
+    `<img id="${placeholderId}" class="ea-img-uploading" src="${placeholderUrl}" alt="">`);
 
   try {
     const { media_url } = await uploadMedia(file);
@@ -196,6 +197,12 @@ async function eaInsertImageFromFile(file, fileInput) {
     document.getElementById(placeholderId)?.remove();
     toast(e.message || 'Image upload failed.', 'error');
   } finally {
+    // The placeholder <img> only ever needed this blob: URL until it
+    // was swapped for the real uploaded media_url (or removed on
+    // failure) just above — revoke it now instead of leaking it for
+    // the rest of the editing session, which for a long article with
+    // several inserted images added up.
+    URL.revokeObjectURL(placeholderUrl);
     fileInput.value = '';
   }
 }

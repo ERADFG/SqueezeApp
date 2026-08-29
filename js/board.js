@@ -438,6 +438,7 @@ function trendListHtml(list) {
 // module state at event time, so a single channel naturally tracks
 // whichever tab happens to be active when the event arrives.
 let feedChannel = null;
+let trendingIntervalHandle = null; // see the DOMContentLoaded handler below — prevents stacking a new 60s interval on every pjax revisit of the home page
 
 // De-dupes against posts already queued in the pill (not just posts
 // already on screen) — needed now that a post can be queued twice:
@@ -652,5 +653,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       pfBody.style.height = Math.max(56, pfBody.scrollHeight) + 'px';
     });
   }
-  setInterval(loadTrending, 60000);
+  // This whole handler re-runs on every pjax navigation back to the
+  // home page (see the guard comment above) — without clearing the
+  // previous interval first, each revisit stacked another 60s
+  // `loadTrending` timer on top of the last one, so after navigating
+  // away and back a few times the trending panel was silently
+  // refetching several times a minute instead of once.
+  if (trendingIntervalHandle) clearInterval(trendingIntervalHandle);
+  trendingIntervalHandle = setInterval(loadTrending, 60000);
 });

@@ -7,6 +7,8 @@
 let epProfile = null;
 let epAvatarFile = null;
 let epBannerFile = null;
+let epAvatarPreviewUrl = null; // blob: URL currently shown — revoked before being replaced, see below
+let epBannerPreviewUrl = null;
 
 async function loadEditProfile() {
   if (document.body.dataset.page !== 'editprofile') return; // see js/notifications.js
@@ -82,8 +84,10 @@ async function loadEditProfile() {
     if (!validateFile(file, errEl)) return;
     clearErr(errEl);
     openCropModal(file, 'square', (cropped) => {
+      if (epAvatarPreviewUrl) URL.revokeObjectURL(epAvatarPreviewUrl);
       epAvatarFile = cropped;
-      document.getElementById('ep-avatar-preview').src = URL.createObjectURL(cropped);
+      epAvatarPreviewUrl = URL.createObjectURL(cropped);
+      document.getElementById('ep-avatar-preview').src = epAvatarPreviewUrl;
     });
   });
 
@@ -95,8 +99,10 @@ async function loadEditProfile() {
     if (!validateFile(file, errEl)) return;
     clearErr(errEl);
     openCropModal(file, 'wide', (cropped) => {
+      if (epBannerPreviewUrl) URL.revokeObjectURL(epBannerPreviewUrl);
       epBannerFile = cropped;
-      document.getElementById('ep-banner-wrap').style.setProperty('--banner-img', `url('${URL.createObjectURL(cropped)}')`);
+      epBannerPreviewUrl = URL.createObjectURL(cropped);
+      document.getElementById('ep-banner-wrap').style.setProperty('--banner-img', `url('${epBannerPreviewUrl}')`);
     });
   });
 

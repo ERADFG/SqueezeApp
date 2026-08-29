@@ -3078,6 +3078,11 @@ function openCreateCommunityModal() {
 function closeCreateCommunityModal() {
   const el = document.getElementById('cc-modal-bg');
   if (el?.classList.contains('open')) { el.classList.remove('open'); unlockScroll(); }
+  // Drop the blob: URLs for any picked avatar/banner before losing
+  // the only reference to them (ccWiz) — otherwise the browser holds
+  // that memory for the rest of the page's lifetime.
+  if (ccWiz?.avatarPreviewUrl) URL.revokeObjectURL(ccWiz.avatarPreviewUrl);
+  if (ccWiz?.bannerPreviewUrl) URL.revokeObjectURL(ccWiz.bannerPreviewUrl);
   ccWiz = null;
 }
 
@@ -3169,6 +3174,7 @@ function renderCcForm() {
     if (!file || !validateFile(file, errEl)) return;
     clearErr(errEl);
     openCropModal(file, 'square', (cropped) => {
+      if (ccWiz.avatarPreviewUrl) URL.revokeObjectURL(ccWiz.avatarPreviewUrl);
       ccWiz.avatarBlob = cropped;
       ccWiz.avatarPreviewUrl = URL.createObjectURL(cropped);
       document.getElementById('cc-avatar-preview').innerHTML = `<img src="${ccWiz.avatarPreviewUrl}" alt="">`;
@@ -3180,6 +3186,7 @@ function renderCcForm() {
     if (!file || !validateFile(file, errEl)) return;
     clearErr(errEl);
     openCropModal(file, 'wide', (cropped) => {
+      if (ccWiz.bannerPreviewUrl) URL.revokeObjectURL(ccWiz.bannerPreviewUrl);
       ccWiz.bannerBlob = cropped;
       ccWiz.bannerPreviewUrl = URL.createObjectURL(cropped);
       document.getElementById('cc-banner-wrap').style.setProperty('--banner-img', `url('${ccWiz.bannerPreviewUrl}')`);
@@ -6330,7 +6337,14 @@ function wireFilePreview(inputId, previewId, errElId) {
   const input = document.getElementById(inputId);
   const preview = document.getElementById(previewId);
   const prefix = inputId.replace(/-file$/, '');
+  // Tracks the previous preview's blob: URL so it can be revoked
+  // below — without this, picking a file, then picking a different
+  // one (or removing it) leaked the earlier blob for the rest of the
+  // page's lifetime instead of freeing it immediately.
+  let previewUrl = null;
+  const revokePreview = () => { if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = null; } };
   input.addEventListener('change', () => {
+    revokePreview();
     preview.innerHTML = '';
     const file = input.files[0];
     if (!file) return;
@@ -6340,6 +6354,7 @@ function wireFilePreview(inputId, previewId, errElId) {
     if (composeExtras[prefix]) composeExtras[prefix].gifUrl = null; // file + GIF are mutually exclusive
     removePoll(prefix); // media & poll are mutually exclusive
     const url = URL.createObjectURL(file);
+    previewUrl = url;
     const type = mediaTypeFor(file);
     const el = type === 'video'
       ? Object.assign(document.createElement('video'), { src: url, controls: true })
@@ -6348,7 +6363,7 @@ function wireFilePreview(inputId, previewId, errElId) {
     const rm = document.createElement('span');
     rm.className = 'rm-f';
     rm.textContent = 'remove file';
-    rm.onclick = () => { input.value = ''; preview.innerHTML = ''; };
+    rm.onclick = () => { input.value = ''; preview.innerHTML = ''; revokePreview(); };
     preview.appendChild(document.createElement('br'));
     preview.appendChild(rm);
   });
