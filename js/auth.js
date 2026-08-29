@@ -268,7 +268,7 @@ function refreshPostGates() {
 
 function requireLogin() {
   if (!currentSession) {
-    toast('You need an account to do that. Log in or sign up first.', 'error');
+    toast('You need an account to do that. Log in or create an account first.', 'error');
     return false;
   }
   return true;
@@ -497,7 +497,7 @@ async function doSignUp(e) {
     showErr(errEl, err.message?.includes('duplicate') || err.message?.includes('unique')
       ? 'That username or email is already taken.'
       : (err.message || 'Sign up failed.'));
-    btn.disabled = false; btn.value = 'Sign Up';
+    btn.disabled = false; btn.value = 'Create Account';
   }
 }
 

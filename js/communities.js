@@ -36,7 +36,7 @@ async function renderList() {
   listEl.innerHTML = skeletonFeedHtml();
 
   if (communitiesTab === 'mine' && !currentSession) {
-    listEl.innerHTML = `<div class="post-login-gate" style="border-top:none;">You need an account to join communities. <a href="login.html">Log in</a> or <a href="signup.html">sign up</a>.</div>`;
+    listEl.innerHTML = `<div class="post-login-gate" style="border-top:none;">You need an account to join communities. <a href="login.html">Log in</a> or <a href="signup.html">create an account</a>.</div>`;
     return;
   }
 

@@ -4080,8 +4080,17 @@ body.chat-thread-open #chat-fab { display:none; }
 }
 .gi-edit-details-btn:hover { text-decoration:underline; }
 #gi-details-edit { text-align:left; margin-top:10px; }
+/* The generic ".modal input[type=text]/textarea" rule further down
+   (margin:0 16px 12px, meant for the plain stacked-field modals like
+   Report/Edit profile) was still winning on margin here even though
+   this rule's higher #id specificity already overrides its width —
+   CSS cascades per property, not per rule, so leaving margin unset
+   let that 16px left+right margin sneak back in on top of this
+   rule's width:100%, shoving the box 16px off-center to the right
+   (bigger gap on the left, field crowding/clipping the right edge).
+   Explicitly zeroing the side margins here keeps it symmetric. */
 #gi-details-edit input[type="text"], #gi-details-edit textarea {
-  width:100%; font:inherit; font-size:14px; padding:8px 11px; border-radius:var(--r-sm);
+  width:100%; margin:0 0 12px; font:inherit; font-size:14px; padding:8px 11px; border-radius:var(--r-sm);
   border:1px solid var(--div); background:var(--bg); color:var(--ink); resize:none; text-align:center;
 }
 #gi-details-edit input[type="text"]:focus, #gi-details-edit textarea:focus { outline:none; border-color:var(--maroon); }

@@ -263,7 +263,7 @@ function replyComposerHtml() {
       </div>
     </div>
     <div class="post-login-gate" data-requires-anon style="display:none;">
-      You need an account to reply. <a href="login.html">Log in</a> or <a href="signup.html">sign up</a>.
+      You need an account to reply. <a href="login.html">Log in</a> or <a href="signup.html">create an account</a>.
     </div>`;
 }
 

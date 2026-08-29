@@ -96,7 +96,7 @@ async function loadNotifications() {
   const session = currentSession;
 
   if (!session) {
-    root.innerHTML = `<div class="post-login-gate" style="border-top:none;">Log in to see your notifications. <a href="login.html">Log in</a> or <a href="signup.html">sign up</a>.</div>`;
+    root.innerHTML = `<div class="post-login-gate" style="border-top:none;">Log in to see your notifications. <a href="login.html">Log in</a> or <a href="signup.html">create an account</a>.</div>`;
     return;
   }
 

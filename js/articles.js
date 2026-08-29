@@ -38,7 +38,7 @@ async function renderArticles() {
   listEl.innerHTML = skeletonFeedHtml();
 
   if (articlesTab === 'mine' && !currentSession) {
-    listEl.innerHTML = `<div class="post-login-gate" style="border-top:none;">You need an account to write and view your own Articles. <a href="login.html">Log in</a> or <a href="signup.html">sign up</a>.</div>`;
+    listEl.innerHTML = `<div class="post-login-gate" style="border-top:none;">You need an account to write and view your own Articles. <a href="login.html">Log in</a> or <a href="signup.html">create an account</a>.</div>`;
     return;
   }
 
