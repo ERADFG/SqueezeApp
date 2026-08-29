@@ -660,7 +660,8 @@ const NAV_ICON = {
   shield:   '<svg viewBox="0 0 24 24"><path d="M12 3.3 5.3 5.9v5.4c0 4.7 2.9 7.9 6.7 8.9 3.8-1 6.7-4.2 6.7-8.9V5.9Z"/><path d="m9 12 2 2 4-4"/></svg>',
   globe:    '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.5 2.5 3.8 5.8 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.8-3.8-9s1.3-6.5 3.8-9Z"/></svg>',
   palette:  '<svg viewBox="0 0 24 24"><path d="M12 3.3a8.7 8.7 0 1 0 0 17.4c1 0 1.7-.8 1.7-1.7 0-.45-.18-.86-.46-1.16-.28-.3-.46-.7-.46-1.14 0-.9.75-1.65 1.7-1.65h1.9c2.3 0 4.2-1.85 4.2-4.15 0-4.2-4.2-7.6-8.58-7.6Z"/><circle cx="7.7" cy="11.3" r="1.15" fill="currentColor" stroke="none"/><circle cx="10.3" cy="7.5" r="1.15" fill="currentColor" stroke="none"/><circle cx="15" cy="7.9" r="1.15" fill="currentColor" stroke="none"/><circle cx="17" cy="12" r="1.15" fill="currentColor" stroke="none"/></svg>',
-  help:     '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.3 9.3a2.7 2.7 0 1 1 3.9 2.4c-.7.4-1.2 1-1.2 1.8v.4"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></svg>'
+  help:     '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.3 9.3a2.7 2.7 0 1 1 3.9 2.4c-.7.4-1.2 1-1.2 1.8v.4"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></svg>',
+  trophy:   '<svg viewBox="0 0 24 24"><path d="M7 4.5h10v4.3c0 3.1-2.24 5.4-5 5.4s-5-2.3-5-5.4V4.5Z"/><path d="M7 5.5H4.6c0 2.4.9 4 2.85 4.4M17 5.5h2.4c0 2.4-.9 4-2.85 4.4"/><path d="M12 14.2V18M9 19.5h6"/></svg>'
 };
 
 // ── THEME — Default (light) / Dim / Lights out (dark), applied via
@@ -920,6 +921,7 @@ function currentNavKey() {
   if (path === '/articles' || path.startsWith('/i/articles/') || path.endsWith('/articles.html') || path.endsWith('/article.html') || path.endsWith('/editarticle.html')) return 'articles';
   if (path === '/lists' || path.startsWith('/i/lists/') || path.endsWith('/lists.html') || path.endsWith('/list.html')) return 'lists';
   if (path === '/settings' || path.endsWith('/settings.html')) return 'settings';
+  if (path === '/achievements' || path.endsWith('/achievements.html')) return 'achievements';
   if (path === '/rules' || path.endsWith('/rules.html')) return 'rules';
   if (path === '/about' || path.endsWith('/about.html')) return 'about';
   if (path === '/contact' || path.endsWith('/contact.html')) return 'contact';
@@ -965,7 +967,7 @@ function renderSideNav() {
   // auth.js) — #more-wrap just needs the shared "acct" class and its
   // own toggle, both already wired up below/in toggleMoreMenu().
   const moreItem = (href, icon, label) => `<a href="${href}"><span class="navicon">${icon}</span>${label}</a>`;
-  const moreCur = ['settings', 'articles', 'blog', 'rules', 'about', 'contact', 'privacy', 'terms', 'help'].includes(here);
+  const moreCur = ['settings', 'achievements', 'articles', 'blog', 'rules', 'about', 'contact', 'privacy', 'terms', 'help'].includes(here);
   const moreBtn = `
     <div class="acct" id="more-wrap">
       <button class="navmore-btn${moreCur ? ' cur' : ''}" onclick="toggleMoreMenu();return false;">
@@ -973,6 +975,7 @@ function renderSideNav() {
       </button>
       <div class="acct-menu navmore-menu" id="more-menu">
         ${moreItem('/settings', NAV_ICON.gear, t('nav.settings'))}
+        ${currentSession ? moreItem('/achievements', NAV_ICON.trophy, 'Achievements') : ''}
         ${moreItem(`${lp}/articles`, NAV_ICON.article, t('nav.articles'))}
         ${moreItem('/blog/index.html', NAV_ICON.book, 'Blog')}
         ${moreItem(`${lp}/rules`, NAV_ICON.doc, t('nav.rules'))}
@@ -1120,6 +1123,7 @@ function renderMobileChrome() {
             <a href="${lp}/communities">${NAV_ICON.people}Communities</a>
             <a href="lists.html">${NAV_ICON.list}Lists</a>
             <a href="bookmarks.html">${NAV_ICON.bookmark}Saved</a>
+            <a href="/achievements">${NAV_ICON.trophy}Achievements</a>
             <a href="/settings">${NAV_ICON.gear}Settings</a>
           </div>
           <span class="m-drawer-group-label">More</span>

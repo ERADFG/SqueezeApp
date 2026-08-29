@@ -27,6 +27,7 @@
     { "src": "^/notifications$",      "dest": "/notifications.html" },
     { "src": "^/bookmarks$",          "dest": "/bookmarks.html" },
     { "src": "^/settings$",           "dest": "/settings.html" },
+    { "src": "^/achievements$",       "dest": "/achievements.html" },
     { "src": "^/search$",             "dest": "/search.html" },
     { "src": "^/rules$",              "dest": "/rules.html" },
     { "src": "^/about$",              "dest": "/about.html" },
