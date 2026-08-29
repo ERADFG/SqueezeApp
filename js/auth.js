@@ -527,7 +527,23 @@ async function doSignUp(e) {
 async function resolveLoginEmail(identifier) {
   if (identifier.includes('@')) return identifier;
   const { data, error } = await sb.rpc('email_for_login', { p_username: identifier });
-  if (error || !data) throw new Error('Incorrect username or password.');
+  if (error) {
+    // Tell a missing/misconfigured RPC apart from "no such username" —
+    // PGRST202 is PostgREST's code for "function not found in schema
+    // cache", which means supabase/username_login.sql hasn't been run
+    // on this project yet (or ran before the schema cache reloaded).
+    // Surfacing that distinctly (instead of folding it into "incorrect
+    // credentials") is what actually lets someone fix it, rather than
+    // re-typing a correct password forever. Logged, not shown raw to
+    // the person, since the message itself is meant for whoever set
+    // the site up, not an end user.
+    console.error('email_for_login RPC failed:', error);
+    if (error.code === 'PGRST202' || /schema cache|does not exist/i.test(error.message || '')) {
+      throw new Error('Username login isn\u2019t set up yet on this project \u2014 run supabase/username_login.sql in the Supabase SQL editor, then try again (or log in with your email instead).');
+    }
+    throw new Error('Incorrect username or password.');
+  }
+  if (!data) throw new Error('Incorrect username or password.');
   return data;
 }
 
