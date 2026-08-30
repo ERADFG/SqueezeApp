@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>Page not found · InteractInk</title>
+<meta name="robots" content="noindex"/>
+<meta content="#1185FE" name="theme-color"/>
+<!-- Pre-paint theme script — identical to the one used on every other
+     page, so this page opens in whatever theme (light / dim / dark)
+     and accent the person already has saved, with no flash. -->
+<script>(function(){try{var t=localStorage.getItem('oc-theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}if(t&&t!=="light"){document.documentElement.setAttribute('data-theme',t);}var a=localStorage.getItem('oc-accent');if(a&&a!=="blue")document.documentElement.setAttribute('data-accent',a);}catch(e){}})();</script>
+<link href="img/favicon-32.png" id="fav32" rel="icon" sizes="32x32" type="image/png"/>
+<link href="img/favicon.png" id="fav512" rel="icon" sizes="512x512" type="image/png"/>
+<link href="css/style.css?v=20260829d" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link href="https://fonts.gstatic.com" rel="preconnect" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&display=swap" rel="stylesheet"/>
+<style>
+  .err404-page{
+    min-height:100dvh; min-height:100vh;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:var(--bg); box-sizing:border-box;
+    padding:32px 20px 56px;
+    text-align:center;
+  }
+  .err404-msg{
+    font-family:'Fredoka',inherit; font-weight:600;
+    font-size:clamp(16px,2.6vw,25px); line-height:1.45;
+    color:var(--ink); margin:0 0 clamp(8px,3vw,22px); max-width:720px;
+  }
+  .err404-figure{
+    display:flex; align-items:center; justify-content:center;
+    gap:clamp(2px,1.6vw,18px);
+    margin:0 0 clamp(22px,4.5vw,44px);
+    width:100%;
+  }
+  .err404-digit{
+    font-family:'Fredoka',inherit; font-weight:700;
+    font-size:clamp(64px,17vw,190px); line-height:1;
+    color:var(--maroon); user-select:none;
+  }
+  .err404-cat{
+    height:clamp(160px,34vw,380px); width:auto;
+    display:block; flex:0 0 auto;
+  }
+  .err404-cat-dark{ display:none; }
+  html[data-theme="dim"] .err404-cat-light, html[data-theme="dark"] .err404-cat-light{ display:none; }
+  html[data-theme="dim"] .err404-cat-dark,  html[data-theme="dark"] .err404-cat-dark { display:block; }
+
+  .err404-btn{
+    font-family:'Fredoka',inherit; font-weight:600;
+    display:inline-flex; align-items:center; gap:10px;
+    background:var(--maroon); color:#fff; text-decoration:none;
+    font-size:16px; letter-spacing:.03em; text-transform:uppercase;
+    padding:15px 30px; border-radius:999px; border:none; cursor:pointer;
+    box-shadow:0 10px 24px -6px var(--maroon), 0 2px 6px rgba(0,0,0,.15);
+    transition:background-color .15s ease, transform .1s ease, box-shadow .15s ease;
+  }
+  .err404-btn:hover{ background:var(--maroon-dk); transform:translateY(-1px); box-shadow:0 14px 28px -6px var(--maroon), 0 3px 8px rgba(0,0,0,.18); }
+  .err404-btn:active{ transform:translateY(0); }
+  .err404-btn svg{ width:18px; height:18px; flex:0 0 auto; }
+
+  .err404-theme-toggle{
+    position:fixed; top:16px; right:16px;
+    width:40px; height:40px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--hover-bg); border:1px solid var(--line); color:var(--ink);
+    cursor:pointer;
+  }
+  .err404-theme-toggle svg{ width:19px; height:19px; }
+  .err404-theme-toggle .i-sun{ display:none; }
+  html[data-theme="dim"] .err404-theme-toggle .i-moon, html[data-theme="dark"] .err404-theme-toggle .i-moon{ display:none; }
+  html[data-theme="dim"] .err404-theme-toggle .i-sun,  html[data-theme="dark"] .err404-theme-toggle .i-sun { display:block; }
+
+  .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+</style>
+</head>
+<body data-page="404">
+
+<button class="err404-theme-toggle" id="err404ThemeBtn" type="button" aria-label="Toggle dark mode">
+  <svg class="i-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+  <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5" fill="currentColor" stroke="none"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
+</button>
+
+<main class="err404-page">
+  <h1 class="sr-only">404 — Page not found</h1>
+  <p class="err404-msg">Well&hellip; this is awkward.<br>The page you&rsquo;re looking for took a cat nap.</p>
+
+  <div class="err404-figure">
+    <span class="err404-digit" aria-hidden="true">4</span>
+    <img class="err404-cat err404-cat-light" src="img/404-cat-light.png" width="360" height="588" alt="Fluffy cat wearing a pink shower cap" />
+    <img class="err404-cat err404-cat-dark" src="img/404-cat-dark.png" width="360" height="588" alt="Fluffy cat wearing a pink shower cap" />
+    <span class="err404-digit" aria-hidden="true">4</span>
+  </div>
+
+  <a class="err404-btn" href="/">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-3v9h-5v-6H11v6H6v-9H3z"/></svg>
+    <span>Go Home</span>
+  </a>
+</main>
+
+<script>
+(function(){
+  var btn = document.getElementById('err404ThemeBtn');
+  if(!btn) return;
+  btn.addEventListener('click', function(){
+    var html = document.documentElement;
+    var isDark = html.getAttribute('data-theme') === 'dark' || html.getAttribute('data-theme') === 'dim';
+    if(isDark){
+      html.removeAttribute('data-theme');
+      try{ localStorage.setItem('oc-theme','light'); }catch(e){}
+    } else {
+      html.setAttribute('data-theme','dark');
+      try{ localStorage.setItem('oc-theme','dark'); }catch(e){}
+    }
+  });
+})();
+</script>
+</body>
+</html>
