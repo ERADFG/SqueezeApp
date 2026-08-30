@@ -75,8 +75,9 @@ function switchAdminTab(tab) {
   if (tab === 'replies' && !repliesLoadedOnce) { repliesLoadedOnce = true; loadRecentReplies(); }
   if (tab === 'articles' && !articlesLoadedOnce) { articlesLoadedOnce = true; loadRecentArticles(); }
   if (tab === 'reports' && !reportsLoadedOnce) { reportsLoadedOnce = true; loadReports(); }
+  if (tab === 'moderation' && !moderationLoadedOnce) { moderationLoadedOnce = true; loadModerationQueue(); }
 }
-let repliesLoadedOnce = false, articlesLoadedOnce = false, reportsLoadedOnce = false;
+let repliesLoadedOnce = false, articlesLoadedOnce = false, reportsLoadedOnce = false, moderationLoadedOnce = false;
 
 // ── USERS: search by username, verify/unverify, suspend/unsuspend ──
 
@@ -635,5 +636,71 @@ async function resolveReport(reportId, status) {
     loadStats();
   } catch (e) {
     toast(e.message || 'Could not update that report.', 'error');
+  }
+}
+
+// ── MODERATION QUEUE — auto-pipeline's flagged items, distinct from
+// user-submitted Reports above. Reads public.moderation_events via
+// admin_list_moderation_queue() (moderation_media_pipeline.sql).
+// content_type is 'post'/'reply' (gated, reviewable here) or
+// 'text'/'chat'/'avatar'/'community_image' (informational only — text
+// content was already blocked or allowed client-side at post time by
+// api/moderate-text.js, and avatars have no row to un-hide, so those
+// rows show for visibility/audit but skip the Approve/Remove buttons).
+let currentModerationFilter = 'human_review';
+function setModerationFilter(status) {
+  currentModerationFilter = status;
+  document.querySelectorAll('#adm-moderation-filters .adm-btn').forEach(b => b.classList.toggle('adm-btn-active', b.dataset.status === status));
+  loadModerationQueue();
+}
+
+async function loadModerationQueue() {
+  const box = document.getElementById('adm-moderation-results');
+  box.innerHTML = `<div class="no-t">Loading&hellip;</div>`;
+  const { data, error } = await sb.rpc('admin_list_moderation_queue', { status_filter: currentModerationFilter });
+  if (error) { box.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
+  box.innerHTML = (data || []).map(adminModerationRowHtml).join('') || `<div class="no-t">Nothing here.</div>`;
+  const badge = document.getElementById('adm-moderation-badge');
+  const openCount = (data || []).filter(r => r.decision === 'human_review').length;
+  if (currentModerationFilter === 'human_review' && openCount) { badge.textContent = openCount; badge.style.display = ''; }
+  else if (currentModerationFilter === 'human_review') { badge.style.display = 'none'; }
+}
+
+function adminModerationRowHtml(r) {
+  const reviewable = r.content_type === 'post' || r.content_type === 'reply';
+  const tagClass = r.decision === 'block' ? 'adm-tag-actioned' : r.decision === 'human_review' ? 'adm-tag-open' : 'adm-tag-dismissed';
+  const reasons = [];
+  if (r.csam_match) reasons.push('CSAM hash match');
+  if (r.nsfw != null && r.nsfw >= 0.5) reasons.push(`NSFW ${(r.nsfw * 100).toFixed(0)}%`);
+  (r.categories || []).forEach(c => { if (c.score >= 0.5) reasons.push(`${c.label} ${(c.score * 100).toFixed(0)}%`); });
+  if (r.toxicity != null && r.toxicity >= 0.5) reasons.push(`toxicity ${(r.toxicity * 100).toFixed(0)}%`);
+  if (r.spam != null && r.spam >= 0.5) reasons.push(`spam ${(r.spam * 100).toFixed(0)}%`);
+  if (Array.isArray(r.doxxing_flags) && r.doxxing_flags.length) reasons.push(...r.doxxing_flags.map(d => d.label));
+
+  return `
+  <div class="adm-row adm-post-row" id="adm-mod-${r.id}">
+    <div class="adm-row-txt">
+      <span class="adm-row-name">${esc(r.content_type)}<span class="adm-tag ${tagClass}">${esc(r.decision)}</span></span>
+      <span class="adm-row-meta">${reasons.map(esc).join(' &middot; ') || 'no specific signal above threshold'}</span>
+      <span class="adm-row-meta">${timeAgo(r.created_at)}${r.reviewed_at ? ' &middot; reviewed (' + esc(r.review_outcome || '') + ')' : ''}</span>
+      <span class="adm-post-body">${esc((r.excerpt || '').slice(0, 200))}</span>
+    </div>
+    <div class="adm-row-acts">
+      ${reviewable && !r.reviewed_at ? `<button class="adm-btn adm-btn-primary" onclick="reviewModerationItem('${r.id}', '${r.content_type}s', '${r.content_ref}', 'approve')">Approve</button>` : ''}
+      ${reviewable && !r.reviewed_at ? `<button class="adm-btn adm-btn-danger" onclick="reviewModerationItem('${r.id}', '${r.content_type}s', '${r.content_ref}', 'remove')">Remove</button>` : ''}
+    </div>
+  </div>`;
+}
+
+async function reviewModerationItem(eventId, table, contentId, decision) {
+  try {
+    const { error } = await sb.rpc('admin_review_moderation_item', {
+      p_event_id: eventId, p_table: table, p_content_id: contentId, p_decision: decision,
+    });
+    if (error) throw error;
+    toast(decision === 'approve' ? 'Content approved and made visible.' : 'Content removed.');
+    loadModerationQueue();
+  } catch (e) {
+    toast(e.message || 'Could not update that item.', 'error');
   }
 }

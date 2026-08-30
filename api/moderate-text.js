@@ -109,6 +109,32 @@ async function toxicityScore(text) {
   }
 }
 
+// ---------------------------------------------------------------
+// Drug-sale / weapon-sale language — zero-shot text classification
+// (see nsfw-service/main.py's /text-categories), scores the sentence
+// in context instead of matching a fixed wordlist. Catches coded
+// phrasing ("plug for that gas, dm for menu") a keyword filter misses
+// entirely, since sellers rotate slang specifically to dodge those.
+// ---------------------------------------------------------------
+async function categoryScores(text) {
+  const serviceUrl = process.env.MODERATION_SERVICE_URL;
+  const token = process.env.MODERATION_SERVICE_TOKEN;
+  if (!serviceUrl || !text.trim()) return [];
+
+  try {
+    const res = await fetch(`${serviceUrl}/text-categories`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ text }),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.categories ?? [];
+  } catch {
+    return [];
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -130,14 +156,19 @@ export default async function handler(req, res) {
   const doxHits = detectDoxxing(text);
   const spam = spamScore(text);
   const badword = localProfanityHit(text);
-  // Only pay for a Perspective call if the cheap checks haven't already
-  // decided this is fine to skip further scrutiny — saves quota.
-  const toxic = badword || spam > 0.3 || text.length > 20 ? await toxicityScore(text) : 0;
+  // Only pay for a model call if the cheap checks haven't already
+  // decided this is fine to skip further scrutiny — saves compute.
+  const needsDeepCheck = badword || spam > 0.3 || text.length > 20;
+  const [toxic, categories] = await Promise.all([
+    needsDeepCheck ? toxicityScore(text) : Promise.resolve(0),
+    needsDeepCheck ? categoryScores(text) : Promise.resolve([]),
+  ]);
+  const topCategory = categories[0] ?? null;
 
   let decision = 'allow';
   if (doxHits.length > 0) decision = 'human_review';
-  else if (toxic >= 0.85 || spam >= 0.8) decision = 'block';
-  else if (badword || toxic >= 0.6 || spam >= 0.5) decision = 'soft_flag';
+  else if (toxic >= 0.85 || spam >= 0.8 || (topCategory && topCategory.score >= 0.85)) decision = 'block';
+  else if (badword || toxic >= 0.6 || spam >= 0.5 || (topCategory && topCategory.score >= 0.6)) decision = 'soft_flag';
 
   // Log every decision for the admin panel / audit trail. Uses the same
   // service-role pattern as your other SECURITY DEFINER RPCs.
@@ -151,10 +182,11 @@ export default async function handler(req, res) {
       p_spam: spam,
       p_doxxing_flags: doxHits,
       p_decision: decision,
+      p_categories: categories,
     });
   } catch (e) {
     console.error('moderation log failed', e);
   }
 
-  return res.status(200).json({ decision, scores: { toxic, spam, badword }, doxHits });
+  return res.status(200).json({ decision, scores: { toxic, spam, badword, categories }, doxHits });
 }

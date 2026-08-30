@@ -113,6 +113,7 @@
           <button class="adm-tab" data-tab="replies" onclick="switchAdminTab('replies')">Replies</button>
           <button class="adm-tab" data-tab="articles" onclick="switchAdminTab('articles')">Articles</button>
           <button class="adm-tab" data-tab="reports" onclick="switchAdminTab('reports')">Reports<span class="adm-tab-badge" id="adm-reports-badge"></span></button>
+          <button class="adm-tab" data-tab="moderation" onclick="switchAdminTab('moderation')">Moderation<span class="adm-tab-badge" id="adm-moderation-badge"></span></button>
         </div>
 
         <div class="adm-panel active" id="adm-panel-users">
@@ -155,6 +156,23 @@
               <button class="adm-btn" data-status="all" onclick="setReportFilter('all')">All</button>
             </div>
             <div id="adm-report-results"></div>
+          </div>
+        </div>
+
+        <div class="adm-panel" id="adm-panel-moderation">
+          <div class="adm-section">
+            <!-- Auto-moderation queue — items api/moderate-text.js /
+                 api/moderate-media.js couldn't confidently decide on
+                 their own (decision: 'human_review'). Distinct from the
+                 Reports tab above, which is user-submitted reports;
+                 this is the AI/rules pipeline's own uncertain calls.
+                 See moderation_media_pipeline.sql's admin_list_moderation_queue(). -->
+            <div class="adm-report-filters" id="adm-moderation-filters">
+              <button class="adm-btn adm-btn-active" data-status="human_review" onclick="setModerationFilter('human_review')">Needs review</button>
+              <button class="adm-btn" data-status="block" onclick="setModerationFilter('block')">Auto-blocked</button>
+              <button class="adm-btn" data-status="allow" onclick="setModerationFilter('allow')">Allowed (flagged)</button>
+            </div>
+            <div id="adm-moderation-results"></div>
           </div>
         </div>
       </div>

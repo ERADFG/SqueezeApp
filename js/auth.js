@@ -619,6 +619,24 @@ async function logOut() {
 
 // Uploads to avatars/<uid>/<random>.<ext> — the storage RLS policy
 // only allows a user to write inside their own <uid> folder.
+//
+// Shared by every avatar/banner/image upload in the app (profile,
+// community, list, chat-group — see the call sites in js/community.js,
+// js/list.js, js/chat.js, js/editprofile.js), which is exactly why the
+// moderation check lives here instead of being duplicated at each call
+// site: one choke point covers all of them, including any future ones.
+//
+// Unlike posts/replies, there's no per-row moderation_status here (an
+// avatar isn't a feed item you can hide behind RLS — hiding someone's
+// whole profile because their avatar got flagged would be wrong, and
+// RLS is row-level, not column-level). So enforcement works differently:
+// on a 'block' verdict the just-uploaded file is deleted from storage
+// before this function returns, and the caller never gets a URL to
+// attach to anything. 'human_review' still logs to moderation_events
+// for the admin queue but does NOT block the upload — avatars are low
+// enough stakes (and reversible enough — a caller can always re-upload
+// or an admin can suspend) that holding every borderline avatar for
+// manual review isn't worth the friction. Tune this if you disagree.
 async function uploadAvatar(file, userId) {
   const ext = file.name.split('.').pop().toLowerCase();
   const path = `${userId}/${crypto.randomUUID()}.${ext}`;
@@ -627,7 +645,32 @@ async function uploadAvatar(file, userId) {
   });
   if (error) throw error;
   const { data } = sb.storage.from('avatars').getPublicUrl(path);
-  return data.publicUrl;
+  const publicUrl = data.publicUrl;
+
+  const isVideo = file.type?.startsWith('video/');
+  try {
+    const res = await fetch('/api/moderate-media', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId, contentType: 'avatar', mediaUrl: publicUrl, mediaType: isVideo ? 'video' : 'image',
+      }),
+    });
+    const mod = res.ok ? await res.json() : { decision: 'human_review' };
+    if (mod.decision === 'block') {
+      await sb.storage.from('avatars').remove([path]); // don't leave a rejected upload sitting in storage
+      throw new Error("That image didn't pass review — please choose a different one.");
+    }
+  } catch (e) {
+    // A network failure talking to /api/moderate-media is NOT the same
+    // as a confirmed block — don't lose someone's legitimate profile
+    // photo over a blip. But a thrown block-message above should
+    // propagate, not be swallowed here, so re-throw anything that
+    // looks like our own message rather than a fetch failure.
+    if (e instanceof Error && e.message.includes("didn't pass review")) throw e;
+  }
+
+  return publicUrl;
 }
 
 // Guarded against pjax.js's synthetic DOMContentLoaded re-dispatch on

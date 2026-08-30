@@ -1723,6 +1723,36 @@ async function checkTextModeration(contentType, text, contentRef, errEl) {
   }
 }
 
+// Server-side media enforcement (see api/moderate-media.js) — the
+// backstop that closes the bypass the client-side nsfwjs check in
+// uploadMedia() can't: someone with devtools open and a valid session
+// can skip the browser check entirely by inserting straight through
+// supabase-js, but they can't make a 'pending' row visible themselves
+// — only this endpoint (or an admin) can flip that, since
+// moderation_media_pipeline.sql's RESTRICTIVE policy hides anything
+// that isn't 'visible' from everyone but its author.
+//
+// Called AFTER the row already exists with moderation_status:
+// 'pending' — see submitGlobalCompose()/submitReply() below for the
+// call site. Unlike checkTextModeration above, this does NOT fail
+// open: a failed request just leaves the row pending (invisible to
+// everyone but the author) rather than defaulting it to visible.
+async function checkMediaModeration(table, contentId, contentType, mediaUrl, mediaType) {
+  try {
+    const res = await fetch('/api/moderate-media', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: currentSession.user.id, table, contentId, contentType, mediaUrl, mediaType,
+      }),
+    });
+    if (!res.ok) return { decision: 'human_review' };
+    return await res.json();
+  } catch {
+    return { decision: 'human_review' };
+  }
+}
+
 async function submitGlobalCompose() {
   if (!requireLogin()) return;
   const bodyEl = document.getElementById('gc-body');
@@ -1755,15 +1785,32 @@ async function submitGlobalCompose() {
     }
     const poll = collectPoll('gc');
     const scheduled_at = collectSchedule('gc');
+    // media_url present -> insert hidden ('pending') until the server-side
+    // check below flips it; see moderation_media_pipeline.sql's
+    // RESTRICTIVE select policy. Text-only posts skip straight to
+    // 'visible' (default) since checkTextModeration already gated them.
     const { data, error } = await sb.from('posts').insert({
       author_id: currentSession.user.id,
       body, media_url, media_type,
       poll_options: poll?.poll_options || null,
       poll_ends_at: poll?.poll_ends_at || null,
       scheduled_at,
-      reply_audience: getReplyAudience('gc')
+      reply_audience: getReplyAudience('gc'),
+      ...(media_url ? { moderation_status: 'pending' } : {}),
     }).select('*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)').single();
     if (error) throw error;
+
+    if (media_url) {
+      stEl.textContent = 'Checking upload…';
+      const mod = await checkMediaModeration('posts', data.id, 'post', media_url, media_type);
+      if (mod.decision === 'block') {
+        stEl.textContent = '';
+        showErr(errEl, "Your post was published but the media didn't pass review, so it's hidden from others.");
+      } else if (mod.decision === 'human_review') {
+        stEl.textContent = '';
+        showErr(errEl, "Your post is up, but the media needs a quick manual review before others can see it.");
+      }
+    }
 
     bodyEl.value = ''; bodyEl.style.height = '';
     fileEl.value = ''; document.getElementById('gc-fp').innerHTML = '';
@@ -1940,9 +1987,20 @@ async function submitReplyPopup() {
       post_id: targetPostId,
       parent_reply_id: null,
       author_id: currentSession.user.id,
-      body, media_url, media_type
+      body, media_url, media_type,
+      ...(media_url ? { moderation_status: 'pending' } : {}),
     }).select('*, profile:profiles(username,display_name,avatar_url,verified,verification_type)').single();
     if (error) throw error;
+
+    if (media_url) {
+      stEl.textContent = 'Checking upload…';
+      const mod = await checkMediaModeration('replies', data.id, 'reply', media_url, media_type);
+      if (mod.decision === 'block') {
+        showErr(errEl, "Your reply was posted but the media didn't pass review, so it's hidden from others.");
+      } else if (mod.decision === 'human_review') {
+        showErr(errEl, 'Your reply is up, but the media needs a quick manual review before others can see it.');
+      }
+    }
 
     bodyEl.value = ''; bodyEl.style.height = '';
     fileEl.value = ''; document.getElementById('rpc-fp').innerHTML = '';
