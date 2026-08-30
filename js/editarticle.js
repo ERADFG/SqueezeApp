@@ -19,6 +19,7 @@
 let eaEditingId = null;
 let eaOriginal = null;
 let eaSavedRange = null; // selection snapshot, so an async image upload can still insert where the cursor was
+let eaSelectionChangeHandler = null; // see eaWireToolbar() below — same leak class as thread.js's hashChangeHandler
 
 function eaGetEditId() {
   return new URLSearchParams(location.search).get('id');
@@ -98,9 +99,19 @@ function eaWireToolbar() {
 
   editor.addEventListener('keyup', eaUpdateToolbarState);
   editor.addEventListener('mouseup', eaUpdateToolbarState);
-  document.addEventListener('selectionchange', () => {
+  // `document` persists across pjax navigations (unlike `editor`,
+  // which lives inside .xshell and gets torn down on the next
+  // navigation), so writing/editing more than one article in the
+  // same tab session was stacking another 'selectionchange' listener
+  // on top of the last every time — each old one still holding a
+  // reference to its now-removed `editor` element (blocking it from
+  // being garbage collected) and still running its check on every
+  // selection change anywhere on the site, forever.
+  if (eaSelectionChangeHandler) document.removeEventListener('selectionchange', eaSelectionChangeHandler);
+  eaSelectionChangeHandler = () => {
     if (document.activeElement === editor) eaUpdateToolbarState();
-  });
+  };
+  document.addEventListener('selectionchange', eaSelectionChangeHandler);
 
   const fileInput = document.getElementById('ea-body-img-file');
   fileInput.addEventListener('change', () => eaInsertImageFromFile(fileInput.files[0], fileInput));

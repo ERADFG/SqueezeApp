@@ -17,6 +17,7 @@ let postId = null;
 
 let allReplies = []; // flat list, kept around so inline "reply to this comment" forms can insert without a refetch
 let currentPost = null; // the OP post, kept around so hash-driven re-renders don't need to refetch it
+let hashChangeHandler = null; // see loadThread() below — same leak class as threadChannel/subscribeRealtime()
 
 // Optional hook called by applyEditToDom() in common.js right after a
 // successful edit — applyEditToDom() already patched every rendered
@@ -184,11 +185,22 @@ async function loadThread() {
   // the #reply-<id> focus hash changes: a comment being clicked (see
   // rcClick/focusReply above), the browser's back/forward buttons, or
   // a direct link landing straight on a specific comment.
-  window.addEventListener('hashchange', () => {
+  //
+  // window persists across pjax navigations, so without removing the
+  // previous thread page's listener first, visiting a second (or
+  // third, or Nth) thread page in the same tab stacked another
+  // 'hashchange' listener on top of the last — every old one closing
+  // over its own thread's stale allReplies/currentPost and still
+  // firing (re-rendering the wrong thread's data into whatever
+  // .xshell currently holds) on every future hash change. Same leak
+  // class as threadChannel below, just missing this guard.
+  if (hashChangeHandler) window.removeEventListener('hashchange', hashChangeHandler);
+  hashChangeHandler = () => {
     renderConversation();
     afterRender();
     document.getElementById('main')?.scrollIntoView({ behavior: 'instant', block: 'start' });
-  });
+  };
+  window.addEventListener('hashchange', hashChangeHandler);
 
   // The OP itself counts as viewed the moment its thread is opened
   // (see common.js — this still respects the once-per-session dedup,

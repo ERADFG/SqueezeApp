@@ -686,8 +686,20 @@ async function renderThread(origin, username, id) {
 }
 
 module.exports = async function handler(req, res) {
-  const host = req.headers['x-forwarded-host'] || req.headers.host;
+  // This response is publicly cached at the edge for every visitor,
+  // not just bots (see Cache-Control below) — building `origin`
+  // straight from the request's x-forwarded-host header let anyone
+  // who can influence that header get their own domain baked into
+  // the cached canonical/og:url links, which every later visitor
+  // hitting the same cached URL would then receive (host-header
+  // cache poisoning). Same guard as api/sitemap.js's safeOrigin() —
+  // CANONICAL_HOST is this project's real domain; *.vercel.app is
+  // still allowed through for preview deployments, anything else
+  // (including a spoofed Host) falls back to the canonical domain.
+  const CANONICAL_HOST = 'interactink.vercel.app';
+  const rawHost = (req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim().toLowerCase();
   const proto = (req.headers['x-forwarded-proto'] || 'https').split(',')[0];
+  const host = (rawHost === CANONICAL_HOST || rawHost.endsWith('.vercel.app')) ? rawHost : CANONICAL_HOST;
   const origin = `${proto}://${host}`;
   const { type, username, id, slug } = req.query;
 

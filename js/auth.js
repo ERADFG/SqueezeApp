@@ -602,8 +602,22 @@ async function uploadAvatar(file, userId) {
   return data.publicUrl;
 }
 
+// Guarded against pjax.js's synthetic DOMContentLoaded re-dispatch on
+// every soft navigation (see its navigate()): auth.js itself is only
+// ever loaded once (it's a shared trailing script, outside the
+// .xshell pjax swaps), but without this flag this handler was still
+// re-running on every navigation and calling sb.auth.onAuthStateChange()
+// again each time — Supabase never dedupes subscriptions, so after
+// browsing N pages in one session, this tab had N separate listeners
+// all alive at once. Each one holds its closure in memory for good
+// (a real leak over a long session), and the next login/logout/token
+// refresh would call renderAuthArea() N times in a row instead of
+// once.
+let _authAreaWired = false;
 document.addEventListener('DOMContentLoaded', () => {
   renderAuthArea();
+  if (_authAreaWired) return;
+  _authAreaWired = true;
   sb.auth.onAuthStateChange((_event, _session) => {
     renderAuthArea();
   });

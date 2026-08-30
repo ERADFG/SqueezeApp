@@ -48,6 +48,25 @@ const SUPABASE_URL = 'https://pyitivzoqleukuclajrf.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5aXRpdnpvcWxldWt1Y2xhanJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5Nzg0ODcsImV4cCI6MjEwMTU1NDQ4N30.gKvqOaAREY5wcptIv7OHfjHhZR5ogIaMY8I98jHRmFs';
 
 const PAGE_SIZE = 1000;
+
+// This response is publicly cached at the edge (see Cache-Control
+// below) — building `origin` straight from the request's
+// x-forwarded-host header let anyone who can influence that header
+// get their own domain baked into the cached response, which every
+// later visitor hitting the same cached URL would then receive
+// (host-header cache poisoning). CANONICAL_HOST is this project's
+// real domain; *.vercel.app is still allowed through so preview
+// deployments keep generating a sitemap that points at themselves
+// (see the comment this replaced, above). Anything else — including
+// a spoofed Host — falls back to the canonical domain instead of
+// being trusted.
+const CANONICAL_HOST = 'interactink.vercel.app';
+function safeOrigin(req) {
+  const host = (req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim().toLowerCase();
+  const proto = (req.headers['x-forwarded-proto'] || 'https').split(',')[0];
+  const safeHost = (host === CANONICAL_HOST || host.endsWith('.vercel.app')) ? host : CANONICAL_HOST;
+  return `${proto}://${safeHost}`;
+}
 const MAX_ROWS = 5000;
 
 // Real <lastmod> for the static pages below, instead of omitting the tag —
@@ -208,9 +227,7 @@ function localizedStaticUrls(origin) {
 }
 
 module.exports = async function handler(req, res) {
-  const host = req.headers['x-forwarded-host'] || req.headers.host;
-  const proto = (req.headers['x-forwarded-proto'] || 'https').split(',')[0];
-  const origin = `${proto}://${host}`;
+  const origin = safeOrigin(req);
 
   let profiles = [], posts = [], communities = [], lists = [], articles = [];
   try {

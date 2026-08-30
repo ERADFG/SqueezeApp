@@ -351,7 +351,16 @@ function prefetchHref(href) {
   link.href = href;
   document.head.appendChild(link);
 }
+// Guarded against pjax.js's synthetic DOMContentLoaded re-dispatch (see
+// its navigate()): this listener lives on `document` itself, which
+// pjax never replaces, so without this flag every soft navigation was
+// stacking another pair of document-level pointerover/touchstart
+// listeners on top of the last — after browsing N pages, hovering a
+// single link fired prefetchHref() N times.
+let _linkPrefetchWired = false;
 function wireLinkPrefetch() {
+  if (_linkPrefetchWired) return;
+  _linkPrefetchWired = true;
   const grab = e => {
     const a = e.target.closest && e.target.closest('a[href]');
     if (a) prefetchHref(a.getAttribute('href'));
@@ -375,11 +384,19 @@ document.addEventListener('DOMContentLoaded', wireLinkPrefetch);
 // and, combined with a scale transform on the native one (now
 // removed above), made the fixed nav bars briefly double up. Now
 // exactly one of the two ever runs.
+// Same document-level-listener leak as wireLinkPrefetch above: guard
+// against pjax's synthetic DOMContentLoaded re-running this on every
+// soft navigation, which would otherwise attach another 'click'
+// listener each time and fire the fade (and the eventual
+// `location.href` reassignment) once per stacked copy on every click.
+let _pageLeaveFadeWired = false;
 function wirePageLeaveFade() {
+  if (_pageLeaveFadeWired) return;
   // Native support is skipped outright for IN_APP_BROWSER_UA above (see
   // the pagereveal listener), so those UAs need this plain fade too —
   // 'onpageswap' in window alone isn't a safe signal for them.
   if ('onpageswap' in window && !IN_APP_BROWSER_UA) return;
+  _pageLeaveFadeWired = true;
   document.addEventListener('click', (e) => {
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     const a = e.target.closest && e.target.closest('a[href]');
@@ -6814,8 +6831,18 @@ async function checkForUpdate() {
   if (latest !== _knownAppVersion) showUpdateBanner();
 }
 
+// Guarded the same way as wireLinkPrefetch/wirePageLeaveFade above:
+// without this flag, pjax's synthetic DOMContentLoaded re-dispatch on
+// every soft navigation was stacking another 5-minute setInterval and
+// another visibilitychange listener each time — after browsing N
+// pages, this tab was silently firing N concurrent version-check
+// requests every 5 minutes (and N of them on every tab-refocus)
+// instead of one.
+let _updateCheckWired = false;
 document.addEventListener('DOMContentLoaded', () => {
   checkForUpdate();
+  if (_updateCheckWired) return;
+  _updateCheckWired = true;
   setInterval(checkForUpdate, UPDATE_CHECK_INTERVAL_MS);
   // Also check right away whenever someone comes back to a tab
   // they'd left in the background — the common "left it open

@@ -157,9 +157,18 @@ const HELP_ARTICLES = [
       input.focus();
     });
 
-    document.addEventListener('click', (e) => {
+    // `document` persists across pjax navigations (unlike `results`,
+    // which lives on this page and gets torn down when navigating
+    // away), so revisiting the Help Center home more than once in the
+    // same tab session was stacking another one of these on top of
+    // the last every time — each old one still closing over its own
+    // page instance's now-removed `results` element. Same leak class
+    // fixed in js/thread.js/js/editarticle.js.
+    if (window.__helpSearchOutsideClickWired) document.removeEventListener('click', window.__helpSearchOutsideClickWired);
+    window.__helpSearchOutsideClickWired = (e) => {
       if (!e.target.closest('.help-search-wrap')) results.classList.remove('open');
-    });
+    };
+    document.addEventListener('click', window.__helpSearchOutsideClickWired);
 
     // deep-link support: /help/index.html?q=notifications
     const params = new URLSearchParams(window.location.search);

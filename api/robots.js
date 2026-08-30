@@ -22,10 +22,30 @@
 // still in the sitemap is a contradiction Search Console flags as an
 // error — keep these two lists in sync).
 // ─────────────────────────────────────────────────────────────
-module.exports = function handler(req, res) {
-  const host = req.headers['x-forwarded-host'] || req.headers.host;
+
+// This response is publicly cached at the edge (see Cache-Control
+// below) — building the Sitemap: line straight from the request's
+// x-forwarded-host header let anyone who can influence that header
+// get their own domain baked into the cached response, which every
+// later visitor hitting the same cached URL would then receive
+// (host-header cache poisoning). CANONICAL_HOST is this project's
+// real domain; *.vercel.app is still allowed through so preview
+// deployments keep pointing at themselves (the reason this builds
+// the origin from the request at all — see the comment above).
+// Anything else — including a spoofed Host — falls back to the
+// canonical domain instead of being trusted. Same guard as
+// api/sitemap.js's safeOrigin(); keep both in sync if this ever
+// changes.
+const CANONICAL_HOST = 'interactink.vercel.app';
+function safeOrigin(req) {
+  const host = (req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim().toLowerCase();
   const proto = (req.headers['x-forwarded-proto'] || 'https').split(',')[0];
-  const origin = `${proto}://${host}`;
+  const safeHost = (host === CANONICAL_HOST || host.endsWith('.vercel.app')) ? host : CANONICAL_HOST;
+  return `${proto}://${safeHost}`;
+}
+
+module.exports = function handler(req, res) {
+  const origin = safeOrigin(req);
 
   const body = `User-agent: *
 Allow: /

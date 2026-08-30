@@ -35,12 +35,15 @@ export default async function handler(req, res) {
   // Refuse to let this become an open proxy for probing addresses on
   // Vercel's internal network — a pasted "link" pointing at
   // localhost/169.254.169.254/a private range gets refused outright
-  // rather than fetched.
-  if (
-    host === 'localhost' || host === '0.0.0.0' || host.endsWith('.local') ||
-    /^127\./.test(host) || /^10\./.test(host) || /^192\.168\./.test(host) ||
-    /^172\.(1[6-9]|2\d|3[0-1])\./.test(host) || /^169\.254\./.test(host)
-  ) {
+  // rather than fetched. Also reused below for every redirect hop
+  // (see the manual-redirect loop) — an *external* site that 3xx's to
+  // one of these addresses would otherwise sail through unchecked.
+  const isPrivateHost = (h) => (
+    h === 'localhost' || h === '0.0.0.0' || h.endsWith('.local') ||
+    /^127\./.test(h) || /^10\./.test(h) || /^192\.168\./.test(h) ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(h) || /^169\.254\./.test(h)
+  );
+  if (isPrivateHost(host)) {
     return res.status(400).json({ error: 'Invalid url' });
   }
 
@@ -51,18 +54,28 @@ export default async function handler(req, res) {
     const timeout = setTimeout(() => controller.abort(), 5000);
     let upstream;
     try {
-      upstream = await fetch(target.href, {
-        redirect: 'follow',
-        signal: controller.signal,
-        headers: {
-          // A plain fetch() UA gets silently blocked or served a
-          // stripped page by a fair number of sites; a browser-shaped
-          // UA is what makes this behave the same as a real Bluesky/
-          // Discord/iMessage unfurl for most targets.
-          'User-Agent': 'Mozilla/5.0 (compatible; InteractInkBot/1.0; +https://interactink.com)',
-          'Accept': 'text/html,application/xhtml+xml',
-        },
-      });
+      let hop = target;
+      for (let redirects = 0; ; redirects++) {
+        if (redirects > 5) return res.status(200).json(empty);
+        upstream = await fetch(hop.href, {
+          redirect: 'manual',
+          signal: controller.signal,
+          headers: {
+            // A plain fetch() UA gets silently blocked or served a
+            // stripped page by a fair number of sites; a browser-shaped
+            // UA is what makes this behave the same as a real Bluesky/
+            // Discord/iMessage unfurl for most targets.
+            'User-Agent': 'Mozilla/5.0 (compatible; InteractInkBot/1.0; +https://interactink.com)',
+            'Accept': 'text/html,application/xhtml+xml',
+          },
+        });
+        if (upstream.status < 300 || upstream.status >= 400 || !upstream.headers.get('location')) break;
+        let next;
+        try { next = new URL(upstream.headers.get('location'), hop.href); } catch { return res.status(200).json(empty); }
+        if (next.protocol !== 'http:' && next.protocol !== 'https:') return res.status(200).json(empty);
+        if (isPrivateHost(next.hostname.toLowerCase())) return res.status(200).json(empty);
+        hop = next;
+      }
     } finally {
       clearTimeout(timeout);
     }
