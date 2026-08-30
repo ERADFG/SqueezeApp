@@ -1681,6 +1681,35 @@ function closeGlobalCompose() {
   unlockScroll();
 }
 
+// Free layered text moderation (doxxing/PII, spam, profanity, toxicity —
+// see api/moderate-text.js). Called right after verifyHuman() passes and
+// before the actual insert, on every post/reply/quote. Defined here in
+// common.js (rather than a separate js/moderation.js <script> tag) so it's
+// automatically available on every page that already includes common.js,
+// with no extra HTML edits needed. Fails open on network errors so a
+// moderation-service outage never blocks someone from posting.
+async function checkTextModeration(contentType, text, contentRef, errEl) {
+  try {
+    const res = await fetch('/api/moderate-text', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: currentSession.user.id, contentType, text, contentRef: contentRef ?? null }),
+    });
+    if (!res.ok) return true; // fail open on outage
+    const { decision } = await res.json();
+    if (decision === 'block') {
+      showErr(errEl, "This looks like it breaks our rules — please revise and try again.");
+      return false;
+    }
+    // 'allow', 'soft_flag', and 'human_review' all let the post through;
+    // soft_flag/human_review are logged server-side for the admin queue
+    // (see admin_get_flagged_content() in moderation_pipeline.sql).
+    return true;
+  } catch {
+    return true; // fail open — never block a real user because of a network hiccup
+  }
+}
+
 async function submitGlobalCompose() {
   if (!requireLogin()) return;
   const bodyEl = document.getElementById('gc-body');
@@ -1696,6 +1725,7 @@ async function submitGlobalCompose() {
   if (!validatePollAndSchedule('gc', errEl)) return;
   if (!ensureCaptchaRevealed('gc-captcha')) return;
   if (!(await verifyHuman('gc-captcha', errEl))) return;
+  if (!(await checkTextModeration('text', body, null, errEl))) return;
 
   btn.disabled = true;
   stEl.textContent = 'Posting…';
@@ -1878,6 +1908,7 @@ async function submitReplyPopup() {
   if (body.length > 500) { showErr(errEl, 'Reply too long (max 500 chars).'); return; }
   if (!ensureCaptchaRevealed('rpc-captcha')) return;
   if (!(await verifyHuman('rpc-captcha', errEl))) return;
+  if (!(await checkTextModeration('chat', body, targetPostId, errEl))) return;
 
   btn.disabled = true;
   stEl.textContent = 'Posting…';
@@ -2579,6 +2610,7 @@ async function submitQuote() {
   if (body.length > 500) { showErr(errEl, 'Comment too long (max 500 chars).'); return; }
   if (!ensureCaptchaRevealed('qm-captcha')) return;
   if (!(await verifyHuman('qm-captcha', errEl))) return;
+  if (!(await checkTextModeration('text', body, quotingPostId, errEl))) return;
   btn.disabled = true;
   try {
     const { data, error } = await sb.from('posts').insert({
@@ -5435,7 +5467,14 @@ async function compressImageFile(file) {
     canvas.getContext('2d').drawImage(bitmap, 0, 0, width, height);
     bitmap.close?.();
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', IMAGE_COMPRESS_QUALITY));
-    if (!blob || blob.size >= file.size) return file;
+    // Deliberately NOT falling back to the original file when the
+    // re-encoded version isn't smaller: the canvas round-trip is what
+    // strips EXIF/GPS metadata (phones embed the exact location a photo
+    // was taken at by default). Falling back to the raw original here
+    // would silently re-introduce that location leak on any image that
+    // was already well-optimized. A slightly larger, metadata-free file
+    // is the right tradeoff.
+    if (!blob) return file;
     const name = file.name.replace(/\.[^.]+$/, '') + '.webp';
     return new File([blob], name, { type: 'image/webp' });
   } catch {

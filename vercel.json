@@ -20,6 +20,13 @@
     { "src": "^/(js|css)/.*$",  "headers": { "Cache-Control": "public, max-age=31536000, immutable" }, "continue": true },
     { "src": "^/img/.*$",       "headers": { "Cache-Control": "public, max-age=31536000, stale-while-revalidate=604800" }, "continue": true },
 
+    { "src": "^/.*$", "headers": {
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Permissions-Policy": "geolocation=(), camera=(), microphone=()"
+      }, "continue": true },
+
     { "handle": "filesystem" },
 
     { "src": "^/robots\\.txt$",  "dest": "/api/robots" },

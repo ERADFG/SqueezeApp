@@ -444,6 +444,34 @@ async function doSignUp(e) {
   if (!ensureCaptchaRevealed('su-captcha')) return;
   if (!(await verifyHuman('su-captcha', errEl))) return;
 
+  // Two free, silent checks before we spend an actual signUp() call:
+  // reject throwaway-email domains (cuts bot/spam account farming) and
+  // warn on passwords already exposed in known breaches. Both fail open
+  // (allow signup) if the check itself errors out, so a hiccup in either
+  // service never blocks a real signup.
+  try {
+    const { data: disposable } = await sb.rpc('is_disposable_email', { p_email: email });
+    if (disposable) {
+      showErr(errEl, 'Please use a permanent email address (throwaway/temporary email domains are not allowed).');
+      return;
+    }
+  } catch { /* fail open */ }
+
+  try {
+    const pwRes = await fetch('/api/check-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+    if (pwRes.ok) {
+      const { breached, count } = await pwRes.json();
+      if (breached) {
+        showErr(errEl, `That password has appeared in ${count.toLocaleString()} known data breaches — please choose a different one.`);
+        return;
+      }
+    }
+  } catch { /* fail open */ }
+
   btn.disabled = true; btn.value = 'Creating account…';
   try {
     const { data, error } = await sb.auth.signUp({
