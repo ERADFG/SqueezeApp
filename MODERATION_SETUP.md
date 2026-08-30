@@ -14,10 +14,55 @@ nsfw-service/                 - self-hosted, open-source: NSFW images/video + te
 supabase/moderation_pipeline.sql - logs, disposable-email blocking, login lockout
 supabase/load_disposable_domains.sql - one-paste SQL to load the domain list (no Node needed)
 js/moderation.js              - client helpers, same style as verifyHuman()
+js/common.js                  - client-side moderation layer (see below), inline next to
+                                 the existing compression/upload code
 data/badwords.txt             - free open-source profanity wordlist (LDNOOBW)
 data/disposable-email-domains.txt - free open-source list, 8,300+ throwaway domains
 scripts/load-disposable-domains.mjs - alternative Node loader (use the .sql file instead if you'd rather not run Node)
 ```
+
+## Client-side layer (new — runs with zero setup, no server required)
+
+`js/common.js` now also runs moderation **in the browser**, entirely on-device,
+using open-source models loaded from jsDelivr at request time (nothing to
+install, no build step, no card, no account):
+
+| Check | Library (license) | What it does |
+|---|---|---|
+| Image NSFW | [nsfwjs](https://github.com/infinitered/nsfwjs) (MIT) on [TensorFlow.js](https://www.tensorflow.org/js) (Apache-2.0) | Classifies every image upload (Drawing/Hentai/Neutral/Porn/Sexy) before it leaves the device. Wired into `uploadMedia()` — a block-level result stops the upload with a friendly error. |
+| Video NSFW | same model, sampled frames | Draws a frame to `<canvas>` every ~2s (capped at 15 samples, stops early on a clear hit) and classifies each one — genuinely frame-by-frame, not just the thumbnail. |
+| Text toxicity | [transformers.js](https://github.com/xenova/transformers.js) (Apache-2.0) running `Xenova/toxic-bert` — a quantized port of the same `unitary/toxic-bert` model the server already uses | Gives an instant local toxicity read while typing/submitting, before the server round trip. |
+| Doxxing/PII | plain regex, same patterns as `api/moderate-text.js` | Instant, no model needed. |
+
+**Read this before you rely on it:** this client-side layer is a *first pass*,
+not a security boundary. Anyone can open devtools, disable the page's JS, or
+call the Supabase storage API directly, and every check here is skipped —
+it never runs. That's fine for what it's for (catching normal users
+uploading normal mistakes, and giving instant feedback instead of a wait),
+but it is **not** a substitute for server-side moderation on content that
+other users will see.
+
+Right now, be aware: **`nsfw-service/main.py`'s `/classify` endpoint exists
+in this repo but nothing calls it yet** — no code currently sends an
+uploaded image/video to it after upload. That means the client-side check
+above is, at the moment, the *only* NSFW check running at all, and it's
+bypassable as described. If you don't want to deploy `nsfw-service/`
+(e.g. to avoid a hosting provider's card requirement), that's a reasonable
+call for a small/low-risk community, but understand the tradeoff: someone
+who wants to post something and knows to disable JS first, can. If/when you
+do want the real backstop, deploy `nsfw-service/` (Fly.io's free tier, or
+any $5/mo box, no card needed for Fly's free allowance) and add a call to
+`/classify` after upload — e.g. from an admin-triggered scan or a
+background job — that can actually take the content down if it's flagged,
+since only server-side code can do that safely (a client can't be trusted
+to delete its own violating upload).
+
+All models load lazily (first use) and are cached by the browser after
+that, so this doesn't add meaningful weight to page load — only to the
+first image/video/post someone actually submits in a session. Everything
+fails open on model-load failure (offline, ad blocker, old browser): a
+broken model load never blocks a legitimate post, same philosophy as the
+rest of this file.
 
 ## Setup
 

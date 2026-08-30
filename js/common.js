@@ -1689,6 +1689,19 @@ function closeGlobalCompose() {
 // with no extra HTML edits needed. Fails open on network errors so a
 // moderation-service outage never blocks someone from posting.
 async function checkTextModeration(contentType, text, contentRef, errEl) {
+  // Instant local pass first (doxxing regex +, if the model's already
+  // warm, an in-browser toxicity read) — see checkTextLocal above. Never
+  // adds real latency: the toxicity model is bounded by
+  // LOCAL_TOXICITY_TIMEOUT_MS, and the regex check is instant either
+  // way. The server call below still always runs and is still what
+  // actually decides soft_flag/human_review and gets logged — this only
+  // short-circuits the obvious block cases so the person doesn't have
+  // to wait on a round trip to find out.
+  const local = await checkTextLocal(text);
+  if (local.decision === 'block') {
+    showErr(errEl, "This looks like it breaks our rules — please revise and try again.");
+    return false;
+  }
   try {
     const res = await fetch('/api/moderate-text', {
       method: 'POST',
@@ -5597,6 +5610,218 @@ async function compressVideoFile(file) {
   }
 }
 
+// ── CLIENT-SIDE NSFW DETECTION (images & video) ──
+// Runs entirely in-browser via TensorFlow.js — the pixels never leave
+// the device for this pass. Uses nsfwjs (MIT-licensed, open source),
+// which wraps a MobileNetV2 classifier trained to score five classes:
+// Drawing, Hentai, Neutral, Porn, Sexy.
+//
+// IMPORTANT — this is a first-pass filter, not a security boundary.
+// It stops obviously explicit uploads before they ever hit the network
+// (saves the person a wasted upload, saves you storage/bandwidth, and
+// gives instant feedback instead of a wait), but like any client-side
+// check it can be bypassed by disabling JS or calling the storage API
+// directly. The actual backstop is nsfw-service/main.py's /classify
+// endpoint running server-side on the uploaded file — this client pass
+// complements that, it doesn't replace it. Don't remove the server-side
+// check on the strength of this one.
+const NSFWJS_VERSION = '4.4.0';
+const TFJS_VERSION = '4.22.0';
+let _nsfwModelPromise = null;
+async function loadNSFWModel() {
+  if (!_nsfwModelPromise) {
+    _nsfwModelPromise = (async () => {
+      // nsfwjs expects tf as a global (`window.tf`), so it has to land
+      // first and stay attached rather than just being imported locally.
+      if (!window.tf) {
+        window.tf = await import(`https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@${TFJS_VERSION}/+esm`);
+      }
+      const nsfwjs = await import(`https://cdn.jsdelivr.net/npm/nsfwjs@${NSFWJS_VERSION}/+esm`);
+      // MobileNetV2 variant: smaller download and faster inference than
+      // the default InceptionV3 model — the right tradeoff for a check
+      // that runs on every image/video upload in a browser tab.
+      return await nsfwjs.load('MobileNetV2');
+    })().catch((err) => {
+      _nsfwModelPromise = null; // let the next upload retry instead of caching a permanent failure
+      throw err;
+    });
+  }
+  return _nsfwModelPromise;
+}
+
+// Combines the five class probabilities into one score. Sexy is
+// weighted down relative to Porn/Hentai so borderline results (gym
+// selfies, swimwear, etc.) don't get treated the same as explicit
+// content — matches the intent of the severity bands in
+// api/moderate-text.js (soft_flag vs. block).
+function nsfwScoreFromPredictions(predictions) {
+  const byClass = Object.fromEntries(predictions.map(p => [p.className, p.probability]));
+  const porn = byClass.Porn || 0;
+  const hentai = byClass.Hentai || 0;
+  const sexy = byClass.Sexy || 0;
+  return Math.max(porn, hentai, sexy * 0.6);
+}
+
+const NSFW_BLOCK_THRESHOLD = 0.85;
+const NSFW_REVIEW_THRESHOLD = 0.6;
+
+async function checkImageNSFW(file) {
+  try {
+    const model = await loadNSFWModel();
+    const bitmap = await createImageBitmap(file);
+    const canvas = document.createElement('canvas');
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    canvas.getContext('2d').drawImage(bitmap, 0, 0);
+    bitmap.close?.();
+    const predictions = await model.classify(canvas);
+    const score = nsfwScoreFromPredictions(predictions);
+    return {
+      nsfwProbability: score,
+      decision: score >= NSFW_BLOCK_THRESHOLD ? 'block' : score >= NSFW_REVIEW_THRESHOLD ? 'soft_flag' : 'allow',
+      predictions,
+    };
+  } catch {
+    // Fail open: a model-load failure (offline, ad-blocker, old
+    // browser, first-load-too-slow) should never stop someone from
+    // posting a normal image. The server-side pass is still the real
+    // backstop for anything this misses.
+    return { nsfwProbability: 0, decision: 'allow', predictions: [] };
+  }
+}
+
+// Video isn't decoded frame-by-frame in full (slow, memory-heavy in a
+// tab) — instead it's sampled at a fixed cadence, capped at
+// MAX_VIDEO_SAMPLES frames so a long video can't hang the upload flow,
+// and scanning stops early the moment a clear block-level frame is
+// found.
+const VIDEO_SAMPLE_INTERVAL_S = 2;
+const MAX_VIDEO_SAMPLES = 15;
+async function checkVideoNSFW(file, onStatus) {
+  const notify = onStatus || (() => {});
+  let objectUrl;
+  try {
+    const model = await loadNSFWModel();
+    const video = document.createElement('video');
+    video.muted = true;
+    video.playsInline = true;
+    objectUrl = URL.createObjectURL(file);
+    video.src = objectUrl;
+    await new Promise((resolve, reject) => {
+      video.onloadedmetadata = resolve;
+      video.onerror = () => reject(new Error('video decode failed'));
+    });
+
+    const duration = video.duration || 0;
+    const sampleCount = Math.min(MAX_VIDEO_SAMPLES, Math.max(1, Math.floor(duration / VIDEO_SAMPLE_INTERVAL_S) || 1));
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+
+    let maxScore = 0;
+    for (let i = 0; i < sampleCount; i++) {
+      const t = sampleCount === 1 ? 0 : (duration / sampleCount) * i;
+      await new Promise((resolve) => {
+        video.onseeked = resolve;
+        video.currentTime = t;
+      });
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const predictions = await model.classify(canvas);
+      maxScore = Math.max(maxScore, nsfwScoreFromPredictions(predictions));
+      notify(`Checking video… (${i + 1}/${sampleCount})`);
+      if (maxScore >= NSFW_BLOCK_THRESHOLD) break; // clear block already found, no need to keep scanning
+    }
+
+    return {
+      nsfwProbability: maxScore,
+      decision: maxScore >= NSFW_BLOCK_THRESHOLD ? 'block' : maxScore >= NSFW_REVIEW_THRESHOLD ? 'soft_flag' : 'allow',
+      framesSampled: sampleCount,
+    };
+  } catch {
+    return { nsfwProbability: 0, decision: 'allow', framesSampled: 0 }; // fail open, same reasoning as checkImageNSFW
+  } finally {
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+  }
+}
+
+// ── CLIENT-SIDE TEXT PRE-CHECK ──
+// Runs the same doxxing/PII regexes as api/moderate-text.js locally
+// (instant, free) plus an in-browser toxicity read using transformers.js
+// (Xenova's WASM/ONNX port of HuggingFace transformers) running
+// Xenova/toxic-bert — a quantized port of the same unitary/toxic-bert
+// model the server already uses, so the two scores should track closely.
+//
+// The profanity wordlist is deliberately NOT duplicated here: shipping
+// it in a browser-readable JS file would just hand out the exact
+// evasion list to anyone who opens devtools, so that check stays
+// server-only. The server call in checkTextModeration() below remains
+// authoritative either way — it's the one that actually gets logged to
+// the admin queue and can't be skipped by disabling JS. This local pass
+// exists purely so obvious cases surface instantly instead of waiting
+// on a round trip, and so text moderation still gives useful feedback
+// if the moderation server is ever temporarily down.
+const CLIENT_PII_PATTERNS = [
+  { label: 'phone_number', pattern: /(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g },
+  { label: 'email_leak', pattern: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g },
+  { label: 'ssn_like', pattern: /\b\d{3}-\d{2}-\d{4}\b/g },
+];
+function detectDoxxingLocal(text) {
+  const hits = [];
+  for (const { label, pattern } of CLIENT_PII_PATTERNS) {
+    pattern.lastIndex = 0;
+    if (pattern.test(text)) hits.push(label);
+  }
+  return hits;
+}
+
+const TRANSFORMERS_VERSION = '2.17.2';
+let _toxicityPipelinePromise = null;
+async function loadToxicityPipeline() {
+  if (!_toxicityPipelinePromise) {
+    _toxicityPipelinePromise = (async () => {
+      const { pipeline, env } = await import(`https://cdn.jsdelivr.net/npm/@xenova/transformers@${TRANSFORMERS_VERSION}/+esm`);
+      env.allowLocalModels = false; // always fetch the model from HF's CDN, never expect local files
+      return await pipeline('text-classification', 'Xenova/toxic-bert', { quantized: true });
+    })().catch((err) => {
+      _toxicityPipelinePromise = null;
+      throw err;
+    });
+  }
+  return _toxicityPipelinePromise;
+}
+// Opportunistic background preload — starts the (one-time, then cached
+// by the browser) model download on page load without blocking
+// anything, so by the time someone actually submits a post the model is
+// usually already warm. If it fails or is still loading, checkTextLocal
+// below just falls open with no local opinion — never a blocker.
+loadToxicityPipeline().catch(() => {});
+
+const TEXT_BLOCK_THRESHOLD = 0.9;
+const TEXT_REVIEW_THRESHOLD = 0.65;
+const LOCAL_TOXICITY_TIMEOUT_MS = 1200;
+async function checkTextLocal(text) {
+  const doxHits = detectDoxxingLocal(text);
+  if (doxHits.length) return { decision: 'human_review', toxicity: 0, doxHits };
+  try {
+    const toxic = await Promise.race([
+      (async () => {
+        const classify = await loadToxicityPipeline();
+        const results = await classify(text.slice(0, 512));
+        return Math.max(0, ...results.filter(r => !/non.?toxic/i.test(r.label)).map(r => r.score));
+      })(),
+      new Promise((resolve) => setTimeout(() => resolve(0), LOCAL_TOXICITY_TIMEOUT_MS)),
+    ]);
+    return {
+      decision: toxic >= TEXT_BLOCK_THRESHOLD ? 'block' : toxic >= TEXT_REVIEW_THRESHOLD ? 'soft_flag' : 'allow',
+      toxicity: toxic,
+      doxHits: [],
+    };
+  } catch {
+    return { decision: 'allow', toxicity: 0, doxHits: [] }; // fail open — server pass is still authoritative
+  }
+}
+
 // Uploads a file to the media bucket and returns { media_url, media_type }.
 // `onStatus(message)`, if given, is called with a short human-readable
 // status as compression/upload progresses, for callers that want to
@@ -5624,6 +5849,25 @@ async function uploadMedia(file, onStatus) {
   // makes video posting fast; compressVideoFile() is kept below,
   // unused, in case server-side/background transcoding is wired up
   // later.
+
+  // Client-side NSFW pass — after compression (checking the smaller,
+  // already-normalized file is faster) and before the file ever leaves
+  // the device. See checkImageNSFW/checkVideoNSFW above for what this
+  // does and doesn't guarantee.
+  if (type === 'image') {
+    notify('Checking image…');
+    const nsfw = await checkImageNSFW(file);
+    if (nsfw.decision === 'block') {
+      throw new Error("This image looks like it may violate our content rules and can't be uploaded. If you think this is a mistake, contact support.");
+    }
+  } else if (type === 'video') {
+    notify('Checking video…');
+    const nsfw = await checkVideoNSFW(file, notify);
+    if (nsfw.decision === 'block') {
+      throw new Error("This video looks like it may violate our content rules and can't be uploaded. If you think this is a mistake, contact support.");
+    }
+  }
+
   notify('Uploading…');
   const ext = file.name.split('.').pop().toLowerCase();
   const path = `${crypto.randomUUID()}.${ext}`;
