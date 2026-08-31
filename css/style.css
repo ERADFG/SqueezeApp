@@ -3667,6 +3667,13 @@ a.auth-submit { text-align:center; text-decoration:none; }
 .notif-item.unread .notif-badge { border-color:var(--maroon-tint); }
 .notif-badge svg { width:11px; height:11px; fill:none; stroke:currentColor; stroke-width:2.4; }
 .notif-badge.like svg, .notif-badge.quote svg { fill:#fff; stroke:none; }
+/* The badge's -3px/-3px offset + matching ring border is tuned to
+   nest into the curve of a circular avatar. Gold-badge accounts use
+   a squared-off avatar (.avatar-square, 22% radius — see avSqClass()
+   in common.js), whose corner is much straighter, so that same badge
+   reads as floating half off the edge instead of tucked into it.
+   Pull it in slightly and square its own corner to match. */
+.notif-avatar-wrap-sq .notif-badge { right:-1px; bottom:-1px; border-radius:30%; }
 .notif-body { flex:1; min-width:0; }
 .notif-body .notif-txt { font-size:14.5px; color:var(--ink); line-height:1.35; }
 .notif-body .notif-txt b { font-weight:800; }

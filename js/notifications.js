@@ -11,7 +11,8 @@ const NOTIF_ICON = {
   repost:  ICON.repost,
   quote:   ICON.quote,
   mention: '<svg viewBox="0 0 24 24"><path d="M15.5 12a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"/><path d="M15.5 12v1.2c0 1.3 1 2.3 2.3 2.3s2.2-1 2.2-3.5a8 8 0 1 0-3.5 6.6"/></svg>',
-  follow:  '<svg viewBox="0 0 24 24"><circle cx="12" cy="8.3" r="3.6"/><path d="M4.5 20c1.2-4 4-6 7.5-6s6.3 2 7.5 6"/></svg>'
+  follow:  '<svg viewBox="0 0 24 24"><circle cx="12" cy="8.3" r="3.6"/><path d="M4.5 20c1.2-4 4-6 7.5-6s6.3 2 7.5 6"/></svg>',
+  message: ICON.chat
 };
 
 function notifText(n) {
@@ -22,11 +23,13 @@ function notifText(n) {
   if (n.type === 'quote') return `${who} quoted your post`;
   if (n.type === 'mention') return `${who} mentioned you`;
   if (n.type === 'follow') return `${who} followed you`;
+  if (n.type === 'message') return `${who} sent you a message`;
   return who;
 }
 
 function notifHref(n) {
   if (n.type === 'follow') return n.actor?.username ? profileUrl(n.actor.username) : '#';
+  if (n.type === 'message') return n.actor?.username ? messagesUrl(n.actor.username) : '#';
   if (n.post && !n.post.is_deleted) return postUrlById(n.post.id, n.post.profile?.username || n.post.author?.username);
   return '#';
 }
@@ -36,7 +39,7 @@ function notifItemHtml(n) {
   const snippet = (n.type !== 'follow' && n.post && !n.post.is_deleted) ? `<div class="notif-snip">${renderBody((n.post.body || '').slice(0, 140))}</div>` : '';
   return `
   <a class="notif-item${n.read ? '' : ' unread'}" href="${notifHref(n)}">
-    <span class="notif-avatar-wrap">
+    <span class="notif-avatar-wrap${avSqClass(n.actor) ? ' notif-avatar-wrap-sq' : ''}">
       <img class="avatar${avSqClass(n.actor)}" src="${esc(actorAvatar)}" alt="" loading="lazy" decoding="async">
       <span class="notif-badge ${n.type}">${NOTIF_ICON[n.type] || ''}</span>
     </span>
