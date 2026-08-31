@@ -334,16 +334,35 @@ document.addEventListener('mousedown', e => {
   if (e.target.closest('.pw-toggle')) e.preventDefault();
 });
 
-// ── OAuth (Google / Apple) — used by the "Create account" chooser
-// (start.html) and the Log In page's "Continue with Google" button.
-// Supabase handles the actual redirect/callback; this just kicks it
-// off and comes back to the current site (so a person starting from
-// start.html or login.html lands back on the home feed once the
-// provider round-trip finishes and a session exists).
-// NOTE: this only works once Google/Apple are turned on as providers
-// in the Supabase dashboard (Authentication → Providers), each with
-// its own client ID/secret — the button itself doesn't need any
-// setup beyond that.
+// ── OAuth — InteractInk is OAuth-only for account creation and login
+// now (no email/password form). Every button on start.html/login.html/
+// signup.html calls this with a Supabase provider id. Supabase handles
+// the actual redirect/callback; this just kicks it off and comes back
+// to the current site (so a person lands back on the home feed once
+// the provider round-trip finishes and a session exists).
+// NOTE: each provider only works once it's turned on in the Supabase
+// dashboard (Authentication → Providers), with its own client ID/secret
+// — the button itself doesn't need any setup beyond that. Google,
+// Twitter (X), Facebook, and Discord are all providers Supabase
+// supports natively. Bluesky is NOT a built-in Supabase provider — it
+// isn't in Supabase's social-login list at all. Bluesky's own sign-in
+// is an AT Protocol OAuth flow with per-client dynamic client
+// registration, which doesn't map cleanly onto Supabase's generic
+// "Custom OAuth/OIDC Provider" feature the way a normal OAuth2/OIDC
+// provider does. The 'custom:bluesky' id below is a placeholder for
+// if/when that's wired up as a Custom Provider in the Supabase
+// dashboard (see supabase.com/docs/guides/auth/custom-oauth-providers)
+// — until then, that button will fail with a "provider not found"
+// style error, same as any other unconfigured provider.
+const OAUTH_PROVIDER_NAMES = {
+  google: 'Google',
+  twitter: 'X',
+  facebook: 'Facebook',
+  discord: 'Discord',
+  'custom:bluesky': 'Bluesky',
+  apple: 'Apple',
+};
+
 async function doOAuth(provider, btn) {
   if (btn) { btn.disabled = true; btn.style.opacity = '.6'; }
   try {
@@ -357,7 +376,8 @@ async function doOAuth(provider, btn) {
     // enabled, network error, popup blocked, etc).
   } catch (err) {
     console.error('OAuth sign-in failed:', err);
-    alert(`Couldn't continue with ${provider === 'google' ? 'Google' : 'Apple'} right now. Try email instead, or try again in a moment.`);
+    const name = OAUTH_PROVIDER_NAMES[provider] || provider;
+    alert(`Couldn't continue with ${name} right now. Try again in a moment, or use a different sign-in option.`);
     if (btn) { btn.disabled = false; btn.style.opacity = ''; }
   }
 }
@@ -382,7 +402,14 @@ window.addEventListener('pageshow', function (event) {
   });
 });
 
-// ── SIGN UP ──
+// ── SIGN UP (email/password) ──
+// NOTE: the root site (login.html/signup.html/start.html) no longer
+// uses this — those pages are OAuth-only now (see doOAuth above). This
+// function is kept only because the translated pages under /es/, /fr/,
+// /de/, /pt/, /ja/, /ru/ still have the old email/password form and
+// still call it. Update those pages the same way if you want the
+// whole site OAuth-only, then this (and doLogIn/resolveLoginEmail
+// below) can be deleted.
 // No email verification step at all — signUp() creates the auth.users
 // row (and, via the DB trigger, the profiles row + auto-follow of
 // @marpe) and hands back a real session in the same call, so the
