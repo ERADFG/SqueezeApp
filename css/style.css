@@ -476,6 +476,16 @@ html[data-theme="dim"] .logo-mark-dark, html[data-theme="dark"] .logo-mark-dark 
 .sidebar-post-btn svg { width:18px; height:18px; flex:none; }
 .sidebar-post-btn:hover { background:var(--maroon-dk); text-decoration:none; color:#fff; }
 .sidebar-post-btn:active { background:var(--maroon-dk); opacity:.9; }
+/* The logged-out variant of this button is an <a> living inside
+   #side-nav, which IS the <nav> that "#hdr nav a" / "#hdr nav
+   a:visited" target — and that id-qualified selector outranks the
+   plain .sidebar-post-btn class above, so it was quietly repainting
+   the pill (and, via currentColor, the pencil icon) back to
+   var(--ink) instead of white. Re-declaring white here at matching
+   #hdr-nav-a specificity restores it without needing !important. */
+#hdr nav a.sidebar-post-btn,
+#hdr nav a.sidebar-post-btn:visited { color:#fff; }
+#hdr nav a.sidebar-post-btn:hover { background:var(--maroon-dk); color:#fff; }
 
 /* auth-area sits at the bottom of the sidebar, Twitter-profile-button style */
 .auth-area { display:block; margin-top:auto; padding-top:8px; }
