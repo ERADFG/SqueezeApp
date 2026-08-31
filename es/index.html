@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>InteractInk en Español</title>
+<meta name="description" content="InteractInk es un imageboard social en tiempo real — publica, responde y sigue a personas con un feed en vivo de Para ti y Siguiendo.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="InteractInk">
+<meta property="og:title" content="InteractInk en Español">
+<meta property="og:description" content="InteractInk es un imageboard social en tiempo real — publica, responde y sigue a personas con un feed en vivo de Para ti y Siguiendo.">
+<meta property="og:image" content="/img/logo-light.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="InteractInk en Español">
+<meta name="twitter:description" content="InteractInk es un imageboard social en tiempo real — publica, responde y sigue a personas con un feed en vivo de Para ti y Siguiendo.">
+<meta name="twitter:image" content="/img/logo-light.png">
+<link rel="canonical" href="https://interactink.vercel.app/es">
+<meta property="og:url" content="https://interactink.vercel.app/es">
+<link rel="alternate" hreflang="en" href="https://interactink.vercel.app/">
+<link rel="alternate" hreflang="es" href="https://interactink.vercel.app/es">
+<link rel="alternate" hreflang="fr" href="https://interactink.vercel.app/fr">
+<link rel="alternate" hreflang="de" href="https://interactink.vercel.app/de">
+<link rel="alternate" hreflang="pt" href="https://interactink.vercel.app/pt">
+<link rel="alternate" hreflang="ja" href="https://interactink.vercel.app/ja">
+<link rel="alternate" hreflang="ru" href="https://interactink.vercel.app/ru">
+<link rel="alternate" hreflang="x-default" href="https://interactink.vercel.app/">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"InteractInk","url":"https://interactink.vercel.app/es","inLanguage":"es","potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"https://interactink.vercel.app/search?q={search_term_string}"},"query-input":"required name=search_term_string"}}</script>
+<base href="/">
+<link rel="icon" type="image/png" href="/img/favicon-32.png" sizes="32x32" id="fav32">
+<link rel="icon" type="image/png" href="/img/favicon.png" sizes="512x512" id="fav512">
+<link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+<meta name="theme-color" content="#1185FE">
+<script>(function(){try{var t=localStorage.getItem('oc-theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}if(t&&t!=="light"){document.documentElement.setAttribute('data-theme',t);var f32=document.getElementById('fav32'),f512=document.getElementById('fav512');if(f32)f32.setAttribute('href',f32.getAttribute('href').replace('favicon-32.png','favicon-dark-32.png'));if(f512)f512.setAttribute('href',f512.getAttribute('href').replace('favicon.png','favicon-dark.png'));}var a=localStorage.getItem('oc-accent');if(a&&a!=="blue")document.documentElement.setAttribute('data-accent',a);}catch(e){}})();</script>
+<link rel="preconnect" href="https://pyitivzoqleukuclajrf.supabase.co">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="/css/style.css?v=20260829d">
+</head>
+<body>
+
+<div class="xshell">
+  <!-- LEFT SIDEBAR -->
+  <div id="hdr">
+    <div class="sb-top">
+      <a class="logo" href="/es">
+        <span class="badge">
+          <img class="logo-mark logo-mark-light" src="/img/logo-light.png" alt="InteractInk logo" width="36" height="36">
+          <img class="logo-mark logo-mark-dark" src="/img/logo-dark.png" alt="InteractInk logo" width="36" height="36">
+        </span>
+        <span class="wordmark">Interact<em>Ink</em></span>
+      </a>
+      <nav id="side-nav"></nav>
+    </div>
+    <span id="auth-area" class="auth-area"></span>
+  </div>
+
+  <!-- CENTER + RIGHT -->
+  <div id="main">
+    <div id="feed">
+      <h1 class="sr-only">InteractInk — Feed de Para ti y Siguiendo</h1>
+      <!-- TABS -->
+      <div id="board-hdr">
+        <div class="xtabs" id="xtabs">
+          <button class="xtab active" id="tab-foryou" onclick="switchTab('foryou');return false;">Para ti</button>
+          <button class="xtab" id="tab-following" onclick="switchTab('following');return false;">Siguiendo</button>
+        </div>
+        <button class="xtabs-plus" title="Crear una comunidad" aria-label="Crear una comunidad" onclick="openCreateCommunityModal();return false;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+
+      <!-- POST FORM -->
+      <div id="pf-wrap">
+        <div id="pf-box" data-requires-auth style="display:none;">
+          <div class="pf-row">
+            <span class="pf-avatar" id="pf-avatar"></span>
+            <div class="pf-col">
+              <div class="errmsg" id="pf-err" style="display:none;"></div>
+              <textarea id="pf-body" maxlength="500" placeholder="¿Qué está pasando?"></textarea>
+              <div id="pf-fp" class="fp"></div>
+              <div class="cx-poll" id="pf-poll-box" hidden>
+                <div class="cx-poll-opts" id="pf-poll-opts">
+                  <input type="text" class="cx-poll-opt" placeholder="Opción 1" maxlength="25">
+                  <input type="text" class="cx-poll-opt" placeholder="Opción 2" maxlength="25">
+                </div>
+                <div class="cx-poll-row">
+                  <button type="button" class="cx-poll-add" onclick="addPollOption('pf');return false;">+ Agregar opción</button>
+                  <select id="pf-poll-dur"><option value="1">1 día</option><option value="3" selected>3 días</option><option value="7">7 días</option></select>
+                  <button type="button" class="cx-poll-remove" title="Quitar encuesta" aria-label="Quitar encuesta" onclick="removePoll('pf');return false;">&#10005;</button>
+                </div>
+              </div>
+              <div class="cx-sched" id="pf-sched-box" hidden>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="5" width="17" height="16" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg>
+                <input type="datetime-local" id="pf-sched-input">
+                <button type="button" class="cx-sched-remove" title="Quitar" aria-label="Quitar" onclick="removeSchedule('pf');return false;">&#10005;</button>
+              </div>
+            </div>
+          </div>
+          <div id="pf-ga-slot"></div>
+          <div id="pf-captcha" class="captcha-card" style="display:none;">
+            <div class="captcha-card-head">
+              <span class="captcha-card-icon">
+                <svg class="cci-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+                <svg class="cci-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 9.5 17 19 7"/></svg>
+              </span>
+              <span class="captcha-card-text">
+                <span class="captcha-card-title">Quick security check</span>
+                <span class="captcha-card-sub">Confirm you're human to continue</span>
+              </span>
+            </div>
+            <div class="captcha-card-body"><div class="captcha-skeleton"></div></div>
+          </div>
+          <div class="pf-toolbar">
+            <div class="pf-icons">
+              <button type="button" class="pf-ic" title="Multimedia" aria-label="Multimedia" onclick="document.getElementById('pf-file').click();return false;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10.5" r="1.6"/><path d="m4 17 5-5 3.5 3.5L17 11l3 3"/></svg>
+              </button>
+              <button type="button" class="pf-ic" title="GIF" aria-label="GIF" onclick="openGifPicker('pf');return false;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="14" rx="3.5"/><text x="12" y="15.2" font-family="Arial,Helvetica,sans-serif" font-size="7.3" font-weight="700" letter-spacing="0.3" text-anchor="middle" fill="currentColor" stroke="none">GIF</text></svg>
+              </button>
+              <button type="button" class="pf-ic" title="Encuesta" aria-label="Encuesta" onclick="togglePollBuilder('pf');return false;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 15v2M12 11v6M17 8v10"/></svg>
+              </button>
+              <button type="button" class="pf-ic" title="Emoji" aria-label="Emoji" onclick="toggleEmojiPicker('pf', this);return false;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8.5 10h.01M15.5 10h.01M8 14.5c1 1.2 2.3 1.8 4 1.8s3-.6 4-1.8"/></svg>
+              </button>
+              <button type="button" class="pf-ic" title="Programar" aria-label="Programar" onclick="toggleScheduleBuilder('pf');return false;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="5" width="17" height="16" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="M8 13.5h1M12 13.5h1M16 13.5h1M8 17h1M12 17h1"/></svg>
+              </button>
+              <input type="file" id="pf-file" accept="image/*,video/*" style="display:none;">
+            </div>
+            <input type="submit" id="pf-btn" class="pf-btn" value="Publicar" onclick="submitPost();return false;" disabled>
+          </div>
+          <span id="pf-st" style="font-size:11px;color:var(--muted);"></span>
+        </div>
+        <div class="post-login-gate" data-requires-anon style="display:none;">
+          Necesitas una cuenta para publicar. <a href="/es/login">Inicia sesión</a> o <a href="/es/signup">regístrate</a> — solo toma un minuto.
+        </div>
+      </div>
+
+      <a href="#" id="show-new-pill" class="show-new-pill" onclick="flushPendingPosts();return false;" style="display:none;"></a>
+
+      <div id="feed-posts"><span class="spinner">Cargando publicaciones&hellip;</span></div>
+    </div>
+
+    <div id="sidebar">
+      <div class="xsearch">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+        <input id="side-search" placeholder="Buscar en InteractInk">
+      </div>
+
+      <div class="trends-box">
+        <div class="t-lbl">Tendencias</div>
+        <div id="t-trending"></div>
+      </div>
+
+      <div class="who-box" id="my-communities"></div>
+
+      <div class="who-box" id="who-to-follow"></div>
+
+      <div id="ftr">
+        [<a href="#" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;">Arriba</a>]
+        &nbsp;&mdash;&nbsp;
+        Todas las marcas registradas y derechos de autor pertenecen a sus respectivos dueños. Las imágenes y comentarios son responsabilidad de quien los publica.
+        <br><span style="font-size:10px;color:var(--muted);">&copy; 2026 InteractInk &mdash; <a href="/es/rules">Reglas</a> &mdash; <a href="/es/rules#dmca">DMCA</a> &mdash; <a href="/es/about">Acerca de</a> &mdash; <a href="/es/contact">Contacto</a> &mdash; <a href="/es/privacy">Privacidad</a> &mdash; <a href="/es/terms">Términos</a> &mdash; <a href="/">English</a> &mdash; <a href="/fr">Français</a> &mdash; <a href="/de">Deutsch</a> &mdash; <a href="/pt">Português</a> &mdash; <a href="/ru">Русский</a></span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- REPORT MODAL -->
+<div class="modal-bg" id="modal-report">
+  <div class="modal">
+    <a class="modal-close" href="#" onclick="closeReport();return false;">&#10005;</a>
+    <h2>Reportar publicación</h2>
+    <label>Motivo</label>
+    <select id="report-reason">
+      <option value="illegal">Contenido ilegal</option>
+      <option value="spam">Spam</option>
+      <option value="doxxing">Doxxing / información personal</option>
+      <option value="harassment">Acoso</option>
+      <option value="other">Otro</option>
+    </select>
+    <label>Detalles (opcional)</label>
+    <textarea id="report-details" rows="3" maxlength="500"></textarea>
+    <button class="modal-btn" onclick="submitReport()">Enviar reporte</button>
+  </div>
+</div>
+
+
+<!-- QUOTE POST MODAL -->
+<div class="modal-bg" id="modal-quote">
+  <div class="modal" style="width:420px;">
+    <a class="modal-close" href="#" onclick="closeQuoteModal();return false;">&#10005;</a>
+    <h2>Citar publicación</h2>
+    <div class="errmsg" id="qm-err" style="display:none;margin:0 16px 8px;"></div>
+    <div class="qm-body">
+      <span class="pf-avatar" id="qm-avatar"></span>
+      <textarea id="qm-body" maxlength="500" placeholder="Agrega un comentario"></textarea>
+    </div>
+    <div class="qm-preview-wrap" id="qm-preview"></div>
+    <div class="qm-foot"><span class="qm-count" id="qm-count">500</span></div>
+    <div id="qm-captcha" class="captcha-card" style="display:none;margin:0 16px 10px;">
+      <div class="captcha-card-head">
+        <span class="captcha-card-icon">
+          <svg class="cci-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+          <svg class="cci-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 9.5 17 19 7"/></svg>
+        </span>
+        <span class="captcha-card-text">
+          <span class="captcha-card-title">Quick security check</span>
+          <span class="captcha-card-sub">Confirm you're human to continue</span>
+        </span>
+      </div>
+      <div class="captcha-card-body"><div class="captcha-skeleton"></div></div>
+    </div>
+    <button class="modal-btn" id="qm-btn" onclick="submitQuote()">Publicar</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3" defer></script>
+<script src="/js/supabase-config.js?v=20260820" defer></script>
+<script src="/js/i18n.js?v=20260828e" defer></script>
+<script src="/js/common.js?v=20260829d" defer></script>
+<script src="/js/video-player.js?v=20260823e" defer></script>
+<script src="/js/crop-modal.js?v=20260820" defer></script>
+<script src="/js/auth.js?v=20260827g" defer></script>
+<script src="/js/board.js?v=20260820" defer></script>
+<script src="/js/pjax.js?v=20260826" defer></script>
+</body>
+</html>
