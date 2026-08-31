@@ -3592,6 +3592,9 @@ async function submitCreateCommunityWizard() {
   const description = document.getElementById('cc-desc').value.trim();
   if (description.length > 80) { showErr(errEl, 'Description is too long (max 80 characters).'); return; }
   ccWiz.description = description;
+  // Text moderation gate — community name/description had no check;
+  // both are public and shown everywhere the community appears.
+  if (!(await checkTextModeration('text', `${name}\n${description}`, null, errEl))) return;
 
   btn.disabled = true;
   btn.textContent = 'Creating\u2026';

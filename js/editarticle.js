@@ -266,6 +266,16 @@ async function submitArticle() {
   if (cover_url && !/^https?:\/\//i.test(cover_url)) { showErr(errEl, 'Cover image must be a valid https:// URL.'); return; }
   if (!eaEditingId && !ensureCaptchaRevealed('ea-captcha')) return;
   if (!eaEditingId && !(await verifyHuman('ea-captcha', errEl))) return;
+  // Text moderation gate — articles had none at all. Note this is a
+  // best-effort pre-publish check only, not the same guarantee posts/
+  // replies get: the `articles` table has no moderation_status column
+  // or RESTRICTIVE RLS policy backing it, so unlike posts/replies this
+  // can be skipped by someone calling supabase-js directly. Giving
+  // articles the same RLS-backed enforcement posts/replies have would
+  // need a real migration (a moderation_status column + policy mirroring
+  // moderation_media_pipeline.sql) — flagging that as a follow-up, not
+  // silently treating this check as equivalent to that.
+  if (!(await checkTextModeration('text', `${title}\n\n${body}`, eaEditingId || null, errEl))) return;
 
   btn.disabled = true;
   btn.textContent = eaEditingId ? 'Saving…' : 'Publishing…';

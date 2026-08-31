@@ -8,12 +8,13 @@ use so no service-role key ever reaches the browser.
 ## What's new
 
 ```
-api/moderate-text.js          - text moderation: doxxing, spam, profanity, toxicity, drug/weapon-sale language
+api/moderate-text.js          - text moderation: doxxing, spam, profanity, toxicity, drug/weapon-sale + sexual-solicitation language
 api/moderate-media.js         - NEW: server-side enforcement for images/video/avatars — the real security boundary
 api/check-password.js         - free breached-password check (HaveIBeenPwned)
 nsfw-service/                 - self-hosted, open-source: NSFW + weapon/drug categories, images/video/text
 supabase/moderation_pipeline.sql - logs, disposable-email blocking, login lockout
 supabase/moderation_media_pipeline.sql - NEW: media moderation columns, RESTRICTIVE RLS enforcement, CSAM audit log, admin queue RPCs
+supabase/moderation_audio_pipeline.sql - NEW: audio-transcript moderation columns (audio_toxicity, transcript_excerpt) on moderation_events
 supabase/load_disposable_domains.sql - one-paste SQL to load the domain list (no Node needed)
 js/moderation.js              - client helpers, same style as verifyHuman()
 js/common.js                  - client-side moderation layer + server-side gate wiring (see below)
@@ -78,15 +79,39 @@ own bypassed upload visible to anyone else.
 **What it checks, per image/video:**
 - NSFW (`Falconsai/nsfw_image_detection`, same as the client-side pass, run again server-side where it can't be skipped)
 - Weapons / drugs / illegal goods (`openai/clip-vit-base-patch32`, zero-shot — see `nsfw-service/main.py`'s `IMAGE_CATEGORY_LABELS`, tune these to your community)
+- For video only: toxicity + drug/weapon-sale/sexual-solicitation language in the **audio track** (whisper transcription, then the same text classifiers used on post text — see "Audio got the same treatment too" above)
 - CSAM hash-match, if you've configured a provider — **see `CSAM_SETUP.md`, this is the one piece that needs you to apply for external access, not just deploy code**
 
 **Text got the same treatment**: `api/moderate-text.js` now also runs
 a zero-shot classifier (`facebook/bart-large-mnli`) for drug-sale/
-weapon-sale phrasing, since a fixed wordlist misses coded/slang
-language on purpose — sellers rotate slang specifically to dodge
-keyword filters, but "someone offering to sell drugs" as a category
-scores consistently regardless of which slang term they used this
-week.
+weapon-sale phrasing and sexual solicitation/explicit sexual content,
+since a fixed wordlist misses coded/slang language on purpose —
+sellers and solicitors rotate slang specifically to dodge keyword
+filters, but "someone offering to sell drugs" or "someone soliciting
+sexual content" as a category scores consistently regardless of which
+slang term they used this week.
+
+**Audio got the same treatment too (new)**: for video uploads,
+`nsfw-service/main.py`'s new `/audio-moderate` endpoint extracts the
+audio track (ffmpeg), transcribes it (`openai/whisper-base`), then
+runs the transcript through the exact same toxicity and
+drug/weapon-sale/sexual-solicitation classifiers used on post text
+above — reusing the code, not a separate model or a separate policy. `api/moderate-media.js` calls this for every video upload
+(skipped for images, which have no audio track) and folds the result
+into the same block / human_review / visible decision, and a video
+with no audio track at all (silent, music-only) just comes back with
+an empty transcript and zero scores rather than erroring. The
+transcript is logged (truncated to ~200 chars, same as post excerpts)
+so an admin reviewing a `human_review` item can see what was actually
+said, and `moderation_events` gained `audio_toxicity` /
+`transcript_excerpt` columns for this — run
+`supabase/moderation_audio_pipeline.sql` (after the two moderation SQL
+files below) to add them. Whisper is heavier than the other models on
+CPU — give the box a bit more headroom if video volume is high, and
+tune `MAX_AUDIO_SECONDS` (default 600) / `WHISPER_MODEL` (default
+`openai/whisper-base`; drop to `openai/whisper-tiny` for speed or up
+to `openai/whisper-small` for accuracy) via env vars on the
+`nsfw-service` deployment if needed.
 
 **Avatars, banners, community images, list images, chat-group
 avatars** all funnel through the single `uploadAvatar()` function in
@@ -133,19 +158,23 @@ bigger call than this doc should make for you.
 1. **Run the SQL, in order.** `supabase/moderation_pipeline.sql`, then
    `supabase/load_disposable_domains.sql`, then
    `supabase/moderation_media_pipeline.sql` (needs `is_admin()` from
-   `admin_panel_advanced.sql`, so run that first if you haven't already).
+   `admin_panel_advanced.sql`, so run that first if you haven't already),
+   then `supabase/moderation_audio_pipeline.sql`.
 
 2. **Copy the data files** into `data/` at your project root (same level as
    `api/` and `js/`) — `moderate-text.js` reads `badwords.txt` from there.
 
 3. **Deploy `nsfw-service/`** — a self-hosted server covering NSFW
-   image/video detection, text toxicity, AND (new) weapon/drug/illegal-
-   goods categories for both images and text, using open-source models
+   image/video detection, text toxicity, weapon/drug/illegal-goods
+   categories for both images and text, AND (new) audio-transcript
+   moderation for video, using open-source models
    (`Falconsai/nsfw_image_detection`, `unitary/toxic-bert`,
-   `openai/clip-vit-base-patch32`, `facebook/bart-large-mnli`). Still the
-   only external service you need — no third-party account, no API key,
-   free forever. The two new category models are heavier — give the box
-   at least 2GB RAM.
+   `openai/clip-vit-base-patch32`, `facebook/bart-large-mnli`,
+   `openai/whisper-base`). Still the only external service you need —
+   no third-party account, no API key, free forever. The category and
+   whisper models are heavier — give the box at least 2GB RAM (more if
+   video volume is high; see `MAX_AUDIO_SECONDS`/`WHISPER_MODEL` env
+   vars in `nsfw-service/main.py` to tune cost vs. accuracy).
 
    ~~We originally planned to use Google's Perspective API for toxicity~~
    — **don't.** Google confirmed it's shutting down entirely on
@@ -207,7 +236,8 @@ bigger call than this doc should make for you.
 | Self-hosted toxicity model | Harassment, threats, nuanced toxicity the wordlist misses | Free forever (your own server) |
 | Self-hosted NSFW model (client + server) | Explicit images/video | Free forever (your own server) |
 | Zero-shot weapon/drug/illegal-goods (image) | Weapons, drugs, drug paraphernalia in posted media | Free forever (your own server) |
-| Zero-shot drug/weapon-sale language (text) | Coded/slang sale language a wordlist would miss | Free forever (your own server) |
+| Zero-shot drug/weapon-sale + sexual-solicitation language (text) | Coded/slang sale or solicitation language a wordlist would miss | Free forever (your own server) |
+| Audio transcript moderation (video) | Toxicity/harassment, drug/weapon-sale, and sexual-solicitation language spoken in a video, not just shown or captioned | Free forever (your own server) |
 | CSAM hash-matching | Known CSAM, via a vetted provider — **needs setup, see CSAM_SETUP.md** | Free (application required) |
 | Server-side enforcement (RESTRICTIVE RLS) | The actual "disable JS and post anything" bypass | Free (just SQL + one API route) |
 | Admin moderation queue | Anything the pipeline couldn't confidently decide alone | Free (just SQL + admin panel) |

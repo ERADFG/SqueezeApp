@@ -134,6 +134,9 @@ async function submitShareArticle() {
   if (body.length > 250) { showErr(errEl, 'Comment too long (max 250 chars).'); return; }
   if (!ensureCaptchaRevealed('sa-captcha')) return;
   if (!(await verifyHuman('sa-captcha', errEl))) return;
+  // Text moderation gate — missing here. Skips cleanly for an empty
+  // comment (a bare share with no added text), same as everywhere else.
+  if (body && !(await checkTextModeration('text', body, article.id, errEl))) return;
   btn.disabled = true;
   try {
     const { error } = await sb.from('posts').insert({

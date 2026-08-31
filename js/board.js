@@ -315,6 +315,10 @@ async function submitPost() {
   if (!enforceCooldown(errEl)) return;
   if (!ensureCaptchaRevealed('pf-captcha')) return;
   if (!(await verifyHuman('pf-captcha', errEl))) return;
+  // Text moderation gate — this is the main board composer and it was
+  // never calling checkTextModeration at all, unlike the modal
+  // composer in common.js. Same call, same place in the flow.
+  if (!(await checkTextModeration('text', body, null, errEl))) return;
 
   btn.disabled = true;
   stEl.textContent = 'Posting…';
@@ -331,6 +335,10 @@ async function submitPost() {
     }
     const poll = collectPoll('pf');
     const scheduled_at = collectSchedule('pf');
+    // media_url present -> insert hidden ('pending') until
+    // checkMediaModeration() below flips it — was missing here, so
+    // media posted from the main board composer never got the
+    // server-side NSFW/category/CSAM check at all.
     const { data, error } = await sb.from('posts').insert({
       author_id: currentSession.user.id,
       body,
@@ -339,9 +347,23 @@ async function submitPost() {
       poll_options: poll?.poll_options || null,
       poll_ends_at: poll?.poll_ends_at || null,
       scheduled_at,
-      reply_audience: getReplyAudience('pf')
+      reply_audience: getReplyAudience('pf'),
+      ...(media_url ? { moderation_status: 'pending' } : {}),
     }).select(POST_SELECT).single();
     if (error) throw error;
+
+    if (media_url) {
+      stEl.textContent = 'Checking upload…';
+      const mod = await checkMediaModeration('posts', data.id, 'post', media_url, media_type);
+      if (mod.decision === 'block') {
+        stEl.textContent = '';
+        showErr(errEl, "Your post was published but the media didn't pass review, so it's hidden from others.");
+      } else if (mod.decision === 'human_review') {
+        stEl.textContent = '';
+        showErr(errEl, "Your post is up, but the media needs a quick manual review before others can see it.");
+      }
+    }
+
     bodyEl.value = '';
     bodyEl.style.height = '';
     fileEl.value = ''; document.getElementById('pf-fp').innerHTML = '';

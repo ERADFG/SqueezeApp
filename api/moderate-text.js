@@ -110,11 +110,12 @@ async function toxicityScore(text) {
 }
 
 // ---------------------------------------------------------------
-// Drug-sale / weapon-sale language — zero-shot text classification
-// (see nsfw-service/main.py's /text-categories), scores the sentence
-// in context instead of matching a fixed wordlist. Catches coded
-// phrasing ("plug for that gas, dm for menu") a keyword filter misses
-// entirely, since sellers rotate slang specifically to dodge those.
+// Drug-sale / weapon-sale / sexual-solicitation language — zero-shot
+// text classification (see nsfw-service/main.py's /text-categories),
+// scores the sentence in context instead of matching a fixed
+// wordlist. Catches coded phrasing ("plug for that gas, dm for menu")
+// a keyword filter misses entirely, since sellers (and solicitors)
+// rotate slang specifically to dodge those.
 // ---------------------------------------------------------------
 async function categoryScores(text) {
   const serviceUrl = process.env.MODERATION_SERVICE_URL;
@@ -165,10 +166,17 @@ export default async function handler(req, res) {
   ]);
   const topCategory = categories[0] ?? null;
 
+  // Thresholds tightened (was 0.85/0.8/0.85 block, 0.6/0.5/0.6
+  // soft_flag) — auto-blocks more of what used to only get flagged.
+  // Same trade-off as moderate-media.js: expect more false positives
+  // on strong-but-not-actually-abusive language (heated arguments,
+  // dark humor, reclaimed slurs in some communities). Watch the admin
+  // queue's "Allowed (flagged)" and "Auto-blocked" tabs after this
+  // ships and loosen back up if it's overreaching for your community.
   let decision = 'allow';
   if (doxHits.length > 0) decision = 'human_review';
-  else if (toxic >= 0.85 || spam >= 0.8 || (topCategory && topCategory.score >= 0.85)) decision = 'block';
-  else if (badword || toxic >= 0.6 || spam >= 0.5 || (topCategory && topCategory.score >= 0.6)) decision = 'soft_flag';
+  else if (toxic >= 0.7 || spam >= 0.65 || (topCategory && topCategory.score >= 0.7)) decision = 'block';
+  else if (badword || toxic >= 0.4 || spam >= 0.35 || (topCategory && topCategory.score >= 0.4)) decision = 'soft_flag';
 
   // Log every decision for the admin panel / audit trail. Uses the same
   // service-role pattern as your other SECURITY DEFINER RPCs.

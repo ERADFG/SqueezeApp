@@ -119,11 +119,18 @@ async function saveEditProfile() {
   const errEl = document.getElementById('ep-err');
   const stEl  = document.getElementById('ep-st');
   clearErr(errEl);
+  const display_name = document.getElementById('ep-display').value.trim().slice(0, 50) || null;
+  const bio = document.getElementById('ep-bio').value.trim().slice(0, 200) || null;
+  // Text moderation gate — profile bio/display name had no check at
+  // all before saving, unlike post/reply text. Bio is public-facing
+  // (shows on every visit to a profile), so it gets the same gate.
+  const profileText = [display_name, bio].filter(Boolean).join('\n');
+  if (profileText && !(await checkTextModeration('text', profileText, epProfile.id, errEl))) return;
   stEl.textContent = 'Saving…';
   try {
     const updates = {
-      display_name: document.getElementById('ep-display').value.trim().slice(0, 50) || null,
-      bio: document.getElementById('ep-bio').value.trim().slice(0, 200) || null,
+      display_name,
+      bio,
       location: document.getElementById('ep-location').value.trim().slice(0, 30) || null,
       website: normalizeWebsite(document.getElementById('ep-website').value.trim())
     };

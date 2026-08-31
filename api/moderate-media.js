@@ -146,16 +146,38 @@ export default async function handler(req, res) {
   const type = mediaType === 'video' ? 'video' : 'image'; // gifs classify fine as images (first-frame based)
 
   // Run NSFW + category checks in parallel — independent categories,
-  // no reason to serialize them.
-  const [nsfwResult, categoryResult, csamResult] = await Promise.all([
+  // no reason to serialize them. Audio moderation only applies to
+  // video (images have no audio track) — /audio-moderate itself
+  // handles a silent/no-audio video gracefully, but there's no point
+  // calling it at all for a still image.
+  const [nsfwResult, categoryResult, audioResult, csamResult] = await Promise.all([
     callModerationService('/classify', { url: mediaUrl, type }),
     callModerationService('/categories', { url: mediaUrl, type }),
+    type === 'video' ? callModerationService('/audio-moderate', { url: mediaUrl }) : Promise.resolve(null),
     checkCsamHash(mediaUrl),
   ]);
 
   const nsfw = nsfwResult?.nsfw_probability ?? null;
   const categories = categoryResult?.categories ?? [];
   const topCategoryScore = categories.length ? Math.max(...categories.map((c) => c.score)) : 0;
+  const transcript = audioResult?.transcript ?? '';
+  const audioToxicity = audioResult?.toxicity_probability ?? 0;
+  const audioCategories = audioResult?.categories ?? [];
+  const topAudioCategoryScore = audioCategories.length ? Math.max(...audioCategories.map((c) => c.score)) : 0;
+  // Tagged by source and merged into one array for the audit log /
+  // admin queue — moderation_events has one `categories` jsonb column,
+  // not separate image/audio columns, so the admin reviewing a
+  // 'human_review' item can see at a glance whether the hit came from
+  // the frame or the narration.
+  const allCategories = [
+    ...categories.map((c) => ({ ...c, source: 'image' })),
+    ...audioCategories.map((c) => ({ ...c, source: 'audio' })),
+  ];
+  // A video with no image-side signal at all (server unreachable) is
+  // still unreachable even if we happened to get an audio result back
+  // from a partially-up service — keep the original "did the image
+  // checks come back" definition for the fail-toward-review branch
+  // below, since that's the check most likely to catch NSFW content.
   const serviceUnreachable = nsfwResult === null && categoryResult === null;
 
   let decision;
@@ -167,11 +189,29 @@ export default async function handler(req, res) {
     // opposite of the client-side layer's "fail open" (which is fine
     // for a UX nicety, not for the actual enforcement gate).
     decision = 'human_review';
-  } else if (nsfw !== null && nsfw >= 0.9) {
+  } else if (nsfw !== null && nsfw >= 0.75) {
+    // Tightened from 0.9 — auto-blocks more confidently-NSFW content
+    // outright instead of routing it to human review. Trade-off: a
+    // wider slice of borderline-but-legitimate images (suggestive but
+    // not explicit, some art/swimwear photos) will now get auto-
+    // blocked instead of waiting for a human call. Watch the admin
+    // queue's "Auto-blocked" tab after this ships and loosen back
+    // toward 0.85-0.9 if you're seeing real false positives there.
     decision = 'block';
-  } else if (topCategoryScore >= 0.85) {
+  } else if (topCategoryScore >= 0.7 || topAudioCategoryScore >= 0.7 || audioToxicity >= 0.7) {
+    // Same thresholds as the image/text-in-post checks above — the
+    // audio track is just another place the same violations (drug/
+    // weapon sale, sexual solicitation, harassment) can show up, not a
+    // separate policy. Someone narrating a drug sale, propositioning
+    // people, or hurling slurs over the video gets the same outcome as
+    // if they'd typed it in the caption.
     decision = 'block';
-  } else if ((nsfw !== null && nsfw >= 0.6) || topCategoryScore >= 0.55) {
+  } else if (
+    (nsfw !== null && nsfw >= 0.45) ||
+    topCategoryScore >= 0.4 ||
+    topAudioCategoryScore >= 0.4 ||
+    audioToxicity >= 0.4
+  ) {
     decision = 'human_review';
   } else {
     decision = 'visible';
@@ -189,7 +229,17 @@ export default async function handler(req, res) {
         .from(table)
         .update({
           moderation_status: decision === 'block' ? 'blocked' : decision === 'human_review' ? 'human_review' : 'visible',
-          moderation_flags: { nsfw, categories, csamChecked: csamResult.configured },
+          moderation_flags: {
+            nsfw,
+            categories: allCategories,
+            audioToxicity,
+            // Transcript itself is useful context for a human reviewer
+            // deciding a 'human_review' item, but there's no reason to
+            // keep it once a video is 'visible' — truncate the same
+            // way moderate-text.js truncates post excerpts.
+            transcriptExcerpt: transcript ? transcript.slice(0, 200) : '',
+            csamChecked: csamResult.configured,
+          },
           moderation_checked_at: new Date().toISOString(),
         })
         .eq('id', contentId);
@@ -206,9 +256,11 @@ export default async function handler(req, res) {
       p_content_ref: String(contentId),
       p_excerpt: mediaUrl,
       p_nsfw: nsfw,
-      p_categories: categories,
+      p_categories: allCategories,
       p_decision: decision === 'block' ? 'block' : decision === 'human_review' ? 'human_review' : 'allow',
       p_csam_match: csamResult.matched,
+      p_audio_toxicity: audioResult ? audioToxicity : null,
+      p_transcript_excerpt: transcript ? transcript.slice(0, 200) : null,
     });
   } catch (e) {
     console.error('[moderate-media] log failed', e);
@@ -237,6 +289,14 @@ export default async function handler(req, res) {
 
   return res.status(200).json({
     decision,
-    scores: { nsfw, categories, csamMatched: csamResult.matched, csamConfigured: csamResult.configured },
+    scores: {
+      nsfw,
+      categories,
+      audioToxicity,
+      audioCategories,
+      transcript,
+      csamMatched: csamResult.matched,
+      csamConfigured: csamResult.configured,
+    },
   });
 }

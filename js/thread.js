@@ -542,6 +542,12 @@ async function submitReply(parentReplyId = currentFocusedReplyId()) {
   const captchaId = parentReplyId ? `rf-inline-captcha-${parentReplyId}` : 'rf-captcha';
   if (!ensureCaptchaRevealed(captchaId)) return;
   if (!(await verifyHuman(captchaId, errEl))) return;
+  // Text moderation gate — was missing here entirely. This is the same
+  // checkTextModeration() call every other composer (global compose,
+  // the reply popup in common.js) makes; without it, replies posted
+  // from a thread page skipped doxxing/toxicity/spam/drug-weapon-
+  // language checks completely.
+  if (!(await checkTextModeration('chat', body, postId, errEl))) return;
 
   btn.disabled = true;
   stEl.textContent = 'Posting…';
@@ -556,15 +562,37 @@ async function submitReply(parentReplyId = currentFocusedReplyId()) {
       stEl.textContent = 'Uploading file…';
       ({ media_url, media_type } = await uploadMedia(file, msg => stEl.textContent = msg));
     }
+    // media_url present -> insert hidden ('pending') until
+    // checkMediaModeration() below flips it, same pattern as
+    // submitGlobalCompose()/submitReplyPopup() in common.js. This was
+    // missing here, so media posted from a thread page's reply box
+    // (main or inline) went straight to 'visible' with NO server-side
+    // NSFW/category/CSAM check ever running — the single biggest gap
+    // in the whole moderation pipeline, since this is the most-used
+    // reply entry point on the site.
     const { data, error } = await sb.from('replies').insert({
       post_id: postId,
       parent_reply_id: parentReplyId,
       author_id: currentSession.user.id,
       body,
       media_url,
-      media_type
+      media_type,
+      ...(media_url ? { moderation_status: 'pending' } : {}),
     }).select(REPLY_SELECT).single();
     if (error) throw error;
+
+    if (media_url) {
+      stEl.textContent = 'Checking upload…';
+      const mod = await checkMediaModeration('replies', data.id, 'reply', media_url, media_type);
+      if (mod.decision === 'block') {
+        stEl.textContent = '';
+        showErr(errEl, "Your reply was posted but the media didn't pass review, so it's hidden from others.");
+      } else if (mod.decision === 'human_review') {
+        stEl.textContent = '';
+        showErr(errEl, 'Your reply is up, but the media needs a quick manual review before others can see it.');
+      }
+    }
+
     bodyEl.value = ''; if (fileEl) fileEl.value = '';
     if (fpEl) fpEl.innerHTML = '';
     if (!parentReplyId) resetComposeExtras('rf');

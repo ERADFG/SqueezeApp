@@ -688,6 +688,8 @@ async function submitCommunityPost() {
   if (!enforceCooldown(errEl)) return;
   if (!ensureCaptchaRevealed('cf-captcha')) return;
   if (!(await verifyHuman('cf-captcha', errEl))) return;
+  // Text moderation gate — missing here, same as board.js's submitPost().
+  if (!(await checkTextModeration('text', body, community.id, errEl))) return;
 
   btn.disabled = true;
   stEl.textContent = 'Posting…';
@@ -702,15 +704,32 @@ async function submitCommunityPost() {
       stEl.textContent = 'Uploading file…';
       ({ media_url, media_type } = await uploadMedia(file, msg => stEl.textContent = msg));
     }
+    // media_url present -> insert hidden ('pending') until
+    // checkMediaModeration() below flips it — was missing here, so
+    // community post media never got the server-side check.
     const { data, error } = await sb.from('posts').insert({
       author_id: currentSession.user.id,
       body,
       media_url,
       media_type,
       community_id: community.id,
-      reply_audience: getReplyAudience('cf')
+      reply_audience: getReplyAudience('cf'),
+      ...(media_url ? { moderation_status: 'pending' } : {}),
     }).select(POST_SELECT).single();
     if (error) throw error;
+
+    if (media_url) {
+      stEl.textContent = 'Checking upload…';
+      const mod = await checkMediaModeration('posts', data.id, 'post', media_url, media_type);
+      if (mod.decision === 'block') {
+        stEl.textContent = '';
+        showErr(errEl, "Your post was published but the media didn't pass review, so it's hidden from others.");
+      } else if (mod.decision === 'human_review') {
+        stEl.textContent = '';
+        showErr(errEl, "Your post is up, but the media needs a quick manual review before others can see it.");
+      }
+    }
+
     bodyEl.value = '';
     bodyEl.style.height = '';
     fileEl.value = ''; document.getElementById('cf-fp').innerHTML = '';
