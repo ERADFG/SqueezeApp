@@ -1013,9 +1013,11 @@ async function loadThread(session, root) {
       ${blockedNotice}
       <div id="chat-attach-preview" class="chat-attach-preview" hidden></div>
       <div id="chat-record-bar" class="chat-record-bar" hidden>
-        <span class="chat-record-dot"></span>
-        <span id="chat-record-time" class="chat-record-time">0:00</span>
-        <span class="chat-record-hint">&lsaquo; ${esc(t('chat.slideToCancel'))}</span>
+        <div class="chat-record-drag" id="chat-record-drag">
+          <span class="chat-record-dot"></span>
+          <span id="chat-record-time" class="chat-record-time">0:00</span>
+          <span class="chat-record-hint">&lsaquo; ${esc(t('chat.slideToCancel'))}</span>
+        </div>
         <button type="button" class="chat-record-cancel" title="${esc(t('chat.cancelRecording'))}" aria-label="${esc(t('chat.cancelRecording'))}" onclick="cancelVoiceRecording()">${ICON_TRASH}</button>
         <button type="button" class="chat-record-stop" title="${esc(t('chat.stopRecording'))}" aria-label="${esc(t('chat.stopRecording'))}" onclick="stopVoiceRecording()">${ICON_STOP}</button>
       </div>
@@ -1702,6 +1704,63 @@ function cancelVoiceRecording() {
   chatRecorder.stop();
 }
 
+// ── SLIDE TO CANCEL ──
+// Drag the dot/timer/"‹ Slide to cancel" group leftward to cancel a
+// recording, matching the hint text next to it (previously that text
+// was just a label — dragging didn't do anything). Wired with
+// document-level pointer listeners rather than binding directly to
+// #chat-record-drag, because that element is torn down and rebuilt
+// by innerHTML every time the thread/group view re-renders (new
+// message arriving, switching tabs, etc.) — a listener attached to
+// the old node would silently stop working the next time chat.js
+// re-renders the composer.
+const SLIDE_TO_CANCEL_PX = 80; // drag this far left to trigger a cancel
+let slideCancelStartX = null;
+let slideCancelActive = false;
+
+document.addEventListener('pointerdown', (e) => {
+  const drag = e.target.closest('#chat-record-drag');
+  if (!drag || !chatRecorder) return;
+  slideCancelStartX = e.clientX;
+  slideCancelActive = true;
+  drag.style.transition = 'none';
+  try { drag.setPointerCapture(e.pointerId); } catch (err) {}
+});
+
+document.addEventListener('pointermove', (e) => {
+  if (!slideCancelActive || slideCancelStartX == null) return;
+  const drag = document.getElementById('chat-record-drag');
+  if (!drag) return;
+  let dx = e.clientX - slideCancelStartX;
+  if (dx > 0) dx = 0; // only a leftward drag counts — dragging right does nothing
+  drag.style.transform = dx ? `translateX(${dx}px)` : '';
+  const hint = drag.querySelector('.chat-record-hint');
+  if (hint) hint.style.opacity = String(Math.max(0, 1 - Math.abs(dx) / SLIDE_TO_CANCEL_PX));
+  if (dx <= -SLIDE_TO_CANCEL_PX) {
+    slideCancelActive = false;
+    slideCancelStartX = null;
+    drag.style.transition = '';
+    drag.style.transform = '';
+    cancelVoiceRecording(); // also resets chat-record-bar's hidden state via stopChatRecordUi()
+  }
+});
+
+function resetSlideCancelDrag() {
+  if (!slideCancelActive) return;
+  slideCancelActive = false;
+  slideCancelStartX = null;
+  const drag = document.getElementById('chat-record-drag');
+  if (!drag) return;
+  // Didn't cross the threshold — snap back to start instead of
+  // leaving it wherever the finger let go.
+  drag.style.transition = 'transform .18s ease';
+  drag.style.transform = '';
+  const hint = drag.querySelector('.chat-record-hint');
+  if (hint) hint.style.opacity = '';
+}
+document.addEventListener('pointerup', resetSlideCancelDrag);
+document.addEventListener('pointercancel', resetSlideCancelDrag);
+
 // ── VOICE NOTES: COMPACT PLAYBACK BUBBLE ──
 // Used both for the pre-send preview and for rendering a received/
 // sent voice note in the thread. Backed by a plain <audio> element
@@ -1986,9 +2045,11 @@ async function loadGroupThread(session, root) {
   const composerHtml = canPost ? `
       <div id="chat-attach-preview" class="chat-attach-preview" hidden></div>
       <div id="chat-record-bar" class="chat-record-bar" hidden>
-        <span class="chat-record-dot"></span>
-        <span id="chat-record-time" class="chat-record-time">0:00</span>
-        <span class="chat-record-hint">&lsaquo; ${esc(t('chat.slideToCancel'))}</span>
+        <div class="chat-record-drag" id="chat-record-drag">
+          <span class="chat-record-dot"></span>
+          <span id="chat-record-time" class="chat-record-time">0:00</span>
+          <span class="chat-record-hint">&lsaquo; ${esc(t('chat.slideToCancel'))}</span>
+        </div>
         <button type="button" class="chat-record-cancel" title="${esc(t('chat.cancelRecording'))}" aria-label="${esc(t('chat.cancelRecording'))}" onclick="cancelVoiceRecording()">${ICON_TRASH}</button>
         <button type="button" class="chat-record-stop" title="${esc(t('chat.stopRecording'))}" aria-label="${esc(t('chat.stopRecording'))}" onclick="stopVoiceRecording()">${ICON_STOP}</button>
       </div>

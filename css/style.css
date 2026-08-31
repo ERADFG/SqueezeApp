@@ -4400,6 +4400,8 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
    stopChatRecordUi() in chat.js) silently did nothing and the record bar
    rendered permanently open regardless of recording state. */
 .chat-composer[hidden], .chat-record-bar[hidden] { display:none; }
+.chat-record-drag { display:flex; align-items:center; gap:10px; flex:1; min-width:0; touch-action:pan-y; user-select:none; -webkit-user-select:none; cursor:grab; }
+.chat-record-drag:active { cursor:grabbing; }
 .chat-record-dot { width:10px; height:10px; border-radius:50%; background:#e0245e; animation:oc-record-pulse 1.2s infinite ease-in-out; flex:none; }
 @keyframes oc-record-pulse { 0%,100% { opacity:1; } 50% { opacity:.35; } }
 .chat-record-time { font-variant-numeric:tabular-nums; font-weight:600; }
@@ -4418,22 +4420,37 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .msg-bubble-bare-media .pm { margin:0; }
 
 /* ── compact voice-note player (used both in the pending-attachment
-   preview and in sent/received bubbles) ── */
-.voice-msg { display:inline-flex; align-items:center; gap:8px; min-width:190px; }
-.voice-play-btn { flex:none; width:30px; height:30px; border-radius:50%; border:none; background:rgba(255,255,255,.22); color:inherit; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; }
+   preview and in sent/received bubbles) ──
+   .voice-msg previously only had a min-width, with .voice-wave below
+   set to flex:1 and no width of its own. A flex:1 child with no
+   sibling providing a hard size and no definite width on the flex
+   container itself doesn't reliably shrink-wrap — browsers fall back
+   to filling the available line box, which here meant the whole
+   bubble ballooning out to .msg-bubble's 72% max-width instead of
+   staying a small, fixed-size player. Giving .voice-msg a real width
+   (not just a floor) fixes that: .voice-wave's flex:1 now resolves
+   against a known 160px, so the bubble stays compact regardless of
+   how much space the message column has. */
+.voice-msg { display:inline-flex; align-items:center; gap:7px; width:172px; }
+.voice-play-btn { flex:none; width:26px; height:26px; border-radius:50%; border:none; background:rgba(255,255,255,.22); color:inherit; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; }
 .msg-row.theirs .voice-play-btn { background:var(--maroon-tint); color:var(--maroon); }
-.voice-play-btn svg { width:14px; height:14px; margin-left:1px; }
+.voice-play-btn svg { width:12px; height:12px; margin-left:1px; }
 /* Bar-style waveform (see voiceWaveformSvg() in chat.js) — two
    identical SVGs stacked, the top one clipped to the played fraction
    by width so the "played" bars read as a distinct, brighter colour
    from the "unplayed" ones, same visual language as WhatsApp/
    Telegram/Signal voice notes. */
-.voice-wave { position:relative; flex:1; height:22px; overflow:hidden; }
+.voice-wave { position:relative; flex:1; min-width:0; height:20px; overflow:hidden; }
 .voice-wave-svg { display:block; width:100%; height:100%; fill:rgba(255,255,255,.35); }
 .msg-row.theirs .voice-wave-svg { fill:var(--line); }
 .voice-wave-fg-clip { position:absolute; inset:0; width:100%; height:100%; clip-path:inset(0 100% 0 0); }
 .voice-wave-fg-clip .voice-wave-svg { fill:currentColor; }
-.voice-time { flex:none; font-size:11.5px; font-variant-numeric:tabular-nums; opacity:.85; }
+/* Voice-note bubbles don't need the same roomy padding as text —
+   tightening it keeps the whole bubble (not just the player inside)
+   visibly smaller, matching the compact width above. Falls back to
+   the normal .msg-bubble padding in browsers without :has(). */
+.msg-bubble:has(.voice-msg) { padding:7px 9px; }
+.voice-time { flex:none; font-size:10.5px; font-variant-numeric:tabular-nums; opacity:.85; }
 
 /* ── mobile: full-screen immersive thread ──
    Below 700px, an open thread (.chat-thread) takes over the whole
