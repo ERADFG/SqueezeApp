@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>Finish setting up — InteractInk</title>
+<meta content="One last step to finish setting up your InteractInk account." name="description"/>
+<meta content="noindex, nofollow" name="robots"/>
+<base href="/"/>
+<link href="img/favicon-32.png" id="fav32" rel="icon" sizes="32x32" type="image/png"/>
+<link href="img/favicon.png" id="fav512" rel="icon" sizes="512x512" type="image/png"/>
+<link href="img/apple-touch-icon.png" rel="apple-touch-icon"/>
+<meta content="#1185FE" name="theme-color"/>
+<script>(function(){try{var t=localStorage.getItem('oc-theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}if(t&&t!=="light"){document.documentElement.setAttribute('data-theme',t);var f32=document.getElementById('fav32'),f512=document.getElementById('fav512');if(f32)f32.setAttribute('href',f32.getAttribute('href').replace('favicon-32.png','favicon-dark-32.png'));if(f512)f512.setAttribute('href',f512.getAttribute('href').replace('favicon.png','favicon-dark.png'));}var a=localStorage.getItem('oc-accent');if(a&&a!=="blue")document.documentElement.setAttribute('data-accent',a);}catch(e){}})();</script>
+<link href="https://pyitivzoqleukuclajrf.supabase.co" rel="preconnect"/>
+<link crossorigin="" href="https://cdn.jsdelivr.net" rel="preconnect"/>
+<link href="css/style.css?v=20260829d" rel="stylesheet"/>
+</head>
+<body data-page="auth">
+<div class="xshell">
+<div id="hdr">
+<div class="sb-top">
+<a class="logo" href="/">
+<span class="badge">
+<img alt="InteractInk logo" class="logo-mark logo-mark-light" height="36" src="img/logo-light.png" width="36"/>
+<img alt="InteractInk logo" class="logo-mark logo-mark-dark" height="36" src="img/logo-dark.png" width="36"/>
+</span>
+<span class="wordmark">Interact<em>Ink</em></span>
+</a>
+<nav id="side-nav"></nav>
+</div>
+<span class="auth-area" id="auth-area"></span>
+</div>
+<div class="auth-wrap">
+<div class="auth-shell">
+<div class="auth-card">
+<h1>Almost there</h1>
+<p class="auth-sub">Pick a username — that's how people on InteractInk will find and mention you.</p>
+<div class="auth-body">
+<div class="errmsg" id="ob-err" style="display:none;"></div>
+<form id="ob-form" onsubmit="completeOnboarding(event)">
+<div class="auth-field">
+<label for="ob-username">Username</label>
+<div class="auth-input-wrap">
+<span class="auth-fi"><svg viewbox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"></path></svg></span>
+<input autocomplete="username" id="ob-username" maxlength="20" placeholder="yourname" required="" type="text"/>
+</div>
+<span class="auth-hint">3–20 characters: letters, numbers, underscore.</span>
+</div>
+<div class="auth-field">
+<label id="ob-dob-label">Date of birth <span style="font-weight:400;color:var(--muted);">(optional)</span></label>
+<div class="dob-input-wrap" id="ob-dob-wrap">
+<span class="auth-fi"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24"><rect height="16" rx="2" width="18" x="3" y="5"></rect><path d="M3 10h18"></path><path d="M8 3v4M16 3v4"></path></svg></span>
+<div class="dob-combo" data-combo="month">
+<button aria-expanded="false" aria-haspopup="listbox" class="dob-combo-btn" id="ob-dob-month-btn" type="button"><span class="dob-combo-label">Month</span><svg class="dob-combo-caret" viewbox="0 0 10 6"><path d="M0 0l5 6 5-6z"></path></svg></button>
+<div aria-label="Month" class="dob-combo-panel" hidden="" id="ob-dob-month-panel" role="listbox" tabindex="-1"></div>
+</div>
+<div class="dob-combo" data-combo="day">
+<button aria-expanded="false" aria-haspopup="listbox" class="dob-combo-btn" id="ob-dob-day-btn" type="button"><span class="dob-combo-label">Day</span><svg class="dob-combo-caret" viewbox="0 0 10 6"><path d="M0 0l5 6 5-6z"></path></svg></button>
+<div aria-label="Day" class="dob-combo-panel" hidden="" id="ob-dob-day-panel" role="listbox" tabindex="-1"></div>
+</div>
+<div class="dob-combo" data-combo="year">
+<button aria-expanded="false" aria-haspopup="listbox" class="dob-combo-btn" id="ob-dob-year-btn" type="button"><span class="dob-combo-label">Year</span><svg class="dob-combo-caret" viewbox="0 0 10 6"><path d="M0 0l5 6 5-6z"></path></svg></button>
+<div aria-label="Year" class="dob-combo-panel" hidden="" id="ob-dob-year-panel" role="listbox" tabindex="-1"></div>
+</div>
+<!-- Real selects — not shown. Same trick as the old signup form's
+     DOB combo: comboboxes above just set these and dispatch a
+     `change` event, so #ob-age is what completeOnboarding() reads. -->
+<select aria-hidden="true" class="dob-select" id="ob-dob-month" style="display:none" tabindex="-1">
+<option disabled="" selected="" value="">Month</option>
+<option value="1">Jan</option>
+<option value="2">Feb</option>
+<option value="3">Mar</option>
+<option value="4">Apr</option>
+<option value="5">May</option>
+<option value="6">Jun</option>
+<option value="7">Jul</option>
+<option value="8">Aug</option>
+<option value="9">Sep</option>
+<option value="10">Oct</option>
+<option value="11">Nov</option>
+<option value="12">Dec</option>
+</select>
+<select aria-hidden="true" class="dob-select dob-day" id="ob-dob-day" style="display:none" tabindex="-1">
+<option disabled="" selected="" value="">Day</option>
+</select>
+<select aria-hidden="true" class="dob-select dob-year" id="ob-dob-year" style="display:none" tabindex="-1">
+<option disabled="" selected="" value="">Year</option>
+</select>
+</div>
+<span class="auth-hint" id="ob-age-hint">We use this to keep the community age-appropriate.</span>
+<input id="ob-age" type="hidden"/>
+</div>
+<div class="auth-field">
+<label>Gender <span style="font-weight:400;color:var(--muted);">(optional)</span></label>
+<div aria-label="Gender" class="gender-group" id="ob-gender-group" role="radiogroup">
+<button aria-checked="false" class="gender-chip" data-value="male" role="radio" type="button">
+<span class="gender-chip-icon"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24"><circle cx="10" cy="14" r="6"></circle><path d="M14.5 9.5 20 4M15 4h5v5"></path></svg></span>
+<span>Male</span>
+</button>
+<button aria-checked="false" class="gender-chip" data-value="female" role="radio" type="button">
+<span class="gender-chip-icon"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24"><circle cx="12" cy="9" r="6"></circle><path d="M12 15v6M9 19h6"></path></svg></span>
+<span>Female</span>
+</button>
+<button aria-checked="false" class="gender-chip" data-value="other" role="radio" type="button">
+<span class="gender-chip-icon"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24"><circle cx="9" cy="9" r="5.5"></circle><circle cx="15" cy="15" r="5.5"></circle></svg></span>
+<span>Other</span>
+</button>
+<button aria-checked="false" class="gender-chip" data-value="not_specified" role="radio" type="button">
+<span class="gender-chip-icon"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24"><rect height="10" rx="2" width="16" x="4" y="10"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg></span>
+<span>Prefer not to say</span>
+</button>
+</div>
+<select aria-hidden="true" id="ob-gender" style="display:none" tabindex="-1">
+<option disabled="" selected="" value="">Select…</option>
+<option value="male">Male</option>
+<option value="female">Female</option>
+<option value="other">Other</option>
+<option value="not_specified">Prefer not to say</option>
+</select>
+</div>
+<input class="auth-submit" id="ob-btn" type="submit" value="Continue"/>
+</form>
+<script>
+        (function(){
+          const monthSel = document.getElementById('ob-dob-month');
+          const daySel   = document.getElementById('ob-dob-day');
+          const yearSel  = document.getElementById('ob-dob-year');
+          const ageHidden= document.getElementById('ob-age');
+          const hintEl   = document.getElementById('ob-age-hint');
+          if (!monthSel || !daySel || !yearSel) return;
+
+          const now = new Date();
+          const CUR_YEAR = now.getFullYear();
+          const MIN_YEAR = CUR_YEAR - 120;
+          const MAX_YEAR = CUR_YEAR - 13;
+
+          let monthCombo, dayCombo, yearCombo;
+
+          for (let y = MAX_YEAR; y >= MIN_YEAR; y--) {
+            const opt = document.createElement('option');
+            opt.value = String(y); opt.textContent = String(y);
+            yearSel.appendChild(opt);
+          }
+
+          function daysInMonth(month, year) {
+            if (!month) return 31;
+            return new Date(year || 2000, month, 0).getDate();
+          }
+
+          function populateDays() {
+            const month = Number(monthSel.value) || 0;
+            const year  = Number(yearSel.value) || 0;
+            const prevVal = daySel.value;
+            const total = daysInMonth(month, year);
+            const placeholder = daySel.firstElementChild.cloneNode(true);
+            daySel.innerHTML = '';
+            daySel.appendChild(placeholder);
+            for (let d = 1; d <= total; d++) {
+              const opt = document.createElement('option');
+              opt.value = String(d); opt.textContent = String(d);
+              daySel.appendChild(opt);
+            }
+            if (prevVal && Number(prevVal) <= total) {
+              daySel.value = prevVal;
+            } else {
+              placeholder.selected = true;
+            }
+            if (dayCombo) dayCombo.syncLabel();
+          }
+          populateDays();
+
+          function updateAge() {
+            const m = Number(monthSel.value), d = Number(daySel.value), y = Number(yearSel.value);
+            if (!m || !d || !y) { if (ageHidden) ageHidden.value = ''; return; }
+            let age = CUR_YEAR - y;
+            const hadBirthdayThisYear = (now.getMonth() + 1 > m) || (now.getMonth() + 1 === m && now.getDate() >= d);
+            if (!hadBirthdayThisYear) age--;
+            if (ageHidden) ageHidden.value = String(age);
+            if (hintEl) {
+              if (age < 13) {
+                hintEl.textContent = 'You must be at least 13 years old to use InteractInk.';
+                hintEl.classList.add('auth-hint-error');
+              } else {
+                hintEl.textContent = hintEl.dataset.defaultText || hintEl.textContent;
+                hintEl.classList.remove('auth-hint-error');
+              }
+            }
+          }
+          if (hintEl) hintEl.dataset.defaultText = hintEl.textContent;
+
+          monthSel.addEventListener('change', function(){ populateDays(); updateAge(); });
+          yearSel.addEventListener('change', function(){ populateDays(); updateAge(); });
+          daySel.addEventListener('change', updateAge);
+
+          function setupDobCombo(sel, btn, panel) {
+            const labelEl = btn.querySelector('.dob-combo-label');
+            labelEl.dataset.placeholder = labelEl.textContent;
+
+            function closePanel() {
+              panel.hidden = true;
+              btn.setAttribute('aria-expanded', 'false');
+              btn.classList.remove('open');
+            }
+
+            function syncLabel() {
+              const chosen = sel.options[sel.selectedIndex];
+              const picked = chosen && chosen.value !== '';
+              labelEl.textContent = picked ? chosen.textContent : labelEl.dataset.placeholder;
+              btn.classList.toggle('filled', picked);
+            }
+
+            function renderOptions() {
+              panel.innerHTML = '';
+              Array.from(sel.options).forEach(function(opt) {
+                if (opt.disabled) return;
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = 'dob-combo-option';
+                item.setAttribute('role', 'option');
+                item.textContent = opt.textContent;
+                if (opt.value === sel.value) {
+                  item.classList.add('active');
+                  item.setAttribute('aria-selected', 'true');
+                }
+                item.addEventListener('click', function() {
+                  sel.value = opt.value;
+                  sel.dispatchEvent(new Event('change', { bubbles: true }));
+                  syncLabel();
+                  closePanel();
+                  btn.focus();
+                });
+                panel.appendChild(item);
+              });
+            }
+
+            function openPanel() {
+              [monthCombo, dayCombo, yearCombo].forEach(function(c) { if (c && c !== api) c.closePanel(); });
+              renderOptions();
+              panel.hidden = false;
+              btn.setAttribute('aria-expanded', 'true');
+              btn.classList.add('open');
+              const active = panel.querySelector('.dob-combo-option.active');
+              if (active) active.scrollIntoView({ block: 'center' });
+            }
+
+            btn.addEventListener('click', function(ev) {
+              ev.stopPropagation();
+              if (panel.hidden) openPanel(); else closePanel();
+            });
+
+            const api = { closePanel, syncLabel };
+            return api;
+          }
+
+          monthCombo = setupDobCombo(monthSel, document.getElementById('ob-dob-month-btn'), document.getElementById('ob-dob-month-panel'));
+          dayCombo   = setupDobCombo(daySel,   document.getElementById('ob-dob-day-btn'),   document.getElementById('ob-dob-day-panel'));
+          yearCombo  = setupDobCombo(yearSel,  document.getElementById('ob-dob-year-btn'),  document.getElementById('ob-dob-year-panel'));
+
+          document.addEventListener('click', function(e) {
+            if (!e.target.closest('.dob-combo')) {
+              [monthCombo, dayCombo, yearCombo].forEach(function(c) { c.closePanel(); });
+            }
+          });
+          document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') [monthCombo, dayCombo, yearCombo].forEach(function(c) { c.closePanel(); });
+          });
+
+          const chips = document.querySelectorAll('#ob-gender-group .gender-chip');
+          const genderSel = document.getElementById('ob-gender');
+          chips.forEach(function(chip){
+            chip.addEventListener('click', function(){
+              chips.forEach(function(c){ c.classList.remove('active'); c.setAttribute('aria-checked','false'); });
+              chip.classList.add('active');
+              chip.setAttribute('aria-checked','true');
+              if (genderSel) {
+                genderSel.value = chip.dataset.value;
+                genderSel.dispatchEvent(new Event('change'));
+              }
+            });
+          });
+        })();
+        </script>
+</div>
+</div>
+</div>
+</div>
+</div>
+<script defer="" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3"></script>
+<script defer="" src="js/supabase-config.js?v=20260820"></script>
+<script defer="" src="js/common.js?v=20260829d"></script>
+<script defer="" src="js/auth.js?v=20260830a"></script>
+</body>
+</html>

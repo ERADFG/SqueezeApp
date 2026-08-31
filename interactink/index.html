@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>InteractInk</title>
+<meta content="InteractInk is a real-time social imageboard — post, reply, and follow people with a live For You and Following feed." name="description"/>
+<meta content="website" property="og:type"/>
+<meta content="InteractInk" property="og:site_name"/>
+<meta content="InteractInk" property="og:title"/>
+<meta content="InteractInk is a real-time social imageboard — post, reply, and follow people with a live For You and Following feed." property="og:description"/>
+<meta content="/img/logo-light.png" property="og:image"/>
+<meta content="summary" name="twitter:card"/>
+<meta content="InteractInk" name="twitter:title"/>
+<meta content="InteractInk is a real-time social imageboard — post, reply, and follow people with a live For You and Following feed." name="twitter:description"/>
+<meta content="/img/logo-light.png" name="twitter:image"/>
+<link href="https://interactink.vercel.app/" rel="canonical"/>
+<meta content="https://interactink.vercel.app/" property="og:url"/>
+<link href="https://interactink.vercel.app/" hreflang="en" rel="alternate"/>
+<link href="https://interactink.vercel.app/es" hreflang="es" rel="alternate"/>
+<link href="https://interactink.vercel.app/fr" hreflang="fr" rel="alternate"/>
+<link href="https://interactink.vercel.app/de" hreflang="de" rel="alternate"/>
+<link href="https://interactink.vercel.app/pt" hreflang="pt" rel="alternate"/>
+<link href="https://interactink.vercel.app/ja" hreflang="ja" rel="alternate"/>
+<link href="https://interactink.vercel.app/ru" hreflang="ru" rel="alternate"/>
+<link href="https://interactink.vercel.app/" hreflang="x-default" rel="alternate"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"InteractInk","url":"https://interactink.vercel.app/","inLanguage":"en","potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"https://interactink.vercel.app/search?q={search_term_string}"},"query-input":"required name=search_term_string"}}</script>
+<base href="/"/>
+<link href="img/favicon-32.png" id="fav32" rel="icon" sizes="32x32" type="image/png"/>
+<link href="img/favicon.png" id="fav512" rel="icon" sizes="512x512" type="image/png"/>
+<link href="img/apple-touch-icon.png" rel="apple-touch-icon"/>
+<meta content="#1185FE" name="theme-color"/>
+<script>(function(){try{var t=localStorage.getItem('oc-theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}if(t&&t!=="light"){document.documentElement.setAttribute('data-theme',t);var f32=document.getElementById('fav32'),f512=document.getElementById('fav512');if(f32)f32.setAttribute('href',f32.getAttribute('href').replace('favicon-32.png','favicon-dark-32.png'));if(f512)f512.setAttribute('href',f512.getAttribute('href').replace('favicon.png','favicon-dark.png'));}var a=localStorage.getItem('oc-accent');if(a&&a!=="blue")document.documentElement.setAttribute('data-accent',a);}catch(e){}})();</script>
+<link href="https://pyitivzoqleukuclajrf.supabase.co" rel="preconnect"/>
+<link crossorigin="" href="https://cdn.jsdelivr.net" rel="preconnect"/>
+<link href="css/style.css?v=20260829d" rel="stylesheet"/>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"InteractInk","url":"https://interactink.vercel.app/","logo":"https://interactink.vercel.app/img/logo-light.png"}</script></head>
+<body data-page="home">
+<!-- BOOT SPLASH — shown for the very first paint on cold entry to the
+     site, like Bluesky's logo screen. Inline/critical so it renders
+     before css/style.css or any JS has loaded — nothing else on this
+     page depends on it. Removed automatically a couple of frames
+     after the page has painted (see the inline script below), with a
+     hard 2.5s safety-net timeout so it can never get stuck on-screen
+     if something else goes wrong. Deliberately only on index.html —
+     this is a real entry point (like Bluesky's cold boot), not
+     something that should reappear on every internal click. -->
+<style>
+  #boot-splash{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:#fff;transition:opacity .25s ease;pointer-events:none}
+  html[data-theme="dark"] #boot-splash,html[data-theme="dim"] #boot-splash{background:#000}
+  #boot-splash img{width:52px;height:52px;animation:bootPulse 1.1s ease-in-out infinite}
+  #boot-splash .bs-dark{display:none}
+  html[data-theme="dark"] #boot-splash .bs-light,html[data-theme="dim"] #boot-splash .bs-light{display:none}
+  html[data-theme="dark"] #boot-splash .bs-dark,html[data-theme="dim"] #boot-splash .bs-dark{display:block}
+  @keyframes bootPulse{0%,100%{opacity:.55;transform:scale(.94)}50%{opacity:1;transform:scale(1)}}
+  #boot-splash.bs-hide{opacity:0;pointer-events:none}
+</style>
+<div aria-hidden="true" id="boot-splash">
+<img alt="" class="bs-light" height="52" src="img/logo-light.png" width="52"/>
+<img alt="" class="bs-dark" height="52" src="img/logo-dark.png" width="52"/>
+</div>
+<script>
+(function(){
+  function hideBootSplash(){
+    var el = document.getElementById('boot-splash');
+    if(!el) return;
+    el.classList.add('bs-hide');
+    setTimeout(function(){ el.remove(); }, 300);
+  }
+  window.addEventListener('DOMContentLoaded', function(){
+    requestAnimationFrame(function(){ requestAnimationFrame(hideBootSplash); });
+  });
+  setTimeout(hideBootSplash, 2500);
+})();
+</script>
+<div class="xshell">
+<!-- LEFT SIDEBAR -->
+<div id="hdr">
+<div class="sb-top">
+<a class="logo" href="/">
+<span class="badge">
+<img alt="InteractInk logo" class="logo-mark logo-mark-light" height="36" src="img/logo-light.png" width="36"/>
+<img alt="InteractInk logo" class="logo-mark logo-mark-dark" height="36" src="img/logo-dark.png" width="36"/>
+</span>
+<span class="wordmark">Interact<em>Ink</em></span>
+</a>
+<nav id="side-nav"></nav>
+</div>
+<span class="auth-area" id="auth-area"></span>
+</div>
+<!-- CENTER + RIGHT -->
+<div id="main">
+<div id="feed">
+<h1 class="sr-only">InteractInk — For You and Following feed</h1>
+<!-- TABS -->
+<div id="board-hdr">
+<div class="xtabs" id="xtabs">
+<span aria-hidden="true" class="xtabs-indicator no-anim" id="xtabs-indicator"></span>
+<button class="xtab active" id="tab-foryou" onclick="switchTab('foryou');return false;">For you</button>
+<button class="xtab" id="tab-following" onclick="switchTab('following');return false;">Following</button>
+</div>
+<button aria-label="Create a community" class="xtabs-plus" onclick="openCreateCommunityModal();return false;" title="Create a community">
+<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2.2" viewbox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
+</button>
+</div>
+<!-- POST FORM -->
+<div id="pf-wrap">
+<div data-requires-auth="" id="pf-box" style="display:none;">
+<div class="pf-row">
+<span class="pf-avatar" id="pf-avatar"></span>
+<div class="pf-col">
+<div class="errmsg" id="pf-err" style="display:none;"></div>
+<textarea id="pf-body" maxlength="500" placeholder="What's happening?"></textarea>
+<div class="fp" id="pf-fp"></div>
+<div class="cx-poll" hidden="" id="pf-poll-box">
+<div class="cx-poll-opts" id="pf-poll-opts">
+<div class="cx-poll-opt-row"><input class="cx-poll-opt" maxlength="25" placeholder="Choice 1" type="text"/></div>
+<div class="cx-poll-opt-row"><input class="cx-poll-opt" maxlength="25" placeholder="Choice 2" type="text"/></div>
+</div>
+<div class="cx-poll-row">
+<button class="cx-poll-add" onclick="addPollOption('pf');return false;" type="button">+ Add option</button>
+<select id="pf-poll-dur"><option value="1">1 day</option><option selected="" value="3">3 days</option><option value="7">7 days</option></select>
+<button aria-label="Remove poll" class="cx-poll-remove" onclick="removePoll('pf');return false;" title="Remove poll" type="button">✕</button>
+</div>
+</div>
+<div class="cx-sched" hidden="" id="pf-sched-box">
+<svg fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><rect height="16" rx="2" width="17" x="3.5" y="5"></rect><path d="M3.5 9.5h17M8 3v4M16 3v4"></path></svg>
+<input id="pf-sched-input" type="datetime-local"/>
+<button aria-label="Remove" class="cx-sched-remove" onclick="removeSchedule('pf');return false;" title="Remove" type="button">✕</button>
+</div>
+</div>
+</div>
+<div id="pf-ga-slot"></div>
+<div class="captcha-card" id="pf-captcha" style="display:none;">
+<div class="captcha-card-head">
+<span class="captcha-card-icon">
+<svg class="cci-shield" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6l7-3Z"></path><path d="m9 12 2 2 4-4"></path></svg>
+<svg class="cci-check" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" viewbox="0 0 24 24"><path d="M5 12.5 9.5 17 19 7"></path></svg>
+</span>
+<span class="captcha-card-text">
+<span class="captcha-card-title">Quick security check</span>
+<span class="captcha-card-sub">Confirm you're human to continue</span>
+</span>
+</div>
+<div class="captcha-card-body"><div class="captcha-skeleton"></div></div>
+</div>
+<div class="pf-toolbar">
+<div class="pf-icons">
+<button aria-label="Media" class="pf-ic" onclick="document.getElementById('pf-file').click();return false;" title="Media" type="button">
+<svg fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><rect height="14" rx="2" width="18" x="3" y="5"></rect><circle cx="9" cy="10.5" r="1.6"></circle><path d="m4 17 5-5 3.5 3.5L17 11l3 3"></path></svg>
+</button>
+<button aria-label="GIF" class="pf-ic" onclick="openGifPicker('pf');return false;" title="GIF" type="button">
+<svg fill="none" stroke="currentColor" stroke-width="1.7" viewbox="0 0 24 24"><rect height="14" rx="3.5" width="18" x="3" y="5"></rect><text fill="currentColor" font-family="Arial,Helvetica,sans-serif" font-size="7.3" font-weight="700" letter-spacing="0.3" stroke="none" text-anchor="middle" x="12" y="15.2">GIF</text></svg>
+</button>
+<button aria-label="Poll" class="pf-ic" onclick="togglePollBuilder('pf');return false;" title="Poll" type="button">
+<svg fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><rect height="16" rx="2" width="18" x="3" y="4"></rect><path d="M7 15v2M12 11v6M17 8v10"></path></svg>
+</button>
+<button aria-label="Emoji" class="pf-ic" onclick="toggleEmojiPicker('pf', this);return false;" title="Emoji" type="button">
+<svg fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M8.5 10h.01M15.5 10h.01M8 14.5c1 1.2 2.3 1.8 4 1.8s3-.6 4-1.8"></path></svg>
+</button>
+<button aria-label="Schedule" class="pf-ic" onclick="toggleScheduleBuilder('pf');return false;" title="Schedule" type="button">
+<svg fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><rect height="16" rx="2" width="17" x="3.5" y="5"></rect><path d="M3.5 9.5h17M8 3v4M16 3v4"></path><path d="M8 13.5h1M12 13.5h1M16 13.5h1M8 17h1M12 17h1"></path></svg>
+</button>
+<input accept="image/*,video/*" id="pf-file" style="display:none;" type="file"/>
+</div>
+<input class="pf-btn" disabled="" id="pf-btn" onclick="submitPost();return false;" type="submit" value="Post"/>
+</div>
+<span id="pf-st" style="font-size:11px;color:var(--muted);"></span>
+</div>
+<div class="post-login-gate" data-requires-anon="" style="display:none;">
+          You need an account to post. <a href="start.html">Create an account</a> — it takes a minute.
+        </div>
+</div>
+<a class="show-new-pill" href="#" id="show-new-pill" onclick="flushPendingPosts();return false;" style="display:none;"></a>
+<div id="feed-posts">
+<div class="skel-card"><div class="skel-avatar"></div><div class="skel-lines"><div class="skel-line w40"></div><div class="skel-line w90"></div><div class="skel-line w60"></div></div></div>
+<div class="skel-card"><div class="skel-avatar"></div><div class="skel-lines"><div class="skel-line w40"></div><div class="skel-line w90"></div><div class="skel-line w60"></div></div></div>
+<div class="skel-card"><div class="skel-avatar"></div><div class="skel-lines"><div class="skel-line w40"></div><div class="skel-line w90"></div><div class="skel-line w60"></div></div></div>
+<div class="skel-card"><div class="skel-avatar"></div><div class="skel-lines"><div class="skel-line w40"></div><div class="skel-line w90"></div><div class="skel-line w60"></div></div></div>
+</div>
+</div>
+<div id="sidebar">
+<div class="xsearch">
+<svg fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.35-4.35"></path></svg>
+<input id="side-search" placeholder="Search InteractInk"/>
+</div>
+<div class="trends-box">
+<div class="t-lbl">Most Trending</div>
+<div id="t-trending"></div>
+</div>
+<div class="who-box" id="my-communities"></div>
+<div class="who-box" id="who-to-follow"></div>
+<div id="ftr">
+        [<a href="#" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;">Top</a>]
+         — 
+        All trademarks and copyrights are owned by their respective parties. Images and comments are the responsibility of the poster.
+        <br/><span style="font-size:10px;color:var(--muted);">© 2026 InteractInk — <a href="rules.html">Rules</a> — <a href="rules.html#dmca">DMCA</a> — <a href="about.html">About</a> — <a href="contact.html">Contact</a> — <a href="privacy.html">Privacy</a> — <a href="terms.html">Terms</a> — <a href="/help/index.html">Help Center</a> — <a href="/es">Español</a> — <a href="/fr">Français</a> — <a href="/de">Deutsch</a> — <a href="/pt">Português</a> — <a href="/ja">日本語</a> — <a href="/ru">Русский</a></span>
+</div>
+</div>
+</div>
+</div>
+<!-- REPORT MODAL -->
+<div class="modal-bg" id="modal-report">
+<div class="modal">
+<a class="modal-close" href="#" onclick="closeReport();return false;">✕</a>
+<h2>Report Post</h2>
+<label>Reason</label>
+<select id="report-reason">
+<option value="illegal">Illegal content</option>
+<option value="spam">Spam</option>
+<option value="doxxing">Doxxing / personal info</option>
+<option value="harassment">Harassment</option>
+<option value="other">Other</option>
+</select>
+<label>Details (optional)</label>
+<textarea id="report-details" maxlength="500" rows="3"></textarea>
+<button class="modal-btn" onclick="submitReport()">Submit Report</button>
+</div>
+</div>
+<!-- QUOTE POST MODAL -->
+<div class="modal-bg" id="modal-quote">
+<div class="modal" style="width:420px;">
+<a class="modal-close" href="#" onclick="closeQuoteModal();return false;">✕</a>
+<h2>Quote Post</h2>
+<div class="errmsg" id="qm-err" style="display:none;margin:0 16px 8px;"></div>
+<div class="qm-body">
+<span class="pf-avatar" id="qm-avatar"></span>
+<textarea id="qm-body" maxlength="500" placeholder="Add a comment"></textarea>
+</div>
+<div class="qm-preview-wrap" id="qm-preview"></div>
+<div class="qm-foot"><span class="qm-count" id="qm-count">500</span></div>
+<div class="captcha-card" id="qm-captcha" style="display:none;margin:0 16px 10px;">
+<div class="captcha-card-head">
+<span class="captcha-card-icon">
+<svg class="cci-shield" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6l7-3Z"></path><path d="m9 12 2 2 4-4"></path></svg>
+<svg class="cci-check" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" viewbox="0 0 24 24"><path d="M5 12.5 9.5 17 19 7"></path></svg>
+</span>
+<span class="captcha-card-text">
+<span class="captcha-card-title">Quick security check</span>
+<span class="captcha-card-sub">Confirm you're human to continue</span>
+</span>
+</div>
+<div class="captcha-card-body"><div class="captcha-skeleton"></div></div>
+</div>
+<button class="modal-btn" id="qm-btn" onclick="submitQuote()">Post</button>
+</div>
+</div>
+<script defer="" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3"></script>
+<script defer="" src="js/supabase-config.js?v=20260820"></script>
+<script defer="" src="js/i18n.js?v=20260828e"></script>
+<script defer="" src="js/common.js?v=20260829d"></script>
+<script defer="" src="js/video-player.js?v=20260823e"></script>
+<script defer="" src="js/crop-modal.js?v=20260820"></script>
+<script defer="" src="js/auth.js?v=20260830a"></script>
+<script defer="" src="js/board.js?v=20260820"></script>
+<script defer="" src="/js/pjax.js?v=20260826"></script>
+</body>
+</html>
