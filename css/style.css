@@ -3293,11 +3293,40 @@ html[data-theme="dim"] .auth-hero, html[data-theme="dark"] .auth-hero {
    full width like the reference. Single monoline blue stroke to
    match InteractInk's "ink" mark. */
 .auth-hero-scene {
-  position:absolute; left:0; right:0; bottom:0; width:100%; height:auto;
+  /* inset:0 + width/height:100% + preserveAspectRatio="xMidYMax slice"
+     (set on the <svg> element itself in the HTML) makes this behave
+     exactly like object-fit:cover on the bitmap illustration below:
+     it always fills .auth-hero's actual box in both dimensions,
+     cropping whichever axis overflows and anchoring to the bottom
+     edge so the skyline never floats mid-air. The old width:100%;
+     height:auto version instead locked the scene's height to a fixed
+     ratio of the *width* alone, with zero relationship to how tall
+     .auth-hero actually was — on the full-bleed chooser/login layout
+     (height determined by leftover viewport space, not by the art)
+     that computed height routinely exceeded the box, so the top of
+     the scene (birds, clouds) got hard-clipped by overflow:hidden
+     right at .auth-hero's own top edge, reading as random flat-cut
+     grey shards floating at the very top of the page instead of a
+     deliberate crop. */
+  position:absolute; inset:0; width:100%; height:100%;
   color:#0B6FE0; opacity:.65;
   display:none; /* light theme uses the illustrated .auth-hero-illustration bitmap instead — see below */
+  /* On short/wide desktop viewports "slice" still has to crop some
+     amount off the top to fill the box — that's fine for the hill/
+     skyline silhouette, but the clouds and birds live right near the
+     top of the artwork, so a hard crop could still slice cleanly
+     through the middle of one and leave a flat, stubby, very visible
+     remnant behind (the "grey pill" artifact). A soft fade over the
+     top ~15% quietly dissolves whatever gets cropped into the sky
+     gradient behind it instead, so a partial cloud reads as "fading
+     into the sky" rather than "cut off with scissors" — and it costs
+     nothing when nothing is cropped, since a cloud at full opacity
+     fading to a cloud at slightly-lower opacity near the very edge
+     is imperceptible. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 15%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 15%);
 }
-html[data-theme="dim"] .auth-hero-scene, html[data-theme="dark"] .auth-hero-scene { color:#3B9EFF; opacity:.55; display:block; }
+html[data-theme="dim"] .auth-hero-scene, html[data-theme="dark"] .auth-hero-scene { color:#3B9EFF; opacity:.6; display:block; }
 .auth-hero-scene .scene-fill { fill:var(--bg); stroke:none; opacity:1; }
 .auth-hero-scene .scene-cloud { fill:#fff; stroke:none; opacity:.9; }
 html[data-theme="dim"] .auth-hero-scene .scene-cloud, html[data-theme="dark"] .auth-hero-scene .scene-cloud { fill:#EAF4FF; opacity:.12; }
@@ -3454,11 +3483,23 @@ a.auth-submit { text-align:center; text-decoration:none; }
    fields don't get squeezed. */
 .auth-wrap-hero-full {
   height:100vh; height:100dvh; height:100svh;
-  display:flex; flex-direction:column; overflow:hidden; padding:0;
+  display:flex; flex-direction:column; align-items:center; overflow:hidden; padding:0;
 }
+/* align-items:center above is what actually keeps .auth-shell
+   horizontally centered — the fix matters because .auth-shell only
+   has an explicit width (420px, capped by max-width) rather than
+   width:100%, and a flex column's default cross-axis alignment for
+   a sized item is flex-start, i.e. pinned flush to the left edge.
+   On any desktop-width viewport (sidebar reserves 275px on the
+   left, nothing on the right) that left-pinning read as the sign-up
+   card being crammed against the sidebar with a large dead void of
+   empty hero art on the right — this is the "desktop bug" in the
+   screenshot. margin:0 auto below is kept as a second safety net
+   (some older engines only honor one of the two), but align-items
+   is the one actually doing the centering here. */
 .auth-wrap-hero-full .auth-hero { flex:1 1 auto; min-height:0; justify-content:flex-start; }
 .auth-wrap-hero-full .auth-shell {
-  margin:0; max-width:420px; min-height:0; box-shadow:none; width:100%; flex:none;
+  margin:0 auto; max-width:420px; min-height:0; box-shadow:none; width:100%; flex:none;
   background:transparent; border:none; border-radius:0;
 }
 .auth-wrap-hero-full .auth-card { background:transparent; padding:24px 28px calc(28px + env(safe-area-inset-bottom)); }
