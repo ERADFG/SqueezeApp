@@ -1501,7 +1501,7 @@ select {
 .pb { line-height:1.4; word-wrap:break-word; font-size:15px; white-space:pre-wrap; color:var(--ink); margin-top:1px; }
 .gt { color:var(--green); }
 
-/* "View more" / "View less" toggle for posts over 200 characters —
+/* "View more" / "View less" toggle for posts over 350 characters —
    see renderBodyToggle()/togglePostBody() in js/common.js. .pb-short
    and .pb-full share the exact same font/line-height as .pb so
    swapping which one is [hidden] causes no layout jump. */

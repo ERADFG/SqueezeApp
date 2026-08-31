@@ -4754,7 +4754,7 @@ function renderBody(body) {
 // compose/reply textarea), but a card full of 500 characters of text
 // makes the feed feel like a wall of text — so anything over this
 // gets collapsed behind a "View more" toggle, Twitter/X-style.
-const BODY_TRUNCATE_LEN = 200;
+const BODY_TRUNCATE_LEN = 350;
 
 // Same job as renderBody() above, but for the "full" render spots
 // (feed cards, thread detail, profile replies, lightbox caption) as

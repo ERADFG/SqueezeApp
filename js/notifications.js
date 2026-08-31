@@ -3,7 +3,7 @@
 // Rows are created server-side by triggers (see schema.sql) — this
 // page only ever reads + marks-read, never inserts.
 // ─────────────────────────────────────────────────────────────
-const NOTIF_SELECT = '*, actor:profiles!notifications_actor_id_fkey(username,display_name,avatar_url,verified,verification_type), post:posts(id,body,is_deleted,profile:profiles!posts_author_id_fkey(username))';
+const NOTIF_SELECT = '*, actor:profiles!notifications_actor_id_fkey(username,display_name,avatar_url,verified,verification_type), post:posts(id,body,is_deleted,profile:profiles!posts_author_id_fkey(username)), reply:replies(id,body,is_deleted)';
 
 const NOTIF_ICON = {
   like:    ICON.heart,
@@ -36,7 +36,16 @@ function notifHref(n) {
 
 function notifItemHtml(n) {
   const actorAvatar = avatarUrl(n.actor?.avatar_url);
-  const snippet = (n.type !== 'follow' && n.post && !n.post.is_deleted) ? `<div class="notif-snip">${renderBody((n.post.body || '').slice(0, 140))}</div>` : '';
+  // A mention inside a reply used to snippet the parent post's body
+  // (all notifications link post_id to the parent post, for
+  // navigation) — which meant the preview text wasn't actually the
+  // text that mentioned you. Prefer the reply's own body when one is
+  // attached, same as every other type's snippet reflects the actual
+  // content the notification is about.
+  const snipSource = (n.type === 'mention' && n.reply && !n.reply.is_deleted) ? n.reply
+    : (n.post && !n.post.is_deleted) ? n.post
+    : null;
+  const snippet = (n.type !== 'follow' && n.type !== 'message' && snipSource) ? `<div class="notif-snip">${renderBody((snipSource.body || '').slice(0, 140))}</div>` : '';
   return `
   <a class="notif-item${n.read ? '' : ' unread'}" href="${notifHref(n)}">
     <span class="notif-avatar-wrap${avSqClass(n.actor) ? ' notif-avatar-wrap-sq' : ''}">
