@@ -343,23 +343,15 @@ document.addEventListener('mousedown', e => {
 // NOTE: each provider only works once it's turned on in the Supabase
 // dashboard (Authentication → Providers), with its own client ID/secret
 // — the button itself doesn't need any setup beyond that. Google,
-// Twitter (X), Facebook, and Discord are all providers Supabase
-// supports natively. Bluesky is NOT a built-in Supabase provider — it
-// isn't in Supabase's social-login list at all. Bluesky's own sign-in
-// is an AT Protocol OAuth flow with per-client dynamic client
-// registration, which doesn't map cleanly onto Supabase's generic
-// "Custom OAuth/OIDC Provider" feature the way a normal OAuth2/OIDC
-// provider does. The 'custom:bluesky' id below is a placeholder for
-// if/when that's wired up as a Custom Provider in the Supabase
-// dashboard (see supabase.com/docs/guides/auth/custom-oauth-providers)
-// — until then, that button will fail with a "provider not found"
-// style error, same as any other unconfigured provider.
+// Facebook, and Discord are all providers Supabase supports natively.
+// X and Bluesky buttons were removed from the auth pages (X now
+// requires a paid developer account for API/OAuth access; Bluesky
+// isn't a built-in Supabase provider at all — see git history if
+// either needs to come back).
 const OAUTH_PROVIDER_NAMES = {
   google: 'Google',
-  twitter: 'X',
   facebook: 'Facebook',
   discord: 'Discord',
-  'custom:bluesky': 'Bluesky',
   apple: 'Apple',
 };
 
