@@ -1,1 +1,158 @@
-function flReadUrl(){const l=location.pathname.match(/^\/([^/]+)\/(followers|following)\/?$/);if(l)return{flUsername:decodeURIComponent(l[1]),flTab:l[2]};const e=new URLSearchParams(location.search);return{flUsername:e.get("u"),flTab:"following"===e.get("tab")?"following":"followers"}}let flUsername=null,flTab="followers",flProfile=null,flMyFollowing=new Set;function flRenderTabs(){document.getElementById("fl-tabs").innerHTML=`\n    <div class="xtabs">\n      <button class="xtab${"followers"===flTab?" active":""}" onclick="flSetTab('followers')">Followers</button>\n      <button class="xtab${"following"===flTab?" active":""}" onclick="flSetTab('following')">Following</button>\n    </div>`}function flSetTab(l){if(l!==flTab){flTab=l;try{history.replaceState(null,"",prettyFollowListUrl(flUsername,l))}catch(l){}flRenderTabs(),flLoadList()}}function flRowHtml(l,e){const o=l?.username||"unknown",n=currentSession&&l.id!==e,a=flMyFollowing.has(l.id),i=n&&a&&isProtectedFollowUsername(o)?`<button class="follow-btn following locked" disabled title="You can't unfollow this account." aria-label="You can't unfollow this account.">${ICON_LOCK_SM}${t("action.following")}</button>`:`<button class="follow-btn${a?" following":""}" onclick="flToggleFollow('${l.id}', this)">${a?t("action.following"):t("action.follow")}</button>`;return`\n  <div class="fl-row">\n    <a class="ulrow" style="flex:1;min-width:0;" href="${profileUrl(o)}">\n      <img class="avatar pfp-md${avSqClass(l)}" src="${esc(avatarUrl(l?.avatar_url))}" alt="" loading="lazy" decoding="async">\n      <div class="ulrow-txt">\n        <span class="ulrow-name">${esc(l?.display_name||o)}${vBadge(l)}</span>\n        <span class="ulrow-handle">@${esc(o)}</span>\n      </div>\n    </a>\n    ${n?i:""}\n  </div>`}async function flLoadList(){const l=document.getElementById("followlist-root");if(!flProfile)return;l.innerHTML=skeletonFeedHtml(3);const e="followers"===flTab?"followee_id":"follower_id",o="followers"===flTab?"follower_id":"followee_id",{data:n,error:t}=await sb.from("follows").select(`${o}, profile:profiles!follows_${o}_fkey(id,username,display_name,avatar_url,verified,verification_type)`).eq(e,flProfile.id).order("created_at",{ascending:!1}).limit(200);if(t)return void(l.innerHTML=`<div class="errmsg">${esc(t.message)}</div>`);if(!n.length)return void(l.innerHTML=`<div class="empty-note">${"followers"===flTab?`@${esc(flProfile.username)} has no followers yet.`:`@${esc(flProfile.username)} isn't following anyone yet.`}</div>`);const a=currentSession?.user?.id||null;l.innerHTML=n.map(l=>flRowHtml(l.profile,a)).join("")}async function flToggleFollow(l,e){if(!requireLogin())return;const o=e.classList.contains("following");e.disabled=!0;try{if(o){const{error:o}=await unfollowUser(l);if(o)throw o;flMyFollowing.delete(l),e.classList.remove("following"),e.textContent=t("action.follow")}else{const{error:o}=await followUser(l);if(o)throw o;flMyFollowing.add(l),e.classList.add("following"),e.textContent=t("action.following")}}catch(l){alert(l.message||"Could not update follow status.")}finally{e.disabled=!1}}async function flLoadMyFollowing(){flMyFollowing=new Set,await authReady;const l=currentSession;if(!l)return;const{data:e}=await sb.from("follows").select("followee_id").eq("follower_id",l.user.id);flMyFollowing=new Set((e||[]).map(l=>l.followee_id))}async function loadFollowList(){if("followlist"!==document.body.dataset.page)return;const l=flReadUrl();flUsername=l.flUsername,flTab=l.flTab,flProfile=null,flMyFollowing=new Set;const e=document.getElementById("followlist-root");if(!e)return;if(!flUsername)return void(e.innerHTML='<div class="errmsg">No user specified.</div>');const{data:o,error:n}=await sb.from("profiles").select("*").ilike("username",flUsername).single();if(n||!o)return void(e.innerHTML='<div class="errmsg">No user found with that username.</div>');flProfile=o,document.title=`People followed by @${o.username} — InteractInk`,document.getElementById("fl-name").textContent=o.display_name||o.username,document.getElementById("fl-handle").textContent=`@${o.username}`,document.getElementById("fl-back").href=profileUrl(o.username);const t=prettyFollowListUrl(o.username,flTab);if(location.pathname!==t)try{history.replaceState(null,"",t)}catch(l){}setPageDescription(`People ${"following"===flTab?"followed by":"following"} @${o.username} on InteractInk.`),setCanonical(t),flRenderTabs(),await flLoadMyFollowing(),flLoadList()}document.addEventListener("DOMContentLoaded",loadFollowList);
+// ─────────────────────────────────────────────────────────────
+// FOLLOW LIST PAGE — /<username>/followers or /<username>/following
+// Also reachable via the legacy followlist.html?u=<username>&tab=...
+// form — see below.
+// ─────────────────────────────────────────────────────────────
+// Recomputed on every visit (see loadFollowList() below) rather than
+// frozen here — pjax (js/pjax.js) keeps this script loaded for the
+// life of the tab, so viewing a *different* person's followers/
+// following later would otherwise silently keep showing the very
+// first profile's list forever, since this file only ever gets
+// parsed once.
+function flReadUrl() {
+  const m = location.pathname.match(/^\/([^/]+)\/(followers|following)\/?$/);
+  if (m) return { flUsername: decodeURIComponent(m[1]), flTab: m[2] };
+  const params = new URLSearchParams(location.search);
+  return { flUsername: params.get('u'), flTab: params.get('tab') === 'following' ? 'following' : 'followers' };
+}
+let flUsername = null;
+let flTab = 'followers';
+let flProfile = null;
+let flMyFollowing = new Set(); // ids of people the *viewer* (logged-in user) follows
+
+function flRenderTabs() {
+  const el = document.getElementById('fl-tabs');
+  el.innerHTML = `
+    <div class="xtabs">
+      <button class="xtab${flTab === 'followers' ? ' active' : ''}" onclick="flSetTab('followers')">Followers</button>
+      <button class="xtab${flTab === 'following' ? ' active' : ''}" onclick="flSetTab('following')">Following</button>
+    </div>`;
+}
+
+function flSetTab(tab) {
+  if (tab === flTab) return;
+  flTab = tab;
+  try { history.replaceState(null, '', prettyFollowListUrl(flUsername, tab)); } catch (e) {}
+  flRenderTabs();
+  flLoadList();
+}
+
+function flRowHtml(profile, viewerId) {
+  const uname = profile?.username || 'unknown';
+  const showBtn = currentSession && profile.id !== viewerId;
+  const following = flMyFollowing.has(profile.id);
+  const locked = showBtn && following && isProtectedFollowUsername(uname);
+  const btnHtml = locked
+    ? `<button class="follow-btn following locked" disabled title="You can't unfollow this account." aria-label="You can't unfollow this account.">${ICON_LOCK_SM}${t('action.following')}</button>`
+    : `<button class="follow-btn${following ? ' following' : ''}" onclick="flToggleFollow('${profile.id}', this)">${following ? t('action.following') : t('action.follow')}</button>`;
+  return `
+  <div class="fl-row">
+    <a class="ulrow" style="flex:1;min-width:0;" href="${profileUrl(uname)}">
+      <img class="avatar pfp-md${avSqClass(profile)}" src="${esc(avatarUrl(profile?.avatar_url))}" alt="" loading="lazy" decoding="async">
+      <div class="ulrow-txt">
+        <span class="ulrow-name">${esc(profile?.display_name || uname)}${vBadge(profile)}</span>
+        <span class="ulrow-handle">@${esc(uname)}</span>
+      </div>
+    </a>
+    ${showBtn ? btnHtml : ''}
+  </div>`;
+}
+
+async function flLoadList() {
+  const root = document.getElementById('followlist-root');
+  if (!flProfile) return;
+  root.innerHTML = skeletonFeedHtml(3);
+
+  const col = flTab === 'followers' ? 'followee_id' : 'follower_id';
+  const wantCol = flTab === 'followers' ? 'follower_id' : 'followee_id';
+  const { data, error } = await sb.from('follows')
+    .select(`${wantCol}, profile:profiles!follows_${wantCol}_fkey(id,username,display_name,avatar_url,verified,verification_type)`)
+    .eq(col, flProfile.id)
+    .order('created_at', { ascending: false })
+    .limit(200);
+
+  if (error) { root.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
+  if (!data.length) {
+    root.innerHTML = `<div class="empty-note">${flTab === 'followers' ? `@${esc(flProfile.username)} has no followers yet.` : `@${esc(flProfile.username)} isn't following anyone yet.`}</div>`;
+    return;
+  }
+  const viewerId = currentSession?.user?.id || null;
+  root.innerHTML = data.map(row => flRowHtml(row.profile, viewerId)).join('');
+}
+
+async function flToggleFollow(userId, btn) {
+  if (!requireLogin()) return;
+  const following = btn.classList.contains('following');
+  btn.disabled = true;
+  try {
+    if (following) {
+      const { error } = await unfollowUser(userId);
+      if (error) throw error;
+      flMyFollowing.delete(userId);
+      btn.classList.remove('following');
+      btn.textContent = t('action.follow');
+    } else {
+      const { error } = await followUser(userId);
+      if (error) throw error;
+      flMyFollowing.add(userId);
+      btn.classList.add('following');
+      btn.textContent = t('action.following');
+    }
+  } catch (e) {
+    alert(e.message || 'Could not update follow status.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function flLoadMyFollowing() {
+  flMyFollowing = new Set();
+  // Reuses the already-resolved session from auth.js instead of calling
+  // sb.auth.getSession() again — see the note in ensureLikesLoaded()
+  // (js/common.js).
+  await authReady;
+  const session = currentSession;
+  if (!session) return;
+  const { data } = await sb.from('follows').select('followee_id').eq('follower_id', session.user.id);
+  flMyFollowing = new Set((data || []).map(r => r.followee_id));
+}
+
+async function loadFollowList() {
+  // pjax guard — see js/notifications.js. Recompute everything
+  // derived from the URL fresh on every visit — see the comment on
+  // flReadUrl() above.
+  if (document.body.dataset.page !== 'followlist') return;
+  const url = flReadUrl();
+  flUsername = url.flUsername;
+  flTab = url.flTab;
+  flProfile = null;
+  flMyFollowing = new Set();
+
+  const root = document.getElementById('followlist-root');
+  if (!root) return;
+  if (!flUsername) {
+    root.innerHTML = `<div class="errmsg">No user specified.</div>`;
+    return;
+  }
+
+  const { data: profile, error } = await sb.from('profiles').select('*').ilike('username', flUsername).single();
+  if (error || !profile) {
+    root.innerHTML = `<div class="errmsg">No user found with that username.</div>`;
+    return;
+  }
+  flProfile = profile;
+  document.title = `People followed by @${profile.username} — InteractInk`;
+  document.getElementById('fl-name').textContent = profile.display_name || profile.username;
+  document.getElementById('fl-handle').textContent = `@${profile.username}`;
+  document.getElementById('fl-back').href = profileUrl(profile.username);
+  const canonical = prettyFollowListUrl(profile.username, flTab);
+  if (location.pathname !== canonical) { try { history.replaceState(null, '', canonical); } catch (e) {} }
+  setPageDescription(`People ${flTab === 'following' ? 'followed by' : 'following'} @${profile.username} on InteractInk.`);
+  setCanonical(canonical);
+
+  flRenderTabs();
+  await flLoadMyFollowing();
+  flLoadList();
+}
+
+document.addEventListener('DOMContentLoaded', loadFollowList);

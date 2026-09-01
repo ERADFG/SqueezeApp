@@ -1,1 +1,706 @@
-async function loadStats(){const e=document.getElementById("adm-stats"),{data:t,error:a}=await sb.rpc("admin_stats");if(a||!t||!t.length)return;const n=t[0];e.innerHTML=`\n    <div class="adm-stat"><b>${n.total_users??0}</b><span>Users</span></div>\n    <div class="adm-stat adm-stat-warn"><b>${n.banned_users??0}</b><span>Suspended</span></div>\n    <div class="adm-stat"><b>${n.total_posts??0}</b><span>Posts</span></div>\n    <div class="adm-stat"><b>${n.total_articles??0}</b><span>Articles</span></div>\n    <div class="adm-stat ${n.open_reports?"adm-stat-warn":""}"><b>${n.open_reports??0}</b><span>Open Reports</span></div>`;const s=document.getElementById("adm-reports-badge");n.open_reports?(s.textContent=n.open_reports,s.style.display=""):s.style.display="none"}function switchAdminTab(e){document.querySelectorAll(".adm-tab").forEach(t=>t.classList.toggle("active",t.dataset.tab===e)),document.querySelectorAll(".adm-panel").forEach(t=>t.classList.toggle("active",t.id===`adm-panel-${e}`)),"replies"!==e||repliesLoadedOnce||(repliesLoadedOnce=!0,loadRecentReplies()),"articles"!==e||articlesLoadedOnce||(articlesLoadedOnce=!0,loadRecentArticles()),"reports"!==e||reportsLoadedOnce||(reportsLoadedOnce=!0,loadReports()),"moderation"!==e||moderationLoadedOnce||(moderationLoadedOnce=!0,loadModerationQueue())}document.addEventListener("DOMContentLoaded",async()=>{if("admin"!==document.body.dataset.page)return;if(await authReady,!currentSession)return void(location.href="login.html");const{data:e,error:t}=await sb.rpc("is_admin");!t&&e?(document.getElementById("admin-gate").style.display="none",document.getElementById("admin-panel").style.display="",loadStats(),wireUserSearch(),wirePostSearch(),wireReplySearch(),wireArticleSearch(),loadRecentPosts()):location.href="/"});let repliesLoadedOnce=!1,articlesLoadedOnce=!1,reportsLoadedOnce=!1,moderationLoadedOnce=!1,userSearchTimer=null;function wireUserSearch(){const e=document.getElementById("adm-user-q");e.addEventListener("input",()=>{clearTimeout(userSearchTimer),userSearchTimer=setTimeout(()=>runUserSearch(e.value.trim()),300)})}async function runUserSearch(e){const t=document.getElementById("adm-user-results");if(!e)return void(t.innerHTML="");t.innerHTML='<div class="no-t">Searching&hellip;</div>';const{data:a,error:n}=await sb.from("profiles").select("id,username,display_name,avatar_url,verified,verification_type,banned,suspend_reason,suspended_until").or(`username.ilike.%${e}%,display_name.ilike.%${e}%`).limit(15);n?t.innerHTML=`<div class="errmsg">${esc(n.message)}</div>`:a&&a.length?t.innerHTML=a.map(adminUserRowHtml).join(""):t.innerHTML='<div class="no-t">No users found.</div>'}function suspendMetaHtml(e){if(!e.banned)return"";return`<span class="adm-row-meta">Suspended ${e.suspended_until?`until ${new Date(e.suspended_until).toLocaleString()}`:"permanently"}${e.suspend_reason?` &mdash; ${esc(e.suspend_reason)}`:""}</span>`}const VERIFY_TYPES=[{value:"",label:"Not verified"},{value:"blue",label:"Blue"},{value:"gold",label:"Gold"},{value:"purple",label:"Purple"}];function verifySelectHtml(e){const t=e.verified?e.verification_type||"purple":"",a=VERIFY_TYPES.map(e=>`<option value="${e.value}" ${e.value===t?"selected":""}>${e.label}</option>`).join("");return`<select class="adm-verify-select" aria-label="Verification badge" onchange="adminSetVerification('${e.id}', this.value)">${a}</select>`}function adminUserRowHtml(e){const t=e.username||"unknown",a=esc(e.display_name||t);return`\n  <div class="adm-row" id="adm-user-${e.id}">\n    <a href="${profileUrl(t)}" target="_blank" rel="noopener">\n      <img class="avatar pfp-md${avSqClass(e)}" src="${esc(avatarUrl(e.avatar_url))}" loading="lazy" decoding="async" alt="">\n    </a>\n    <div class="adm-row-txt">\n      <span class="adm-row-name">${a}${vBadge(e)}${e.banned?'<span class="adm-tag adm-tag-banned">Suspended</span>':""}</span>\n      <span class="adm-row-handle">@${esc(t)}</span>\n      ${suspendMetaHtml(e)}\n    </div>\n    <div class="adm-row-acts">\n      ${verifySelectHtml(e)}\n      ${e.banned?`<button class="adm-btn adm-btn-danger adm-btn-active" onclick="adminUnsuspend('${e.id}', '${esc(t)}')">Unsuspend</button>`:`<button class="adm-btn adm-btn-danger" onclick="openSuspendModal('${e.id}', '${esc(t)}')">Suspend</button>`}\n    </div>\n  </div>`}async function adminSetVerification(e,t){const a=!!t;try{const{error:n}=await sb.rpc("admin_verify_user",{target_user_id:e,make_verified:a,p_verification_type:a?t:null});if(n)throw n;toast(a?`User verified (${t}).`:"Verification removed."),runUserSearch(document.getElementById("adm-user-q").value.trim())}catch(e){toast(e.message||"Could not update that user.","error")}}let suspendTarget=null;async function openSuspendModal(e,t){suspendTarget={userId:e,uname:t},document.getElementById("adm-suspend-title").textContent=`Suspend @${t}?`,document.getElementById("adm-suspend-duration").value="permanent",document.getElementById("adm-suspend-reason").value="";const a=document.getElementById("adm-suspend-ips");if(a&&(a.textContent=""),document.getElementById("adm-suspend-bg").classList.add("open"),lockScroll(),a){const{data:t}=await sb.rpc("admin_get_user_ips",{target_user_id:e});if(suspendTarget?.userId!==e)return;a.textContent=t?.length?`Suspending will also ban ${t.length} known IP${1===t.length?"":"s"} for this account.`:"No IPs on file for this account yet."}}function closeSuspendModal(){document.getElementById("adm-suspend-bg").classList.remove("open"),unlockScroll(),suspendTarget=null}async function confirmSuspend(){if(!suspendTarget)return;const{userId:e,uname:t}=suspendTarget,a=document.getElementById("adm-suspend-duration").value,n=document.getElementById("adm-suspend-reason").value.trim().slice(0,500),s="permanent"===a?null:new Date(Date.now()+24*Number(a)*60*60*1e3).toISOString(),r=document.getElementById("adm-suspend-confirm");r.disabled=!0,r.textContent="Suspending…";try{const{error:a}=await sb.rpc("admin_suspend_user",{target_user_id:e,reason:n||null,until:s});if(a)throw a;toast(`@${t} suspended.`),closeSuspendModal(),runUserSearch(document.getElementById("adm-user-q").value.trim()),document.getElementById("adm-panel-reports").classList.contains("active")&&loadReports(),loadStats()}catch(e){toast(e.message||"Could not suspend that user.","error")}finally{r.disabled=!1,r.textContent="Suspend"}}async function adminUnsuspend(e,t){if(await ocConfirm({title:`Unsuspend @${t}?`,desc:"They will immediately be able to log in, post, and reply again.",confirmLabel:"Unsuspend",danger:!1}))try{const{error:a}=await sb.rpc("admin_unsuspend_user",{target_user_id:e});if(a)throw a;toast(`@${t} unsuspended.`),runUserSearch(document.getElementById("adm-user-q").value.trim()),document.getElementById("adm-panel-reports").classList.contains("active")&&loadReports(),loadStats()}catch(e){toast(e.message||"Could not unsuspend that user.","error")}}let postSearchTimer=null;function wirePostSearch(){const e=document.getElementById("adm-post-q");e.addEventListener("input",()=>{clearTimeout(postSearchTimer),postSearchTimer=setTimeout(()=>{const t=e.value.trim();t?runPostSearch(t):loadRecentPosts()},300)})}let postShowDeleted=!1;function togglePostShowDeleted(){postShowDeleted=document.getElementById("adm-post-showdel").checked;const e=document.getElementById("adm-post-q").value.trim();e?runPostSearch(e):loadRecentPosts()}async function loadRecentPosts(){const e=document.getElementById("adm-post-results");e.innerHTML='<div class="no-t">Loading&hellip;</div>';let t=sb.from("posts").select("id,body,created_at,author_id,is_deleted,profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)").order("created_at",{ascending:!1}).limit(20);postShowDeleted||(t=t.eq("is_deleted",!1));const{data:a,error:n}=await t;e.innerHTML=n?`<div class="errmsg">${esc(n.message)}</div>`:(a||[]).map(adminPostRowHtml).join("")||'<div class="no-t">No posts yet.</div>'}async function runPostSearch(e){const t=document.getElementById("adm-post-results");t.innerHTML='<div class="no-t">Searching&hellip;</div>';let a=sb.from("posts").select("id,body,created_at,author_id,is_deleted,profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)").order("created_at",{ascending:!1}).limit(30);postShowDeleted||(a=a.eq("is_deleted",!1)),a=e.startsWith("@")?a.ilike("profile.username",`%${e.slice(1)}%`):a.ilike("body",`%${e}%`);const{data:n,error:s}=await a;if(s)return void(t.innerHTML=`<div class="errmsg">${esc(s.message)}</div>`);const r=(n||[]).filter(e=>e.profile);t.innerHTML=r.map(adminPostRowHtml).join("")||'<div class="no-t">No matching posts.</div>'}function adminPostRowHtml(e){const t=e.profile?.username||"unknown",a=esc(e.profile?.display_name||t);return`\n  <div class="adm-row adm-post-row${e.is_deleted?" adm-row-deleted":""}" id="adm-post-${e.id}">\n    <img class="avatar pfp-md${avSqClass(e.profile)}" src="${esc(avatarUrl(e.profile?.avatar_url))}" loading="lazy" decoding="async" alt="">\n    <div class="adm-row-txt">\n      <span class="adm-row-name">${a}${vBadge(e.profile)} <span class="adm-row-handle">@${esc(t)}</span> &middot; <span class="adm-row-dt">${timeAgo(e.created_at)}</span>${e.is_deleted?'<span class="adm-tag adm-tag-banned">Deleted</span>':""}</span>\n      <a class="adm-post-body" href="${postUrl(e)}" target="_blank" rel="noopener">${esc((e.body||"").slice(0,200))}</a>\n    </div>\n    <div class="adm-row-acts">\n      ${e.is_deleted?`<button class="adm-btn adm-btn-primary" onclick="adminRestorePost('${e.id}')">Restore</button>`:`<button class="adm-btn adm-btn-danger" onclick="adminDeletePost('${e.id}')">Delete</button>`}\n    </div>\n  </div>`}async function adminDeletePost(e){if(await ocConfirm({title:"Delete this post?",desc:"This removes it from the site. This cannot be undone from here.",confirmLabel:"Delete",danger:!0}))try{const{error:t}=await sb.rpc("admin_delete_post",{post_id:e});if(t)throw t;if(postShowDeleted){const e=document.getElementById("adm-post-q").value.trim();e?runPostSearch(e):loadRecentPosts()}else document.getElementById(`adm-post-${e}`)?.remove();toast("Post deleted."),loadStats()}catch(e){toast(e.message||"Could not delete that post.","error")}}async function adminRestorePost(e){try{const{error:t}=await sb.rpc("admin_restore_post",{post_id:e});if(t)throw t;const a=document.getElementById("adm-post-q").value.trim();a?runPostSearch(a):loadRecentPosts(),toast("Post restored."),loadStats()}catch(e){toast(e.message||"Could not restore that post.","error")}}let replySearchTimer=null;function wireReplySearch(){const e=document.getElementById("adm-reply-q");e.addEventListener("input",()=>{clearTimeout(replySearchTimer),replySearchTimer=setTimeout(()=>{const t=e.value.trim();t?runReplySearch(t):loadRecentReplies()},300)})}let replyShowDeleted=!1;function toggleReplyShowDeleted(){replyShowDeleted=document.getElementById("adm-reply-showdel").checked;const e=document.getElementById("adm-reply-q").value.trim();e?runReplySearch(e):loadRecentReplies()}async function loadRecentReplies(){const e=document.getElementById("adm-reply-results");e.innerHTML='<div class="no-t">Loading&hellip;</div>';let t=sb.from("replies").select("id,body,created_at,post_id,author_id,is_deleted,profile:profiles(username,display_name,avatar_url,verified,verification_type)").order("created_at",{ascending:!1}).limit(20);replyShowDeleted||(t=t.eq("is_deleted",!1));const{data:a,error:n}=await t;e.innerHTML=n?`<div class="errmsg">${esc(n.message)}</div>`:(a||[]).map(adminReplyRowHtml).join("")||'<div class="no-t">No replies yet.</div>'}async function runReplySearch(e){const t=document.getElementById("adm-reply-results");t.innerHTML='<div class="no-t">Searching&hellip;</div>';let a=sb.from("replies").select("id,body,created_at,post_id,author_id,is_deleted,profile:profiles(username,display_name,avatar_url,verified,verification_type)").order("created_at",{ascending:!1}).limit(30);replyShowDeleted||(a=a.eq("is_deleted",!1)),a=e.startsWith("@")?a.ilike("profile.username",`%${e.slice(1)}%`):a.ilike("body",`%${e}%`);const{data:n,error:s}=await a;if(s)return void(t.innerHTML=`<div class="errmsg">${esc(s.message)}</div>`);const r=(n||[]).filter(e=>e.profile);t.innerHTML=r.map(adminReplyRowHtml).join("")||'<div class="no-t">No matching replies.</div>'}function adminReplyRowHtml(e){const t=e.profile?.username||"unknown",a=esc(e.profile?.display_name||t);return`\n  <div class="adm-row adm-post-row${e.is_deleted?" adm-row-deleted":""}" id="adm-reply-${e.id}">\n    <img class="avatar pfp-md${avSqClass(e.profile)}" src="${esc(avatarUrl(e.profile?.avatar_url))}" loading="lazy" decoding="async" alt="">\n    <div class="adm-row-txt">\n      <span class="adm-row-name">${a}${vBadge(e.profile)} <span class="adm-row-handle">@${esc(t)}</span> &middot; <span class="adm-row-dt">${timeAgo(e.created_at)}</span>${e.is_deleted?'<span class="adm-tag adm-tag-banned">Deleted</span>':""}</span>\n      <a class="adm-post-body" href="${postUrlById(e.post_id)}" target="_blank" rel="noopener">${esc((e.body||"").slice(0,200))}</a>\n    </div>\n    <div class="adm-row-acts">\n      ${e.is_deleted?`<button class="adm-btn adm-btn-primary" onclick="adminRestoreReply('${e.id}')">Restore</button>`:`<button class="adm-btn adm-btn-danger" onclick="adminDeleteReply('${e.id}')">Delete</button>`}\n    </div>\n  </div>`}async function adminDeleteReply(e){if(await ocConfirm({title:"Delete this reply?",desc:"This removes it from the site. This cannot be undone from here.",confirmLabel:"Delete",danger:!0}))try{const{error:t}=await sb.rpc("admin_delete_reply",{reply_id:e});if(t)throw t;if(replyShowDeleted){const e=document.getElementById("adm-reply-q").value.trim();e?runReplySearch(e):loadRecentReplies()}else document.getElementById(`adm-reply-${e}`)?.remove();toast("Reply deleted."),loadStats()}catch(e){toast(e.message||"Could not delete that reply.","error")}}async function adminRestoreReply(e){try{const{error:t}=await sb.rpc("admin_restore_reply",{reply_id:e});if(t)throw t;const a=document.getElementById("adm-reply-q").value.trim();a?runReplySearch(a):loadRecentReplies(),toast("Reply restored."),loadStats()}catch(e){toast(e.message||"Could not restore that reply.","error")}}let articleSearchTimer=null;function wireArticleSearch(){const e=document.getElementById("adm-article-q");e.addEventListener("input",()=>{clearTimeout(articleSearchTimer),articleSearchTimer=setTimeout(()=>{const t=e.value.trim();t?runArticleSearch(t):loadRecentArticles()},300)})}let articleShowDeleted=!1;function toggleArticleShowDeleted(){articleShowDeleted=document.getElementById("adm-article-showdel").checked;const e=document.getElementById("adm-article-q").value.trim();e?runArticleSearch(e):loadRecentArticles()}async function loadRecentArticles(){const e=document.getElementById("adm-article-results");e.innerHTML='<div class="no-t">Loading&hellip;</div>';let t=sb.from("articles").select("id,title,created_at,author_id,is_deleted,profile:profiles!articles_author_id_fkey(username,display_name,avatar_url,verified,verification_type)").order("created_at",{ascending:!1}).limit(20);articleShowDeleted||(t=t.eq("is_deleted",!1));const{data:a,error:n}=await t;e.innerHTML=n?`<div class="errmsg">${esc(n.message)}</div>`:(a||[]).map(adminArticleRowHtml).join("")||'<div class="no-t">No articles yet.</div>'}async function runArticleSearch(e){const t=document.getElementById("adm-article-results");t.innerHTML='<div class="no-t">Searching&hellip;</div>';let a=sb.from("articles").select("id,title,created_at,author_id,is_deleted,profile:profiles!articles_author_id_fkey(username,display_name,avatar_url,verified,verification_type)").order("created_at",{ascending:!1}).limit(30);articleShowDeleted||(a=a.eq("is_deleted",!1)),a=e.startsWith("@")?a.ilike("profile.username",`%${e.slice(1)}%`):a.or(`title.ilike.%${e}%,body.ilike.%${e}%`);const{data:n,error:s}=await a;if(s)return void(t.innerHTML=`<div class="errmsg">${esc(s.message)}</div>`);const r=(n||[]).filter(e=>e.profile);t.innerHTML=r.map(adminArticleRowHtml).join("")||'<div class="no-t">No matching articles.</div>'}function adminArticleRowHtml(e){const t=e.profile?.username||"unknown",a=esc(e.profile?.display_name||t);return`\n  <div class="adm-row adm-post-row${e.is_deleted?" adm-row-deleted":""}" id="adm-article-${e.id}">\n    <img class="avatar pfp-md${avSqClass(e.profile)}" src="${esc(avatarUrl(e.profile?.avatar_url))}" loading="lazy" decoding="async" alt="">\n    <div class="adm-row-txt">\n      <span class="adm-row-name">${a}${vBadge(e.profile)} <span class="adm-row-handle">@${esc(t)}</span> &middot; <span class="adm-row-dt">${timeAgo(e.created_at)}</span>${e.is_deleted?'<span class="adm-tag adm-tag-banned">Deleted</span>':""}</span>\n      <a class="adm-post-body" href="${articleUrl(e.id)}" target="_blank" rel="noopener">${esc(e.title||"(untitled)")}</a>\n    </div>\n    <div class="adm-row-acts">\n      ${e.is_deleted?`<button class="adm-btn adm-btn-primary" onclick="adminRestoreArticle('${e.id}')">Restore</button>`:`<button class="adm-btn adm-btn-danger" onclick="adminDeleteArticle('${e.id}')">Delete</button>`}\n    </div>\n  </div>`}async function adminDeleteArticle(e){if(await ocConfirm({title:"Delete this article?",desc:"This removes it from the site. This cannot be undone from here.",confirmLabel:"Delete",danger:!0}))try{const{error:t}=await sb.rpc("admin_delete_article",{article_id:e});if(t)throw t;if(articleShowDeleted){const e=document.getElementById("adm-article-q").value.trim();e?runArticleSearch(e):loadRecentArticles()}else document.getElementById(`adm-article-${e}`)?.remove();toast("Article deleted."),loadStats()}catch(e){toast(e.message||"Could not delete that article.","error")}}async function adminRestoreArticle(e){try{const{error:t}=await sb.rpc("admin_restore_article",{article_id:e});if(t)throw t;const a=document.getElementById("adm-article-q").value.trim();a?runArticleSearch(a):loadRecentArticles(),toast("Article restored."),loadStats()}catch(e){toast(e.message||"Could not restore that article.","error")}}let currentReportFilter="open";function setReportFilter(e){currentReportFilter=e,document.querySelectorAll("#adm-report-filters .adm-btn").forEach(t=>t.classList.toggle("adm-btn-active",t.dataset.status===e)),loadReports()}async function loadReports(){const e=document.getElementById("adm-report-results");e.innerHTML='<div class="no-t">Loading&hellip;</div>';const{data:t,error:a}=await sb.rpc("admin_list_reports",{status_filter:currentReportFilter});e.innerHTML=a?`<div class="errmsg">${esc(a.message)}</div>`:(t||[]).map(adminReportRowHtml).join("")||'<div class="no-t">No reports here.</div>'}function adminReportRowHtml(e){const t=e.reported_user_id||e.post_author_id||e.reply_author_id,a=e.reported_username||e.post_author_username||e.reply_author_username||(e.community_id?null:"unknown"),n=e.community_id?`Reported: ${esc(e.community_name||"a community")}`:`Reported: @${esc(a)}`;let s="";e.post_id?s=`<a class="adm-post-body" href="${postUrlById(e.post_id,e.post_author_username)}" target="_blank" rel="noopener">Post: ${esc((e.post_body||"").slice(0,160))}</a>`:e.reply_id?s=`<a class="adm-post-body" href="${postUrlById(e.reply_id)}" target="_blank" rel="noopener">Reply: ${esc((e.reply_body||"").slice(0,160))}</a>`:e.community_id&&(s=`<a class="adm-post-body" href="${communityUrl(e.community_slug||"")}" target="_blank" rel="noopener">Community: ${esc(e.community_name||"unknown")}</a>`);const r="open"===e.status?"adm-tag-open":"actioned"===e.status?"adm-tag-actioned":"adm-tag-dismissed";return`\n  <div class="adm-row adm-post-row" id="adm-report-${e.id}">\n    <div class="adm-row-txt">\n      <span class="adm-row-name">${n}<span class="adm-tag ${r}">${esc(e.status)}</span></span>\n      <span class="adm-row-meta">Reason: ${esc(e.reason||"(none given)")}${e.details?" &mdash; "+esc(e.details):""}</span>\n      <span class="adm-row-meta">Reported by @${esc(e.reporter_username||"unknown")} &middot; ${timeAgo(e.created_at)}</span>\n      ${s}\n    </div>\n    <div class="adm-row-acts">\n      ${t?`<button class="adm-btn adm-btn-danger" onclick="openSuspendModal('${t}', '${esc(a)}')">Suspend</button>`:""}\n      ${"actioned"!==e.status?`<button class="adm-btn adm-btn-primary" onclick="resolveReport('${e.id}', 'actioned')">Mark actioned</button>`:""}\n      ${"dismissed"!==e.status?`<button class="adm-btn" onclick="resolveReport('${e.id}', 'dismissed')">Dismiss</button>`:""}\n    </div>\n  </div>`}async function resolveReport(e,t){try{const{error:a}=await sb.rpc("admin_set_report_status",{report_id:e,new_status:t});if(a)throw a;toast("actioned"===t?"Report marked actioned.":"Report dismissed."),loadReports(),loadStats()}catch(e){toast(e.message||"Could not update that report.","error")}}let currentModerationFilter="human_review";function setModerationFilter(e){currentModerationFilter=e,document.querySelectorAll("#adm-moderation-filters .adm-btn").forEach(t=>t.classList.toggle("adm-btn-active",t.dataset.status===e)),loadModerationQueue()}async function loadModerationQueue(){const e=document.getElementById("adm-moderation-results");e.innerHTML='<div class="no-t">Loading&hellip;</div>';const{data:t,error:a}=await sb.rpc("admin_list_moderation_queue",{status_filter:currentModerationFilter});if(a)return void(e.innerHTML=`<div class="errmsg">${esc(a.message)}</div>`);e.innerHTML=(t||[]).map(adminModerationRowHtml).join("")||'<div class="no-t">Nothing here.</div>';const n=document.getElementById("adm-moderation-badge"),s=(t||[]).filter(e=>"human_review"===e.decision).length;"human_review"===currentModerationFilter&&s?(n.textContent=s,n.style.display=""):"human_review"===currentModerationFilter&&(n.style.display="none")}function adminModerationRowHtml(e){const t="post"===e.content_type||"reply"===e.content_type,a="block"===e.decision?"adm-tag-actioned":"human_review"===e.decision?"adm-tag-open":"adm-tag-dismissed",n=[];return e.csam_match&&n.push("CSAM hash match"),null!=e.nsfw&&e.nsfw>=.5&&n.push(`NSFW ${(100*e.nsfw).toFixed(0)}%`),(e.categories||[]).forEach(e=>{e.score>=.5&&n.push(`${e.label} ${(100*e.score).toFixed(0)}%`)}),null!=e.toxicity&&e.toxicity>=.5&&n.push(`toxicity ${(100*e.toxicity).toFixed(0)}%`),null!=e.spam&&e.spam>=.5&&n.push(`spam ${(100*e.spam).toFixed(0)}%`),Array.isArray(e.doxxing_flags)&&e.doxxing_flags.length&&n.push(...e.doxxing_flags.map(e=>e.label)),`\n  <div class="adm-row adm-post-row" id="adm-mod-${e.id}">\n    <div class="adm-row-txt">\n      <span class="adm-row-name">${esc(e.content_type)}<span class="adm-tag ${a}">${esc(e.decision)}</span></span>\n      <span class="adm-row-meta">${n.map(esc).join(" &middot; ")||"no specific signal above threshold"}</span>\n      <span class="adm-row-meta">${timeAgo(e.created_at)}${e.reviewed_at?" &middot; reviewed ("+esc(e.review_outcome||"")+")":""}</span>\n      <span class="adm-post-body">${esc((e.excerpt||"").slice(0,200))}</span>\n    </div>\n    <div class="adm-row-acts">\n      ${t&&!e.reviewed_at?`<button class="adm-btn adm-btn-primary" onclick="reviewModerationItem('${e.id}', '${e.content_type}s', '${e.content_ref}', 'approve')">Approve</button>`:""}\n      ${t&&!e.reviewed_at?`<button class="adm-btn adm-btn-danger" onclick="reviewModerationItem('${e.id}', '${e.content_type}s', '${e.content_ref}', 'remove')">Remove</button>`:""}\n    </div>\n  </div>`}async function reviewModerationItem(e,t,a,n){try{const{error:s}=await sb.rpc("admin_review_moderation_item",{p_event_id:e,p_table:t,p_content_id:a,p_decision:n});if(s)throw s;toast("approve"===n?"Content approved and made visible.":"Content removed."),loadModerationQueue()}catch(e){toast(e.message||"Could not update that item.","error")}}
+// ─────────────────────────────────────────────────────────────
+// ADMIN PANEL — /admin (admin.html). Tabs: Users, Posts, Replies,
+// Articles, Reports. Gated two ways:
+//   1) Client-side here: hides the page and bounces anyone who
+//      isn't an admin, so a stranger who finds the URL just sees a
+//      blank "redirecting" page.
+//   2) Database-side, which is the part that actually matters:
+//      every action below calls an RPC (admin_verify_user /
+//      admin_suspend_user / admin_unsuspend_user / admin_delete_post /
+//      admin_delete_reply / admin_delete_article / admin_list_reports /
+//      admin_set_report_status) that re-checks is_admin() itself
+//      before doing anything — see supabase/admin_panel_advanced.sql.
+//      Even if someone bypassed this file entirely and called the
+//      API directly, the database would still refuse them. That's
+//      the real lock; this file is just the UI in front of it.
+// ─────────────────────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', async () => {
+  // pjax guard — see js/notifications.js. Extra important here: without
+  // it, this listener (once loaded, on visiting /admin even once)
+  // would keep firing on every later navigation to ANY page, making
+  // a redundant is_admin() RPC call each time and — worse — hijacking
+  // navigation with location.href below if the session ever looked
+  // logged-out while the admin happened to be looking at some
+  // unrelated page.
+  if (document.body.dataset.page !== 'admin') return;
+  await authReady;
+
+  if (!currentSession) {
+    location.href = 'login.html';
+    return;
+  }
+
+  const { data: isAdmin, error } = await sb.rpc('is_admin');
+  if (error || !isAdmin) {
+    // Not an admin account — don't even hint the page exists.
+    location.href = '/';
+    return;
+  }
+
+  document.getElementById('admin-gate').style.display = 'none';
+  document.getElementById('admin-panel').style.display = '';
+
+  loadStats();
+  wireUserSearch();
+  wirePostSearch();
+  wireReplySearch();
+  wireArticleSearch();
+  loadRecentPosts();
+});
+
+// ── STATS BAR ──
+
+async function loadStats() {
+  const box = document.getElementById('adm-stats');
+  const { data, error } = await sb.rpc('admin_stats');
+  if (error || !data || !data.length) return;
+  const s = data[0];
+  box.innerHTML = `
+    <div class="adm-stat"><b>${s.total_users ?? 0}</b><span>Users</span></div>
+    <div class="adm-stat adm-stat-warn"><b>${s.banned_users ?? 0}</b><span>Suspended</span></div>
+    <div class="adm-stat"><b>${s.total_posts ?? 0}</b><span>Posts</span></div>
+    <div class="adm-stat"><b>${s.total_articles ?? 0}</b><span>Articles</span></div>
+    <div class="adm-stat ${s.open_reports ? 'adm-stat-warn' : ''}"><b>${s.open_reports ?? 0}</b><span>Open Reports</span></div>`;
+  const badge = document.getElementById('adm-reports-badge');
+  if (s.open_reports) { badge.textContent = s.open_reports; badge.style.display = ''; }
+  else { badge.style.display = 'none'; }
+}
+
+// ── TABS ──
+
+function switchAdminTab(tab) {
+  document.querySelectorAll('.adm-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.adm-panel').forEach(p => p.classList.toggle('active', p.id === `adm-panel-${tab}`));
+  if (tab === 'replies' && !repliesLoadedOnce) { repliesLoadedOnce = true; loadRecentReplies(); }
+  if (tab === 'articles' && !articlesLoadedOnce) { articlesLoadedOnce = true; loadRecentArticles(); }
+  if (tab === 'reports' && !reportsLoadedOnce) { reportsLoadedOnce = true; loadReports(); }
+  if (tab === 'moderation' && !moderationLoadedOnce) { moderationLoadedOnce = true; loadModerationQueue(); }
+}
+let repliesLoadedOnce = false, articlesLoadedOnce = false, reportsLoadedOnce = false, moderationLoadedOnce = false;
+
+// ── USERS: search by username, verify/unverify, suspend/unsuspend ──
+
+let userSearchTimer = null;
+function wireUserSearch() {
+  const input = document.getElementById('adm-user-q');
+  input.addEventListener('input', () => {
+    clearTimeout(userSearchTimer);
+    userSearchTimer = setTimeout(() => runUserSearch(input.value.trim()), 300);
+  });
+}
+
+async function runUserSearch(q) {
+  const box = document.getElementById('adm-user-results');
+  if (!q) { box.innerHTML = ''; return; }
+  box.innerHTML = `<div class="no-t">Searching&hellip;</div>`;
+
+  const { data, error } = await sb.from('profiles')
+    .select('id,username,display_name,avatar_url,verified,verification_type,banned,suspend_reason,suspended_until')
+    .or(`username.ilike.%${q}%,display_name.ilike.%${q}%`)
+    .limit(15);
+
+  if (error) { box.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
+  if (!data || !data.length) { box.innerHTML = `<div class="no-t">No users found.</div>`; return; }
+
+  box.innerHTML = data.map(adminUserRowHtml).join('');
+}
+
+function suspendMetaHtml(p) {
+  if (!p.banned) return '';
+  const until = p.suspended_until ? `until ${new Date(p.suspended_until).toLocaleString()}` : 'permanently';
+  const reason = p.suspend_reason ? ` &mdash; ${esc(p.suspend_reason)}` : '';
+  return `<span class="adm-row-meta">Suspended ${until}${reason}</span>`;
+}
+
+// Badge type picker shown per user row. "" = not verified; otherwise
+// one of the verification_type values the DB constraint allows
+// (see admin_verify_user() in supabase/admin_panel_advanced.sql).
+// Selecting a value calls adminSetVerification() directly from the
+// <select>'s onchange — no separate confirm step, mirroring how the
+// old single Verify/Unverify button worked.
+const VERIFY_TYPES = [
+  { value: '', label: 'Not verified' },
+  { value: 'blue', label: 'Blue' },
+  { value: 'gold', label: 'Gold' },
+  { value: 'purple', label: 'Purple' },
+];
+
+function verifySelectHtml(p) {
+  const current = p.verified ? (p.verification_type || 'purple') : '';
+  const opts = VERIFY_TYPES.map(t =>
+    `<option value="${t.value}" ${t.value === current ? 'selected' : ''}>${t.label}</option>`
+  ).join('');
+  return `<select class="adm-verify-select" aria-label="Verification badge" onchange="adminSetVerification('${p.id}', this.value)">${opts}</select>`;
+}
+
+function adminUserRowHtml(p) {
+  const uname = p.username || 'unknown';
+  const name = esc(p.display_name || uname);
+  return `
+  <div class="adm-row" id="adm-user-${p.id}">
+    <a href="${profileUrl(uname)}" target="_blank" rel="noopener">
+      <img class="avatar pfp-md${avSqClass(p)}" src="${esc(avatarUrl(p.avatar_url))}" loading="lazy" decoding="async" alt="">
+    </a>
+    <div class="adm-row-txt">
+      <span class="adm-row-name">${name}${vBadge(p)}${p.banned ? '<span class="adm-tag adm-tag-banned">Suspended</span>' : ''}</span>
+      <span class="adm-row-handle">@${esc(uname)}</span>
+      ${suspendMetaHtml(p)}
+    </div>
+    <div class="adm-row-acts">
+      ${verifySelectHtml(p)}
+      ${p.banned
+        ? `<button class="adm-btn adm-btn-danger adm-btn-active" onclick="adminUnsuspend('${p.id}', '${esc(uname)}')">Unsuspend</button>`
+        : `<button class="adm-btn adm-btn-danger" onclick="openSuspendModal('${p.id}', '${esc(uname)}')">Suspend</button>`}
+    </div>
+  </div>`;
+}
+
+async function adminSetVerification(userId, type) {
+  const makeVerified = !!type;
+  try {
+    const { error } = await sb.rpc('admin_verify_user', {
+      target_user_id: userId,
+      make_verified: makeVerified,
+      p_verification_type: makeVerified ? type : null,
+    });
+    if (error) throw error;
+    toast(makeVerified ? `User verified (${type}).` : 'Verification removed.');
+    runUserSearch(document.getElementById('adm-user-q').value.trim());
+  } catch (e) {
+    toast(e.message || 'Could not update that user.', 'error');
+  }
+}
+
+// ── SUSPEND MODAL — shared by every tab (Users list, Reports queue) ──
+
+let suspendTarget = null; // { userId, uname }
+
+async function openSuspendModal(userId, uname) {
+  suspendTarget = { userId, uname };
+  document.getElementById('adm-suspend-title').textContent = `Suspend @${uname}?`;
+  document.getElementById('adm-suspend-duration').value = 'permanent';
+  document.getElementById('adm-suspend-reason').value = '';
+  const ipsEl = document.getElementById('adm-suspend-ips');
+  if (ipsEl) ipsEl.textContent = '';
+  document.getElementById('adm-suspend-bg').classList.add('open');
+  lockScroll();
+
+  // Known IPs for this account (see supabase/ip_ban.sql) — suspending
+  // bans every one of these, not just the account itself.
+  if (ipsEl) {
+    const { data } = await sb.rpc('admin_get_user_ips', { target_user_id: userId });
+    if (suspendTarget?.userId !== userId) return; // modal moved on already
+    if (data?.length) {
+      ipsEl.textContent = `Suspending will also ban ${data.length} known IP${data.length === 1 ? '' : 's'} for this account.`;
+    } else {
+      ipsEl.textContent = 'No IPs on file for this account yet.';
+    }
+  }
+}
+function closeSuspendModal() {
+  document.getElementById('adm-suspend-bg').classList.remove('open');
+  unlockScroll();
+  suspendTarget = null;
+}
+
+async function confirmSuspend() {
+  if (!suspendTarget) return;
+  const { userId, uname } = suspendTarget;
+  const durationVal = document.getElementById('adm-suspend-duration').value;
+  const reason = document.getElementById('adm-suspend-reason').value.trim().slice(0, 500);
+  const until = durationVal === 'permanent'
+    ? null
+    : new Date(Date.now() + Number(durationVal) * 24 * 60 * 60 * 1000).toISOString();
+
+  const btn = document.getElementById('adm-suspend-confirm');
+  btn.disabled = true; btn.textContent = 'Suspending…';
+  try {
+    const { error } = await sb.rpc('admin_suspend_user', { target_user_id: userId, reason: reason || null, until });
+    if (error) throw error;
+    toast(`@${uname} suspended.`);
+    closeSuspendModal();
+    runUserSearch(document.getElementById('adm-user-q').value.trim());
+    if (document.getElementById('adm-panel-reports').classList.contains('active')) loadReports();
+    loadStats();
+  } catch (e) {
+    toast(e.message || 'Could not suspend that user.', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Suspend';
+  }
+}
+
+async function adminUnsuspend(userId, uname) {
+  const ok = await ocConfirm({
+    title: `Unsuspend @${uname}?`,
+    desc: 'They will immediately be able to log in, post, and reply again.',
+    confirmLabel: 'Unsuspend',
+    danger: false,
+  });
+  if (!ok) return;
+  try {
+    const { error } = await sb.rpc('admin_unsuspend_user', { target_user_id: userId });
+    if (error) throw error;
+    toast(`@${uname} unsuspended.`);
+    runUserSearch(document.getElementById('adm-user-q').value.trim());
+    if (document.getElementById('adm-panel-reports').classList.contains('active')) loadReports();
+    loadStats();
+  } catch (e) {
+    toast(e.message || 'Could not unsuspend that user.', 'error');
+  }
+}
+
+// ── POSTS: recent feed by default, or search by body text / @username ──
+
+let postSearchTimer = null;
+function wirePostSearch() {
+  const input = document.getElementById('adm-post-q');
+  input.addEventListener('input', () => {
+    clearTimeout(postSearchTimer);
+    postSearchTimer = setTimeout(() => {
+      const q = input.value.trim();
+      q ? runPostSearch(q) : loadRecentPosts();
+    }, 300);
+  });
+}
+
+let postShowDeleted = false;
+function togglePostShowDeleted() {
+  postShowDeleted = document.getElementById('adm-post-showdel').checked;
+  const q = document.getElementById('adm-post-q').value.trim();
+  q ? runPostSearch(q) : loadRecentPosts();
+}
+
+async function loadRecentPosts() {
+  const box = document.getElementById('adm-post-results');
+  box.innerHTML = `<div class="no-t">Loading&hellip;</div>`;
+  let query = sb.from('posts')
+    .select('id,body,created_at,author_id,is_deleted,profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)')
+    .order('created_at', { ascending: false })
+    .limit(20);
+  if (!postShowDeleted) query = query.eq('is_deleted', false);
+  const { data, error } = await query;
+  if (error) { box.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
+  box.innerHTML = (data || []).map(adminPostRowHtml).join('') || `<div class="no-t">No posts yet.</div>`;
+}
+
+async function runPostSearch(q) {
+  const box = document.getElementById('adm-post-results');
+  box.innerHTML = `<div class="no-t">Searching&hellip;</div>`;
+  let query = sb.from('posts')
+    .select('id,body,created_at,author_id,is_deleted,profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)')
+    .order('created_at', { ascending: false })
+    .limit(30);
+  if (!postShowDeleted) query = query.eq('is_deleted', false);
+
+  query = q.startsWith('@')
+    ? query.ilike('profile.username', `%${q.slice(1)}%`)
+    : query.ilike('body', `%${q}%`);
+
+  const { data, error } = await query;
+  if (error) { box.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
+  const rows = (data || []).filter(p => p.profile); // ilike on a joined column can return null-joins; drop those
+  box.innerHTML = rows.map(adminPostRowHtml).join('') || `<div class="no-t">No matching posts.</div>`;
+}
+
+function adminPostRowHtml(p) {
+  const uname = p.profile?.username || 'unknown';
+  const name = esc(p.profile?.display_name || uname);
+  return `
+  <div class="adm-row adm-post-row${p.is_deleted ? ' adm-row-deleted' : ''}" id="adm-post-${p.id}">
+    <img class="avatar pfp-md${avSqClass(p.profile)}" src="${esc(avatarUrl(p.profile?.avatar_url))}" loading="lazy" decoding="async" alt="">
+    <div class="adm-row-txt">
+      <span class="adm-row-name">${name}${vBadge(p.profile)} <span class="adm-row-handle">@${esc(uname)}</span> &middot; <span class="adm-row-dt">${timeAgo(p.created_at)}</span>${p.is_deleted ? '<span class="adm-tag adm-tag-banned">Deleted</span>' : ''}</span>
+      <a class="adm-post-body" href="${postUrl(p)}" target="_blank" rel="noopener">${esc((p.body || '').slice(0, 200))}</a>
+    </div>
+    <div class="adm-row-acts">
+      ${p.is_deleted
+        ? `<button class="adm-btn adm-btn-primary" onclick="adminRestorePost('${p.id}')">Restore</button>`
+        : `<button class="adm-btn adm-btn-danger" onclick="adminDeletePost('${p.id}')">Delete</button>`}
+    </div>
+  </div>`;
+}
+
+async function adminDeletePost(postId) {
+  const ok = await ocConfirm({
+    title: 'Delete this post?',
+    desc: 'This removes it from the site. This cannot be undone from here.',
+    confirmLabel: 'Delete',
+    danger: true,
+  });
+  if (!ok) return;
+  try {
+    const { error } = await sb.rpc('admin_delete_post', { post_id: postId });
+    if (error) throw error;
+    if (postShowDeleted) {
+      const q = document.getElementById('adm-post-q').value.trim();
+      q ? runPostSearch(q) : loadRecentPosts();
+    } else {
+      document.getElementById(`adm-post-${postId}`)?.remove();
+    }
+    toast('Post deleted.');
+    loadStats();
+  } catch (e) {
+    toast(e.message || 'Could not delete that post.', 'error');
+  }
+}
+
+async function adminRestorePost(postId) {
+  try {
+    const { error } = await sb.rpc('admin_restore_post', { post_id: postId });
+    if (error) throw error;
+    const q = document.getElementById('adm-post-q').value.trim();
+    q ? runPostSearch(q) : loadRecentPosts();
+    toast('Post restored.');
+    loadStats();
+  } catch (e) {
+    toast(e.message || 'Could not restore that post.', 'error');
+  }
+}
+
+// ── REPLIES (comments): recent feed by default, or search by body / @username ──
+
+let replySearchTimer = null;
+function wireReplySearch() {
+  const input = document.getElementById('adm-reply-q');
+  input.addEventListener('input', () => {
+    clearTimeout(replySearchTimer);
+    replySearchTimer = setTimeout(() => {
+      const q = input.value.trim();
+      q ? runReplySearch(q) : loadRecentReplies();
+    }, 300);
+  });
+}
+
+let replyShowDeleted = false;
+function toggleReplyShowDeleted() {
+  replyShowDeleted = document.getElementById('adm-reply-showdel').checked;
+  const q = document.getElementById('adm-reply-q').value.trim();
+  q ? runReplySearch(q) : loadRecentReplies();
+}
+
+async function loadRecentReplies() {
+  const box = document.getElementById('adm-reply-results');
+  box.innerHTML = `<div class="no-t">Loading&hellip;</div>`;
+  let query = sb.from('replies')
+    .select('id,body,created_at,post_id,author_id,is_deleted,profile:profiles(username,display_name,avatar_url,verified,verification_type)')
+    .order('created_at', { ascending: false })
+    .limit(20);
+  if (!replyShowDeleted) query = query.eq('is_deleted', false);
+  const { data, error } = await query;
+  if (error) { box.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
+  box.innerHTML = (data || []).map(adminReplyRowHtml).join('') || `<div class="no-t">No replies yet.</div>`;
+}
+
+async function runReplySearch(q) {
+  const box = document.getElementById('adm-reply-results');
+  box.innerHTML = `<div class="no-t">Searching&hellip;</div>`;
+  let query = sb.from('replies')
+    .select('id,body,created_at,post_id,author_id,is_deleted,profile:profiles(username,display_name,avatar_url,verified,verification_type)')
+    .order('created_at', { ascending: false })
+    .limit(30);
+  if (!replyShowDeleted) query = query.eq('is_deleted', false);
+
+  query = q.startsWith('@')
+    ? query.ilike('profile.username', `%${q.slice(1)}%`)
+    : query.ilike('body', `%${q}%`);
+
+  const { data, error } = await query;
+  if (error) { box.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
+  const rows = (data || []).filter(r => r.profile);
+  box.innerHTML = rows.map(adminReplyRowHtml).join('') || `<div class="no-t">No matching replies.</div>`;
+}
+
+function adminReplyRowHtml(r) {
+  const uname = r.profile?.username || 'unknown';
+  const name = esc(r.profile?.display_name || uname);
+  return `
+  <div class="adm-row adm-post-row${r.is_deleted ? ' adm-row-deleted' : ''}" id="adm-reply-${r.id}">
+    <img class="avatar pfp-md${avSqClass(r.profile)}" src="${esc(avatarUrl(r.profile?.avatar_url))}" loading="lazy" decoding="async" alt="">
+    <div class="adm-row-txt">
+      <span class="adm-row-name">${name}${vBadge(r.profile)} <span class="adm-row-handle">@${esc(uname)}</span> &middot; <span class="adm-row-dt">${timeAgo(r.created_at)}</span>${r.is_deleted ? '<span class="adm-tag adm-tag-banned">Deleted</span>' : ''}</span>
+      <a class="adm-post-body" href="${postUrlById(r.post_id)}" target="_blank" rel="noopener">${esc((r.body || '').slice(0, 200))}</a>
+    </div>
+    <div class="adm-row-acts">
+      ${r.is_deleted
+        ? `<button class="adm-btn adm-btn-primary" onclick="adminRestoreReply('${r.id}')">Restore</button>`
+        : `<button class="adm-btn adm-btn-danger" onclick="adminDeleteReply('${r.id}')">Delete</button>`}
+    </div>
+  </div>`;
+}
+
+async function adminDeleteReply(replyId) {
+  const ok = await ocConfirm({
+    title: 'Delete this reply?',
+    desc: 'This removes it from the site. This cannot be undone from here.',
+    confirmLabel: 'Delete',
+    danger: true,
+  });
+  if (!ok) return;
+  try {
+    const { error } = await sb.rpc('admin_delete_reply', { reply_id: replyId });
+    if (error) throw error;
+    if (replyShowDeleted) {
+      const q = document.getElementById('adm-reply-q').value.trim();
+      q ? runReplySearch(q) : loadRecentReplies();
+    } else {
+      document.getElementById(`adm-reply-${replyId}`)?.remove();
+    }
+    toast('Reply deleted.');
+    loadStats();
+  } catch (e) {
+    toast(e.message || 'Could not delete that reply.', 'error');
+  }
+}
+
+async function adminRestoreReply(replyId) {
+  try {
+    const { error } = await sb.rpc('admin_restore_reply', { reply_id: replyId });
+    if (error) throw error;
+    const q = document.getElementById('adm-reply-q').value.trim();
+    q ? runReplySearch(q) : loadRecentReplies();
+    toast('Reply restored.');
+    loadStats();
+  } catch (e) {
+    toast(e.message || 'Could not restore that reply.', 'error');
+  }
+}
+
+// ── ARTICLES: recent feed by default, or search by title/body / @username ──
+
+let articleSearchTimer = null;
+function wireArticleSearch() {
+  const input = document.getElementById('adm-article-q');
+  input.addEventListener('input', () => {
+    clearTimeout(articleSearchTimer);
+    articleSearchTimer = setTimeout(() => {
+      const q = input.value.trim();
+      q ? runArticleSearch(q) : loadRecentArticles();
+    }, 300);
+  });
+}
+
+let articleShowDeleted = false;
+function toggleArticleShowDeleted() {
+  articleShowDeleted = document.getElementById('adm-article-showdel').checked;
+  const q = document.getElementById('adm-article-q').value.trim();
+  q ? runArticleSearch(q) : loadRecentArticles();
+}
+
+async function loadRecentArticles() {
+  const box = document.getElementById('adm-article-results');
+  box.innerHTML = `<div class="no-t">Loading&hellip;</div>`;
+  let query = sb.from('articles')
+    .select('id,title,created_at,author_id,is_deleted,profile:profiles!articles_author_id_fkey(username,display_name,avatar_url,verified,verification_type)')
+    .order('created_at', { ascending: false })
+    .limit(20);
+  if (!articleShowDeleted) query = query.eq('is_deleted', false);
+  const { data, error } = await query;
+  if (error) { box.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
+  box.innerHTML = (data || []).map(adminArticleRowHtml).join('') || `<div class="no-t">No articles yet.</div>`;
+}
+
+async function runArticleSearch(q) {
+  const box = document.getElementById('adm-article-results');
+  box.innerHTML = `<div class="no-t">Searching&hellip;</div>`;
+  let query = sb.from('articles')
+    .select('id,title,created_at,author_id,is_deleted,profile:profiles!articles_author_id_fkey(username,display_name,avatar_url,verified,verification_type)')
+    .order('created_at', { ascending: false })
+    .limit(30);
+  if (!articleShowDeleted) query = query.eq('is_deleted', false);
+
+  query = q.startsWith('@')
+    ? query.ilike('profile.username', `%${q.slice(1)}%`)
+    : query.or(`title.ilike.%${q}%,body.ilike.%${q}%`);
+
+  const { data, error } = await query;
+  if (error) { box.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
+  const rows = (data || []).filter(a => a.profile);
+  box.innerHTML = rows.map(adminArticleRowHtml).join('') || `<div class="no-t">No matching articles.</div>`;
+}
+
+function adminArticleRowHtml(a) {
+  const uname = a.profile?.username || 'unknown';
+  const name = esc(a.profile?.display_name || uname);
+  return `
+  <div class="adm-row adm-post-row${a.is_deleted ? ' adm-row-deleted' : ''}" id="adm-article-${a.id}">
+    <img class="avatar pfp-md${avSqClass(a.profile)}" src="${esc(avatarUrl(a.profile?.avatar_url))}" loading="lazy" decoding="async" alt="">
+    <div class="adm-row-txt">
+      <span class="adm-row-name">${name}${vBadge(a.profile)} <span class="adm-row-handle">@${esc(uname)}</span> &middot; <span class="adm-row-dt">${timeAgo(a.created_at)}</span>${a.is_deleted ? '<span class="adm-tag adm-tag-banned">Deleted</span>' : ''}</span>
+      <a class="adm-post-body" href="${articleUrl(a.id)}" target="_blank" rel="noopener">${esc(a.title || '(untitled)')}</a>
+    </div>
+    <div class="adm-row-acts">
+      ${a.is_deleted
+        ? `<button class="adm-btn adm-btn-primary" onclick="adminRestoreArticle('${a.id}')">Restore</button>`
+        : `<button class="adm-btn adm-btn-danger" onclick="adminDeleteArticle('${a.id}')">Delete</button>`}
+    </div>
+  </div>`;
+}
+
+async function adminDeleteArticle(articleId) {
+  const ok = await ocConfirm({
+    title: 'Delete this article?',
+    desc: 'This removes it from the site. This cannot be undone from here.',
+    confirmLabel: 'Delete',
+    danger: true,
+  });
+  if (!ok) return;
+  try {
+    const { error } = await sb.rpc('admin_delete_article', { article_id: articleId });
+    if (error) throw error;
+    if (articleShowDeleted) {
+      const q = document.getElementById('adm-article-q').value.trim();
+      q ? runArticleSearch(q) : loadRecentArticles();
+    } else {
+      document.getElementById(`adm-article-${articleId}`)?.remove();
+    }
+    toast('Article deleted.');
+    loadStats();
+  } catch (e) {
+    toast(e.message || 'Could not delete that article.', 'error');
+  }
+}
+
+async function adminRestoreArticle(articleId) {
+  try {
+    const { error } = await sb.rpc('admin_restore_article', { article_id: articleId });
+    if (error) throw error;
+    const q = document.getElementById('adm-article-q').value.trim();
+    q ? runArticleSearch(q) : loadRecentArticles();
+    toast('Article restored.');
+    loadStats();
+  } catch (e) {
+    toast(e.message || 'Could not restore that article.', 'error');
+  }
+}
+
+// ── REPORTS: the moderation queue — read/resolved via SECURITY DEFINER RPCs ──
+
+let currentReportFilter = 'open';
+function setReportFilter(status) {
+  currentReportFilter = status;
+  document.querySelectorAll('#adm-report-filters .adm-btn').forEach(b => b.classList.toggle('adm-btn-active', b.dataset.status === status));
+  loadReports();
+}
+
+async function loadReports() {
+  const box = document.getElementById('adm-report-results');
+  box.innerHTML = `<div class="no-t">Loading&hellip;</div>`;
+  const { data, error } = await sb.rpc('admin_list_reports', { status_filter: currentReportFilter });
+  if (error) { box.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
+  box.innerHTML = (data || []).map(adminReportRowHtml).join('') || `<div class="no-t">No reports here.</div>`;
+}
+
+function adminReportRowHtml(r) {
+  // Whoever's actually responsible: a direct user report, or the
+  // author of the reported post/reply. A community report has no
+  // single person behind it, so targetId stays unset for those (no
+  // Suspend button — see below).
+  const targetId = r.reported_user_id || r.post_author_id || r.reply_author_id;
+  const targetUname = r.reported_username || r.post_author_username || r.reply_author_username || (r.community_id ? null : 'unknown');
+  const reportedLabel = r.community_id ? `Reported: ${esc(r.community_name || 'a community')}` : `Reported: @${esc(targetUname)}`;
+
+  let contentLine = '';
+  if (r.post_id) {
+    contentLine = `<a class="adm-post-body" href="${postUrlById(r.post_id, r.post_author_username)}" target="_blank" rel="noopener">Post: ${esc((r.post_body || '').slice(0, 160))}</a>`;
+  } else if (r.reply_id) {
+    contentLine = `<a class="adm-post-body" href="${postUrlById(r.reply_id)}" target="_blank" rel="noopener">Reply: ${esc((r.reply_body || '').slice(0, 160))}</a>`;
+  } else if (r.community_id) {
+    contentLine = `<a class="adm-post-body" href="${communityUrl(r.community_slug || '')}" target="_blank" rel="noopener">Community: ${esc(r.community_name || 'unknown')}</a>`;
+  }
+
+  const tagClass = r.status === 'open' ? 'adm-tag-open' : r.status === 'actioned' ? 'adm-tag-actioned' : 'adm-tag-dismissed';
+
+  return `
+  <div class="adm-row adm-post-row" id="adm-report-${r.id}">
+    <div class="adm-row-txt">
+      <span class="adm-row-name">${reportedLabel}<span class="adm-tag ${tagClass}">${esc(r.status)}</span></span>
+      <span class="adm-row-meta">Reason: ${esc(r.reason || '(none given)')}${r.details ? ' &mdash; ' + esc(r.details) : ''}</span>
+      <span class="adm-row-meta">Reported by @${esc(r.reporter_username || 'unknown')} &middot; ${timeAgo(r.created_at)}</span>
+      ${contentLine}
+    </div>
+    <div class="adm-row-acts">
+      ${targetId ? `<button class="adm-btn adm-btn-danger" onclick="openSuspendModal('${targetId}', '${esc(targetUname)}')">Suspend</button>` : ''}
+      ${r.status !== 'actioned' ? `<button class="adm-btn adm-btn-primary" onclick="resolveReport('${r.id}', 'actioned')">Mark actioned</button>` : ''}
+      ${r.status !== 'dismissed' ? `<button class="adm-btn" onclick="resolveReport('${r.id}', 'dismissed')">Dismiss</button>` : ''}
+    </div>
+  </div>`;
+}
+
+async function resolveReport(reportId, status) {
+  try {
+    const { error } = await sb.rpc('admin_set_report_status', { report_id: reportId, new_status: status });
+    if (error) throw error;
+    toast(status === 'actioned' ? 'Report marked actioned.' : 'Report dismissed.');
+    loadReports();
+    loadStats();
+  } catch (e) {
+    toast(e.message || 'Could not update that report.', 'error');
+  }
+}
+
+// ── MODERATION QUEUE — auto-pipeline's flagged items, distinct from
+// user-submitted Reports above. Reads public.moderation_events via
+// admin_list_moderation_queue() (moderation_media_pipeline.sql).
+// content_type is 'post'/'reply' (gated, reviewable here) or
+// 'text'/'chat'/'avatar'/'community_image' (informational only — text
+// content was already blocked or allowed client-side at post time by
+// api/moderate-text.js, and avatars have no row to un-hide, so those
+// rows show for visibility/audit but skip the Approve/Remove buttons).
+let currentModerationFilter = 'human_review';
+function setModerationFilter(status) {
+  currentModerationFilter = status;
+  document.querySelectorAll('#adm-moderation-filters .adm-btn').forEach(b => b.classList.toggle('adm-btn-active', b.dataset.status === status));
+  loadModerationQueue();
+}
+
+async function loadModerationQueue() {
+  const box = document.getElementById('adm-moderation-results');
+  box.innerHTML = `<div class="no-t">Loading&hellip;</div>`;
+  const { data, error } = await sb.rpc('admin_list_moderation_queue', { status_filter: currentModerationFilter });
+  if (error) { box.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
+  box.innerHTML = (data || []).map(adminModerationRowHtml).join('') || `<div class="no-t">Nothing here.</div>`;
+  const badge = document.getElementById('adm-moderation-badge');
+  const openCount = (data || []).filter(r => r.decision === 'human_review').length;
+  if (currentModerationFilter === 'human_review' && openCount) { badge.textContent = openCount; badge.style.display = ''; }
+  else if (currentModerationFilter === 'human_review') { badge.style.display = 'none'; }
+}
+
+function adminModerationRowHtml(r) {
+  const reviewable = r.content_type === 'post' || r.content_type === 'reply';
+  const tagClass = r.decision === 'block' ? 'adm-tag-actioned' : r.decision === 'human_review' ? 'adm-tag-open' : 'adm-tag-dismissed';
+  const reasons = [];
+  if (r.csam_match) reasons.push('CSAM hash match');
+  if (r.nsfw != null && r.nsfw >= 0.5) reasons.push(`NSFW ${(r.nsfw * 100).toFixed(0)}%`);
+  (r.categories || []).forEach(c => { if (c.score >= 0.5) reasons.push(`${c.label} ${(c.score * 100).toFixed(0)}%`); });
+  if (r.toxicity != null && r.toxicity >= 0.5) reasons.push(`toxicity ${(r.toxicity * 100).toFixed(0)}%`);
+  if (r.spam != null && r.spam >= 0.5) reasons.push(`spam ${(r.spam * 100).toFixed(0)}%`);
+  if (Array.isArray(r.doxxing_flags) && r.doxxing_flags.length) reasons.push(...r.doxxing_flags.map(d => d.label));
+
+  return `
+  <div class="adm-row adm-post-row" id="adm-mod-${r.id}">
+    <div class="adm-row-txt">
+      <span class="adm-row-name">${esc(r.content_type)}<span class="adm-tag ${tagClass}">${esc(r.decision)}</span></span>
+      <span class="adm-row-meta">${reasons.map(esc).join(' &middot; ') || 'no specific signal above threshold'}</span>
+      <span class="adm-row-meta">${timeAgo(r.created_at)}${r.reviewed_at ? ' &middot; reviewed (' + esc(r.review_outcome || '') + ')' : ''}</span>
+      <span class="adm-post-body">${esc((r.excerpt || '').slice(0, 200))}</span>
+    </div>
+    <div class="adm-row-acts">
+      ${reviewable && !r.reviewed_at ? `<button class="adm-btn adm-btn-primary" onclick="reviewModerationItem('${r.id}', '${r.content_type}s', '${r.content_ref}', 'approve')">Approve</button>` : ''}
+      ${reviewable && !r.reviewed_at ? `<button class="adm-btn adm-btn-danger" onclick="reviewModerationItem('${r.id}', '${r.content_type}s', '${r.content_ref}', 'remove')">Remove</button>` : ''}
+    </div>
+  </div>`;
+}
+
+async function reviewModerationItem(eventId, table, contentId, decision) {
+  try {
+    const { error } = await sb.rpc('admin_review_moderation_item', {
+      p_event_id: eventId, p_table: table, p_content_id: contentId, p_decision: decision,
+    });
+    if (error) throw error;
+    toast(decision === 'approve' ? 'Content approved and made visible.' : 'Content removed.');
+    loadModerationQueue();
+  } catch (e) {
+    toast(e.message || 'Could not update that item.', 'error');
+  }
+}

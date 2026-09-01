@@ -1,1 +1,99 @@
-let articlesTab="all",articlesSearchQuery="";const ARTICLES_PAGE_SIZE=10;let articlesPage={all:1,mine:1};function switchArticlesTab(e){e!==articlesTab&&(articlesTab=e,articlesPage[e]=1,document.getElementById("atab-all").classList.toggle("active","all"===e),document.getElementById("atab-mine").classList.toggle("active","mine"===e),renderArticles())}function gotoArticlesPage(e){articlesPage[articlesTab]=e,renderArticles(),document.getElementById("articles-list")?.scrollIntoView({block:"start",behavior:"smooth"})}function goWriteArticle(){requireLogin()&&(location.href="editarticle.html")}async function renderArticles(){const e=document.getElementById("articles-list");if(e.innerHTML=skeletonFeedHtml(),"mine"===articlesTab&&!currentSession)return void(e.innerHTML='<div class="post-login-gate" style="border-top:none;">You need an account to post. <a href="signup.html">Create an account</a> — it takes a minute.</div>');const t=articlesSearchQuery.trim(),i=articlesPage[articlesTab];let a=sb.from("articles").select("*",{count:"exact"}).eq("is_deleted",!1);"mine"===articlesTab&&(a=a.eq("author_id",currentSession.user.id)),t&&(a=a.or(`title.ilike.%${t}%,body.ilike.%${t}%`));const{data:r,error:c,count:n}=await a.order("created_at",{ascending:!1}).range(10*(i-1),10*i-1);if(c)return void(e.innerHTML=`<div class="errmsg">${esc(c.message)}</div>`);const l=r||[];if(!l.length)return void(e.innerHTML=t?`<div id="feed-empty">No Articles found for &ldquo;${esc(articlesSearchQuery.trim())}&rdquo;.</div>`:"mine"===articlesTab?'<div id="feed-empty">You haven\'t written any Articles yet. Tap &ldquo;+ Write&rdquo; to publish your first one.</div>':'<div id="feed-empty">No Articles have been published yet.</div>');const s=[...new Set(l.map(e=>e.author_id))],{data:o}=await sb.from("profiles").select("id,username,display_name,avatar_url,verified,verification_type").in("id",s),d=new Map((o||[]).map(e=>[e.id,e])),u=Math.max(1,Math.ceil((n||0)/10));e.innerHTML='<div class="article-list">'+l.map(e=>articleRowHtml(e,d.get(e.author_id))).join("")+"</div>"+pagerHtml(i,u,"gotoArticlesPage")}let _articlesSearchDebounce=null;function wireArticlesSearch(){const e=document.getElementById("articles-search");e&&e.addEventListener("input",()=>{clearTimeout(_articlesSearchDebounce),_articlesSearchDebounce=setTimeout(()=>{articlesSearchQuery=e.value,articlesPage[articlesTab]=1,renderArticles()},250)})}document.addEventListener("DOMContentLoaded",async()=>{"articles"===document.body.dataset.page&&(await authReady,wireArticlesSearch(),renderArticles())});
+// ─────────────────────────────────────────────────────────────
+// ARTICLES BROWSE PAGE — /articles
+// Replaces Lists as the app's second primary sidebar item (Lists
+// itself moved into the "···" More menu — see renderSideNav() in
+// js/common.js). Any logged-in account can write an article — see
+// js/editarticle.js — there's no owner/curator distinction the way
+// Lists has. Two tabs: "All Articles" (everyone's, public, no
+// account needed to read) and "Your Articles" (this account's own,
+// requires login).
+// ─────────────────────────────────────────────────────────────
+let articlesTab = 'all'; // 'all' | 'mine'
+let articlesSearchQuery = '';
+const ARTICLES_PAGE_SIZE = 10;
+let articlesPage = { all: 1, mine: 1 };
+
+function switchArticlesTab(tab) {
+  if (tab === articlesTab) return;
+  articlesTab = tab;
+  articlesPage[tab] = 1;
+  document.getElementById('atab-all').classList.toggle('active', tab === 'all');
+  document.getElementById('atab-mine').classList.toggle('active', tab === 'mine');
+  renderArticles();
+}
+
+function gotoArticlesPage(n) {
+  articlesPage[articlesTab] = n;
+  renderArticles();
+  document.getElementById('articles-list')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+}
+
+function goWriteArticle() {
+  if (!requireLogin()) return;
+  location.href = 'editarticle.html';
+}
+
+async function renderArticles() {
+  const listEl = document.getElementById('articles-list');
+  listEl.innerHTML = skeletonFeedHtml();
+
+  if (articlesTab === 'mine' && !currentSession) {
+    listEl.innerHTML = `<div class="post-login-gate" style="border-top:none;">You need an account to post. <a href="signup.html">Create an account</a> — it takes a minute.</div>`;
+    return;
+  }
+
+  const q = articlesSearchQuery.trim();
+  const page = articlesPage[articlesTab];
+
+  let query = sb.from('articles').select('*', { count: 'exact' }).eq('is_deleted', false);
+  if (articlesTab === 'mine') query = query.eq('author_id', currentSession.user.id);
+  if (q) query = query.or(`title.ilike.%${q}%,body.ilike.%${q}%`);
+
+  const { data, error, count } = await query
+    .order('created_at', { ascending: false })
+    .range((page - 1) * ARTICLES_PAGE_SIZE, page * ARTICLES_PAGE_SIZE - 1);
+
+  if (error) { listEl.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
+  const rows = data || [];
+
+  if (!rows.length) {
+    listEl.innerHTML = q
+      ? `<div id="feed-empty">No Articles found for &ldquo;${esc(articlesSearchQuery.trim())}&rdquo;.</div>`
+      : articlesTab === 'mine'
+        ? `<div id="feed-empty">You haven't written any Articles yet. Tap &ldquo;+ Write&rdquo; to publish your first one.</div>`
+        : `<div id="feed-empty">No Articles have been published yet.</div>`;
+    return;
+  }
+
+  const authorIds = [...new Set(rows.map(a => a.author_id))];
+  const { data: authors } = await sb.from('profiles').select('id,username,display_name,avatar_url,verified,verification_type').in('id', authorIds);
+  const authorById = new Map((authors || []).map(a => [a.id, a]));
+
+  const totalPages = Math.max(1, Math.ceil((count || 0) / ARTICLES_PAGE_SIZE));
+  listEl.innerHTML = `<div class="article-list">` +
+    rows.map(a => articleRowHtml(a, authorById.get(a.author_id))).join('') +
+    `</div>` +
+    pagerHtml(page, totalPages, 'gotoArticlesPage');
+}
+
+// Debounced so every keystroke doesn't refetch.
+let _articlesSearchDebounce = null;
+function wireArticlesSearch() {
+  const input = document.getElementById('articles-search');
+  if (!input) return;
+  input.addEventListener('input', () => {
+    clearTimeout(_articlesSearchDebounce);
+    _articlesSearchDebounce = setTimeout(() => {
+      articlesSearchQuery = input.value;
+      articlesPage[articlesTab] = 1;
+      renderArticles();
+    }, 250);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  if (document.body.dataset.page !== 'articles') return; // see js/notifications.js
+  await authReady; // see auth.js — otherwise this can render before we know who's logged in
+  wireArticlesSearch();
+  renderArticles();
+});

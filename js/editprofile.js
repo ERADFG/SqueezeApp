@@ -1,1 +1,164 @@
-let epProfile=null,epAvatarFile=null,epBannerFile=null,epAvatarPreviewUrl=null,epBannerPreviewUrl=null;async function loadEditProfile(){if("editprofile"!==document.body.dataset.page)return;const e=document.getElementById("editprofile-root");if(!e)return;await authReady;const t=currentSession;t?(epProfile=await getProfile(t.user.id),epProfile?(document.getElementById("ep-back").href=profileUrl(epProfile.username),document.title="Edit profile — InteractInk",e.innerHTML=`\n    <div class="ep-banner-wrap" id="ep-banner-wrap" style="${epProfile.banner_url?`--banner-img:url('${esc(epProfile.banner_url)}')`:""}">\n      <label class="ep-banner-pick" for="ep-banner-file">\n        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h3l2-2h6l2 2h3v12H4V7Z"/><circle cx="12" cy="13" r="3.5"/></svg>\n      </label>\n      <input type="file" id="ep-banner-file" accept="image/*" style="display:none;">\n      <img class="avatar ep-avatar${avSqClass(epProfile)}" id="ep-avatar-preview" src="${esc(avatarUrl(epProfile.avatar_url))}" decoding="async" alt="">\n      <label class="ep-avatar-pick" for="ep-avatar-file">\n        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h3l2-2h6l2 2h3v12H4V7Z"/><circle cx="12" cy="13" r="3.5"/></svg>\n      </label>\n      <input type="file" id="ep-avatar-file" accept="image/*" style="display:none;">\n    </div>\n\n    <div class="ep-form">\n      <div class="errmsg" id="ep-err" style="display:none;"></div>\n\n      <label>Display name</label>\n      <input type="text" id="ep-display" maxlength="50" value="${esc(epProfile.display_name||"")}" placeholder="${esc(epProfile.username)}">\n      <span class="pf-note" id="ep-display-count">${(epProfile.display_name||"").length}/50</span>\n\n      <label>Bio</label>\n      <textarea id="ep-bio" maxlength="200" placeholder="Tell people about yourself&hellip;">${esc(epProfile.bio||"")}</textarea>\n      <span class="pf-note" id="ep-bio-count">${(epProfile.bio||"").length}/200</span>\n\n      <label>Location</label>\n      <input type="text" id="ep-location" maxlength="30" value="${esc(epProfile.location||"")}" placeholder="Where are you based?">\n\n      <label>Website</label>\n      <input type="text" id="ep-website" maxlength="100" value="${esc(epProfile.website||"")}" placeholder="yourlink.com">\n\n      <div class="edit-row">\n        <input type="submit" class="pf-btn" value="Save" onclick="saveEditProfile();return false;">\n        <a class="profile-edit-btn" href="${profileUrl(epProfile.username)}">Cancel</a>\n        <span id="ep-st" style="font-size:11px;color:var(--muted);"></span>\n      </div>\n    </div>\n  `,document.getElementById("ep-avatar-file").addEventListener("change",e=>{const t=e.target.files[0],n=document.getElementById("ep-err");e.target.value="",t&&validateFile(t,n)&&(clearErr(n),openCropModal(t,"square",e=>{epAvatarPreviewUrl&&URL.revokeObjectURL(epAvatarPreviewUrl),epAvatarFile=e,epAvatarPreviewUrl=URL.createObjectURL(e),document.getElementById("ep-avatar-preview").src=epAvatarPreviewUrl}))}),document.getElementById("ep-banner-file").addEventListener("change",e=>{const t=e.target.files[0],n=document.getElementById("ep-err");e.target.value="",t&&validateFile(t,n)&&(clearErr(n),openCropModal(t,"wide",e=>{epBannerPreviewUrl&&URL.revokeObjectURL(epBannerPreviewUrl),epBannerFile=e,epBannerPreviewUrl=URL.createObjectURL(e),document.getElementById("ep-banner-wrap").style.setProperty("--banner-img",`url('${epBannerPreviewUrl}')`)}))}),document.getElementById("ep-bio").addEventListener("input",e=>{document.getElementById("ep-bio-count").textContent=`${e.target.value.length}/200`}),document.getElementById("ep-display").addEventListener("input",e=>{document.getElementById("ep-display-count").textContent=`${e.target.value.length}/50`})):e.innerHTML='<div class="errmsg">Could not load your profile.</div>'):e.innerHTML='<div class="post-login-gate" style="border-top:none;">You need an account to post. <a href="signup.html">Create an account</a> — it takes a minute.</div>'}async function saveEditProfile(){const e=document.getElementById("ep-err"),t=document.getElementById("ep-st");clearErr(e);const n=document.getElementById("ep-display").value.trim().slice(0,50)||null,a=document.getElementById("ep-bio").value.trim().slice(0,200)||null,l=[n,a].filter(Boolean).join("\n");if(!l||await checkTextModeration("text",l,epProfile.id,e)){t.textContent="Saving…";try{const e={display_name:n,bio:a,location:document.getElementById("ep-location").value.trim().slice(0,30)||null,website:normalizeWebsite(document.getElementById("ep-website").value.trim())};epAvatarFile&&(t.textContent="Uploading avatar…",e.avatar_url=await uploadAvatar(epAvatarFile,epProfile.id)),epBannerFile&&(t.textContent="Uploading banner…",e.banner_url=await uploadAvatar(epBannerFile,epProfile.id));const{error:l}=await sb.from("profiles").update(e).eq("id",epProfile.id);if(l)throw l;t.textContent="",location.href=profileUrl(epProfile.username)}catch(n){showErr(e,n.message||"Could not save changes."),t.textContent=""}}}function normalizeWebsite(e){if(!e)return null;const t=e.slice(0,100);return/^https?:\/\//i.test(t)?t:`https://${t}`}document.addEventListener("DOMContentLoaded",loadEditProfile);
+// ─────────────────────────────────────────────────────────────
+// EDIT PROFILE PAGE — /editprofile.html (requires login)
+// Always edits the current session's own profile — there is no
+// ?u= param, unlike profile.html/followlist.html, since you can
+// only ever edit your own account.
+// ─────────────────────────────────────────────────────────────
+let epProfile = null;
+let epAvatarFile = null;
+let epBannerFile = null;
+let epAvatarPreviewUrl = null; // blob: URL currently shown — revoked before being replaced, see below
+let epBannerPreviewUrl = null;
+
+async function loadEditProfile() {
+  if (document.body.dataset.page !== 'editprofile') return; // see js/notifications.js
+  const root = document.getElementById('editprofile-root');
+  if (!root) return;
+  // Reuses the already-resolved session from auth.js instead of calling
+  // sb.auth.getSession() again — see the note in ensureLikesLoaded()
+  // (js/common.js). This file's own DOMContentLoaded listener used to
+  // fire its own independent getSession() call at the same time as
+  // auth.js's renderAuthArea() did, which is exactly the concurrent-call
+  // pattern that can deadlock supabase-js's internal auth lock and hang
+  // this page's loading spinner forever.
+  await authReady;
+  const session = currentSession;
+
+  if (!session) {
+    root.innerHTML = `<div class="post-login-gate" style="border-top:none;">You need an account to post. <a href="signup.html">Create an account</a> — it takes a minute.</div>`;
+    return;
+  }
+
+  epProfile = await getProfile(session.user.id);
+  if (!epProfile) {
+    root.innerHTML = `<div class="errmsg">Could not load your profile.</div>`;
+    return;
+  }
+
+  document.getElementById('ep-back').href = profileUrl(epProfile.username);
+  document.title = `Edit profile — InteractInk`;
+
+  root.innerHTML = `
+    <div class="ep-banner-wrap" id="ep-banner-wrap" style="${epProfile.banner_url ? `--banner-img:url('${esc(epProfile.banner_url)}')` : ''}">
+      <label class="ep-banner-pick" for="ep-banner-file">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h3l2-2h6l2 2h3v12H4V7Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+      </label>
+      <input type="file" id="ep-banner-file" accept="image/*" style="display:none;">
+      <img class="avatar ep-avatar${avSqClass(epProfile)}" id="ep-avatar-preview" src="${esc(avatarUrl(epProfile.avatar_url))}" decoding="async" alt="">
+      <label class="ep-avatar-pick" for="ep-avatar-file">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h3l2-2h6l2 2h3v12H4V7Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+      </label>
+      <input type="file" id="ep-avatar-file" accept="image/*" style="display:none;">
+    </div>
+
+    <div class="ep-form">
+      <div class="errmsg" id="ep-err" style="display:none;"></div>
+
+      <label>Display name</label>
+      <input type="text" id="ep-display" maxlength="50" value="${esc(epProfile.display_name || '')}" placeholder="${esc(epProfile.username)}">
+      <span class="pf-note" id="ep-display-count">${(epProfile.display_name || '').length}/50</span>
+
+      <label>Bio</label>
+      <textarea id="ep-bio" maxlength="200" placeholder="Tell people about yourself&hellip;">${esc(epProfile.bio || '')}</textarea>
+      <span class="pf-note" id="ep-bio-count">${(epProfile.bio || '').length}/200</span>
+
+      <label>Location</label>
+      <input type="text" id="ep-location" maxlength="30" value="${esc(epProfile.location || '')}" placeholder="Where are you based?">
+
+      <label>Website</label>
+      <input type="text" id="ep-website" maxlength="100" value="${esc(epProfile.website || '')}" placeholder="yourlink.com">
+
+      <div class="edit-row">
+        <input type="submit" class="pf-btn" value="Save" onclick="saveEditProfile();return false;">
+        <a class="profile-edit-btn" href="${profileUrl(epProfile.username)}">Cancel</a>
+        <span id="ep-st" style="font-size:11px;color:var(--muted);"></span>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('ep-avatar-file').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    const errEl = document.getElementById('ep-err');
+    e.target.value = '';
+    if (!file) return;
+    if (!validateFile(file, errEl)) return;
+    clearErr(errEl);
+    openCropModal(file, 'square', (cropped) => {
+      if (epAvatarPreviewUrl) URL.revokeObjectURL(epAvatarPreviewUrl);
+      epAvatarFile = cropped;
+      epAvatarPreviewUrl = URL.createObjectURL(cropped);
+      document.getElementById('ep-avatar-preview').src = epAvatarPreviewUrl;
+    });
+  });
+
+  document.getElementById('ep-banner-file').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    const errEl = document.getElementById('ep-err');
+    e.target.value = '';
+    if (!file) return;
+    if (!validateFile(file, errEl)) return;
+    clearErr(errEl);
+    openCropModal(file, 'wide', (cropped) => {
+      if (epBannerPreviewUrl) URL.revokeObjectURL(epBannerPreviewUrl);
+      epBannerFile = cropped;
+      epBannerPreviewUrl = URL.createObjectURL(cropped);
+      document.getElementById('ep-banner-wrap').style.setProperty('--banner-img', `url('${epBannerPreviewUrl}')`);
+    });
+  });
+
+  document.getElementById('ep-bio').addEventListener('input', (e) => {
+    document.getElementById('ep-bio-count').textContent = `${e.target.value.length}/200`;
+  });
+
+  document.getElementById('ep-display').addEventListener('input', (e) => {
+    document.getElementById('ep-display-count').textContent = `${e.target.value.length}/50`;
+  });
+}
+
+async function saveEditProfile() {
+  const errEl = document.getElementById('ep-err');
+  const stEl  = document.getElementById('ep-st');
+  clearErr(errEl);
+  const display_name = document.getElementById('ep-display').value.trim().slice(0, 50) || null;
+  const bio = document.getElementById('ep-bio').value.trim().slice(0, 200) || null;
+  // Text moderation gate — profile bio/display name had no check at
+  // all before saving, unlike post/reply text. Bio is public-facing
+  // (shows on every visit to a profile), so it gets the same gate.
+  const profileText = [display_name, bio].filter(Boolean).join('\n');
+  if (profileText && !(await checkTextModeration('text', profileText, epProfile.id, errEl))) return;
+  stEl.textContent = 'Saving…';
+  try {
+    const updates = {
+      display_name,
+      bio,
+      location: document.getElementById('ep-location').value.trim().slice(0, 30) || null,
+      website: normalizeWebsite(document.getElementById('ep-website').value.trim())
+    };
+    if (epAvatarFile) {
+      stEl.textContent = 'Uploading avatar…';
+      updates.avatar_url = await uploadAvatar(epAvatarFile, epProfile.id);
+    }
+    if (epBannerFile) {
+      stEl.textContent = 'Uploading banner…';
+      updates.banner_url = await uploadAvatar(epBannerFile, epProfile.id);
+    }
+    const { error } = await sb.from('profiles').update(updates).eq('id', epProfile.id);
+    if (error) throw error;
+    stEl.textContent = '';
+    location.href = profileUrl(epProfile.username);
+  } catch (e) {
+    showErr(errEl, e.message || 'Could not save changes.');
+    stEl.textContent = '';
+  }
+}
+
+// Twitter-style link field: users type "example.com" without a
+// scheme, but the profile page needs a real absolute href, so a
+// missing http(s):// is added on save rather than on every render.
+function normalizeWebsite(raw) {
+  if (!raw) return null;
+  const trimmed = raw.slice(0, 100);
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
+document.addEventListener('DOMContentLoaded', loadEditProfile);
