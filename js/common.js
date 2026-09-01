@@ -646,7 +646,7 @@ const ICON = {
   // Bookmark ribbon — heavier, more rounded stroke and a smooth
   // curved notch at the bottom (instead of a sharp V), matching the
   // reference save icon.
-  bookmark: '<svg viewBox="0 0 24 24" class="icon-bookmark"><path d="M6.25 6.4A2.65 2.65 0 0 1 8.9 3.75h6.2A2.65 2.65 0 0 1 17.75 6.4v13.2a.85.85 0 0 1-1.36.68L12 16.9l-4.39 3.38a.85.85 0 0 1-1.36-.68V6.4Z" stroke-linejoin="round"/></svg>',
+  bookmark: '<svg viewBox="0 0 24 24" class="icon-bookmark"><path d="M7 6.2Q7 4 9.4 4H14.6Q17 4 17 6.2V18.3Q17 19.5 15.9 18.8L12 16.3L8.1 18.8Q7 19.5 7 18.3Z" stroke-linejoin="round"/></svg>',
   repost:   '<svg viewBox="0 0 24 24"><path d="M17 1.5 21 5.5l-4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 11.5v-2a4 4 0 0 1 4-4h14" stroke-linecap="round"/><path d="M7 22.5 3 18.5l4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12.5v2a4 4 0 0 1-4 4H3" stroke-linecap="round"/></svg>',
   quote:    '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M6.5 6.2c-2.3 1.4-3.7 3.5-3.7 6 0 2.4 1.6 3.9 3.5 3.9 1.75 0 3-1.3 3-2.95 0-1.55-1.1-2.75-2.6-2.75-.25 0-.5 0-.75.1.2-1.5 1.4-3 3-3.85L6.5 6.2Zm9 0c-2.3 1.4-3.7 3.5-3.7 6 0 2.4 1.6 3.9 3.5 3.9 1.75 0 3-1.3 3-2.95 0-1.55-1.1-2.75-2.6-2.75-.25 0-.5 0-.75.1.2-1.5 1.4-3 3-3.85l-2.45-2.3Z"/></svg>'
 };
@@ -662,21 +662,21 @@ const ICON = {
 // the style reference for this set. home/gear are fully redesigned;
 // the rest are re-drafted with the same rounder, bolder language.
 const NAV_ICON = {
-  home:     '<svg viewBox="0 0 24 24"><path d="M5.6 19.2V12.4C5.6 11.6 5.95 10.85 6.55 10.35L11.15 6.35C11.65 5.9 12.35 5.9 12.85 6.35L17.45 10.35C18.05 10.85 18.4 11.6 18.4 12.4V19.2"/><path d="M9.9 19.2V14.6C9.9 13.5 10.6 12.9 11.6 12.9H12.4C13.4 12.9 14.1 13.5 14.1 14.6V19.2"/></svg>',
+  home:     '<svg viewBox="0 0 24 24"><path d="M5.6 19.2L5.6 10.3L12 4.8L18.4 10.3L18.4 19.2"/><path d="M9.9 19.2V14.6Q9.9 12.9 11.55 12.9H12.45Q14.1 12.9 14.1 14.6V19.2"/></svg>',
   search:   '<svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.9"/><path d="m19.5 19.5-4.35-4.35"/></svg>',
   bell:     '<svg viewBox="0 0 24 24"><path d="M12 3.1a5.9 5.9 0 0 0-5.9 5.9v2.5c0 .95-.35 1.85-1 2.55l-.85.95c-1 1.1-.2 2.85 1.28 2.85h13.94c1.48 0 2.28-1.75 1.28-2.85l-.85-.95c-.65-.7-1-1.6-1-2.55V9A5.9 5.9 0 0 0 12 3.1Z"/><path d="M9.3 19.5a2.7 2.7 0 0 0 5.4 0"/></svg>',
   chat:     '<svg viewBox="0 0 24 24"><path d="M14.3 8.6a2.3 2.3 0 0 1-2.3 2.3H6.4l-3.65 3.4V4.3a2.3 2.3 0 0 1 2.3-2.3h6.95a2.3 2.3 0 0 1 2.3 2.3Z"/><path d="M18.1 8.6H20a2 2 0 0 1 2 2v10.5l-3.65-3.4h-5.75a2 2 0 0 1-2-2v-.7"/></svg>',
-  bookmark: '<svg viewBox="0 0 24 24"><path d="M6.4 5.6A2.2 2.2 0 0 1 8.6 3.4h6.8a2.2 2.2 0 0 1 2.2 2.2V20a.75.75 0 0 1-1.2.6L12 16.7l-4.4 3.9A.75.75 0 0 1 6.4 20Z"/></svg>',
+  bookmark: '<svg viewBox="0 0 24 24"><path d="M7 6.2Q7 4 9.4 4H14.6Q17 4 17 6.2V18.3Q17 19.5 15.9 18.8L12 16.3L8.1 18.8Q7 19.5 7 18.3Z" stroke-linejoin="round"/></svg>',
   user:     '<svg viewBox="0 0 24 24"><circle cx="12" cy="8.1" r="4"/><path d="M4.3 19.7c1.05-4.3 3.95-6.4 7.7-6.4s6.65 2.1 7.7 6.4"/></svg>',
-  gear:     '<svg viewBox="0 0 24 24"><path d="M12.00 3.40C11.15 3.40 10.45 5.39 9.44 5.81C8.42 6.23 6.52 5.31 5.92 5.92C5.31 6.52 6.23 8.42 5.81 9.44C5.39 10.45 3.40 11.15 3.40 12.00C3.40 12.85 5.39 13.55 5.81 14.56C6.23 15.58 5.31 17.48 5.92 18.08C6.52 18.69 8.42 17.77 9.44 18.19C10.45 18.61 11.15 20.60 12.00 20.60C12.85 20.60 13.55 18.61 14.56 18.19C15.58 17.77 17.48 18.69 18.08 18.08C18.69 17.48 17.77 15.58 18.19 14.56C18.61 13.55 20.60 12.85 20.60 12.00C20.60 11.15 18.61 10.45 18.19 9.44C17.77 8.42 18.69 6.52 18.08 5.92C17.48 5.31 15.58 6.23 14.56 5.81C13.55 5.39 12.85 3.40 12.00 3.40Z"/><circle cx="12" cy="12" r="3.3"/></svg>',
-  doc:      '<svg viewBox="0 0 24 24"><path d="M6.5 3.5h7.2a1.7 1.7 0 0 1 1.2.5l3.6 3.6a1.7 1.7 0 0 1 .5 1.2V19a1.6 1.6 0 0 1-1.6 1.6h-10.9a1.6 1.6 0 0 1-1.6-1.6V5.1a1.6 1.6 0 0 1 1.6-1.6Z"/><path d="M14.3 3.6V7.4a1.5 1.5 0 0 0 1.5 1.5h3.8"/><path d="M8.3 13.2h7.4M8.3 16.6h5.2"/></svg>',
+  gear:     '<svg viewBox="0 0 24 24"><path d="M13.15,4.58Q14.30,6.46 16.44,5.94Q18.58,5.42 18.06,7.56Q17.54,9.70 19.42,10.85Q21.3,12 19.42,13.15Q17.54,14.30 18.06,16.44Q18.58,18.58 16.44,18.06Q14.30,17.54 13.15,19.42Q12,21.3 10.85,19.42Q9.70,17.54 7.56,18.06Q5.42,18.58 5.94,16.44Q6.46,14.30 4.58,13.15Q2.7,12 4.58,10.85Q6.46,9.70 5.94,7.56Q5.42,5.42 7.56,5.94Q9.70,6.46 10.85,4.58Q12,2.7 13.15,4.58Z" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.1"/></svg>',
+  doc:      '<svg viewBox="0 0 24 24"><path d="M6.5 3.5h7.2a2.1 2.1 0 0 1 1.2.5l3.6 3.6a2.1 2.1 0 0 1 .5 1.2V19a2 2 0 0 1-2 2h-10.5a2 2 0 0 1-2-2V5.5a2 2 0 0 1 2-2Z" stroke-linejoin="round"/><path d="M14.3 3.6V7.4a1.5 1.5 0 0 0 1.5 1.5h3.8" stroke-linejoin="round"/><path d="M8.3 13.2h7.4M8.3 16.6h5.2"/></svg>',
   // Open book — used for Blog so it reads distinctly from the
   // folded-corner "doc" icon shared by Rules/Terms.
   book:     '<svg viewBox="0 0 24 24"><path d="M4 5.6c2.5-1.15 5.15-1.15 8 .3v12.8c-2.85-1.4-5.5-1.4-8-.3Z" stroke-linejoin="round"/><path d="M20 5.6c-2.5-1.15-5.15-1.15-8 .3v12.8c2.85-1.4 5.5-1.4 8-.3Z" stroke-linejoin="round"/></svg>',
   dots:     '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="2" fill="currentColor" stroke="none"/></svg>',
   people:   '<svg viewBox="0 0 24 24"><circle cx="9" cy="8.1" r="3.6"/><path d="M2.5 20.1c1-4 3.4-6 6.5-6s5.5 2 6.5 6"/><path d="M15.4 5a3.5 3.5 0 0 1 0 6.7"/><path d="M16.1 14.7c2.5.55 4.3 2.4 5.1 5.4"/></svg>',
   list:     '<svg viewBox="0 0 24 24"><rect x="3.7" y="5.2" width="3.6" height="3.6" rx="1.3"/><rect x="3.7" y="10.2" width="3.6" height="3.6" rx="1.3"/><rect x="3.7" y="15.2" width="3.6" height="3.6" rx="1.3"/><path d="M10.5 7h10M10.5 12h10M10.5 17h10"/></svg>',
-  article:  '<svg viewBox="0 0 24 24"><rect x="4.5" y="3.5" width="15" height="17" rx="2.4"/><path d="M8 8.3h8M8 12h8M8 15.7h5"/></svg>',
+  article:  '<svg viewBox="0 0 24 24"><rect x="4.5" y="3.5" width="15" height="17" rx="3.2"/><path d="M8 8.3h8M8 12h8M8 15.7h5"/></svg>',
   info:     '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.1"/><path d="M12 10.8v6.1"/><circle cx="12" cy="7.4" r="1.15" fill="currentColor" stroke="none"/></svg>',
   mail:     '<svg viewBox="0 0 24 24"><rect x="3.2" y="5.2" width="17.6" height="13.6" rx="3.2"/><path d="m4 6.5 7.55 5.9a.75.75 0 0 0 .9 0L20 6.5"/></svg>',
   shield:   '<svg viewBox="0 0 24 24"><path d="M12 3.1 5.1 5.75v5.55c0 4.85 3 8.15 6.9 9.2 3.9-1.05 6.9-4.35 6.9-9.2V5.75Z" stroke-linejoin="round"/><path d="m8.8 12.1 2.1 2.1 4.3-4.3"/></svg>',
@@ -4333,7 +4333,7 @@ function repostBannerHtml(reposter) {
 // The "📌 Pinned" tag shown above a profile's pinned post — same
 // banner styling as repostBannerHtml above, just a pin icon + static
 // label since (unlike a repost) there's no one else to credit.
-const ICON_PIN = '<svg class="pin-ic" viewBox="0 0 24 24"><path d="M16 12V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v8l-2 2v2h5.2v6h1.6v-6H18v-2z"/></svg>';
+const ICON_PIN = '<svg class="pin-ic" viewBox="0 0 24 24"><path d="M12 3c-3.3 0-6 2.55-6 5.85 0 4.35 6 12.15 6 12.15s6-7.8 6-12.15C18 5.55 15.3 3 12 3Z"/></svg>';
 function pinBannerHtml(pinned) {
   if (!pinned) return '';
   return `<div class="repost-banner">${ICON_PIN}<span>Pinned</span></div>`;
