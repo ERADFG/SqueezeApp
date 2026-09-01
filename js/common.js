@@ -662,8 +662,8 @@ const ICON = {
 // the style reference for this set. home/gear are fully redesigned;
 // the rest are re-drafted with the same rounder, bolder language.
 const NAV_ICON = {
-  home:     '<svg viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5" stroke-linejoin="round"/><path d="M6 9.5V19a1 1 0 0 0 1 1h3.2v-4.6a1.8 1.8 0 0 1 1.8-1.8 1.8 1.8 0 0 1 1.8 1.8V20H17a1 1 0 0 0 1-1V9.5" stroke-linejoin="round"/></svg>',
-  search:   '<svg viewBox="0 0 24 24" class="icon-search"><circle cx="10.5" cy="10.5" r="6.9"/><path d="m19.5 19.5-4.35-4.35"/></svg>',
+  home:     '<svg viewBox="0 0 24 24"><path d="M5.6 19.2V12.4C5.6 11.6 5.95 10.85 6.55 10.35L11.15 6.35C11.65 5.9 12.35 5.9 12.85 6.35L17.45 10.35C18.05 10.85 18.4 11.6 18.4 12.4V19.2"/><path d="M9.9 19.2V14.6C9.9 13.5 10.6 12.9 11.6 12.9H12.4C13.4 12.9 14.1 13.5 14.1 14.6V19.2"/></svg>',
+  search:   '<svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.9"/><path d="m19.5 19.5-4.35-4.35"/></svg>',
   bell:     '<svg viewBox="0 0 24 24"><path d="M12 3.1a5.9 5.9 0 0 0-5.9 5.9v2.5c0 .95-.35 1.85-1 2.55l-.85.95c-1 1.1-.2 2.85 1.28 2.85h13.94c1.48 0 2.28-1.75 1.28-2.85l-.85-.95c-.65-.7-1-1.6-1-2.55V9A5.9 5.9 0 0 0 12 3.1Z"/><path d="M9.3 19.5a2.7 2.7 0 0 0 5.4 0"/></svg>',
   chat:     '<svg viewBox="0 0 24 24"><path d="M14.3 8.6a2.3 2.3 0 0 1-2.3 2.3H6.4l-3.65 3.4V4.3a2.3 2.3 0 0 1 2.3-2.3h6.95a2.3 2.3 0 0 1 2.3 2.3Z"/><path d="M18.1 8.6H20a2 2 0 0 1 2 2v10.5l-3.65-3.4h-5.75a2 2 0 0 1-2-2v-.7"/></svg>',
   bookmark: '<svg viewBox="0 0 24 24"><path d="M6.4 5.6A2.2 2.2 0 0 1 8.6 3.4h6.8a2.2 2.2 0 0 1 2.2 2.2V20a.75.75 0 0 1-1.2.6L12 16.7l-4.4 3.9A.75.75 0 0 1 6.4 20Z"/></svg>',
@@ -1049,7 +1049,7 @@ function toggleMoreMenu() { document.getElementById('more-wrap')?.classList.togg
 // state changes, so the avatar, counts, and badge never go stale. ──
 const PLUS_ICON = '<svg viewBox="0 0 24 24"><path d="M12 4v16M4 12h16"/></svg>';
 const CHECK_ICON = '<svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>';
-const ICON_COMPOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 13.5V18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4.5"/><path d="M18.4 3.1a1.8 1.8 0 0 1 2.5 2.5L13.2 13.3l-3.2.7.7-3.2Z" stroke-linejoin="round"/></svg>';
+const ICON_COMPOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
 // Same magnifying-glass shape already inlined in every .xsearch box
 // across the app (search page, member pickers, etc.) — pulled out
 // here as a shared constant for the chat "Search a user" trigger so
