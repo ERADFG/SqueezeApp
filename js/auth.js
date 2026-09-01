@@ -343,14 +343,15 @@ document.addEventListener('mousedown', e => {
 // NOTE: each provider only works once it's turned on in the Supabase
 // dashboard (Authentication → Providers), with its own client ID/secret
 // — the button itself doesn't need any setup beyond that. Google,
-// Facebook, and Discord are all providers Supabase supports natively.
-// X and Bluesky buttons were removed from the auth pages (X now
-// requires a paid developer account for API/OAuth access; Bluesky
-// isn't a built-in Supabase provider at all — see git history if
-// either needs to come back).
+// GitHub, and Discord are all providers Supabase supports natively,
+// and none of them require phone-number verification to create the
+// developer app/credentials (Facebook, X, and Twitch all do — that's
+// why they were dropped). Bluesky was also dropped — it isn't a
+// built-in Supabase provider at all (see git history if any of these
+// need to come back).
 const OAUTH_PROVIDER_NAMES = {
   google: 'Google',
-  facebook: 'Facebook',
+  github: 'GitHub',
   discord: 'Discord',
   apple: 'Apple',
 };
