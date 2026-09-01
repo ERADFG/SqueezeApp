@@ -3738,6 +3738,33 @@ a.auth-submit { text-align:center; text-decoration:none; }
 .notif-dot { flex:none; width:9px; height:9px; border-radius:50%; background:var(--maroon); align-self:center; animation:notif-dot-pulse 2s ease-in-out infinite; }
 @keyframes notif-dot-pulse { 0%,100% { box-shadow:0 0 0 0 var(--maroon-tint); } 50% { box-shadow:0 0 0 4px var(--maroon-tint); } }
 
+/* Mention notifications — a two-part layout instead of the plain
+   avatar+badge row every other type uses: the actual mentioning text
+   rendered like a normal post up top (avatar/name/time/body), then a
+   separate tinted callout below explaining what happened. Overrides
+   the base .notif-item's row flex with a column stack, since this
+   type needs two stacked blocks instead of one avatar-beside-text
+   line. */
+.notif-item-mention { flex-direction:column; align-items:stretch; gap:10px; position:relative; }
+.notif-mention-post { display:flex; gap:12px; align-items:flex-start; }
+.notif-mention-post .avatar { width:40px; height:40px; flex:none; }
+.notif-mention-post-body { flex:1; min-width:0; }
+.notif-mention-who { font-size:14.5px; color:var(--ink); }
+.notif-mention-who b { font-weight:800; }
+.notif-mention-who .verified-badge { width:16px; height:16px; margin:0 0 0 3px; vertical-align:middle; flex:none; display:inline-block; }
+.notif-mention-time { font-size:13px; color:var(--muted); margin-left:6px; }
+.notif-mention-time::before { content:"· "; }
+.notif-mention-text { font-size:14.5px; color:var(--ink); line-height:1.35; margin-top:2px; white-space:pre-wrap; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; }
+.notif-mention-callout { display:flex; gap:10px; align-items:flex-start; background:var(--hover-bg); border-radius:14px; padding:10px 12px; margin-left:52px; }
+.notif-mention-callout-icon { flex:none; width:26px; height:26px; border-radius:50%; background:var(--maroon); color:#fff; display:flex; align-items:center; justify-content:center; }
+.notif-mention-callout-icon svg { width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2.3; }
+.notif-mention-callout-title { font-size:13.5px; font-weight:700; color:var(--ink); }
+.notif-mention-callout-sub { font-size:12.5px; color:var(--muted); margin-top:1px; }
+.notif-item-mention .notif-dot { position:absolute; top:16px; right:16px; }
+@media (max-width: 480px) {
+  .notif-mention-callout { margin-left:0; }
+}
+
 /* ═══════════════════════════════════════════════════════════════
    CHAT PAGE
    ═══════════════════════════════════════════════════════════════ */

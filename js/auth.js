@@ -359,10 +359,18 @@ const OAUTH_PROVIDER_NAMES = {
 async function doOAuth(provider, btn) {
   if (btn) { btn.disabled = true; btn.style.opacity = '.6'; }
   try {
-    const { error } = await sb.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: location.origin + '/' }
-    });
+    // Google, by default, silently reuses whichever Google account the
+    // browser already has an active session with instead of showing its
+    // account picker — fine for a first-time login, but it means "Add
+    // account" (which sends people back through this same OAuth flow)
+    // could never actually add a *different* Google account: tapping
+    // Continue with Google would just immediately re-authenticate the
+    // same one and land back on the account already signed in. Forcing
+    // Google's own account-chooser screen with prompt=select_account
+    // fixes that — it always asks which account to use, every time.
+    const options = { redirectTo: location.origin + '/' };
+    if (provider === 'google') options.queryParams = { prompt: 'select_account' };
+    const { error } = await sb.auth.signInWithOAuth({ provider, options });
     if (error) throw error;
     // On success the browser navigates away to the provider — nothing
     // else to do here. Only reachable on failure (provider not

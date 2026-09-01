@@ -35,6 +35,7 @@ function notifHref(n) {
 }
 
 function notifItemHtml(n) {
+  if (n.type === 'mention') return mentionItemHtml(n);
   const actorAvatar = avatarUrl(n.actor?.avatar_url);
   // A mention inside a reply used to snippet the parent post's body
   // (all notifications link post_id to the parent post, for
@@ -42,9 +43,7 @@ function notifItemHtml(n) {
   // text that mentioned you. Prefer the reply's own body when one is
   // attached, same as every other type's snippet reflects the actual
   // content the notification is about.
-  const snipSource = (n.type === 'mention' && n.reply && !n.reply.is_deleted) ? n.reply
-    : (n.post && !n.post.is_deleted) ? n.post
-    : null;
+  const snipSource = (n.post && !n.post.is_deleted) ? n.post : null;
   const snippet = (n.type !== 'follow' && n.type !== 'message' && snipSource) ? `<div class="notif-snip">${renderBody((snipSource.body || '').slice(0, 140))}</div>` : '';
   return `
   <a class="notif-item${n.read ? '' : ' unread'}" href="${notifHref(n)}">
@@ -56,6 +55,41 @@ function notifItemHtml(n) {
       <div class="notif-txt">${notifText(n)}</div>
       ${snippet}
       <div class="notif-time">${timeAgo(n.created_at)}</div>
+    </div>
+    ${n.read ? '' : '<span class="notif-dot" aria-hidden="true"></span>'}
+  </a>`;
+}
+
+// Mention notifications get their own two-part layout instead of the
+// plain avatar+badge row every other type uses: the actual mentioning
+// text rendered like a normal post (avatar, name, time, body) so
+// it's immediately readable, then a separate tinted callout below
+// explaining what happened — same idea as X's own "You've been
+// mentioned in this Tweet" card, minus the unmention action (this app
+// has no equivalent feature to hang that button off yet).
+function mentionItemHtml(n) {
+  const actorAvatar = avatarUrl(n.actor?.avatar_url);
+  const name = esc(n.actor?.display_name || n.actor?.username || 'Someone');
+  const snipSource = (n.reply && !n.reply.is_deleted) ? n.reply
+    : (n.post && !n.post.is_deleted) ? n.post
+    : null;
+  const mentionText = snipSource ? renderBody((snipSource.body || '').slice(0, 220)) : '';
+  const inWhat = (n.reply && !n.reply.is_deleted) ? 'reply' : 'post';
+  return `
+  <a class="notif-item notif-item-mention${n.read ? '' : ' unread'}" href="${notifHref(n)}">
+    <div class="notif-mention-post">
+      <img class="avatar${avSqClass(n.actor)}" src="${esc(actorAvatar)}" alt="" loading="lazy" decoding="async">
+      <div class="notif-mention-post-body">
+        <div class="notif-mention-who"><b>${name}${vBadge(n.actor)}</b><span class="notif-mention-time">${timeAgo(n.created_at)}</span></div>
+        ${mentionText ? `<div class="notif-mention-text">${mentionText}</div>` : ''}
+      </div>
+    </div>
+    <div class="notif-mention-callout">
+      <span class="notif-mention-callout-icon">${NOTIF_ICON.mention}</span>
+      <div class="notif-mention-callout-copy">
+        <div class="notif-mention-callout-title">You were mentioned</div>
+        <div class="notif-mention-callout-sub">${name} mentioned you in a ${inWhat}</div>
+      </div>
     </div>
     ${n.read ? '' : '<span class="notif-dot" aria-hidden="true"></span>'}
   </a>`;
