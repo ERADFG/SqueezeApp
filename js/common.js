@@ -2776,25 +2776,39 @@ function togglePostMenu(id, ev) {
   document.body.classList.remove('oc-sheet-open');
   if (willOpen) {
     wrap.classList.add('open');
-    positionMenuDd(wrap);
-    // A fast re-tap can land while the browser's own chrome (the
-    // address bar hiding/showing as the page scrolls) is still
-    // resizing the visual viewport — the getBoundingClientRect() read
-    // inside positionMenuDd() above can get measured mid-transition,
-    // landing the dropdown noticeably off from the "···" button for a
-    // moment. Re-measuring one and two frames later catches and
-    // corrects that with no visible flicker (same double-rAF
-    // self-correction used for the fullscreen video layout in
-    // video-player.js's ttvSyncFullscreenLayout). Each callback
-    // re-checks .open in case a second fast tap already closed the
-    // menu again by the time it runs.
-    requestAnimationFrame(() => {
-      if (!wrap.classList.contains('open')) return;
+    // Below 640px this menu is a fixed-to-viewport bottom sheet (see
+    // the @media block around .pc-menu-dd in style.css) — pinned to
+    // the screen edges, not to the "···" button — so the JS pixel
+    // positioning below not only isn't needed there, setting an
+    // inline `top` would fight the sheet's `bottom:0` and place it
+    // wherever the button happens to be instead of flush at the
+    // bottom. Same mobile-sheet-locks-scroll treatment as the
+    // repost/quote menu (toggleRepostMenu) for consistency between
+    // the two popovers.
+    const isMobileSheet = window.matchMedia('(max-width: 640px)').matches;
+    if (isMobileSheet) {
+      document.body.classList.add('oc-sheet-open');
+    } else {
       positionMenuDd(wrap);
+      // A fast re-tap can land while the browser's own chrome (the
+      // address bar hiding/showing as the page scrolls) is still
+      // resizing the visual viewport — the getBoundingClientRect() read
+      // inside positionMenuDd() above can get measured mid-transition,
+      // landing the dropdown noticeably off from the "···" button for a
+      // moment. Re-measuring one and two frames later catches and
+      // corrects that with no visible flicker (same double-rAF
+      // self-correction used for the fullscreen video layout in
+      // video-player.js's ttvSyncFullscreenLayout). Each callback
+      // re-checks .open in case a second fast tap already closed the
+      // menu again by the time it runs.
       requestAnimationFrame(() => {
-        if (wrap.classList.contains('open')) positionMenuDd(wrap);
+        if (!wrap.classList.contains('open')) return;
+        positionMenuDd(wrap);
+        requestAnimationFrame(() => {
+          if (wrap.classList.contains('open')) positionMenuDd(wrap);
+        });
       });
-    });
+    }
     // Quick icon pop on the "···" button itself, same flourish family
     // as the like/reply/share/bookmark buttons (see .pc-menu-btn.menu-open
     // in style.css) — works identically for a mouse click on desktop and
@@ -2845,8 +2859,21 @@ function positionMenuDd(wrap) {
 }
 document.addEventListener('click', (e) => {
   document.querySelectorAll('.pc-menu-wrap.open').forEach(w => {
-    if (!w.contains(e.target)) w.classList.remove('open');
+    // e.target === w covers a tap on the mobile sheet's backdrop —
+    // it's the wrap's own ::before pseudo-element, so w.contains(e.target)
+    // would otherwise be true (an element always "contains" itself)
+    // and the sheet would never dismiss on backdrop tap. Same pattern
+    // as the repost/quote sheet's outside-click handler above.
+    if (e.target === w || !w.contains(e.target)) {
+      w.classList.remove('open');
+      document.body.classList.remove('oc-sheet-open');
+    }
   });
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  document.querySelectorAll('.pc-menu-wrap.open').forEach(w => w.classList.remove('open'));
+  document.body.classList.remove('oc-sheet-open');
 });
 // The dropdown is positioned with real viewport pixel coordinates
 // (see positionMenuDd() above), computed once at the moment it opens.

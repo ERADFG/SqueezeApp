@@ -145,6 +145,11 @@ async function loadProfile() {
               <button class="pc-menu-btn profile-icon-btn" onclick="togglePostMenu('profile-${profile.id}', event)">${ICON.menu}</button>
               <div class="pc-menu-dd" id="profile-menu-dd">${profileMenuItemsHtml(profile)}</div>
             </div>` : ''}
+          ${isOwnProfile ? `
+            <div class="pc-menu-wrap" id="pmenu-profile-${profile.id}">
+              <button class="pc-menu-btn profile-icon-btn" onclick="togglePostMenu('profile-${profile.id}', event)">${ICON.menu}</button>
+              <div class="pc-menu-dd" id="profile-menu-dd">${ownProfileMenuItemsHtml(profile)}</div>
+            </div>` : ''}
           ${!isOwnProfile && session ? `<button class="follow-btn" id="follow-btn" onclick="toggleFollow()">${t('action.follow')}</button>` : ''}
           ${!isOwnProfile && !session ? `<a class="follow-btn" href="login.html">${t('action.follow')}</a>` : ''}
           ${isOwnProfile ? `<a class="profile-edit-btn" href="editprofile.html">Edit Profile</a>` : ''}
@@ -270,6 +275,21 @@ function profileMenuItemsHtml(profile) {
     <button id="pm-mute-btn" onclick="profileMenuMute(event, '${profile.id}')">Mute</button>
     ${blockItem}
     <button class="pc-menu-danger" onclick="profileMenuReport(event, '${profile.id}')">Report @${esc(profile.username)}</button>`;
+}
+
+// Own-profile version of the "···" menu — same sheet/dropdown, but
+// without any of the other-person actions (Block/Mute/Report/Add to
+// Lists) that don't apply to yourself. Share + Copy link cover the
+// same ground as Bluesky's "Share via…" on its own-profile sheet;
+// Settings and Achievements stand in for the app-specific shortcuts
+// that don't have a direct InteractInk equivalent (starter packs, Go
+// live, ...) so the menu still has more than one useful thing in it.
+function ownProfileMenuItemsHtml(profile) {
+  return `
+    <button onclick="profileMenuShare(event, '${u_(profile.username)}')">Share @${esc(profile.username)} via&hellip;</button>
+    <button onclick="profileMenuCopyLink(event, '${u_(profile.username)}')">Copy link to profile</button>
+    <a href="/settings" onclick="closeProfileMenu(event)">Settings</a>
+    <a href="/achievements" onclick="closeProfileMenu(event)">Achievements</a>`;
 }
 
 function closeProfileMenu(ev) {
