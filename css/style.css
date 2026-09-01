@@ -1505,39 +1505,6 @@ select {
 .pc-menu-dd button.pc-menu-danger { color:var(--like); }
 .pc-menu-dd button.pc-menu-danger:hover { background:var(--like-tint); }
 
-/* Below 640px, every "···" menu (post cards, chat header, messages,
-   profile) becomes a real bottom sheet instead of a small anchored
-   dropdown — the same treatment .rp-menu-dd (repost/quote) already
-   gets above, reused here for visual consistency between the two
-   popovers. Backdrop + drag handle + slide-up, pinned to the actual
-   viewport edges rather than the "···" button's position. */
-@media (max-width: 640px) {
-  .pc-menu-wrap.open::before {
-    content:""; position:fixed; inset:0; background:rgba(15,20,25,.5);
-    z-index:998; animation:oc-fade-in .15s ease;
-  }
-  .pc-menu-dd {
-    /* positionMenuDd() (js/common.js) skips setting inline left/top on
-       mobile specifically so these fixed-to-viewport values win. */
-    position:fixed !important; left:0 !important; right:0 !important; bottom:0 !important; top:auto !important;
-    z-index:999; min-width:0; width:100%; max-width:100%; border-radius:24px 24px 0 0; border:none;
-    padding:6px 8px calc(8px + env(safe-area-inset-bottom, 0px));
-    transform:translateY(100%); transform-origin:bottom center;
-    transition:transform .2s cubic-bezier(.2,.8,.2,1), opacity .2s ease, visibility 0s linear .2s;
-  }
-  .pc-menu-wrap.open .pc-menu-dd {
-    transform:translateY(0);
-    transition:transform .22s cubic-bezier(.2,.8,.2,1), opacity .15s ease;
-  }
-  /* Drag handle, like a real bottom sheet, instead of the row list
-     starting flush against the top edge. */
-  .pc-menu-dd::before {
-    content:""; display:block; width:36px; height:4px; border-radius:999px;
-    background:var(--line); margin:6px auto 4px;
-  }
-  .pc-menu-dd button, .pc-menu-dd a { padding:12px 14px; font-size:15px; }
-}
-
 /* thread title — kept above the body since this board has subjects, Twitter has none */
 .subj { display:block; font-weight:800; font-size:14px; color:var(--ink); margin:1px 0 3px; }
 
@@ -2735,12 +2702,7 @@ body[data-page="auth"] #m-topbar, body[data-page="auth"] #m-tabbar, body[data-pa
      bolder/filled icon in ink, no growing pill or revealed label. */
   #m-tabbar a .m-tab-label { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
   #m-tabbar a.cur { color:var(--ink); }
-  /* Filled glyph for the active tab — same "solid when current" treatment
-     already used by the desktop sidebar (#hdr nav a.cur .navicon svg,
-     just above) so the two navs read as one consistent icon language
-     instead of the tab bar only going bold-stroke while the sidebar
-     actually fills in. */
-  #m-tabbar a.cur svg { stroke-width:2.5; fill:currentColor; }
+  #m-tabbar a.cur svg { stroke-width:2.5; }
   /* Tap/press highlight — a small circle snugly hugging just the icon,
      the same footprint Twitter/X itself uses, instead of a rounded
      rectangle stretched across the whole flex-width tab column. Pops
