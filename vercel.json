@@ -7,7 +7,7 @@
   "routes": [
     { "src": "^/(.+)/$", "status": 308, "headers": { "Location": "/$1" } },
 
-    { "src": "^/.*$", "headers": { "Cache-Control": "no-cache, must-revalidate" }, "continue": true },
+    { "src": "^/.*$", "headers": { "Cache-Control": "public, max-age=60, stale-while-revalidate=604800" }, "continue": true },
     { "src": "^/version\\.json$", "headers": { "Cache-Control": "no-store" }, "continue": true },
 
     { "src": "^/$", "dest": "/api/prerender?type=home" },

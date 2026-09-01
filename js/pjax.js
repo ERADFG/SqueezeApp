@@ -83,14 +83,14 @@
     b.style.width = '0%';
     b.style.opacity = '1';
     void b.offsetHeight;
-    b.style.transition = 'width .4s ease,opacity .2s ease';
+    b.style.transition = 'width .25s ease,opacity .15s ease';
     b.style.width = '70%';
   }
   function barDone() {
     if (!bar) return;
     bar.style.width = '100%';
-    setTimeout(() => { if (bar) { bar.style.opacity = '0'; } }, 150);
-    setTimeout(() => { if (bar) { bar.style.width = '0%'; } }, 400);
+    setTimeout(() => { if (bar) { bar.style.opacity = '0'; } }, 80);
+    setTimeout(() => { if (bar) { bar.style.width = '0%'; } }, 230);
   }
 
   // Re-runs every inline <script> found in freshly-swapped content

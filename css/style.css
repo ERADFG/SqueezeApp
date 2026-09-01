@@ -787,7 +787,7 @@ select {
 /* ── WHO TO FOLLOW (right column, Twitter-style suggestions box) ── */
 .who-box { background:var(--hover-bg); border-radius:var(--r-lg); padding:4px 0 6px; margin-bottom:16px; }
 .who-box .t-lbl { margin-bottom:0; }
-.who-row { display:flex; align-items:center; gap:10px; padding:10px 16px; text-decoration:none; color:var(--ink); transition:background-color .12s ease; animation:oc-fade-in .2s ease both; }
+.who-row { display:flex; align-items:center; gap:10px; padding:10px 16px; text-decoration:none; color:var(--ink); transition:background-color .12s ease; animation:oc-fade-in .12s ease both; }
 .who-row:hover { background:rgba(15,20,25,.03); text-decoration:none; }
 .who-row .avatar { flex:none; }
 .who-row-txt { display:flex; flex-direction:column; min-width:0; flex:1; }
@@ -1093,7 +1093,7 @@ select {
    overlapping avatar stack of a few of its followers. ── */
 .list-sec-hdr { font-size:20px; font-weight:800; color:var(--ink); padding:14px 16px 8px; }
 .list-discover-list { display:flex; flex-direction:column; }
-.list-discover-row { display:flex; align-items:flex-start; gap:12px; padding:12px 16px; border-bottom:1px solid var(--line); text-decoration:none; color:var(--ink); transition:background-color .12s ease; animation:oc-fade-in .2s ease both; }
+.list-discover-row { display:flex; align-items:flex-start; gap:12px; padding:12px 16px; border-bottom:1px solid var(--line); text-decoration:none; color:var(--ink); transition:background-color .12s ease; animation:oc-fade-in .12s ease both; }
 .list-discover-row:hover { background:rgba(15,20,25,.03); text-decoration:none; }
 .list-discover-row .list-avatar { width:44px; height:44px; margin-top:1px; }
 .list-discover-body { flex:1; min-width:0; }
@@ -2000,7 +2000,7 @@ html:has(> body.oc-sheet-open) { overflow:hidden; }
    non-"none" transform on this card after the entrance animation ends,
    turning it into a containing block that breaks the fixed-position
    "···" menu the same way it did on .pc. */
-.rc { background:var(--cream-card); border:none; border-bottom:1px solid var(--line); border-radius:0; padding:12px 16px; margin-bottom:0; box-shadow:none; position:relative; transition:background-color .15s ease; cursor:pointer; animation:oc-fade-in .2s ease; }
+.rc { background:var(--cream-card); border:none; border-bottom:1px solid var(--line); border-radius:0; padding:12px 16px; margin-bottom:0; box-shadow:none; position:relative; transition:background-color .15s ease; cursor:pointer; animation:oc-fade-in .12s ease; }
 .rc:hover { background:var(--hover-bg); }
 .rc:active { background:var(--hover-bg); }
 
@@ -3685,20 +3685,20 @@ a.auth-submit { text-align:center; text-decoration:none; }
   padding:16px 16px 8px; letter-spacing:-.01em;
 }
 .notif-group-hdr:first-child { padding-top:12px; }
-.notif-item { display:flex; gap:12px; align-items:center; padding:12px 16px; border-bottom:1px solid var(--line); text-decoration:none; color:var(--ink); transition:background-color .15s ease; animation:oc-fade-in .25s ease both; }
+.notif-item { display:flex; gap:12px; align-items:center; padding:12px 16px; border-bottom:1px solid var(--line); text-decoration:none; color:var(--ink); transition:background-color .15s ease; animation:oc-fade-in .12s ease both; }
 .notif-item:hover { background:var(--hover-bg); text-decoration:none; }
 .notif-item.unread { background:var(--maroon-tint); }
 .notif-item.unread:hover { background:rgba(11,111,224,.16); }
 /* Stagger the first screenful of rows in slightly so the list settles
    in smoothly on load instead of every row popping in at once. */
-.notif-item:nth-child(1) { animation-delay:.02s; }
-.notif-item:nth-child(2) { animation-delay:.05s; }
-.notif-item:nth-child(3) { animation-delay:.08s; }
-.notif-item:nth-child(4) { animation-delay:.11s; }
-.notif-item:nth-child(5) { animation-delay:.14s; }
-.notif-item:nth-child(6) { animation-delay:.17s; }
-.notif-item:nth-child(7) { animation-delay:.2s; }
-.notif-item:nth-child(8) { animation-delay:.23s; }
+.notif-item:nth-child(1) { animation-delay:.01s; }
+.notif-item:nth-child(2) { animation-delay:.02s; }
+.notif-item:nth-child(3) { animation-delay:.03s; }
+.notif-item:nth-child(4) { animation-delay:.04s; }
+.notif-item:nth-child(5) { animation-delay:.05s; }
+.notif-item:nth-child(6) { animation-delay:.06s; }
+.notif-item:nth-child(7) { animation-delay:.07s; }
+.notif-item:nth-child(8) { animation-delay:.08s; }
 /* Avatar with a small icon badge overlapping its bottom-right corner
    (like/reply/repost/quote/follow) instead of a separate icon chip
    floating next to it — reads as one glance-able unit per row, the
@@ -3746,7 +3746,7 @@ a.auth-submit { text-align:center; text-decoration:none; }
 .conv-row-wrap { position:relative; }
 .conv-row-wrap .conv-menu-wrap { position:absolute; top:14px; right:12px; z-index:2; }
 .conv-row-wrap .conv-row { padding-right:44px; }
-.conv-row { display:flex; gap:12px; align-items:center; padding:12px 16px 12px 14px; border-bottom:1px solid var(--line); text-decoration:none; color:var(--ink); transition:background-color .12s ease; position:relative; animation:oc-fade-in .2s ease both; border-left:3px solid transparent; }
+.conv-row { display:flex; gap:12px; align-items:center; padding:12px 16px 12px 14px; border-bottom:1px solid var(--line); text-decoration:none; color:var(--ink); transition:background-color .12s ease; position:relative; animation:oc-fade-in .12s ease both; border-left:3px solid transparent; }
 .conv-row:hover { background:var(--hover-bg); text-decoration:none; }
 .conv-row .avatar { flex:none; width:50px; height:50px; }
 .conv-txt { flex:1; min-width:0; }
@@ -4304,7 +4304,7 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
    message the recipient hadn't seen yet — snapshotted at load time
    (see unreadMsgIds in loadThread()) before we mark everything read,
    so it doesn't just vanish the instant the thread opens. */
-.chat-unread-divider { display:flex; justify-content:center; margin:14px 0 10px; animation:oc-fade-in .2s ease both; }
+.chat-unread-divider { display:flex; justify-content:center; margin:14px 0 10px; animation:oc-fade-in .12s ease both; }
 .chat-unread-divider span {
   background:var(--cream-card); color:var(--muted); font-size:12px; font-weight:700;
   padding:6px 14px; border-radius:999px; box-shadow:0 1px 3px rgba(15,20,25,.12);
