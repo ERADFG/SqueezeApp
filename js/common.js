@@ -662,12 +662,18 @@ const ICON = {
 // the style reference for this set. home/gear are fully redesigned;
 // the rest are re-drafted with the same rounder, bolder language.
 const NAV_ICON = {
-  home:     '<svg viewBox="0 0 24 24"><path d="M5.6 19.2V12.4C5.6 11.6 5.95 10.85 6.55 10.35L11.15 6.35C11.65 5.9 12.35 5.9 12.85 6.35L17.45 10.35C18.05 10.85 18.4 11.6 18.4 12.4V19.2"/><path d="M9.9 19.2V14.6C9.9 13.5 10.6 12.9 11.6 12.9H12.4C13.4 12.9 14.1 13.5 14.1 14.6V19.2"/></svg>',
-  search:   '<svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.9"/><path d="m19.5 19.5-4.35-4.35"/></svg>',
-  bell:     '<svg viewBox="0 0 24 24"><path d="M12 3.1a5.9 5.9 0 0 0-5.9 5.9v2.5c0 .95-.35 1.85-1 2.55l-.85.95c-1 1.1-.2 2.85 1.28 2.85h13.94c1.48 0 2.28-1.75 1.28-2.85l-.85-.95c-.65-.7-1-1.6-1-2.55V9A5.9 5.9 0 0 0 12 3.1Z"/><path d="M9.3 19.5a2.7 2.7 0 0 0 5.4 0"/></svg>',
-  chat:     '<svg viewBox="0 0 24 24"><path d="M14.3 8.6a2.3 2.3 0 0 1-2.3 2.3H6.4l-3.65 3.4V4.3a2.3 2.3 0 0 1 2.3-2.3h6.95a2.3 2.3 0 0 1 2.3 2.3Z"/><path d="M18.1 8.6H20a2 2 0 0 1 2 2v10.5l-3.65-3.4h-5.75a2 2 0 0 1-2-2v-.7"/></svg>',
-  bookmark: '<svg viewBox="0 0 24 24"><path d="M6.4 5.6A2.2 2.2 0 0 1 8.6 3.4h6.8a2.2 2.2 0 0 1 2.2 2.2V20a.75.75 0 0 1-1.2.6L12 16.7l-4.4 3.9A.75.75 0 0 1 6.4 20Z"/></svg>',
-  user:     '<svg viewBox="0 0 24 24"><circle cx="12" cy="8.1" r="4"/><path d="M4.3 19.7c1.05-4.3 3.95-6.4 7.7-6.4s6.65 2.1 7.7 6.4"/></svg>',
+  // Redrawn as one continuous rounded outline (roofline into legs,
+  // arched doorway notched from the bottom) to match the app's new
+  // reference icon set — renders solid via the shared .cur/.act fill
+  // toggle in style.css instead of needing a separate filled variant.
+  home:     '<svg viewBox="0 0 24 24"><path d="M6,19.5 L6,11 C6,9.5 6.6,8.6 7.7,7.7 L11,4.9 C11.6,4.4 12.4,4.4 13,4.9 L16.3,7.7 C17.4,8.6 18,9.5 18,11 L18,19.5 L14.5,19.5 L14.5,15.3 C14.5,13.6 13.4,12.6 12,12.6 C10.6,12.6 9.5,13.6 9.5,15.3 L9.5,19.5 Z" stroke-linejoin="round"/></svg>',
+  search:   '<svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m19.5 19.5-4.3-4.3" stroke-linecap="round"/></svg>',
+  bell:     '<svg viewBox="0 0 24 24"><path d="M12 3.1a5.9 5.9 0 0 0-5.9 5.9v2.5c0 .95-.35 1.85-1 2.55l-.85.95c-1 1.1-.2 2.85 1.28 2.85h13.94c1.48 0 2.28-1.75 1.28-2.85l-.85-.95c-.65-.7-1-1.6-1-2.55V9A5.9 5.9 0 0 0 12 3.1Z" stroke-linejoin="round"/><path d="M9.3 19.5a2.7 2.7 0 0 0 5.4 0" stroke-linecap="round"/></svg>',
+  chat:     '<svg viewBox="0 0 24 24"><path d="M14.3 8.6a2.3 2.3 0 0 1-2.3 2.3H6.4l-3.65 3.4V4.3a2.3 2.3 0 0 1 2.3-2.3h6.95a2.3 2.3 0 0 1 2.3 2.3Z" stroke-linejoin="round"/><path d="M18.1 8.6H20a2 2 0 0 1 2 2v10.5l-3.65-3.4h-5.75a2 2 0 0 1-2-2v-.7" stroke-linejoin="round"/></svg>',
+  bookmark: '<svg viewBox="0 0 24 24"><path d="M6.4 5.6A2.2 2.2 0 0 1 8.6 3.4h6.8a2.2 2.2 0 0 1 2.2 2.2V20a.75.75 0 0 1-1.2.6L12 16.7l-4.4 3.9A.75.75 0 0 1 6.4 20Z" stroke-linejoin="round"/></svg>',
+  // Head circle floats above a closed stadium-shaped shoulder dome,
+  // matching the reference profile glyph (was an open-bottom arc).
+  user:     '<svg viewBox="0 0 24 24"><circle cx="12" cy="7.3" r="3.3"/><path d="M6,19.3 L6,17.4 C6,14.2 8.5,12.6 12,12.6 C15.5,12.6 18,14.2 18,17.4 L18,19.3 Z" stroke-linejoin="round"/></svg>',
   gear:     '<svg viewBox="0 0 24 24"><path d="M12.00 3.40C11.15 3.40 10.45 5.39 9.44 5.81C8.42 6.23 6.52 5.31 5.92 5.92C5.31 6.52 6.23 8.42 5.81 9.44C5.39 10.45 3.40 11.15 3.40 12.00C3.40 12.85 5.39 13.55 5.81 14.56C6.23 15.58 5.31 17.48 5.92 18.08C6.52 18.69 8.42 17.77 9.44 18.19C10.45 18.61 11.15 20.60 12.00 20.60C12.85 20.60 13.55 18.61 14.56 18.19C15.58 17.77 17.48 18.69 18.08 18.08C18.69 17.48 17.77 15.58 18.19 14.56C18.61 13.55 20.60 12.85 20.60 12.00C20.60 11.15 18.61 10.45 18.19 9.44C17.77 8.42 18.69 6.52 18.08 5.92C17.48 5.31 15.58 6.23 14.56 5.81C13.55 5.39 12.85 3.40 12.00 3.40Z"/><circle cx="12" cy="12" r="3.3"/></svg>',
   doc:      '<svg viewBox="0 0 24 24"><path d="M6.5 3.5h7.2a1.7 1.7 0 0 1 1.2.5l3.6 3.6a1.7 1.7 0 0 1 .5 1.2V19a1.6 1.6 0 0 1-1.6 1.6h-10.9a1.6 1.6 0 0 1-1.6-1.6V5.1a1.6 1.6 0 0 1 1.6-1.6Z"/><path d="M14.3 3.6V7.4a1.5 1.5 0 0 0 1.5 1.5h3.8"/><path d="M8.3 13.2h7.4M8.3 16.6h5.2"/></svg>',
   // Open book — used for Blog so it reads distinctly from the
@@ -1049,7 +1055,10 @@ function toggleMoreMenu() { document.getElementById('more-wrap')?.classList.togg
 // state changes, so the avatar, counts, and badge never go stale. ──
 const PLUS_ICON = '<svg viewBox="0 0 24 24"><path d="M12 4v16M4 12h16"/></svg>';
 const CHECK_ICON = '<svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>';
-const ICON_COMPOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+// Redrawn as a rounded square bracket left open at the top-right corner,
+// with a diagonal pencil stroke crossing through the gap — matches the
+// reference compose/edit glyph (was a plain pencil-and-underline icon).
+const ICON_COMPOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5,5 L8,5 C6.34,5 5,6.34 5,8 L5,16 C5,17.66 6.34,19 8,19 L16,19 C17.66,19 19,17.66 19,16 L19,11"/><path d="M18.7,4.3 10.2,12.8"/></svg>';
 // Same magnifying-glass shape already inlined in every .xsearch box
 // across the app (search page, member pickers, etc.) — pulled out
 // here as a shared constant for the chat "Search a user" trigger so

@@ -835,7 +835,7 @@ select {
   background:var(--maroon); color:#fff; font-weight:800; font-size:16px; overflow:hidden;
 }
 .comm-avatar-plus { background:var(--hover-bg); color:var(--maroon); border:1.5px dashed var(--maroon); }
-.comm-avatar-plus svg { width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:2.2; }
+.comm-avatar-plus svg { width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
 .comm-create-row { display:flex; align-items:center; gap:10px; padding:10px 16px; text-decoration:none; color:var(--ink); transition:background-color .12s ease; }
 .comm-create-row:hover { background:rgba(15,20,25,.03); text-decoration:none; }
 .comm-create-row .who-row-name { color:var(--maroon); }
@@ -1060,7 +1060,7 @@ select {
 }
 .list-avatar img { width:100%; height:100%; object-fit:cover; }
 .list-avatar-glyph { width:18px; height:18px; }
-.list-avatar-glyph svg { width:100%; height:100%; stroke:currentColor; fill:none; stroke-width:2.2; }
+.list-avatar-glyph svg { width:100%; height:100%; stroke:currentColor; fill:none; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
 .list-avatar-sm { width:36px; height:36px; }
 .list-avatar-lg { width:56px; height:56px; border-radius:var(--r-md); }
 .list-avatar-lg .list-avatar-glyph { width:26px; height:26px; }
@@ -1108,7 +1108,7 @@ select {
   flex:none; width:32px; height:32px; margin-top:1px; border-radius:50%; display:flex; align-items:center; justify-content:center;
   background:var(--bg); color:var(--ink); border:1px solid var(--line); cursor:pointer; transition:background-color .12s ease, transform .1s ease;
 }
-.list-follow-btn svg { width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:2.4; }
+.list-follow-btn svg { width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; }
 .list-follow-btn:hover { background:var(--hover-bg); }
 .list-follow-btn:active { transform:scale(.9); }
 .list-follow-btn.list-following-btn { background:var(--ink); color:var(--bg); border-color:var(--ink); }
@@ -1232,7 +1232,7 @@ select {
   display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px;
   border:none; background:transparent; border-radius:10px; color:var(--ink); cursor:pointer; font-size:14px; font-weight:700;
 }
-.ea-tb-btn svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; }
+.ea-tb-btn svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 .ea-tb-btn:hover { background:var(--maroon-tint); color:var(--maroon); }
 .ea-tb-btn.active { background:var(--maroon-tint); color:var(--maroon); }
 .ea-tb-sep { width:1px; height:20px; background:var(--line); margin:0 4px; flex:none; }
@@ -1554,7 +1554,7 @@ select {
   transition:background .15s ease, color .15s ease, transform .1s cubic-bezier(.2,.8,.2,1);
 }
 .act:active { transform:scale(.90); }
-.act svg { width:19px; height:19px; flex:none; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; shape-rendering:geometricPrecision; transition:transform .18s cubic-bezier(.34,1.56,.64,1); }
+.act svg { width:19px; height:19px; flex:none; fill:none; stroke:currentColor; stroke-width:2.1; stroke-linecap:round; stroke-linejoin:round; shape-rendering:geometricPrecision; transition:transform .18s cubic-bezier(.34,1.56,.64,1); }
 .act.share svg, .act.bookmark svg { stroke-width:2.1; }
 .act:hover { text-decoration:none; }
 .act:active svg { transform:scale(.86); }
@@ -2979,7 +2979,7 @@ body[data-page="auth"] #m-topbar, body[data-page="auth"] #m-tabbar, body[data-pa
 
 .auth-input-wrap { position:relative; }
 .auth-input-wrap .auth-fi { position:absolute; left:12px; top:50%; transform:translateY(-50%); width:18px; height:18px; color:var(--muted); pointer-events:none; }
-.auth-input-wrap .auth-fi svg { width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.auth-input-wrap .auth-fi svg { width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:2.1; stroke-linecap:round; stroke-linejoin:round; }
 .auth-input-wrap input, .auth-input-wrap select { padding-left:38px; }
 .auth-input-wrap:focus-within .auth-fi { color:var(--maroon); }
 
@@ -3104,7 +3104,7 @@ body[data-page="auth"] #m-topbar, body[data-page="auth"] #m-tabbar, body[data-pa
   border-radius:50%; transition:background .12s ease, color .12s ease;
 }
 .pw-toggle:hover { background:var(--maroon-tint); color:var(--maroon); }
-.pw-toggle svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.pw-toggle svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2.1; stroke-linecap:round; stroke-linejoin:round; }
 .pw-toggle .eye-off { display:none; }
 .pw-toggle.showing .eye-on { display:none; }
 .pw-toggle.showing .eye-off { display:block; }
@@ -3716,7 +3716,7 @@ a.auth-submit { text-align:center; text-decoration:none; }
   background:var(--maroon); color:#fff;
 }
 .notif-item.unread .notif-badge { border-color:var(--maroon-tint); }
-.notif-badge svg { width:11px; height:11px; fill:none; stroke:currentColor; stroke-width:2.4; }
+.notif-badge svg { width:11px; height:11px; fill:none; stroke:currentColor; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; }
 .notif-badge.like svg, .notif-badge.quote svg { fill:#fff; stroke:none; }
 /* The badge's -3px/-3px offset + matching ring border is tuned to
    nest into the curve of a circular avatar. Gold-badge accounts use
