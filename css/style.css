@@ -151,6 +151,39 @@ html[data-theme="dim"][data-accent="purple"],html[data-theme="dark"][data-accent
 html[data-theme="dim"][data-accent="orange"],html[data-theme="dark"][data-accent="orange"]{ --maroon:#F97316; --maroon-dk:#FB923C; --mustard:#F97316; --mustard-dk:#FB923C; --link:#F97316; --maroon-tint:rgba(249,115,22,.16); }
 
 * { margin:0; padding:0; box-sizing:border-box; }
+/* ── GLOBAL LONG-PRESS / NATIVE-MENU LOCKDOWN ──────────────────────
+   Long-pressing anything in this app should only ever open *our* own
+   UI (the post preview's Hide/Report sheet, the tab-bar's account
+   switcher, a "···" menu, etc.) — never the browser's native image
+   context menu ("Share image / Download image / Copy image...") or
+   its text-selection callout (the magnifier + "Copy / Select all"
+   bubble). That protection used to only exist in a couple of
+   one-off spots (.pc post cards, .m-tab-avatar), which stopped the
+   two things people actually filed the bug against but left every
+   *other* avatar/image/row uncovered — chat list rows, notification
+   rows, search results, profile headers, article thumbnails — so a
+   hold on any of those (including the ones the two fixed spots sit
+   right next to) still let the native menu through. Locking it down
+   here, once, for the whole document — then explicitly re-opening
+   normal select/callout behavior only where people actually need to
+   type, select or paste (real inputs/textareas/contenteditable) —
+   fixes every surface at once instead of chasing each one by hand. */
+html, body {
+  -webkit-touch-callout:none;
+  -webkit-user-select:none;
+  user-select:none;
+}
+img, video, svg, picture, canvas {
+  -webkit-touch-callout:none;
+  -webkit-user-drag:none;
+  -webkit-user-select:none;
+  user-select:none;
+}
+input, textarea, [contenteditable="true"], [contenteditable=""] {
+  -webkit-touch-callout:default;
+  -webkit-user-select:text;
+  user-select:text;
+}
 /* Safety net: every icon in this app is an inline <svg> with only a
    viewBox (no width/height attributes), sized entirely by CSS at
    each call site. Any spot that forgets a sizing rule falls back to

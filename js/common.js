@@ -22,6 +22,34 @@
 const POST_SELECT = '*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)';
 const REPLY_SELECT = '*, profile:profiles(username,display_name,avatar_url,verified,verification_type)';
 
+// ── GLOBAL LONG-PRESS / NATIVE-MENU LOCKDOWN ────────────────────
+// Mirrors the CSS lockdown at the top of style.css (user-select/
+// touch-callout:none on html/body). That CSS stops the native menu
+// from becoming visible/draggable on most builds, but a few Android
+// WebView/Chrome versions still fire `contextmenu` (the "Share image /
+// Download image / Copy image" popup) and/or `selectstart` (the
+// magnifier + "Copy / Select all" bubble) once before a *plain
+// inherited* user-select:none is fully honored — see the long-press
+// preview's own belt-and-suspenders note further down for the same
+// gap on post cards specifically. Previously that JS-level backstop
+// only existed for post cards (.pc) and nowhere else, so anything
+// long-pressed outside a post — the tab bar's Profile avatar (long-
+// pressed to open "Switch accounts" / "Add account"), a chat list
+// row's avatar, a notification row, a search result, a profile
+// header photo — could still pop the browser's native menu even
+// though our own long-press handling for that element worked fine.
+// Killing both events here, once, for the whole document (except
+// inside real inputs/textareas/contenteditable, which still need
+// normal select/copy/paste) closes that gap everywhere at once.
+document.addEventListener('contextmenu', (ev) => {
+  if (ev.target.closest && ev.target.closest('input, textarea, [contenteditable="true"], [contenteditable=""]')) return;
+  ev.preventDefault();
+});
+document.addEventListener('selectstart', (ev) => {
+  if (ev.target.closest && ev.target.closest('input, textarea, [contenteditable="true"], [contenteditable=""]')) return;
+  ev.preventDefault();
+});
+
 // ── SPECULATIVE PRERENDERING — this is a plain multi-page app (every
 // internal link is a real full navigation, no SPA router), so the
 // single biggest lever for making clicks feel instant is starting the
@@ -4519,22 +4547,13 @@ document.addEventListener('pointermove', (ev) => {
 ['pointerup', 'pointercancel', 'pointerleave', 'scroll'].forEach(evt => {
   document.addEventListener(evt, lpClearTimer, { passive: true, capture: evt === 'scroll' });
 });
-// Stops the OS's own text-selection/callout menu from popping up
-// mid-hold on mobile browsers and racing our own preview.
-document.addEventListener('contextmenu', (ev) => {
-  if (ev.target.closest('.pc[data-post-id]')) ev.preventDefault();
-});
-// Belt-and-suspenders for the same thing: some Android/Chrome builds
-// still start a native text selection (the "Copy / Translate / Select
-// all" toolbar) on a long-press even with user-select:none set in
-// CSS — the CSS property stops the selection from becoming visible/
-// draggable, but a couple of WebView versions fire `selectstart`
-// once before that's fully honored. Killing the event itself here is
-// a second, independent line of defense so nothing can ever slip
-// through, on any browser.
-document.addEventListener('selectstart', (ev) => {
-  if (ev.target.closest && ev.target.closest('.pc[data-post-id]')) ev.preventDefault();
-});
+// The OS's own text-selection/callout menu racing our preview on a
+// post-card hold is now handled document-wide (contextmenu/selectstart
+// guard up near the top of this file, alongside POST_SELECT) rather
+// than scoped to `.pc[data-post-id]` here — that used to be the only
+// place this was patched, which left every long-press *outside* a
+// post (tab-bar avatar, chat rows, notifications, search results...)
+// still exposed to the same native popup.
 
 function lpOverlayEl() {
   let el = document.getElementById('lp-overlay');
@@ -4858,10 +4877,17 @@ function fmtCount(n) {
 }
 
 // ── VIEW COUNTS ──
-// Each browser only bumps a given post/reply's view count once per
-// session (sessionStorage, not localStorage — a fresh visit later
-// still counts as a new view). Fire-and-forget: a failed RPC call
-// should never block rendering the page.
+// The real dedup now happens server-side, per account (see
+// supabase/view_counts_one_per_account.sql) — a signed-in account
+// can never add more than one view to the same post/reply, no matter
+// how many tabs, sessions, or devices they view it from. This
+// sessionStorage flag is just a client-side perf shortcut on top of
+// that: it skips firing the RPC again for something this tab already
+// knows it reported this session, so scrolling back over the same
+// card doesn't re-hit the network — it's not what makes the count
+// correct anymore, the server-side unique constraint is. Logged-out
+// visitors have no account to dedupe against, so their views still
+// count every time either way.
 function seenThisSession(key) {
   const seen = new Set(JSON.parse(sessionStorage.getItem('oc_seen') || '[]'));
   if (seen.has(key)) return true;
@@ -4893,11 +4919,11 @@ function bumpReplyViews(replyIds) {
 // IntersectionObserver; once at least half the card has been on
 // screen for a short moment, it's counted and then left alone (so
 // scrolling back and forth over the same card doesn't recount it).
-// The actual dedup — so the same user never adds more than one view
-// to a given post, whether they scrolled past it, opened its thread,
-// or both — still happens in bumpPostView()/bumpReplyViews() above
-// via seenThisSession(), so this is purely about *when* that fires,
-// not *whether* it can fire twice.
+// The actual dedup — so the same account never adds more than one
+// view to a given post, whether they scrolled past it, opened its
+// thread, or both, in this tab or any other — happens server-side
+// (see supabase/view_counts_one_per_account.sql). This is purely
+// about *when* the RPC fires, not *whether* it can double-count.
 const VIEW_DWELL_MS = 400; // must stay ~half-visible this long to count as an actual view, not just a fast scroll-by
 const _viewTimers = new WeakMap();
 
