@@ -3404,8 +3404,16 @@ function ccModalEl() {
   return el;
 }
 
-function openCreateCommunityModal() {
+async function openCreateCommunityModal() {
   if (!requireLogin()) return;
+  // Accounts can only own up to 2 communities (see
+  // supabase/community_owner_limit.sql for the DB-side trigger that
+  // actually enforces this) — checked here too so someone who's
+  // already at the limit gets a clear toast instead of the wizard
+  // opening and only failing on the last step.
+  const { count, error } = await sb.from('communities').select('id', { count: 'exact', head: true })
+    .eq('created_by', currentSession.user.id);
+  if (!error && (count || 0) >= 2) { toast(`You can only create up to 2 communities.`, 'error'); return; }
   ccWiz = ccFreshWiz();
   const el = ccModalEl();
   clearErr(document.getElementById('cc-err'));
@@ -3623,6 +3631,13 @@ async function submitCreateCommunityWizard() {
   // Text moderation gate — community name/description had no check;
   // both are public and shown everywhere the community appears.
   if (!(await checkTextModeration('text', `${name}\n${description}`, null, errEl))) return;
+
+  // Re-check the 2-community cap right before creating (not just when
+  // the modal opened) — covers someone who opened this wizard, then
+  // hit the limit in another tab before finishing it here.
+  const { count: ownedCount, error: countErr } = await sb.from('communities')
+    .select('id', { count: 'exact', head: true }).eq('created_by', currentSession.user.id);
+  if (!countErr && (ownedCount || 0) >= 2) { showErr(errEl, "You've reached the 2-community limit."); return; }
 
   btn.disabled = true;
   btn.textContent = 'Creating\u2026';

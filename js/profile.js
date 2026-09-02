@@ -257,19 +257,22 @@ async function loadProfile() {
 // Only ever shows communities they OWN (created_by), not ones they've
 // merely joined — same as the reference. Silently removes the
 // section when they don't have one, rather than showing an empty
-// heading.
+// heading. Capped at 2 (accounts can't own more than that — see
+// supabase/community_owner_limit.sql), rendered as a horizontally
+// swipeable, scroll-snapped track when there are two, so the second
+// one is a swipe away instead of stacking the page taller.
 async function loadProfileCommunity(userId) {
   const el = document.getElementById('profile-community');
   if (!el) return;
   const { data, error } = await sb.from('communities').select('*')
     .eq('created_by', userId)
     .order('member_count', { ascending: false })
-    .limit(5);
+    .limit(2);
   if (error || !data || !data.length) { el.remove(); return; }
   el.innerHTML = `
     <div class="profile-comm-sec">
       <h2 class="profile-comm-hdr">${data.length > 1 ? 'Communities' : 'Community'}</h2>
-      ${data.map(profileCommunityCardHtml).join('')}
+      <div class="profile-comm-track">${data.map(profileCommunityCardHtml).join('')}</div>
     </div>`;
 }
 
