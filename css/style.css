@@ -4525,6 +4525,11 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .chat-tool-btn svg { width:19px; height:19px; display:block; }
 .chat-tool-btn:hover:not(:disabled) { background:var(--maroon-tint); }
 .chat-tool-btn:disabled { color:#9EC8DE; cursor:default; }
+/* Mic permanently blocked at the browser level (see
+   refreshMicButtonState() in js/chat.js) — dimmed + tinted red so
+   it's clear before tapping, rather than only after it fails. */
+.chat-tool-btn.chat-mic-blocked { color:var(--like); opacity:.55; }
+.chat-tool-btn.chat-mic-blocked:hover { background:rgba(225,29,72,.1); }
 
 /* ── pending-attachment preview, shown above the composer between
    picking/recording a file and actually hitting send ── */

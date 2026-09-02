@@ -1036,6 +1036,7 @@ async function loadThread(session, root) {
   sizeChatThread();
   scrollChatToBottom();
   applyChatPrefill();
+  refreshMicButtonState();
 
   const unreadIds = [...unreadMsgIds];
   if (unreadIds.length) {
@@ -1597,6 +1598,35 @@ function renderChatAttachPreview() {
   }
 }
 
+// Proactively reflects a permanently-blocked microphone permission on
+// the mic button itself, instead of only ever surfacing it reactively
+// as a toast after someone taps it and getUserMedia() fails. Browsers
+// never re-prompt once mic access has been denied for a site — that's
+// a one-time choice only the person themselves can undo, in their
+// browser's own site settings, no app code can force it — so the
+// most useful thing this can do is make that state visible up front
+// (dimmed button, a tooltip explaining why) rather than let someone
+// discover it only by trying to record and hitting the same wall
+// every time. navigator.permissions isn't implemented everywhere
+// (notably Safari/iOS) — falls back to leaving the button in its
+// normal state there, same as before this existed; the click-time
+// toast in startVoiceRecording() still catches it either way.
+function refreshMicButtonState() {
+  const btn = document.getElementById('chat-mic-btn');
+  if (!btn || !navigator.permissions?.query) return;
+  navigator.permissions.query({ name: 'microphone' }).then(status => {
+    const apply = () => {
+      const blocked = status.state === 'denied';
+      btn.classList.toggle('chat-mic-blocked', blocked);
+      btn.title = blocked ? t('chat.micBlocked') : t('chat.recordVoice');
+    };
+    apply();
+    // Live-updates if they fix it in browser settings without
+    // reloading the page — no need to re-render the whole composer.
+    status.onchange = apply;
+  }).catch(() => {}); // unsupported permission name on some browsers — ignore, click-time toast still covers it
+}
+
 // ── VOICE NOTES: RECORD ──
 async function startVoiceRecording() {
   if (chatRecorder) return; // already recording
@@ -2081,6 +2111,7 @@ async function loadGroupThread(session, root) {
 
   sizeChatThread();
   scrollChatToBottom();
+  refreshMicButtonState();
 
   if (mine) {
     await sb.from('conversation_members').update({ last_read_at: new Date().toISOString() }).eq('conversation_id', conv.id).eq('user_id', session.user.id);
