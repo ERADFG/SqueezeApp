@@ -2718,7 +2718,7 @@ body[data-page="auth"] #m-topbar, body[data-page="auth"] #m-tabbar, body[data-pa
     display:flex; align-items:center; justify-content:space-between;
     position:fixed; top:0; left:0; right:0; height:53px;
     padding:0 6px; background:var(--translucent-bg); backdrop-filter:blur(10px);
-    border-bottom:1px solid var(--line); z-index:900;
+    border-bottom:1px solid var(--line); z-index:900; isolation:isolate;
   }
   #m-topbar .m-menu-btn, #m-topbar .m-feeds-btn {
     display:flex; align-items:center; justify-content:center;
@@ -2747,9 +2747,18 @@ body[data-page="auth"] #m-topbar, body[data-page="auth"] #m-tabbar, body[data-pa
      a floating rounded "dock" chip with a shadow under it. Rebuilt to
      match that: no border-radius, no box-shadow, no frosted-glass
      blur, spans the full width instead of centering as an island. */
+  /* isolation:isolate pins this as its own stacking context so its
+     z-index:900 is compared as a single unit against page content —
+     without it, sticky bars that use backdrop-filter (like
+     #profile-tabs' "Posts / Replies / Scheduled" row, or any other
+     .sec-bar) can get composited into a layer that paints above this
+     fixed dock on some mobile browsers despite their much lower
+     z-index:5, the exact "sticky tab bar sits on top of the fixed
+     bottom nav" bug — same root cause and same fix already used for
+     #m-topbar's sticky-bar overlap and for .m-drawer-bg above. */
   #m-tabbar {
     display:flex; align-items:center; justify-content:space-around;
-    position:fixed; left:0; right:0; bottom:0; z-index:900;
+    position:fixed; left:0; right:0; bottom:0; z-index:900; isolation:isolate;
     padding:8px 4px calc(8px + env(safe-area-inset-bottom));
     background:var(--bg); border-top:1px solid var(--line);
     border-radius:0; box-shadow:none;
