@@ -3,7 +3,7 @@
 // Also reachable via the legacy chat.html?u=<username> form.
 //
 // Messages (1:1 DMs, group, and channel) are encrypted at rest
-// server-side — see supabase/chat_server_side_encryption.sql. Reading
+// server-side — see supabase/chat_encryption.sql. Reading
 // message bodies always goes through the get_dm_thread / get_dm_list /
 // get_group_thread / get_group_last_messages / get_message RPCs,
 // which decrypt with a key that only exists in Supabase Vault, gated
@@ -237,7 +237,7 @@ async function loadConversationList(session, root) {
 
   // get_dm_list() decrypts server-side and returns the same shape the
   // old embedded-resource select used (sender/recipient nested) — see
-  // supabase/chat_server_side_encryption.sql.
+  // supabase/chat_encryption.sql.
   const [{ data, error }, groupRows] = await Promise.all([
     sb.rpc('get_dm_list'),
     loadMyGroupRows(session),
@@ -366,7 +366,7 @@ async function loadMyGroupRows(session) {
 
   const ids = memberRows.map(r => r.conversation_id);
   // get_group_last_messages() decrypts server-side (see
-  // supabase/chat_server_side_encryption.sql) and already returns one
+  // supabase/chat_encryption.sql) and already returns one
   // row per conversation_id, most recent first.
   const { data: msgs } = await sb.rpc('get_group_last_messages', { conv_ids: ids });
 
@@ -960,7 +960,7 @@ async function loadThread(session, root) {
   document.getElementById('chat-sec-bar').innerHTML = `<a class="back" href="chat.html" style="margin:0 10px 0 0;">&larr;</a> ${esc(other.display_name || other.username)}`;
 
   // get_dm_thread() decrypts server-side (see
-  // supabase/chat_server_side_encryption.sql) — no client-side key
+  // supabase/chat_encryption.sql) — no client-side key
   // material or per-device state involved, so this works identically
   // on any device the instant it's opened.
   const { data: msgs, error } = await sb.rpc('get_dm_thread', { other_user_id: other.id });
@@ -1260,7 +1260,7 @@ function msgBubbleHtml(m, myId, group = { start: true, end: true }) {
   const hasCaption = m._plain != null && m._plain !== '';
   const bodyHtml = m._plain != null
     ? (hasCaption ? renderBody(m._plain) : '')
-    : `<div class="msg-undecryptable">${CHAT_ICON_LOCK}<em>This message used the old encryption system and can't be read anymore.</em></div>`;
+    : `<div class="msg-undecryptable">${CHAT_ICON_LOCK}<em>This message can't be decrypted.</em></div>`;
   const mediaHtml = chatMediaHtml(m);
   const ticksHtml = mine
     ? `<span class="msg-ticks${m.read ? ' read' : ''}">${m.read ? ICON_TICK2 : ICON_TICK1}</span>`
@@ -2033,7 +2033,7 @@ async function sendMessage() {
   if (attachment?.type === 'audio' && attachment.durationMs) insertRow.media_duration_ms = attachment.durationMs;
   // body is sent as plain text over TLS and encrypted server-side by
   // messages_encrypt_body_trg the moment it's inserted — see
-  // supabase/chat_server_side_encryption.sql. Nothing to do client-side.
+  // supabase/chat_encryption.sql. Nothing to do client-side.
 
   const { data, error } = await sb.from('messages').insert(insertRow).select('*').single();
   if (error) { alert(error.message || t('chat.failedToSend')); return; }
@@ -2052,7 +2052,7 @@ function subscribeChatRealtime(myId, otherId) {
       if (incoming.recipient_id !== myId) return;
       if (document.getElementById(`msg-${incoming.id}`)) return;
       // Realtime streams the raw row (still ciphertext) — get_message()
-      // decrypts it server-side. See supabase/chat_server_side_encryption.sql.
+      // decrypts it server-side. See supabase/chat_encryption.sql.
       const { data: m, error } = await sb.rpc('get_message', { msg_id: incoming.id });
       if (error || !m) return;
       m._plain = m.deleted_for_everyone ? '' : (m.iv && !m.body_encrypted ? null : m.body);
@@ -2098,7 +2098,7 @@ function subscribeChatRealtime(myId, otherId) {
 // already keyed off the generic `chatAttachment` global rather than
 // `chatOther`, so it works here unchanged. Group/channel messages are
 // now encrypted at rest server-side too (they weren't before) — see
-// supabase/chat_server_side_encryption.sql; nothing client-side needs
+// supabase/chat_encryption.sql; nothing client-side needs
 // to change between the two cases, get_group_thread()/get_message()
 // handle the decryption transparently.
 async function loadGroupThread(session, root) {
@@ -2143,7 +2143,7 @@ async function loadGroupThread(session, root) {
   }
 
   // get_group_thread() decrypts server-side — see
-  // supabase/chat_server_side_encryption.sql. Group/channel messages
+  // supabase/chat_encryption.sql. Group/channel messages
   // are now encrypted at rest too (they weren't before).
   const { data: msgs, error } = await sb.rpc('get_group_thread', { conv_id: conv.id });
   if (error) { root.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
@@ -2409,7 +2409,7 @@ function subscribeGroupRealtime(conversationId, myId) {
       if (incoming.sender_id === myId) return; // already appended optimistically by sendGroupMessage()
       if (document.getElementById(`msg-${incoming.id}`)) return;
       // Realtime streams the raw row (still ciphertext) — get_message()
-      // decrypts it server-side. See supabase/chat_server_side_encryption.sql.
+      // decrypts it server-side. See supabase/chat_encryption.sql.
       const { data: m, error } = await sb.rpc('get_message', { msg_id: incoming.id });
       if (error || !m) return;
       m._plain = m.body;

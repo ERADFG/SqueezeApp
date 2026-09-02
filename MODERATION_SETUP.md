@@ -139,8 +139,7 @@ Approve makes it visible, Remove blocks it permanently. Backed by
 
 ## What this does NOT cover — direct messages
 
-`messages` are end-to-end encrypted (`chat_e2e_encryption.sql` /
-`chat_server_side_encryption.sql`) — the server only ever sees
+`messages` are encrypted at rest (`chat_encryption.sql`) — the server only ever sees
 ciphertext, by design, and that's not something this pipeline changes
 or should change. That means **none of the server-side checks above
 run on DM content or DM media** — there's genuinely nothing for the
