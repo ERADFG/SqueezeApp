@@ -197,6 +197,8 @@ async function loadProfile() {
       </div>
     </div>
 
+    <div id="profile-community"></div>
+
     <div id="profile-tabs" class="sec-bar profile-tabs" style="padding:0;">
       <div class="xtabs">
         <button class="xtab active" id="ptab-posts" onclick="switchProfileTab('posts');return false;">Posts</button>
@@ -245,7 +247,42 @@ async function loadProfile() {
   // the whole header render on an extra query.
   loadReplyCountIntoStat(profile.id, profile.posts_count || 0);
 
+  loadProfileCommunity(profile.id);
   loadUserPosts(profile.id);
+}
+
+// "Community" section — shows any community this profile created,
+// styled like X's own profile "Community" card (avatar, name,
+// description, member count) so a viewer can jump straight to it.
+// Only ever shows communities they OWN (created_by), not ones they've
+// merely joined — same as the reference. Silently removes the
+// section when they don't have one, rather than showing an empty
+// heading.
+async function loadProfileCommunity(userId) {
+  const el = document.getElementById('profile-community');
+  if (!el) return;
+  const { data, error } = await sb.from('communities').select('*')
+    .eq('created_by', userId)
+    .order('member_count', { ascending: false })
+    .limit(5);
+  if (error || !data || !data.length) { el.remove(); return; }
+  el.innerHTML = `
+    <div class="profile-comm-sec">
+      <h2 class="profile-comm-hdr">${data.length > 1 ? 'Communities' : 'Community'}</h2>
+      ${data.map(profileCommunityCardHtml).join('')}
+    </div>`;
+}
+
+function profileCommunityCardHtml(c) {
+  return `
+    <a class="profile-comm-card" href="${communityUrl(c.slug)}">
+      <span class="comm-avatar">${communityAvatarInner(c)}</span>
+      <span class="who-row-txt">
+        <span class="who-row-name">${esc(c.name)}</span>
+        ${c.description ? `<span class="comm-desc profile-comm-card-desc">${esc(c.description)}</span>` : ''}
+        <span class="who-row-handle">${fmtCount(c.member_count)} member${c.member_count === 1 ? '' : 's'}</span>
+      </span>
+    </a>`;
 }
 
 async function loadReplyCountIntoStat(userId, basePostsCount) {

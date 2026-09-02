@@ -882,6 +882,25 @@ select {
 .comm-list .who-row-name { font-size:15px; }
 .comm-list .comm-desc { font-size:13px; color:var(--muted); margin-top:2px; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
+/* ── PROFILE "Community" card — the bordered card X shows on a
+   profile when the account owns a community, distinct from the
+   plain divider-row style .comm-list uses on the browse page. ── */
+.profile-comm-sec { padding:14px 16px 4px; }
+.profile-comm-hdr { font-size:19px; font-weight:800; color:var(--ink); margin:0 0 10px; }
+.profile-comm-card {
+  display:flex; gap:12px; align-items:flex-start; text-decoration:none; color:var(--ink);
+  border:1px solid var(--line); border-radius:16px; padding:14px;
+  transition:background-color .12s ease;
+}
+.profile-comm-card:hover { background:var(--hover-bg); text-decoration:none; }
+.profile-comm-card + .profile-comm-card { margin-top:10px; }
+.profile-comm-card .comm-avatar { width:52px; height:52px; font-size:20px; flex:none; }
+.profile-comm-card .who-row-name { font-size:15.5px; white-space:normal; }
+.profile-comm-card-desc {
+  white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+  overflow:hidden; margin-top:2px;
+}
+
 /* ── PAGE-NUMBER PAGER — shared by any 10-per-page list (Communities
    browse, Lists browse): Prev/Next arrows + numbered pages with
    first/last/current/±1-neighbor kept and gaps collapsed to "…". ── */
@@ -4745,14 +4764,14 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 }
 .blocked-pill:hover { filter:brightness(.9); }
 .blocked-pill:active { filter:brightness(.8); }
-.blocked-notice { padding:24px 16px 0; text-align:center; }
+.blocked-notice { padding:24px 16px 0; display:flex; flex-direction:column; align-items:center; text-align:center; }
 .blocked-notice h1 { font-size:20px; font-weight:800; color:var(--ink); margin:0 0 10px; }
-.blocked-notice p { font-size:14.5px; color:var(--muted); line-height:1.4; margin:0 auto 4px; max-width:420px; }
+.blocked-notice p { font-size:14.5px; color:var(--muted); line-height:1.4; margin:0 0 4px; max-width:420px; }
 .blocked-notice-sub { margin-top:8px !important; }
 .view-posts-btn {
   font-family:inherit; font-size:14.5px; font-weight:700;
   background:var(--link); color:#fff; border:none; border-radius:999px;
-  padding:9px 20px; cursor:pointer; margin-top:16px;
+  padding:9px 20px; cursor:pointer; margin:16px auto 0;
   transition:filter .15s ease;
 }
 .view-posts-btn:hover { filter:brightness(.9); }
