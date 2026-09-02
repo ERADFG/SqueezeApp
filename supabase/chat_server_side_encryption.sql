@@ -87,6 +87,36 @@ $$;
 
 revoke all on function public._chat_secret() from public, anon, authenticated;
 
+-- Safe decrypt wrapper — pgp_sym_decrypt() RAISES (Postgres's literal
+-- error text is "Wrong key or corrupt data") on any ciphertext it
+-- can't decrypt. Called bare inside the jsonb_agg() queries below,
+-- that exception would abort the WHOLE function call over a single
+-- bad row, blanking an entire chat list/thread. Routing through here
+-- instead catches that per-row and returns null, which js/chat.js
+-- already renders as the undecryptable-message placeholder bubble.
+create or replace function public._chat_decrypt(enc_body text, is_encrypted boolean)
+returns text
+language plpgsql
+stable
+security definer
+set search_path = public, vault
+as $$
+begin
+  if not is_encrypted then
+    return enc_body;
+  end if;
+  if enc_body is null then
+    return null;
+  end if;
+  return convert_from(pgp_sym_decrypt(decode(enc_body, 'base64'), public._chat_secret()), 'UTF8');
+exception
+  when others then
+    return null;
+end;
+$$;
+
+revoke all on function public._chat_decrypt(text, boolean) from public, anon, authenticated;
+
 -- ── 2. body_encrypted FLAG ──
 -- true  = body holds base64 pgp_sym_encrypt ciphertext from this
 --         migration's trigger (decrypt with public._chat_secret()).
@@ -163,9 +193,7 @@ begin
     select
       m.created_at,
       to_jsonb(m) || jsonb_build_object(
-        'body', case when m.body_encrypted
-                      then convert_from(pgp_sym_decrypt(decode(m.body, 'base64'), public._chat_secret()), 'UTF8')
-                      else m.body end
+        'body', public._chat_decrypt(m.body, m.body_encrypted)
       ) as row
     from public.messages m
     where m.conversation_id is null
@@ -201,9 +229,7 @@ begin
     select
       m.created_at,
       to_jsonb(m) || jsonb_build_object(
-        'body', case when m.body_encrypted
-                      then convert_from(pgp_sym_decrypt(decode(m.body, 'base64'), public._chat_secret()), 'UTF8')
-                      else m.body end,
+        'body', public._chat_decrypt(m.body, m.body_encrypted),
         'sender', jsonb_build_object('id', sp.id, 'username', sp.username, 'display_name', sp.display_name, 'avatar_url', sp.avatar_url, 'verified', sp.verified, 'verification_type', sp.verification_type),
         'recipient', jsonb_build_object('id', rp.id, 'username', rp.username, 'display_name', rp.display_name, 'avatar_url', rp.avatar_url, 'verified', rp.verified, 'verification_type', rp.verification_type)
       ) as row
@@ -243,9 +269,7 @@ begin
     select
       m.created_at,
       to_jsonb(m) || jsonb_build_object(
-        'body', case when m.body_encrypted
-                      then convert_from(pgp_sym_decrypt(decode(m.body, 'base64'), public._chat_secret()), 'UTF8')
-                      else m.body end
+        'body', public._chat_decrypt(m.body, m.body_encrypted)
       ) as row
     from public.messages m
     where m.conversation_id = conv_id
@@ -277,9 +301,7 @@ begin
   from (
     select distinct on (m.conversation_id)
       to_jsonb(m) || jsonb_build_object(
-        'body', case when m.body_encrypted
-                      then convert_from(pgp_sym_decrypt(decode(m.body, 'base64'), public._chat_secret()), 'UTF8')
-                      else m.body end,
+        'body', public._chat_decrypt(m.body, m.body_encrypted),
         'sender', jsonb_build_object('username', sp.username, 'display_name', sp.display_name)
       ) as row
     from public.messages m
@@ -311,9 +333,7 @@ declare
 begin
   if me is null then raise exception 'not authenticated'; end if;
   select to_jsonb(m) || jsonb_build_object(
-    'body', case when m.body_encrypted
-                  then convert_from(pgp_sym_decrypt(decode(m.body, 'base64'), public._chat_secret()), 'UTF8')
-                  else m.body end
+    'body', public._chat_decrypt(m.body, m.body_encrypted)
   ) into result
   from public.messages m
   where m.id = msg_id
