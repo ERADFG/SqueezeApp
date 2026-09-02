@@ -73,7 +73,14 @@ function mentionItemHtml(n) {
   const snipSource = (n.reply && !n.reply.is_deleted) ? n.reply
     : (n.post && !n.post.is_deleted) ? n.post
     : null;
-  const mentionText = snipSource ? renderBody((snipSource.body || '').slice(0, 220)) : '';
+  // Collapse internal blank lines before truncating: a post like
+  // "Hi\n\n@ali" was rendering here as two visually disconnected
+  // chunks (the "Hi" line, then the @mention link floating on its
+  // own line below it) instead of reading as one line of text like
+  // every other snippet on the site. Runs of whitespace/newlines
+  // flatten to a single space, same as a normal inline preview.
+  const snipBody = snipSource ? (snipSource.body || '').replace(/\s+/g, ' ').trim() : '';
+  const mentionText = snipBody ? renderBody(snipBody.slice(0, 220)) : '';
   const inWhat = (n.reply && !n.reply.is_deleted) ? 'reply' : 'post';
   return `
   <a class="notif-item notif-item-mention${n.read ? '' : ' unread'}" href="${notifHref(n)}">

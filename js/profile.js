@@ -80,27 +80,54 @@ async function loadProfile() {
     return;
   }
 
-  // BLOCKED (by the viewer) — same treatment as X: instead of their
-  // timeline, show a dedicated "you've blocked this account" panel
-  // with nothing but an Unblock action. No bio, stats, tabs, message
-  // button, or posts underneath it — those only come back once
-  // they're unblocked (see profileMenuBlock() below, which just
-  // re-runs loadProfile() after a successful block/unblock so this
-  // view and the normal one never drift out of sync).
+  // BLOCKED (by the viewer) — same treatment as X: the profile header
+  // itself (banner, avatar, name, handle) still shows so you know
+  // whose profile this is, but Follow/Message/stats/bio are all
+  // replaced by a solid red "Blocked" pill in place of the normal
+  // follow button. Posts stay hidden behind a confirmation gate
+  // ("View posts") — viewing them does NOT unblock the account, and
+  // unblocking (tapping the red pill) does NOT re-follow them (see
+  // supabase/fix_unblock_no_refollow.sql) — those only come back
+  // once they're unblocked via profileMenuBlock() below, which just
+  // re-runs loadProfile() so this view and the normal one never
+  // drift out of sync.
   const blockedByMe = !isOwnProfile && session ? await isBlocked(profile.id) : false;
   if (blockedByMe) {
     setPageDescription(`@${profile.username} is blocked.`);
     setCanonical(prettyProfileUrl(profile.username));
     root.innerHTML = `
-      <div class="sec-bar" id="blocked-hdr">
-        <a class="ep-back" href="index.html" aria-label="Back" onclick="if(history.length>1){history.back();return false;}">${PROFILE_ICON_BACK}</a>
-        <div><b>${esc(profile.display_name || profile.username)}</b><div class="handle" style="font-size:13px;">@${esc(profile.username)}</div></div>
+      <div class="profile-hdr${profile.banner_url ? ' banner-loading' : ''}" id="profile-hdr" style="${profile.banner_url ? `--banner-img:url('${esc(profile.banner_url)}')` : ''}">
+        <a class="profile-back-btn" href="index.html" aria-label="Back to home">${PROFILE_ICON_BACK}</a>
+        <div class="profile-hdr-top">
+          <img class="avatar pfp-lg${avSqClass(profile)}" src="${esc(avatarUrl(profile.avatar_url))}" width="96" height="96" decoding="async" fetchpriority="high" alt="">
+          <div class="profile-hdr-actions">
+            <button class="blocked-pill" id="unblock-btn" onclick="profileMenuBlock(event, '${profile.id}', '${u_(profile.username)}')">Blocked</button>
+          </div>
+        </div>
+        <div class="profile-id">
+          <div class="uname-row"><div class="uname">${esc(profile.display_name || profile.username)}${vBadge(profile)}</div></div>
+          <div class="handle">@${esc(profile.username)}</div>
+        </div>
       </div>
-      <div class="susp-notice">
+      <div class="blocked-notice" id="blocked-gate">
         <h1>@${esc(profile.username)} is blocked</h1>
-        <p>You won't see their posts, and they can't follow or message you. Unblocking will follow them again.</p>
-        <button class="follow-btn" id="unblock-btn" onclick="profileMenuBlock(event, '${profile.id}', '${u_(profile.username)}')" style="margin-top:12px;">Unblock @${esc(profile.username)}</button>
-      </div>`;
+        <p>You won't see their posts, and they can't follow or message you.</p>
+        <p class="blocked-notice-sub">Are you sure you want to view these posts? Viewing posts won't unblock @${esc(profile.username)}</p>
+        <button class="view-posts-btn" onclick="revealBlockedPosts('${profile.id}')">View posts</button>
+      </div>
+      <div id="blocked-posts-area"></div>`;
+    if (profile.banner_url) {
+      const bannerCheck = new Image();
+      bannerCheck.onload = () => {
+        const hdrEl = document.getElementById('profile-hdr');
+        if (hdrEl) hdrEl.classList.add('banner-loaded');
+      };
+      bannerCheck.onerror = () => {
+        const hdrEl = document.getElementById('profile-hdr');
+        if (hdrEl) { hdrEl.style.removeProperty('--banner-img'); hdrEl.classList.remove('banner-loading'); }
+      };
+      bannerCheck.src = profile.banner_url;
+    }
     return;
   }
 
@@ -345,7 +372,7 @@ async function profileMenuBlock(ev, userId, username) {
   try {
     if (currentlyBlocked) {
       await unblockUser(userId);
-      toast(`Unblocked @${uname}. You're following them again.`);
+      toast(`Unblocked @${uname}.`);
     } else {
       await blockUser(userId);
       toast(`Blocked @${uname}.`);
@@ -639,6 +666,21 @@ function bumpStat(elId, delta) {
 // cache has definitely picked them up, an embed that can't resolve
 // fails its *entire* query rather than just that part of it. Two
 // plain queries can't do that.
+// "View posts" on a blocked account's gate panel (see loadProfile()
+// above) — drops the confirmation panel and loads their posts
+// read-only, without unblocking them. Reuses loadUserPosts() as-is
+// by handing it the same #profile-posts id it always targets, rather
+// than duplicating its fetch logic for this one gated case.
+function revealBlockedPosts(userId) {
+  const gate = document.getElementById('blocked-gate');
+  if (gate) gate.remove();
+  const area = document.getElementById('blocked-posts-area');
+  if (!area) return;
+  area.id = 'profile-posts';
+  area.innerHTML = skeletonFeedHtml(3);
+  loadUserPosts(userId);
+}
+
 async function loadUserPosts(userId) {
   const el = document.getElementById('profile-posts');
   await ensureFeedPrereqsLoaded();

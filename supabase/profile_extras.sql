@@ -12,9 +12,13 @@
 --   1. BLOCK → unfollow both ways. Same as Twitter: the moment you
 --      block someone, any follow relationship between the two of
 --      you — either direction — is deleted.
---   2. UNBLOCK → re-follow. Unblocking someone makes you follow them
---      again (this is InteractInk-specific, not standard Twitter
---      behavior — but it's what the product wants).
+--   2. UNBLOCK does NOT re-follow. Lifting a block just lifts the
+--      block — it does not make you follow that person again. An
+--      earlier version of this file shipped a trigger that did
+--      re-follow on unblock; that was wrong (confusing — "why am I
+--      suddenly following this person again?") and has been removed.
+--      See fix_unblock_no_refollow.sql for the migration that drops
+--      it on a database that already has it.
 --   3. Nobody can block @marpe. Same idea as the existing
 --      unfollow-lock on @marpe (see PROTECTED_FOLLOW_USERNAME in
 --      common.js / the "users can unfollow" RLS policy in
@@ -95,25 +99,10 @@ create trigger trg_block_insert
   before insert on public.blocks
   for each row execute function public.handle_block_insert();
 
--- ── 2: on unblock, the blocker follows the blocked user again ──
-create or replace function public.handle_block_delete()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  insert into public.follows (follower_id, followee_id)
-  values (old.blocker_id, old.blocked_id)
-  on conflict do nothing;
-  return old;
-end;
-$$;
-
+-- ── 2: on unblock, nothing follow-related happens — see the note at
+-- the top of this file. (No trigger here on purpose.) ──
 drop trigger if exists trg_block_delete on public.blocks;
-create trigger trg_block_delete
-  after delete on public.blocks
-  for each row execute function public.handle_block_delete();
+drop function if exists public.handle_block_delete();
 
 -- Retroactive cleanup: if any block row already exists against
 -- @marpe from before this guard existed, remove it now rather than

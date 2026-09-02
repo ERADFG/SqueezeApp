@@ -4733,6 +4733,31 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .susp-notice p a { color:var(--link); text-decoration:none; }
 .susp-notice p a:hover { text-decoration:underline; }
 
+/* ── BLOCKED PROFILE — red "Blocked" pill in place of the normal
+   follow button, plus the "View posts" confirmation gate below the
+   header (same idea as X's own blocked-profile screen). ── */
+.blocked-pill {
+  font-family:inherit; font-size:14px; font-weight:700;
+  background:var(--like); color:#fff; border:1px solid var(--like); border-radius:999px;
+  padding:7px 18px; cursor:pointer; display:inline-block; margin-top:0;
+  transition:filter .15s ease;
+  box-shadow:none;
+}
+.blocked-pill:hover { filter:brightness(.9); }
+.blocked-pill:active { filter:brightness(.8); }
+.blocked-notice { padding:24px 16px 0; text-align:center; }
+.blocked-notice h1 { font-size:20px; font-weight:800; color:var(--ink); margin:0 0 10px; }
+.blocked-notice p { font-size:14.5px; color:var(--muted); line-height:1.4; margin:0 auto 4px; max-width:420px; }
+.blocked-notice-sub { margin-top:8px !important; }
+.view-posts-btn {
+  font-family:inherit; font-size:14.5px; font-weight:700;
+  background:var(--link); color:#fff; border:none; border-radius:999px;
+  padding:9px 20px; cursor:pointer; margin-top:16px;
+  transition:filter .15s ease;
+}
+.view-posts-btn:hover { filter:brightness(.9); }
+.view-posts-btn:active { filter:brightness(.8); }
+
 /* ── EDIT PROFILE PAGE ── */
 .ep-banner-wrap {
   position:relative; height:150px; background:var(--banner-img, linear-gradient(135deg,#BEE3F8,#E6D9F7)) center/cover no-repeat;
@@ -5369,7 +5394,7 @@ body[data-page="home"] #board-hdr .xtabs {
 body[data-page="home"] #board-hdr .xtab {
   padding:14px 4px; border-radius:0; font-weight:700; color:var(--muted); font-size:14.5px;
 }
-body[data-page="home"] #board-hdr .xtab:hover { color:var(--ink); background:var(--hover-bg); }
+body[data-page="home"] #board-hdr .xtab:hover { color:var(--ink); }
 body[data-page="home"] #board-hdr .xtab.active { background:none; color:var(--ink); box-shadow:none; position:relative; }
 body[data-page="home"] #board-hdr .xtab.active:hover { background:var(--hover-bg); }
 body[data-page="home"] #board-hdr .xtab.active::after {
