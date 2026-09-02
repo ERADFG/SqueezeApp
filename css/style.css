@@ -5520,14 +5520,16 @@ body[data-page="home"] #board-hdr .xtab.active::after {
 }
 body[data-page="home"] #board-hdr .xtabs-indicator { display:none; }
 
-/* ── COMMUNITY / COMMUNITIES: squircle community icon in the warm
-   orange gradient from the reference, plus a faint sunburst-line
-   banner. Scoped to these two pages only — the accent color a
-   person picked in Settings still governs the rest of the app. ── */
+/* ── COMMUNITY / COMMUNITIES: squircle community icon with a
+   gradient, plus a faint sunburst-line banner. Scoped to these two
+   pages only. Both now pull from --mustard/--maroon-dk/--maroon-tint
+   (previously hardcoded orange hex), so they follow whichever
+   accent color a person picked in Settings → Appearance instead of
+   always showing orange regardless of theme. ── */
 body[data-page="community"] .comm-avatar,
 body[data-page="communities"] .comm-avatar {
   border-radius:24%;
-  background:linear-gradient(135deg,#FF8A50,#FF3D1F);
+  background:linear-gradient(135deg,var(--mustard),var(--maroon-dk));
 }
 body[data-page="community"] .comm-avatar img,
 body[data-page="communities"] .comm-avatar img { border-radius:22%; }
@@ -5548,7 +5550,7 @@ body[data-page="community"] .community-banner-wrap {
   height:150px;
   background-image:
     var(--banner-img, none),
-    repeating-conic-gradient(from 0deg at 16% 128%, rgba(255,90,31,.18) 0deg 1deg, transparent 1deg 8deg);
+    repeating-conic-gradient(from 0deg at 16% 128%, var(--maroon-tint) 0deg 1deg, transparent 1deg 8deg);
   background-position:center, 16% 128%;
   background-size:cover, 220% 220%;
   background-color:var(--hover-bg);
