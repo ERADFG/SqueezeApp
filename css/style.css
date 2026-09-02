@@ -5543,7 +5543,7 @@ body[data-page="communities"] .comm-avatar {
   background:linear-gradient(135deg,var(--mustard),var(--maroon-dk));
 }
 body[data-page="community"] .comm-avatar img,
-body[data-page="communities"] .comm-avatar img { border-radius:22%; }
+body[data-page="communities"] .comm-avatar img { border-radius:24%; }
 body[data-page="community"] .comm-avatar-pick { border-radius:24%; }
 
 body[data-page="community"] .comm-avatar-wrap,
