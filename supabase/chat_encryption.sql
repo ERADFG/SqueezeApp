@@ -30,6 +30,13 @@
 -- down an entire chat list/thread — the worst case is that one
 -- message renders as "can't be decrypted" in the UI (see
 -- js/chat.js -> msgBubbleHtml) while everything else works normally.
+--
+-- SCHEMA NOTE
+-- Supabase installs pgcrypto into a schema called `extensions`, not
+-- `public`. Every function below sets search_path to explicitly
+-- include it (public, extensions, vault) — omitting it is why
+-- pgp_sym_encrypt/pgp_sym_decrypt would fail with "function ...
+-- does not exist" even though the extension is enabled.
 -- ═════════════════════════════════════════════════════════════════
 
 create extension if not exists pgcrypto;
@@ -53,7 +60,7 @@ returns text
 language sql
 stable
 security definer
-set search_path = public, vault
+set search_path = public, extensions, vault
 as $$
   select decrypted_secret from vault.decrypted_secrets where name = 'chat_body_key' limit 1;
 $$;
@@ -69,7 +76,7 @@ returns text
 language plpgsql
 stable
 security definer
-set search_path = public, vault
+set search_path = public, extensions, vault
 as $$
 begin
   if not is_encrypted then
@@ -100,7 +107,7 @@ create or replace function public.messages_encrypt_body()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, vault
+set search_path = public, extensions, vault
 as $$
 begin
   if new.body is not null and new.body <> '' then
@@ -131,7 +138,7 @@ returns jsonb
 language plpgsql
 stable
 security definer
-set search_path = public, vault
+set search_path = public, extensions, vault
 as $$
 declare
   me uuid := auth.uid();
@@ -162,7 +169,7 @@ returns jsonb
 language plpgsql
 stable
 security definer
-set search_path = public, vault
+set search_path = public, extensions, vault
 as $$
 declare
   me uuid := auth.uid();
@@ -197,7 +204,7 @@ returns jsonb
 language plpgsql
 stable
 security definer
-set search_path = public, vault
+set search_path = public, extensions, vault
 as $$
 declare
   me uuid := auth.uid();
@@ -229,7 +236,7 @@ returns jsonb
 language plpgsql
 stable
 security definer
-set search_path = public, vault
+set search_path = public, extensions, vault
 as $$
 declare
   me uuid := auth.uid();
@@ -261,7 +268,7 @@ returns jsonb
 language plpgsql
 stable
 security definer
-set search_path = public, vault
+set search_path = public, extensions, vault
 as $$
 declare
   me uuid := auth.uid();
