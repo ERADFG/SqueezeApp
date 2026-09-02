@@ -4553,7 +4553,13 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
    stopChatRecordUi() in chat.js) silently did nothing and the record bar
    rendered permanently open regardless of recording state. */
 .chat-composer[hidden], .chat-record-bar[hidden] { display:none; }
-.chat-record-drag { display:flex; align-items:center; gap:10px; flex:1; min-width:0; touch-action:pan-y; user-select:none; -webkit-user-select:none; cursor:grab; }
+/* touch-action:none (not pan-y) hands the whole gesture to our own
+   pointer handlers — with pan-y still set, iOS/Android can decide a
+   slow or slightly-diagonal drag is the start of a page scroll and
+   swallow it before our JS ever sees enough movement to register the
+   cancel, which is what made sliding to cancel feel unreliable. This
+   bar never needs to scroll vertically anyway. */
+.chat-record-drag { display:flex; align-items:center; gap:10px; flex:1; min-width:0; touch-action:none; user-select:none; -webkit-user-select:none; cursor:grab; }
 .chat-record-drag:active { cursor:grabbing; }
 .chat-record-dot { width:10px; height:10px; border-radius:50%; background:#e0245e; animation:oc-record-pulse 1.2s infinite ease-in-out; flex:none; }
 @keyframes oc-record-pulse { 0%,100% { opacity:1; } 50% { opacity:.35; } }
@@ -4603,6 +4609,22 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
    visibly smaller, matching the compact width above. Falls back to
    the normal .msg-bubble padding in browsers without :has(). */
 .msg-bubble:has(.voice-msg) { padding:7px 9px; }
+/* Voice note with no caption: the clock/ticks meta is normally a
+   float:right span that settles into the bottom-right corner of
+   wrapped caption text (see .msg-meta above) — but with no text to
+   wrap around it, nothing constrains the float, so the auto-width
+   bubble sized itself as if the float needed its own clear space to
+   the right of the (fixed-width) .voice-msg player: the player hugged
+   the left edge and the time/ticks got pushed off to the far right of
+   a much wider bubble, instead of sitting right next to it. .voice-row
+   wraps the player + meta as a flex row instead (only rendered for
+   captionless voice notes — a captioned one still floats the meta
+   under its wrapped text as before), which keeps both pieces together
+   and the bubble hugging its real content width; flex items compute
+   float as none automatically, so this alone stops the meta from
+   floating away. */
+.voice-row { display:flex; align-items:center; gap:8px; }
+.voice-row .msg-meta { float:none; margin:0; flex:none; }
 .voice-time { flex:none; font-size:10.5px; font-variant-numeric:tabular-nums; opacity:.85; }
 
 /* ── mobile: full-screen immersive thread ──

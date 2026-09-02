@@ -1254,7 +1254,14 @@ function msgBubbleHtml(m, myId, group = { start: true, end: true }) {
   // normal bubble since they're compact either way.
   const bareMedia = mediaHtml && !hasCaption && m.media_type !== 'audio';
   const meta = msgMetaHtml(m.created_at, ticksHtml, bareMedia);
-  const bubbleInner = mediaHtml + bodyHtml + meta;
+  // A captionless voice note has no text for the meta's float to wrap
+  // against, which otherwise blows the bubble out far wider than the
+  // player itself (see .voice-row in style.css) — pairing the player
+  // and meta in their own flex row keeps them sitting together. A
+  // voice note WITH a caption keeps the normal float-under-text
+  // layout, since there's real text there for it to wrap around.
+  const voiceOnly = m.media_type === 'audio' && !hasCaption;
+  const bubbleInner = voiceOnly ? `<span class="voice-row">${mediaHtml}${meta}</span>` : mediaHtml + bodyHtml + meta;
   const menu = msgMenuHtml(m, mine);
   // Menu sits on the side of the bubble closest to the thread's
   // center column — before the bubble for "mine" (row is packed to
@@ -1747,20 +1754,29 @@ function cancelVoiceRecording() {
 const SLIDE_TO_CANCEL_PX = 80; // drag this far left to trigger a cancel
 let slideCancelStartX = null;
 let slideCancelActive = false;
+let slideCancelPointerId = null; // ignore any other finger/pointer that joins mid-drag
 
 document.addEventListener('pointerdown', (e) => {
   const drag = e.target.closest('#chat-record-drag');
   if (!drag || !chatRecorder) return;
+  if (e.pointerType === 'mouse' && e.button !== 0) return; // ignore right/middle click
   slideCancelStartX = e.clientX;
   slideCancelActive = true;
+  slideCancelPointerId = e.pointerId;
   drag.style.transition = 'none';
   try { drag.setPointerCapture(e.pointerId); } catch (err) {}
+  // Stops iOS/Android from treating this as the start of a page
+  // scroll or a text-selection long-press — without it, a slow drag
+  // can get swallowed by the browser's own gesture handling before
+  // our pointermove ever sees enough movement to register as a cancel.
+  e.preventDefault();
 });
 
 document.addEventListener('pointermove', (e) => {
   if (!slideCancelActive || slideCancelStartX == null) return;
+  if (slideCancelPointerId != null && e.pointerId !== slideCancelPointerId) return;
   const drag = document.getElementById('chat-record-drag');
-  if (!drag) return;
+  if (!drag) { resetSlideCancelDrag(); return; }
   let dx = e.clientX - slideCancelStartX;
   if (dx > 0) dx = 0; // only a leftward drag counts — dragging right does nothing
   drag.style.transform = dx ? `translateX(${dx}px)` : '';
@@ -1769,16 +1785,21 @@ document.addEventListener('pointermove', (e) => {
   if (dx <= -SLIDE_TO_CANCEL_PX) {
     slideCancelActive = false;
     slideCancelStartX = null;
+    slideCancelPointerId = null;
     drag.style.transition = '';
     drag.style.transform = '';
     cancelVoiceRecording(); // also resets chat-record-bar's hidden state via stopChatRecordUi()
+    return;
   }
-});
+  e.preventDefault();
+}, { passive: false });
 
-function resetSlideCancelDrag() {
+function resetSlideCancelDrag(e) {
   if (!slideCancelActive) return;
+  if (e && slideCancelPointerId != null && e.pointerId !== slideCancelPointerId) return;
   slideCancelActive = false;
   slideCancelStartX = null;
+  slideCancelPointerId = null;
   const drag = document.getElementById('chat-record-drag');
   if (!drag) return;
   // Didn't cross the threshold — snap back to start instead of
@@ -1790,6 +1811,11 @@ function resetSlideCancelDrag() {
 }
 document.addEventListener('pointerup', resetSlideCancelDrag);
 document.addEventListener('pointercancel', resetSlideCancelDrag);
+// If the whole record bar gets torn down mid-drag (e.g. a re-render
+// from a new message arriving) the pointerup/pointercancel above may
+// never fire on it — leaving slideCancelActive stuck true and the
+// next drag on a freshly-rendered bar starting from stale state.
+document.addEventListener('pointerleave', resetSlideCancelDrag, true);
 
 // ── VOICE NOTES: COMPACT PLAYBACK BUBBLE ──
 // Used both for the pre-send preview and for rendering a received/
@@ -2163,7 +2189,11 @@ function groupMsgBubbleHtml(m, myId, group = { start: true, end: true }) {
   const sender = groupSenderProfile(m.sender_id);
   const nameHtml = (!mine && group.start && sender) ? `<div class="gm-sender-name">${esc(sender.display_name || sender.username)}${vBadge(sender)}</div>` : '';
   const meta = msgMetaHtml(m.created_at, '', bareMedia);
-  const bubbleInner = mediaHtml + bodyHtml + meta;
+  // See msgBubbleHtml()'s matching comment: a captionless voice note
+  // pairs the player and meta in a flex row so the float-based
+  // caption layout doesn't blow the bubble out too wide.
+  const voiceOnly = m.media_type === 'audio' && !hasCaption;
+  const bubbleInner = voiceOnly ? `<span class="voice-row">${mediaHtml}${meta}</span>` : mediaHtml + bodyHtml + meta;
   return `
   <div class="${cls.join(' ')}" id="msg-${m.id}" data-day="${esc(chatDayLabel(m.created_at))}" data-sender="${esc(m.sender_id)}" data-ts="${esc(m.created_at)}">
     ${nameHtml}
