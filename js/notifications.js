@@ -3,7 +3,7 @@
 // Rows are created server-side by triggers (see schema.sql) — this
 // page only ever reads + marks-read, never inserts.
 // ─────────────────────────────────────────────────────────────
-const NOTIF_SELECT = '*, actor:profiles!notifications_actor_id_fkey(username,display_name,avatar_url,verified,verification_type), post:posts(id,body,is_deleted,profile:profiles!posts_author_id_fkey(username)), reply:replies(id,body,is_deleted)';
+const NOTIF_SELECT = '*, actor:profiles!notifications_actor_id_fkey(username,display_name,avatar_url,verified,verification_type), post:posts(id,body,is_deleted,profile:profiles!posts_author_id_fkey(username)), reply:replies(id,body,is_deleted), conversation:conversations(id,kind,name,avatar_url)';
 
 const NOTIF_ICON = {
   like:    ICON.heart,
@@ -12,8 +12,13 @@ const NOTIF_ICON = {
   quote:   ICON.quote,
   mention: '<svg viewBox="0 0 24 24"><path d="M15.5 12a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"/><path d="M15.5 12v1.2c0 1.3 1 2.3 2.3 2.3s2.2-1 2.2-3.5a8 8 0 1 0-3.5 6.6"/></svg>',
   follow:  '<svg viewBox="0 0 24 24"><circle cx="12" cy="8.3" r="3.6"/><path d="M4.5 20c1.2-4 4-6 7.5-6s6.3 2 7.5 6"/></svg>',
-  message: ICON.chat
+  message: ICON.chat,
+  group_invite: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.3" r="3.3"/><path d="M2.8 20c.9-3.7 3.2-5.6 6.2-5.6s5.3 1.9 6.2 5.6"/><path d="M15.6 5.3a3.2 3.2 0 0 1 0 6.1"/><path d="M16.2 14.8c2.4.5 4.1 2.2 4.9 5.2"/></svg>'
 };
+
+// Path for a group/channel thread — mirrors groupMessagesUrl() in
+// js/chat.js, which isn't loaded on this page.
+function notifGroupUrl(id) { return `/messages/g/${encodeURIComponent(id)}`; }
 
 function notifText(n) {
   const who = `<b>${esc(n.actor?.display_name || n.actor?.username || 'Someone')}${vBadge(n.actor)}</b>`;
@@ -24,18 +29,21 @@ function notifText(n) {
   if (n.type === 'mention') return `${who} mentioned you`;
   if (n.type === 'follow') return `${who} followed you`;
   if (n.type === 'message') return `${who} sent you a message`;
+  if (n.type === 'group_invite') return `${who} invited you to join <b>${esc(n.conversation?.name || (n.conversation?.kind === 'channel' ? 'a channel' : 'a group'))}</b>`;
   return who;
 }
 
 function notifHref(n) {
   if (n.type === 'follow') return n.actor?.username ? profileUrl(n.actor.username) : '#';
   if (n.type === 'message') return n.actor?.username ? messagesUrl(n.actor.username) : '#';
+  if (n.type === 'group_invite') return n.conversation?.id ? notifGroupUrl(n.conversation.id) : '#';
   if (n.post && !n.post.is_deleted) return postUrlById(n.post.id, n.post.profile?.username || n.post.author?.username);
   return '#';
 }
 
 function notifItemHtml(n) {
   if (n.type === 'mention') return mentionItemHtml(n);
+  if (n.type === 'group_invite') return groupInviteItemHtml(n);
   const actorAvatar = avatarUrl(n.actor?.avatar_url);
   // A mention inside a reply used to snippet the parent post's body
   // (all notifications link post_id to the parent post, for
@@ -102,6 +110,69 @@ function mentionItemHtml(n) {
   </a>`;
 }
 
+// Group/channel invite — Accept/Decline live right on the
+// notification card instead of just linking through, mirroring the
+// landing screen chat.js shows if you open the thread link directly
+// (renderGroupInviteScreen() in js/chat.js) for whichever one someone
+// actually uses. n.inviteStatus is computed in loadNotifications()
+// below, not carried on the row itself: 'pending' shows the two
+// buttons, 'accepted' shows a plain confirmation, 'gone' means the
+// invite was already declined/canceled or the row's simply no longer
+// there.
+function groupInviteItemHtml(n) {
+  const actorAvatar = avatarUrl(n.actor?.avatar_url);
+  const status = n.inviteStatus;
+  const actionsHtml = status === 'pending' ? `
+      <div class="notif-invite-actions">
+        <button type="button" class="notif-invite-decline-btn" onclick="respondGroupInviteFromNotif(this,'${esc(n.conversation?.id || '')}',false)">Decline</button>
+        <button type="button" class="notif-invite-accept-btn" onclick="respondGroupInviteFromNotif(this,'${esc(n.conversation?.id || '')}',true)">Accept</button>
+      </div>`
+    : status === 'accepted' ? `<div class="notif-invite-status notif-invite-status-joined">You joined &middot; <a href="${notifHref(n)}">Open</a></div>`
+    : `<div class="notif-invite-status">Invite no longer available</div>`;
+  return `
+  <div class="notif-item notif-item-invite${n.read ? '' : ' unread'}">
+    <a class="notif-invite-linkwrap" href="${notifHref(n)}">
+      <span class="notif-avatar-wrap${avSqClass(n.actor) ? ' notif-avatar-wrap-sq' : ''}">
+        <img class="avatar${avSqClass(n.actor)}" src="${esc(actorAvatar)}" alt="" loading="lazy" decoding="async">
+        <span class="notif-badge group_invite">${NOTIF_ICON.group_invite}</span>
+      </span>
+      <div class="notif-body">
+        <div class="notif-txt">${notifText(n)}</div>
+        <div class="notif-time">${timeAgo(n.created_at)}</div>
+      </div>
+    </a>
+    ${actionsHtml}
+    ${n.read ? '' : '<span class="notif-dot" aria-hidden="true"></span>'}
+  </div>`;
+}
+
+// Accept/decline right from the card. Neither needs an RPC: accept
+// is just flipping your own conversation_members row to 'accepted'
+// (conversation_members_update_own RLS), decline just deletes it
+// (conversation_members_delete_self) — same two calls
+// acceptGroupInvite()/declineGroupInvite() make in js/chat.js, kept
+// separate here since chat.js isn't loaded on this page.
+async function respondGroupInviteFromNotif(btnEl, convId, accept) {
+  if (!currentSession || !convId) return;
+  const card = btnEl.closest('.notif-item-invite');
+  const actionsEl = card?.querySelector('.notif-invite-actions');
+  actionsEl?.querySelectorAll('button').forEach(b => b.disabled = true);
+  const { error } = accept
+    ? await sb.from('conversation_members').update({ status: 'accepted' }).eq('conversation_id', convId).eq('user_id', currentSession.user.id)
+    : await sb.from('conversation_members').delete().eq('conversation_id', convId).eq('user_id', currentSession.user.id);
+  if (error) {
+    toast(error.message || 'Could not respond to that invite.', 'error');
+    actionsEl?.querySelectorAll('button').forEach(b => b.disabled = false);
+    return;
+  }
+  toast(accept ? 'Joined.' : 'Invite declined.');
+  if (actionsEl) {
+    actionsEl.outerHTML = accept
+      ? `<div class="notif-invite-status notif-invite-status-joined">You joined &middot; <a href="${notifGroupUrl(convId)}">Open</a></div>`
+      : `<div class="notif-invite-status">Invite declined</div>`;
+  }
+}
+
 // Buckets rows the way most notification inboxes do: anything unread
 // jumps to its own "New" group regardless of age, then everything
 // else (already read — from an earlier visit) is grouped by day so a
@@ -162,6 +233,19 @@ async function loadNotifications() {
   if (!data.length) {
     root.innerHTML = `<div id="feed-empty">Nothing here yet. Likes, replies, mentions, and new followers will show up here.</div>`;
     return;
+  }
+
+  // Whether each group_invite is still pending isn't on the
+  // notification row itself (accepting/declining doesn't touch
+  // notifications, only conversation_members — see
+  // supabase/group_invites.sql) — one batched lookup covers every
+  // invite notification on the page instead of a query per card.
+  const inviteConvIds = [...new Set(data.filter(n => n.type === 'group_invite' && n.conversation?.id).map(n => n.conversation.id))];
+  if (inviteConvIds.length) {
+    const { data: memberRows } = await sb.from('conversation_members').select('conversation_id,status')
+      .eq('user_id', session.user.id).in('conversation_id', inviteConvIds);
+    const statusByConv = new Map((memberRows || []).map(r => [r.conversation_id, r.status]));
+    data.forEach(n => { if (n.type === 'group_invite') n.inviteStatus = statusByConv.get(n.conversation?.id) || 'gone'; });
   }
 
   renderNotifGroups(root, data);

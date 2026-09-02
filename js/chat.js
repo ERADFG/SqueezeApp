@@ -306,7 +306,7 @@ async function loadConversationList(session, root) {
   // parallel across every conversation up front rather than blocking
   // row-by-row.
   const rows = await Promise.all(merged.map(async item => {
-    if (item.kind === 'group') return groupConvRowHtml(item.row);
+    if (item.kind === 'group') return groupConvRowHtml(item.row, session.user.id);
     const { other, last, mine } = item.row;
     const unread = !mine && !last.read;
     const uname = other?.username || 'unknown';
@@ -353,9 +353,15 @@ async function loadConversationList(session, root) {
 // list can be merged with the 1:1 rows above and sorted by whichever
 // is more recent — group or DM.
 async function loadMyGroupRows(session) {
+  // Only ACCEPTED memberships show up as a chat thread in the list —
+  // a pending invite (added by someone else, not yet responded to)
+  // only surfaces as a notification (js/notifications.js) with
+  // Accept/Decline, same as loadGroupThread()'s landing screen for
+  // anyone who opens the link directly.
   const { data: memberRows, error } = await sb.from('conversation_members')
     .select('conversation_id, role, last_read_at, conversation:conversations(id,kind,name,description,avatar_url,is_public,created_by)')
-    .eq('user_id', session.user.id);
+    .eq('user_id', session.user.id)
+    .eq('status', 'accepted');
   if (error || !memberRows?.length) return [];
 
   const ids = memberRows.map(r => r.conversation_id);
@@ -382,11 +388,20 @@ function groupAvatarHtml(conv) {
   return `<div class="conv-group-avatar">${esc((conv.name || '?').slice(0, 1).toUpperCase())}</div>`;
 }
 
-function groupConvRowHtml(g) {
-  const unread = g.last && g.lastReadAt ? new Date(g.last.created_at) > new Date(g.lastReadAt) : !!(g.last && !g.lastReadAt);
+function groupConvRowHtml(g, myId) {
+  // A group/channel row only reads "unread" by comparing the last
+  // message's timestamp against this member's last_read_at — with no
+  // check on who actually sent that last message. Posting into your
+  // own channel makes g.last.created_at newer than your own
+  // last_read_at (sending doesn't bump it, only opening the thread
+  // does), so your own post came back looking like an unread message
+  // FROM someone else. Same fix the 1:1 list already uses (`!mine &&
+  // !last.read`) — a message you sent yourself is never unread to you.
+  const mine = !!(g.last && g.last.sender_id === myId);
+  const unread = !mine && g.last && (g.lastReadAt ? new Date(g.last.created_at) > new Date(g.lastReadAt) : true);
   let snip = '';
   if (g.last) {
-    const who = g.last.sender ? `${g.last.sender.display_name || g.last.sender.username}: ` : '';
+    const who = mine ? `${t('chat.youPrefix')}` : (g.last.sender ? `${g.last.sender.display_name || g.last.sender.username}: ` : '');
     if (g.last.media_type) snip = esc(who) + esc(g.last.media_type === 'video' ? t('chat.video') : g.last.media_type === 'audio' ? t('chat.voiceMessage') : t('chat.photo'));
     else snip = esc(who) + esc((g.last.body || '').slice(0, 70));
   } else {
@@ -919,6 +934,9 @@ async function createConversation() {
     return;
   }
 
+  // Everyone picked here gets a pending invite, same as giAddMember()
+  // — you land in the new group/channel immediately as its owner,
+  // but they only join once they accept (conversation_members_force_invite_status_trg).
   const extraMembers = [...gcvPickedMembers.values()];
   if (extraMembers.length) {
     await sb.from('conversation_members').insert(
@@ -1350,6 +1368,30 @@ async function deleteMessageForEveryone(id, ev) {
       if (bubble) bubble.innerHTML = `${CHAT_ICON_LOCK}<em class="msg-deleted-note">${esc(t('chat.messageDeleted'))}</em>`;
       row.querySelectorAll('.msg-menu-wrap .pc-menu-danger').forEach(b => b.remove());
     }
+  } catch (e) {
+    toast(e.message || 'Could not delete that message.', 'error');
+  }
+}
+
+// Sender-only hard delete for a group/channel message. Unlike the 1:1
+// thread there's no "for me" vs "for everyone" choice — the
+// messages_delete_own_conversation RLS policy (chat_full_setup.sql)
+// already restricts the delete to whoever sent it, and once it's gone
+// it's gone for every member, so a plain client-side delete is all
+// this needs (no RPC, no tombstone flag to set).
+async function deleteGroupMessage(id, ev) {
+  if (ev) ev.stopPropagation();
+  document.getElementById(`mmenu-${id}`)?.classList.remove('open');
+  const ok = await ocConfirm({
+    title: t('chat.deleteMessageTitle'),
+    desc: t('chat.deleteGroupMessageDesc'),
+    confirmLabel: t('action.delete'),
+  });
+  if (!ok) return;
+  try {
+    const { error } = await sb.from('messages').delete().eq('id', id);
+    if (error) throw error;
+    document.getElementById(`msg-${id}`)?.remove();
   } catch (e) {
     toast(e.message || 'Could not delete that message.', 'error');
   }
@@ -2064,7 +2106,7 @@ async function loadGroupThread(session, root) {
   if (convErr || !conv) { root.innerHTML = `<div class="errmsg">${esc(t('chat.userNotFound') || "This chat doesn't exist.")}</div>`; return; }
 
   const { data: members } = await sb.from('conversation_members')
-    .select('user_id, role, joined_at, profile:profiles(id,username,display_name,avatar_url,verified,verification_type)')
+    .select('user_id, role, status, joined_at, invited_by, profile:profiles!conversation_members_user_id_fkey(id,username,display_name,avatar_url,verified,verification_type), inviter:profiles!conversation_members_invited_by_fkey(id,username,display_name,avatar_url,verified,verification_type)')
     .eq('conversation_id', conv.id);
 
   chatGroup = conv;
@@ -2079,6 +2121,16 @@ async function loadGroupThread(session, root) {
 
   document.body.classList.add('chat-thread-open');
   document.getElementById('chat-sec-bar').innerHTML = `<a class="back" href="chat.html" style="margin:0 10px 0 0;">&larr;</a> ${esc(conv.name)}`;
+
+  // Invited but haven't responded yet — show the accept/decline
+  // landing screen instead of the live thread. get_group_thread()
+  // and the member list both require an ACCEPTED row (see
+  // supabase/group_invites.sql), so there's nothing more to load
+  // here until they respond.
+  if (mine && mine.status === 'pending') {
+    renderGroupInviteScreen(root, conv, mine);
+    return;
+  }
 
   // Public conversation, not yet a member — auto-join like subscribing
   // to a Telegram channel (RLS: conversation_members_insert_self_public).
@@ -2098,6 +2150,11 @@ async function loadGroupThread(session, root) {
   (msgs || []).forEach(m => { m._plain = m.body; });
 
   const canPost = conv.kind === 'group' || chatGroupMyRole === 'owner' || chatGroupMyRole === 'admin';
+  // chatGroupMembers can include other people's still-pending invites
+  // (visible to any accepted member per conversation_members_select),
+  // which shouldn't count toward "N members" until they've actually
+  // accepted.
+  const chatHdrMemberCount = chatGroupMembers.filter(m => m.status !== 'pending').length;
   const composerHtml = canPost ? `
       <div id="chat-attach-preview" class="chat-attach-preview" hidden></div>
       <div id="chat-record-bar" class="chat-record-bar" hidden>
@@ -2127,11 +2184,18 @@ async function loadGroupThread(session, root) {
         <a href="#" onclick="event.preventDefault();openGroupInfo();">${groupAvatarHtml(conv)}</a>
         <div>
           <a class="nm" href="#" onclick="event.preventDefault();openGroupInfo();">${esc(conv.name)}</a>
-          <span class="chat-hdr-sub">${conv.kind === 'channel' ? 'Channel' : 'Group'} &middot; ${chatGroupMembers.length} member${chatGroupMembers.length === 1 ? '' : 's'}${conv.is_public ? ' &middot; Public' : ''}</span>
+          <span class="chat-hdr-sub">${conv.kind === 'channel' ? 'Channel' : 'Group'} &middot; ${chatHdrMemberCount} member${chatHdrMemberCount === 1 ? '' : 's'}${conv.is_public ? ' &middot; Public' : ''}</span>
         </div>
+        <button type="button" class="chat-hdr-info-btn" aria-label="${esc(t('chat.searchInConversation'))}" title="${esc(t('chat.searchInConversation'))}" onclick="toggleChatSearch(event)">${ICON_SEARCH}</button>
         <button type="button" class="chat-hdr-info-btn" aria-label="Chat info" onclick="openGroupInfo()">${ICON_INFO}</button>
       </div>
+      <div class="chat-search-bar" id="chat-search-bar" hidden>
+        ${ICON_SEARCH}
+        <input type="text" id="chat-search-input" placeholder="${esc(t('chat.searchPlaceholder'))}" oninput="filterChatSearch(this.value)">
+        <button type="button" class="chat-search-close" aria-label="${esc(t('chat.back'))}" onclick="toggleChatSearch(event)">${ICON_CLOSE}</button>
+      </div>
       <div class="chat-msgs" id="chat-msgs">${renderGroupMsgsHtml(msgs || [], session.user.id, mine ? mine.last_read_at : null)}</div>
+      <div id="chat-search-empty" class="chat-search-empty" hidden>${esc(t('chat.noSearchResults'))}</div>
       ${composerHtml}
     </div>`;
 
@@ -2144,6 +2208,66 @@ async function loadGroupThread(session, root) {
   }
 
   subscribeGroupRealtime(conv.id, session.user.id);
+}
+
+// ── PENDING INVITE LANDING SCREEN ──
+// Shown instead of the live thread when you've been added to a
+// private group/channel by someone else but haven't accepted or
+// declined yet (mine.status === 'pending' — see loadGroupThread()
+// above). Mirrors the notification card's own Accept/Decline pair
+// (js/notifications.js's groupInviteItemHtml()) for whoever arrives
+// here straight from the link instead of tapping a button.
+function renderGroupInviteScreen(root, conv, mine) {
+  const inviter = mine.inviter;
+  const byLine = inviter
+    ? `<b>${esc(inviter.display_name || inviter.username)}</b>${vBadge(inviter)} invited you to join`
+    : `You've been invited to join`;
+  root.innerHTML = `
+    <div class="chat-thread chat-invite-screen">
+      <div class="chat-hdr">
+        <a class="chat-hdr-back" href="chat.html" aria-label="${esc(t('chat.back'))}">${ICON_BACK}</a>
+        <div>&nbsp;</div>
+      </div>
+      <div class="chat-invite-card">
+        ${groupAvatarHtml(conv)}
+        <div class="chat-invite-by">${byLine}</div>
+        <div class="chat-invite-name">${esc(conv.name)}</div>
+        <div class="chat-invite-sub">${conv.kind === 'channel' ? 'Channel' : 'Group'}${conv.is_public ? ' &middot; Public' : ''}</div>
+        ${conv.description ? `<div class="chat-invite-desc">${esc(conv.description)}</div>` : ''}
+        <div class="chat-invite-actions">
+          <button type="button" class="chat-invite-decline-btn" onclick="declineGroupInvite('${esc(conv.id)}')">Decline</button>
+          <button type="button" class="chat-invite-accept-btn" onclick="acceptGroupInvite('${esc(conv.id)}')">Accept</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+// Accept: flips your own row to 'accepted' (conversation_members_update_own
+// RLS — no admin/owner privilege needed, it's your own row) then just
+// re-runs loadGroupThread() to drop straight into the now-unlocked
+// live thread.
+async function acceptGroupInvite(convId) {
+  if (!currentSession) return;
+  const { error } = await sb.from('conversation_members')
+    .update({ status: 'accepted' })
+    .eq('conversation_id', convId).eq('user_id', currentSession.user.id);
+  if (error) { toast(error.message || 'Could not accept that invite.', 'error'); return; }
+  toast('Joined.');
+  loadGroupThread(currentSession, document.getElementById('chat-root'));
+}
+
+// Decline: deletes your own pending row outright (conversation_members_delete_self
+// RLS) rather than leaving a declined-but-present row around — same
+// effect as never having been added, and frees the slot for a fresh
+// invite later.
+async function declineGroupInvite(convId) {
+  if (!currentSession) return;
+  const { error } = await sb.from('conversation_members')
+    .delete()
+    .eq('conversation_id', convId).eq('user_id', currentSession.user.id);
+  if (error) { toast(error.message || 'Could not decline that invite.', 'error'); return; }
+  toast('Invite declined.');
+  location.href = 'chat.html';
 }
 
 function groupSenderProfile(senderId) {
@@ -2194,10 +2318,25 @@ function groupMsgBubbleHtml(m, myId, group = { start: true, end: true }) {
   // caption layout doesn't blow the bubble out too wide.
   const voiceOnly = m.media_type === 'audio' && !hasCaption;
   const bubbleInner = voiceOnly ? `<span class="voice-row">${mediaHtml}${meta}</span>` : mediaHtml + bodyHtml + meta;
+  // Delete is sender-only here (own-message deletion), matching the
+  // messages_delete_own_conversation RLS policy in chat_full_setup.sql
+  // — there's no "delete for me"/"for everyone" split like the 1:1
+  // thread has, since a group message is just hard-deleted outright,
+  // the same for every member once it's gone.
+  const menu = mine ? `
+    <div class="pc-menu-wrap msg-menu-wrap" id="mmenu-${m.id}">
+      <button type="button" class="pc-menu-btn" onclick="toggleMsgMenu('${m.id}', event)">${ICON.menu}</button>
+      <div class="pc-menu-dd">
+        <button type="button" class="pc-menu-danger" onclick="deleteGroupMessage('${m.id}', event)">${esc(t('chat.deleteMessage'))}</button>
+      </div>
+    </div>` : '';
+  const searchText = hasCaption ? esc(m._plain.toLowerCase()) : '';
   return `
-  <div class="${cls.join(' ')}" id="msg-${m.id}" data-day="${esc(chatDayLabel(m.created_at))}" data-sender="${esc(m.sender_id)}" data-ts="${esc(m.created_at)}">
+  <div class="${cls.join(' ')}" id="msg-${m.id}" data-day="${esc(chatDayLabel(m.created_at))}" data-sender="${esc(m.sender_id)}" data-ts="${esc(m.created_at)}" data-search="${searchText}">
     ${nameHtml}
+    ${mine ? menu : ''}
     <div class="msg-bubble${bareMedia ? ' msg-bubble-bare-media' : ''}">${bubbleInner}</div>
+    ${mine ? '' : menu}
   </div>`;
 }
 
@@ -2292,21 +2431,31 @@ function openGroupInfo() {
   bg.id = 'gi-modal-bg';
   bg.className = 'modal-bg';
   bg.onclick = e => { if (e.target === bg) bg.remove(); };
+  // Pending invitees (added by an owner/admin, haven't accepted or
+  // declined yet — see supabase/group_invites.sql) are only visible
+  // here to someone who can already manage the group, same as the
+  // conversation_members_select RLS policy that fetched them. They
+  // get their own "Invited" badge instead of a role, and "cancel
+  // invite" instead of "remove" (same DELETE under the hood either
+  // way — conversation_members_delete_admin doesn't care which
+  // status the row is in).
+  const acceptedCount = chatGroupMembers.filter(m => m.status !== 'pending').length;
   const membersHtml = chatGroupMembers
     .slice()
-    .sort((a, b) => (a.role === 'owner' ? -1 : b.role === 'owner' ? 1 : 0))
+    .sort((a, b) => (a.role === 'owner' ? -1 : b.role === 'owner' ? 1 : 0) || (a.status === 'pending' ? 1 : b.status === 'pending' ? -1 : 0))
     .map(m => {
+      const pending = m.status === 'pending';
       // Owner can't be removed here (they'd need to delete the whole
       // conversation instead), and removing yourself is "Leave"
       // below, not this button — so it only ever shows for other
       // non-owner members, and only to someone who can manage.
       const canRemove = canManage && m.role !== 'owner' && m.user_id !== currentSession?.user?.id;
       return `
-      <div class="gi-member-row">
+      <div class="gi-member-row${pending ? ' gi-member-row-pending' : ''}">
         <img src="${esc(avatarUrl(m.profile?.avatar_url))}" alt="">
         <span>${esc(m.profile?.display_name || m.profile?.username || 'Unknown')}${vBadge(m.profile)}</span>
-        <span class="gi-member-role">${esc(m.role)}</span>
-        ${canRemove ? `<button type="button" class="gi-member-remove" onclick="giRemoveMember('${esc(m.user_id)}')" title="Remove from ${chatGroup.kind}">${ICON_CLOSE}</button>` : ''}
+        <span class="gi-member-role${pending ? ' gi-member-role-pending' : ''}">${pending ? 'Invited' : esc(m.role)}</span>
+        ${canRemove ? `<button type="button" class="gi-member-remove" onclick="giRemoveMember('${esc(m.user_id)}')" title="${pending ? 'Cancel invite' : `Remove from ${chatGroup.kind}`}">${ICON_CLOSE}</button>` : ''}
       </div>`;
     }).join('');
   bg.innerHTML = `
@@ -2346,7 +2495,7 @@ function openGroupInfo() {
           </div>
         </div>` : ''}
       </div>
-      <div class="gi-section-label">${chatGroupMembers.length} member${chatGroupMembers.length === 1 ? '' : 's'}</div>
+      <div class="gi-section-label">${acceptedCount} member${acceptedCount === 1 ? '' : 's'}</div>
       <div id="gi-member-list">${membersHtml}</div>
       <div class="gi-actions">
         ${canManage ? `<button type="button" class="gi-add-btn" onclick="giShowAddMembers()">${ICON_PLUS_CIRCLE} Add members</button>` : ''}
@@ -2464,10 +2613,14 @@ function giSearchAddMembers(q) {
 }
 async function giAddMember(userId) {
   if (!chatGroup) return;
+  // Becomes a pending invite, not instant membership — forced
+  // server-side by conversation_members_force_invite_status_trg (see
+  // supabase/group_invites.sql), which is what actually decides
+  // status/invited_by regardless of what's sent here.
   const { error } = await sb.from('conversation_members').insert({ conversation_id: chatGroup.id, user_id: userId, role: 'member' });
-  if (error) { toast(error.message || 'Could not add that member.', 'error'); return; }
+  if (error) { toast(error.message || 'Could not invite that person.', 'error'); return; }
   document.getElementById('gi-modal-bg')?.remove();
-  toast('Member added.');
+  toast('Invite sent.');
   loadGroupThread(currentSession, document.getElementById('chat-root'));
 }
 
@@ -2480,12 +2633,13 @@ async function giRemoveMember(userId) {
   if (!chatGroup) return;
   const m = chatGroupMembers.find(x => x.user_id === userId);
   const label = m?.profile?.display_name || m?.profile?.username || 'this person';
-  if (!confirm(`Remove ${label} from this ${chatGroup.kind}?`)) return;
+  const pending = m?.status === 'pending';
+  if (!confirm(pending ? `Cancel the invite for ${label}?` : `Remove ${label} from this ${chatGroup.kind}?`)) return;
   const { error } = await sb.from('conversation_members').delete()
     .eq('conversation_id', chatGroup.id).eq('user_id', userId);
-  if (error) { toast(error.message || 'Could not remove that member.', 'error'); return; }
+  if (error) { toast(error.message || (pending ? 'Could not cancel that invite.' : 'Could not remove that member.'), 'error'); return; }
   document.getElementById('gi-modal-bg')?.remove();
-  toast('Member removed.');
+  toast(pending ? 'Invite canceled.' : 'Member removed.');
   loadGroupThread(currentSession, document.getElementById('chat-root'));
 }
 

@@ -3828,6 +3828,36 @@ a.auth-submit { text-align:center; text-decoration:none; }
   .notif-mention-callout { margin-left:0; }
 }
 
+/* Group/channel invite notifications — same idea as the mention
+   card above (column stack instead of the plain row), but the two
+   blocks are "who + what" up top and Accept/Decline (or a plain
+   status line, once responded to) below, rather than a rendered
+   post. .notif-item is a <div> here, not an <a> — only the avatar+text
+   portion (.notif-invite-linkwrap) is a link, so tapping Accept/
+   Decline doesn't also navigate away. */
+.notif-item-invite { flex-direction:column; align-items:stretch; gap:10px; position:relative; }
+.notif-invite-linkwrap { display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; }
+.notif-item-invite .notif-dot { position:absolute; top:16px; right:16px; }
+.notif-invite-actions { display:flex; gap:8px; margin-left:58px; }
+@media (max-width: 480px) {
+  .notif-invite-actions { margin-left:0; }
+}
+.notif-invite-accept-btn, .notif-invite-decline-btn {
+  flex:1; border-radius:999px; padding:8px 14px; font-family:inherit; font-size:13.5px; font-weight:700;
+  cursor:pointer; text-align:center; transition:background-color .15s ease, opacity .15s ease;
+}
+.notif-invite-accept-btn { border:none; background:var(--maroon); color:#fff; }
+.notif-invite-accept-btn:hover { background:var(--maroon-dark, var(--maroon)); opacity:.9; }
+.notif-invite-decline-btn { border:1px solid var(--div); background:none; color:var(--ink); }
+.notif-invite-decline-btn:hover { background:var(--hover-bg); }
+.notif-invite-accept-btn:disabled, .notif-invite-decline-btn:disabled { opacity:.5; cursor:default; }
+.notif-invite-status { margin-left:58px; font-size:13px; color:var(--muted); }
+.notif-invite-status a { color:var(--maroon); font-weight:700; }
+.notif-invite-status-joined { color:var(--ink); }
+@media (max-width: 480px) {
+  .notif-invite-status { margin-left:0; }
+}
+
 /* ═══════════════════════════════════════════════════════════════
    CHAT PAGE
    ═══════════════════════════════════════════════════════════════ */
@@ -4252,6 +4282,31 @@ body.chat-thread-open #chat-fab { display:none; }
 .chat-unread-divider[hidden] { display:none; }
 .chat-channel-notice { display:flex; align-items:center; gap:8px; justify-content:center; padding:12px 16px; margin:0 16px 10px; border-radius:var(--r-sm); background:var(--hover-bg); color:var(--muted); font-size:13px; text-align:center; }
 .chat-channel-notice svg { width:16px; height:16px; flex:none; }
+
+/* Pending invite landing screen — shown instead of the live thread
+   when you open a private group/channel's link before accepting or
+   declining (renderGroupInviteScreen() in js/chat.js). Reuses
+   .chat-thread/.chat-hdr for the same fixed-height frame and back
+   button, then centers a single card in the space the messages/
+   composer would otherwise occupy. */
+.chat-invite-screen .chat-msgs, .chat-invite-screen .chat-composer { display:none; }
+.chat-invite-card { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 24px; gap:4px; overflow-y:auto; }
+.chat-invite-card .conv-group-avatar { width:76px; height:76px; font-size:28px; margin-bottom:14px; }
+.chat-invite-by { font-size:14px; color:var(--muted); }
+.chat-invite-by b { color:var(--ink); font-weight:800; }
+.chat-invite-by .verified-badge { width:14px; height:14px; margin:0 0 0 2px; vertical-align:middle; }
+.chat-invite-name { font-size:21px; font-weight:800; color:var(--ink); margin-top:4px; letter-spacing:-.01em; }
+.chat-invite-sub { font-size:13px; color:var(--muted); margin-top:2px; }
+.chat-invite-desc { font-size:14px; color:var(--ink); margin-top:10px; max-width:340px; line-height:1.4; }
+.chat-invite-actions { display:flex; gap:10px; margin-top:24px; width:100%; max-width:280px; }
+.chat-invite-accept-btn, .chat-invite-decline-btn {
+  flex:1; border-radius:999px; padding:11px 18px; font-family:inherit; font-size:14.5px; font-weight:700;
+  cursor:pointer; transition:background-color .15s ease, opacity .15s ease;
+}
+.chat-invite-accept-btn { border:none; background:var(--maroon); color:#fff; }
+.chat-invite-accept-btn:hover { opacity:.9; }
+.chat-invite-decline-btn { border:1px solid var(--div); background:none; color:var(--ink); }
+.chat-invite-decline-btn:hover { background:var(--hover-bg); }
 .gm-sender-name { font-size:12px; font-weight:700; color:var(--maroon); margin:0 0 2px 2px; }
 
 /* ── group info panel ── */
@@ -4350,6 +4405,11 @@ body.chat-thread-open #chat-fab { display:none; }
 .gi-member-row { display:flex; align-items:center; gap:10px; padding:8px 18px; }
 .gi-member-row img { width:32px; height:32px; border-radius:50%; }
 .gi-member-role { margin-left:auto; font-size:11px; font-weight:800; color:var(--muted); text-transform:uppercase; }
+/* Pending invitee row (added by an owner/admin, hasn't accepted yet
+   — see supabase/group_invites.sql). Dimmed slightly so the accepted
+   member list still reads as the "real" roster at a glance. */
+.gi-member-row-pending { opacity:.6; }
+.gi-member-role-pending { color:var(--maroon); }
 .gi-member-remove { flex:none; display:flex; align-items:center; justify-content:center; width:22px; height:22px; padding:0; margin-left:2px; background:none; border:none; border-radius:50%; color:var(--muted); cursor:pointer; }
 .gi-member-remove svg { width:12px; height:12px; }
 .gi-member-remove:hover { background:rgba(225,29,72,.08); color:var(--like); }

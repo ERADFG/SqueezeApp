@@ -98,6 +98,8 @@ const I18N_DICT = {
     'chat.deleteForMeDesc': "This removes it only for you \\u2014 the other person will still see it.",
     'chat.deleteForEveryoneDesc': "This removes it for everyone in the chat. This can't be undone.",
     'chat.messageDeleted': 'This message was deleted',
+    'chat.deleteMessage': 'Delete message',
+    'chat.deleteGroupMessageDesc': "This removes it for everyone in this chat. This can't be undone.",
     'chat.deleteConversation': 'Delete conversation',
     'chat.deleteConversationTitle': 'Delete this conversation?',
     'chat.deleteConversationDesc': 'This removes your messages with {username} from your inbox. {username} will still see their side.',
