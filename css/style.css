@@ -4312,7 +4312,18 @@ body.chat-thread-open #chat-fab { display:none; }
 /* ── group info panel ── */
 .gi-modal { width:380px; max-width:92vw; padding:0 0 16px; text-align:left; }
 .gi-hdr { padding:20px 18px 14px; text-align:center; border-bottom:1px solid var(--line); }
-.gi-hdr img, .gi-hdr .conv-group-avatar { width:64px; height:64px; margin:0 auto 10px; font-size:22px; }
+/* Scoped to .conv-group-avatar only (not "img") — the group/channel
+   avatar is always rendered via groupAvatarHtml(), which wraps the
+   photo in a .conv-group-avatar div, so there's never a bare <img>
+   directly under .gi-hdr. Matching "img" here used to tie in
+   specificity with .conv-group-avatar img's object-fit:cover (both
+   0,1,1) and win by being declared later, stripping the cover-fit
+   and replacing it with a flat width/height + margin:0 auto 10px
+   applied straight to the <img> — margin:auto doesn't center an
+   inline replaced element, so the photo rendered stretched into the
+   fixed box instead of cropped-and-centered by it, reading as
+   off-center. Dropping "img" lets object-fit:cover apply normally. */
+.gi-hdr .conv-group-avatar { width:64px; height:64px; margin:0 auto 10px; font-size:22px; }
 .gi-hdr h2 { margin:0 0 3px; }
 .gi-hdr p { font-size:12.5px; color:var(--muted); margin:0; }
 /* Explicit 64x64 box (matches .gi-hdr img/.conv-group-avatar) so this
