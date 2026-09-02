@@ -5521,11 +5521,11 @@ body[data-page="home"] #board-hdr .xtab.active::after {
 body[data-page="home"] #board-hdr .xtabs-indicator { display:none; }
 
 /* ── COMMUNITY / COMMUNITIES: squircle community icon with a
-   gradient, plus a faint sunburst-line banner. Scoped to these two
-   pages only. Both now pull from --mustard/--maroon-dk/--maroon-tint
-   (previously hardcoded orange hex), so they follow whichever
-   accent color a person picked in Settings → Appearance instead of
-   always showing orange regardless of theme. ── */
+   gradient (pulls from --mustard/--maroon-dk, so it follows
+   whichever accent color a person picked in Settings → Appearance).
+   The banner previously had a faint sunburst-line pattern behind
+   it — removed, since it competed visually with the avatar/photo
+   sitting on top. Scoped to these two pages only. ── */
 body[data-page="community"] .comm-avatar,
 body[data-page="communities"] .comm-avatar {
   border-radius:24%;
@@ -5548,13 +5548,11 @@ body[data-page="community"] .community-hero-top {
 }
 body[data-page="community"] .community-banner-wrap {
   height:150px;
-  background-image:
-    var(--banner-img, none),
-    repeating-conic-gradient(from 0deg at 16% 128%, var(--maroon-tint) 0deg 1deg, transparent 1deg 8deg);
-  background-position:center, 16% 128%;
-  background-size:cover, 220% 220%;
+  background-image: var(--banner-img, none);
+  background-position:center;
+  background-size:cover;
   background-color:var(--hover-bg);
-  background-repeat:no-repeat, no-repeat;
+  background-repeat:no-repeat;
 }
 body[data-page="community"] .community-hero-name { font-size:21px; }
 body[data-page="community"] .community-hero-meta {
