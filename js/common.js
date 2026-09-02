@@ -4501,8 +4501,9 @@ function cardClick(ev, postId, username = null) {
 }
 
 // ── LONG-PRESS POST PREVIEW ──────────────────────────────────────
-// Holding a post card for ~2 seconds pops it up front-and-center over
-// a blurred backdrop (like iOS's "peek" / Android's long-press card
+// Holding a post card for ~half a second (LP_HOLD_MS) pops it up
+// front-and-center over a blurred backdrop (like iOS's "peek" /
+// Android's long-press card
 // preview) with a row of quick actions underneath: Hide, Copy text,
 // Block, Report. Wired once here via delegated listeners so it works
 // on every `.pc` card the app ever renders (feed, profile, search,
@@ -4675,7 +4676,19 @@ async function lpBlockAuthor(postId) {
   try {
     await blockUser(p.author_id);
     toast(uname ? `Blocked @${uname}.` : 'User blocked.');
-    document.querySelectorAll(`[data-post-id="${postId}"]`).forEach(el => el.remove());
+    // Blocking is per-author, not per-post — a mixed feed can be
+    // showing several posts from the same person, and leaving the
+    // other ones sitting there until the next reload would make the
+    // block look like it only half-worked. Sweep every currently
+    // rendered card (via postCache, the same lookup openLongPressPreview
+    // uses) and fade out every one of theirs, not just the post that
+    // was long-pressed — same fade-and-collapse exit as hidePost().
+    document.querySelectorAll('.pc[data-post-id]').forEach(el => {
+      const cached = postCache[el.dataset.postId];
+      if (el.dataset.postId !== postId && (!cached || cached.author_id !== p.author_id)) return;
+      el.classList.add('lp-hidden-out');
+      setTimeout(() => el.remove(), 160);
+    });
   } catch (e) {
     toast(e.message || 'Could not block user.', 'error');
   }
@@ -5014,11 +5027,13 @@ async function isMuted(mutedId) {
   return !!data;
 }
 async function muteUser(mutedId) {
-  return sb.from('mutes').insert({ muter_id: currentSession.user.id, muted_id: mutedId });
+  const { error } = await sb.from('mutes').insert({ muter_id: currentSession.user.id, muted_id: mutedId });
+  if (error) throw error;
 }
 async function unmuteUser(mutedId) {
-  return sb.from('mutes').delete()
+  const { error } = await sb.from('mutes').delete()
     .eq('muter_id', currentSession.user.id).eq('muted_id', mutedId);
+  if (error) throw error;
 }
 
 async function isBlocked(blockedId) {
@@ -5027,12 +5042,24 @@ async function isBlocked(blockedId) {
     .eq('blocker_id', currentSession.user.id).eq('blocked_id', blockedId).maybeSingle();
   return !!data;
 }
+// blockUser()/unblockUser() throw on failure (rather than just
+// returning the raw {data,error} result) because every caller of
+// these two — lpBlockAuthor() below, profileMenuBlock() in
+// profile.js, chatToggleBlock() in chat.js, and the block toggle in
+// list.js — does a plain `await blockUser(...)` inside a try/catch
+// and expects a thrown error on failure, the same way followUser()'s
+// callers explicitly check `{ error }`. Without this, an RLS
+// rejection or a duplicate-block (blocks' primary key is
+// (blocker_id, blocked_id)) would silently no-op while the UI still
+// reported success.
 async function blockUser(blockedId) {
-  return sb.from('blocks').insert({ blocker_id: currentSession.user.id, blocked_id: blockedId });
+  const { error } = await sb.from('blocks').insert({ blocker_id: currentSession.user.id, blocked_id: blockedId });
+  if (error) throw error;
 }
 async function unblockUser(blockedId) {
-  return sb.from('blocks').delete()
+  const { error } = await sb.from('blocks').delete()
     .eq('blocker_id', currentSession.user.id).eq('blocked_id', blockedId);
+  if (error) throw error;
 }
 
 function mediaTypeFor(file) {
