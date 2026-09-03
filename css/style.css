@@ -2039,7 +2039,14 @@ html:has(> body.oc-sheet-open) { overflow:hidden; }
      align-items:flex-start keeps the avatar+textarea pinned to the
      TOP of the (still full-height, still scrollable) row, X-app style,
      so any leftover space falls below the text where it belongs. */
-  .modal.gc-modal .gc-row { flex:0 1 auto; min-height:0; max-height:100%; overflow-y:auto; align-items:flex-start; margin-top:6px; }
+  /* padding-top gives the avatar's ring (drawn with box-shadow, which
+     bleeds a couple px outside the element's own box) a little room
+     to breathe before hitting this row's scrollport edge — without it,
+     the avatar sat flush against the top of this overflow-y:auto box
+     and the browser clipped the top sliver of the ring/circle flat
+     instead of rendering the full curve. margin-top trimmed to match,
+     so the avatar's total top offset from the header stays the same. */
+  .modal.gc-modal .gc-row { flex:0 1 auto; min-height:0; max-height:100%; overflow-y:auto; align-items:flex-start; margin-top:2px; padding-top:4px; }
   .modal.gc-modal .ga-row { flex:none; }
   /* Absorbs whatever vertical space the draft + audience pill don't
      use, so the toolbar still pins to the bottom of the screen (right
