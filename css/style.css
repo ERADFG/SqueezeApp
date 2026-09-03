@@ -3787,7 +3787,13 @@ a.auth-submit { text-align:center; text-decoration:none; }
   border:2.5px solid var(--cream-card); box-sizing:content-box;
   background:var(--maroon); color:#fff;
 }
-.notif-item.unread .notif-badge { border-color:var(--maroon-tint); }
+/* Badge ring stays a crisp white/cream on unread rows too — it used
+   to switch to var(--maroon-tint) (the same pale blue as the unread
+   row's own background), which blended straight into light-colored
+   avatars like the default app-icon logo and made the badge look
+   like a bigger, borderless blob instead of a small ringed icon
+   (most visible on the group_invite badge, since it's the only type
+   that regularly notifies from that default avatar). */
 .notif-badge svg { width:11px; height:11px; fill:none; stroke:currentColor; stroke-width:2.4; }
 .notif-badge.like svg, .notif-badge.quote svg { fill:#fff; stroke:none; }
 /* The badge's -3px/-3px offset + matching ring border is tuned to
