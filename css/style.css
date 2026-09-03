@@ -4984,6 +4984,12 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .ep-form label { display:block; font-size:12px; font-weight:700; color:var(--muted); margin:14px 0 4px; }
 .ep-form input[type="text"], .ep-form textarea { max-width:100%; }
 .ep-form textarea { height:80px; }
+/* Only rendered at all when the account owns a community (see
+   editprofile.js) — a plain checkbox row, not styled as a label for
+   an input field like the ones above it, since this is a toggle
+   rather than something with typed content underneath. */
+.ep-toggle-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:18px 0 4px; font-size:14px; font-weight:600; color:var(--ink); cursor:pointer; }
+.ep-toggle-row input[type="checkbox"] { width:18px; height:18px; flex:none; accent-color:var(--link); cursor:pointer; }
 
 /* ── FOLLOWERS / FOLLOWING LIST PAGE ── */
 .fl-row { display:flex; align-items:center; gap:8px; padding:4px 16px; }

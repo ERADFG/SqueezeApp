@@ -35,6 +35,14 @@ async function loadEditProfile() {
     return;
   }
 
+  // The "show my community on my profile" toggle only makes sense for
+  // someone who actually owns one — querying this once up front so
+  // the row below can be left out entirely rather than showing a
+  // toggle for a feature that would do nothing.
+  const { data: ownedCommunities } = await sb.from('communities')
+    .select('id').eq('created_by', epProfile.id).limit(1);
+  const ownsCommunity = !!(ownedCommunities && ownedCommunities.length);
+
   document.getElementById('ep-back').href = profileUrl(epProfile.username);
   document.title = `Edit profile — InteractInk`;
 
@@ -67,6 +75,12 @@ async function loadEditProfile() {
 
       <label>Website</label>
       <input type="text" id="ep-website" maxlength="100" value="${esc(epProfile.website || '')}" placeholder="yourlink.com">
+
+      ${ownsCommunity ? `
+      <label class="ep-toggle-row" for="ep-show-community">
+        <span>Show my community on my profile</span>
+        <input type="checkbox" id="ep-show-community" ${epProfile.show_community ? 'checked' : ''}>
+      </label>` : ''}
 
       <div class="edit-row">
         <input type="submit" class="pf-btn" value="Save" onclick="saveEditProfile();return false;">
@@ -134,6 +148,8 @@ async function saveEditProfile() {
       location: document.getElementById('ep-location').value.trim().slice(0, 30) || null,
       website: normalizeWebsite(document.getElementById('ep-website').value.trim())
     };
+    const showCommunityEl = document.getElementById('ep-show-community');
+    if (showCommunityEl) updates.show_community = showCommunityEl.checked;
     if (epAvatarFile) {
       stEl.textContent = 'Uploading avatar…';
       updates.avatar_url = await uploadAvatar(epAvatarFile, epProfile.id);

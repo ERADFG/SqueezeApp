@@ -261,23 +261,33 @@ async function loadProfile() {
   // the whole header render on an extra query.
   loadReplyCountIntoStat(profile.id, profile.posts_count || 0);
 
-  loadProfileCommunity(profile.id);
+  loadProfileCommunity(profile.id, profile.show_community);
   loadUserPosts(profile.id);
 }
 
-// "Community" section — shows any community this profile created,
+// "Community" section — shows a community this profile created,
 // styled like X's own profile "Community" card (avatar, name,
 // description, member count) so a viewer can jump straight to it.
 // Only ever shows communities they OWN (created_by), not ones they've
-// merely joined — same as the reference. Silently removes the
-// section when they don't have one, rather than showing an empty
-// heading. Capped at 2 (accounts can't own more than that — see
-// supabase/community_owner_limit.sql), rendered as a horizontally
-// swipeable, scroll-snapped track when there are two, so the second
-// one is a swipe away instead of stacking the page taller.
-async function loadProfileCommunity(userId) {
+// merely joined — same as the reference. Capped at 2 (accounts can't
+// own more than that — see supabase/community_owner_limit.sql),
+// rendered as a horizontally swipeable, scroll-snapped track when
+// there are two, so the second one is a swipe away instead of
+// stacking the page taller.
+//
+// Opt-in, not automatic: owning a community used to be enough on its
+// own to plaster it across the top of your profile, whether you
+// wanted that there or not — for an account that created one mostly
+// to run it, rather than to advertise it, that's a section you never
+// asked for taking up space above your own posts. Now it only renders
+// once the owner has flipped "Show my community on my profile" on in
+// Edit Profile (see editprofile.js); defaults to off, so nothing
+// changes for anyone until they choose to turn it on. See
+// supabase/community_profile_toggle.sql for the column this reads.
+async function loadProfileCommunity(userId, showCommunity) {
   const el = document.getElementById('profile-community');
   if (!el) return;
+  if (!showCommunity) { el.remove(); return; }
   const { data, error } = await sb.from('communities').select('*')
     .eq('created_by', userId)
     .order('member_count', { ascending: false })
