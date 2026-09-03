@@ -3625,7 +3625,7 @@ a.auth-submit { text-align:center; text-decoration:none; }
    profile.js) instead of popping in mid-scroll — while it's loading,
    .banner-loading keeps the neutral gradient showing through so the
    header never looks broken or empty on a slow connection. */
-.profile-hdr.banner-loading::before { background-image:none; background-color:var(--hover-bg); transition:opacity .35s ease; }
+.profile-hdr.banner-loading::before { background-image:linear-gradient(135deg,#3F4B5A,#98A2AE); background-color:transparent; transition:opacity .35s ease; }
 .profile-hdr.banner-loading.banner-loaded::before { background-image:var(--banner-img); background-color:transparent; animation:oc-fade-in-opacity .35s ease both; }
 #pv-avatar { transition:opacity .2s ease; }
 .profile-id { flex:1; min-width:180px; padding-top:10px; }
@@ -3684,28 +3684,14 @@ a.auth-submit { text-align:center; text-decoration:none; }
 /* Posts/Replies/Scheduled — pulled out of .sec-bar's sticky/floating
    behavior entirely instead of chasing more backdrop-filter
    compositing edge cases: a plain bar in normal document flow can
-   never paint over the compose button or bottom nav while actively
-   scrolling, because it isn't layered above the page at all once
-   it's scrolled past. isolation:isolate (added above on
-   .sec-bar/.search-topbar/#board-hdr) still stands as the fix for
-   the OTHER sticky bars that actually need to stay pinned while you
-   scroll; this one just doesn't need to be sticky in the first
-   place.
-   Going static (rather than merely non-sticky) turned out to trade
-   one overlap for another, though: on a short profile (few posts,
-   little bio) this bar's natural resting spot can land in the exact
-   same fixed viewport band #m-fab (the round compose button,
-   z-index:850) always floats in — and since z-index has no effect
-   on a statically-positioned element, #m-fab's higher z-index simply
-   won it, painting the button straight over the "Scheduled" label.
-   position:relative (identical to static for layout — no offset is
-   set, so nothing moves) makes this bar a positioned element again
-   so its own z-index:860 can outrank the button on the rare frame
-   where they do overlap: its background is opaque, so the tab labels
-   now always stay legible and clickable, and #m-fab simply sits
-   behind the bar for that instant instead of on top of it. */
+   never paint over the compose button or bottom nav on scroll,
+   because it isn't layered above the page at all once it's scrolled
+   past. isolation:isolate (added above on .sec-bar/.search-topbar/
+   #board-hdr) still stands as the fix for the OTHER sticky bars that
+   actually need to stay pinned while you scroll; this one just
+   doesn't need to be sticky in the first place. */
 #profile-tabs.sec-bar {
-  position:relative; top:auto; z-index:860; isolation:auto;
+  position:static; top:auto; z-index:auto; isolation:auto;
   backdrop-filter:none; -webkit-backdrop-filter:none;
   background-color:var(--cream-card);
 }

@@ -118,15 +118,19 @@ async function loadProfile() {
       <div id="blocked-posts-area"></div>`;
     if (profile.banner_url) {
       const bannerCheck = new Image();
+      let bannerSettled = false;
       bannerCheck.onload = () => {
+        bannerSettled = true;
         const hdrEl = document.getElementById('profile-hdr');
         if (hdrEl) hdrEl.classList.add('banner-loaded');
       };
       bannerCheck.onerror = () => {
+        bannerSettled = true;
         const hdrEl = document.getElementById('profile-hdr');
         if (hdrEl) { hdrEl.style.removeProperty('--banner-img'); hdrEl.classList.remove('banner-loading'); }
       };
       bannerCheck.src = profile.banner_url;
+      setTimeout(() => { if (!bannerSettled) bannerCheck.onerror(); }, 6000);
     }
     return;
   }
@@ -217,18 +221,28 @@ async function loadProfile() {
   // fallback if it can't actually be displayed.
   if (profile.banner_url) {
     const bannerCheck = new Image();
+    let bannerSettled = false;
     // Also drives the fade-in below: 'load' flips --banner-img from
     // invisible to visible with a transition once it's actually
     // decoded, instead of popping in the instant bytes arrive.
     bannerCheck.onload = () => {
+      bannerSettled = true;
       const hdrEl = document.getElementById('profile-hdr');
       if (hdrEl) hdrEl.classList.add('banner-loaded');
     };
     bannerCheck.onerror = () => {
+      bannerSettled = true;
       const hdrEl = document.getElementById('profile-hdr');
       if (hdrEl) { hdrEl.style.removeProperty('--banner-img'); hdrEl.classList.remove('banner-loading'); }
     };
     bannerCheck.src = profile.banner_url;
+    // Bug fix: a banner that never fires load OR error (a request that
+    // just hangs — flaky connection, a CDN that stalls instead of
+    // 404ing) left .banner-loading applied forever, which meant the
+    // near-white placeholder from that class sat there indefinitely
+    // instead of ever settling on the real photo or the gradient
+    // fallback. Give it 6s, then treat it the same as a failed load.
+    setTimeout(() => { if (!bannerSettled) bannerCheck.onerror(); }, 6000);
   }
 
   if (!isOwnProfile && session) {
