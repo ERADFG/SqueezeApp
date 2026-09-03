@@ -3695,24 +3695,25 @@ a.auth-submit { text-align:center; text-decoration:none; }
   backdrop-filter:none; -webkit-backdrop-filter:none;
   background-color:var(--cream-card);
 }
-/* Bug fix: that reasoning above only holds if the page ends up taller
-   than the viewport, so there's actually something to scroll "past".
-   On a short/empty profile (little to no bio, no posts yet) the whole
-   page can be shorter than the screen — nothing scrolls at all, so
-   this bar just sits wherever the header height happens to land it on
-   first paint. On phones with a taller header (a bio, a community
-   card, etc.) that spot has been ending up right underneath #m-fab
-   (position:fixed, bottom-right), which visually painted the compose
-   button straight over the Scheduled tab's label — not a scroll-past
-   case, just a static overlap that never resolves on its own since
-   there's nothing to scroll. Lifting this above #m-fab's z-index
-   (850) and giving it a real stacking context means its own opaque
-   background always wins that overlap, so the tab labels stay fully
-   legible; #m-fab simply continues past underneath it, the same way
-   it already does under any other opaque foreground content. */
-@media (max-width:700px) {
-  #profile-tabs.sec-bar { z-index:900; }
-}
+/* Bug fix, take two: that reasoning above only holds if the page ends
+   up taller than the viewport, so there's actually something to
+   scroll "past". On a short/empty profile (little to no bio, no
+   posts yet) the whole page can be shorter than the screen — nothing
+   scrolls at all, so this bar just sits wherever the header height
+   happens to land it on first paint. On phones with a taller header
+   (a bio, a community card, etc.) that spot has been ending up right
+   underneath #m-fab (position:fixed, bottom-right) — a static overlap
+   that never resolves on its own since there's nothing to scroll.
+   A previous pass "fixed" this by lifting this bar's z-index above
+   #m-fab's (850) so its opaque background would win, keeping the
+   Scheduled label legible — but that meant the FAB itself rendered as
+   a half-eaten circle, sliced flat across the middle, which reads as
+   broken (X's own FAB never gets clipped like that — it always stays
+   a complete circle and simply floats over whatever's beneath, same
+   as #m-fab does everywhere else in this app). Going back to that
+   convention here too: #m-fab keeps winning the overlap and rendering
+   whole; this bar just yields under it like any other content it
+   floats past. */
 
 .profile-icon-btn {
   width:36px; height:36px; border-radius:50%; border:1px solid var(--border-input);
