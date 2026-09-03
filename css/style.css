@@ -4989,7 +4989,28 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
    an input field like the ones above it, since this is a toggle
    rather than something with typed content underneath. */
 .ep-toggle-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:18px 0 4px; font-size:14px; font-weight:600; color:var(--ink); cursor:pointer; }
-.ep-toggle-row input[type="checkbox"] { width:18px; height:18px; flex:none; accent-color:var(--link); cursor:pointer; }
+/* Bug fix: a bare `width:18px;height:18px` on the checkbox looked
+   fine on desktop but was ignored on some mobile browsers, which
+   fall back to their native checkbox at its own native size (~48px
+   on a high-DPI phone) — several times bigger than the text next to
+   it, and since that native control also carries its own baked-in
+   vertical centering/margin, no amount of align-items:center on the
+   row could actually get it level with the label text. `appearance:
+   none` opts out of that native rendering entirely and draws a
+   plain, fixed-size box by hand instead, so the size (and therefore
+   the centering) is the same everywhere. */
+.ep-toggle-row input[type="checkbox"] {
+  appearance:none; -webkit-appearance:none; -moz-appearance:none;
+  width:20px; height:20px; flex:none; margin:0; padding:0;
+  border:2px solid var(--line); border-radius:5px;
+  background:var(--bg); cursor:pointer; position:relative;
+  transition:background-color .15s ease, border-color .15s ease;
+}
+.ep-toggle-row input[type="checkbox"]:checked { background:var(--link); border-color:var(--link); }
+.ep-toggle-row input[type="checkbox"]:checked::after {
+  content:''; position:absolute; left:5px; top:1px; width:5px; height:10px;
+  border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg);
+}
 
 /* ── FOLLOWERS / FOLLOWING LIST PAGE ── */
 .fl-row { display:flex; align-items:center; gap:8px; padding:4px 16px; }
