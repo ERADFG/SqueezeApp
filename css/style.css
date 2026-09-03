@@ -3691,9 +3691,27 @@ a.auth-submit { text-align:center; text-decoration:none; }
    actually need to stay pinned while you scroll; this one just
    doesn't need to be sticky in the first place. */
 #profile-tabs.sec-bar {
-  position:static; top:auto; z-index:auto; isolation:auto;
+  position:relative; top:auto; z-index:auto; isolation:auto;
   backdrop-filter:none; -webkit-backdrop-filter:none;
   background-color:var(--cream-card);
+}
+/* Bug fix: that reasoning above only holds if the page ends up taller
+   than the viewport, so there's actually something to scroll "past".
+   On a short/empty profile (little to no bio, no posts yet) the whole
+   page can be shorter than the screen — nothing scrolls at all, so
+   this bar just sits wherever the header height happens to land it on
+   first paint. On phones with a taller header (a bio, a community
+   card, etc.) that spot has been ending up right underneath #m-fab
+   (position:fixed, bottom-right), which visually painted the compose
+   button straight over the Scheduled tab's label — not a scroll-past
+   case, just a static overlap that never resolves on its own since
+   there's nothing to scroll. Lifting this above #m-fab's z-index
+   (850) and giving it a real stacking context means its own opaque
+   background always wins that overlap, so the tab labels stay fully
+   legible; #m-fab simply continues past underneath it, the same way
+   it already does under any other opaque foreground content. */
+@media (max-width:700px) {
+  #profile-tabs.sec-bar { z-index:900; }
 }
 
 .profile-icon-btn {
