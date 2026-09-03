@@ -3684,14 +3684,28 @@ a.auth-submit { text-align:center; text-decoration:none; }
 /* Posts/Replies/Scheduled — pulled out of .sec-bar's sticky/floating
    behavior entirely instead of chasing more backdrop-filter
    compositing edge cases: a plain bar in normal document flow can
-   never paint over the compose button or bottom nav on scroll,
-   because it isn't layered above the page at all once it's scrolled
-   past. isolation:isolate (added above on .sec-bar/.search-topbar/
-   #board-hdr) still stands as the fix for the OTHER sticky bars that
-   actually need to stay pinned while you scroll; this one just
-   doesn't need to be sticky in the first place. */
+   never paint over the compose button or bottom nav while actively
+   scrolling, because it isn't layered above the page at all once
+   it's scrolled past. isolation:isolate (added above on
+   .sec-bar/.search-topbar/#board-hdr) still stands as the fix for
+   the OTHER sticky bars that actually need to stay pinned while you
+   scroll; this one just doesn't need to be sticky in the first
+   place.
+   Going static (rather than merely non-sticky) turned out to trade
+   one overlap for another, though: on a short profile (few posts,
+   little bio) this bar's natural resting spot can land in the exact
+   same fixed viewport band #m-fab (the round compose button,
+   z-index:850) always floats in — and since z-index has no effect
+   on a statically-positioned element, #m-fab's higher z-index simply
+   won it, painting the button straight over the "Scheduled" label.
+   position:relative (identical to static for layout — no offset is
+   set, so nothing moves) makes this bar a positioned element again
+   so its own z-index:860 can outrank the button on the rare frame
+   where they do overlap: its background is opaque, so the tab labels
+   now always stay legible and clickable, and #m-fab simply sits
+   behind the bar for that instant instead of on top of it. */
 #profile-tabs.sec-bar {
-  position:static; top:auto; z-index:auto; isolation:auto;
+  position:relative; top:auto; z-index:860; isolation:auto;
   backdrop-filter:none; -webkit-backdrop-filter:none;
   background-color:var(--cream-card);
 }
