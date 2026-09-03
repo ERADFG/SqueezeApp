@@ -2708,7 +2708,19 @@ body[data-page="auth"] #m-topbar, body[data-page="auth"] #m-tabbar, body[data-pa
 
 @media (max-width:700px) {
   #hdr { display:none; }
-  #main { margin-left:0; padding-top:53px; padding-bottom:calc(66px + env(safe-area-inset-bottom)); }
+  /* 66px used to only clear #m-tabbar itself (the bottom dock), but
+     #m-fab floats another 72px above that dock at its own 54px
+     height — so its top edge sits ~126px above the screen bottom,
+     well past that 66px buffer. On a page short enough to end right
+     around there (an empty/near-empty profile is the reliable
+     repro), the last real content — the Posts/Replies/Scheduled bar,
+     in that case — has nowhere to land but inside the FAB's own
+     footprint, and since nothing pushes the page taller than the
+     viewport there's no scroll available to carry it clear either;
+     it's stuck overlapping for good. 140px clears #m-fab's top edge
+     with a little to spare, so the last bit of content always ends
+     above it instead of tucked underneath. */
+  #main { margin-left:0; padding-top:53px; padding-bottom:calc(140px + env(safe-area-inset-bottom)); }
   #sidebar, .xright { display:none; }
 
   /* Every in-page sticky header (#board-hdr's "For you / Following"
@@ -6037,15 +6049,17 @@ html[data-theme="dim"], html[data-theme="dark"] {
   .achv-ring-level { font-size:21px; }
   /* The fixed #m-tabbar (~56px + safe-area) plus the floating compose
      FAB sit on top of this page's content. #main's own bottom padding
-     (padding-bottom:calc(66px + safe-area), set globally for the
-     mobile chrome) wasn't leaving enough real clearance here — the
-     last row of badges in the final category was scrolling to a stop
-     partly *behind* the tabbar instead of fully above it, so it got
-     visually sliced in half by the tabbar's opaque background and
-     read as "blended into" the nav icons below it. Give this specific
-     grid extra bottom breathing room so its last row always clears
-     both the FAB and the tabbar with room to spare, independent of
-     that shared calculation. */
+     (padding-bottom:calc(140px + safe-area), set globally for the
+     mobile chrome — bumped up from an old 66px that only cleared the
+     tabbar and not the FAB above it) wasn't leaving enough real
+     clearance here even so — the last row of badges in the final
+     category was scrolling to a stop partly *behind* the tabbar
+     instead of fully above it, so it got visually sliced in half by
+     the tabbar's opaque background and read as "blended into" the
+     nav icons below it. Give this specific grid extra bottom
+     breathing room so its last row always clears both the FAB and
+     the tabbar with room to spare, independent of that shared
+     calculation. */
   .achv-cats { padding:4px 10px calc(110px + env(safe-area-inset-bottom)); }
   .achv-grid { grid-template-columns:repeat(auto-fill, 78px); justify-content:start; gap:14px 8px; }
   .achv-badge { width:78px; max-width:78px; }
