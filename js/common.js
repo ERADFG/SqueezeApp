@@ -119,7 +119,17 @@ function repaintStickyChrome() {
     void el.offsetHeight; // force the browser to actually drop the old layer here
     el.style.display = '';
   });
-  document.querySelectorAll('.sec-bar, .search-topbar').forEach(el => {
+  // Same stale-compositing-layer bug also hits the small floating
+  // circular back buttons (.profile-back-btn on profile.html,
+  // .auth-back-btn on the login/signup/start hero) — position:
+  // absolute rather than position:fixed like the bars above, but
+  // they share the same backdrop-filter blur that seems to be what
+  // actually triggers it. Reported case: navigating from one profile
+  // page straight into another leaves the OUTGOING page's back
+  // button frozen as a translucent ghost on top of the freshly-
+  // loaded page underneath, in a plain Chromium browser — not just
+  // the in-app WebViews the pagereveal skip further below targets.
+  document.querySelectorAll('.sec-bar, .search-topbar, .profile-back-btn, .auth-back-btn').forEach(el => {
     el.style.display = 'none';
     void el.offsetHeight;
     el.style.display = '';
