@@ -4984,11 +4984,17 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .ep-form label { display:block; font-size:12px; font-weight:700; color:var(--muted); margin:14px 0 4px; }
 .ep-form input[type="text"], .ep-form textarea { max-width:100%; }
 .ep-form textarea { height:80px; }
-/* Only rendered at all when the account owns a community (see
-   editprofile.js) — a plain checkbox row, not styled as a label for
-   an input field like the ones above it, since this is a toggle
-   rather than something with typed content underneath. */
-.ep-toggle-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:18px 0 4px; font-size:14px; font-weight:600; color:var(--ink); cursor:pointer; }
+/* Bug fix: .ep-form label { display:block; font-size:12px; ... }
+   above (a class + element selector) has higher specificity than a
+   single class like .ep-toggle-row, so it was quietly winning and
+   forcing this back to display:block — meaning it was never
+   actually a flex row at all, and align-items:center had nothing to
+   do. That's what was really pushing the checkbox up: with no flex,
+   it just sat at its own inline top edge next to the block-level
+   text instead of being vertically centered against it. Scoping the
+   selector as .ep-form .ep-toggle-row (two classes) outranks that
+   rule instead of fighting it with !important. */
+.ep-form .ep-toggle-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:18px 0 4px; font-size:14px; font-weight:600; color:var(--ink); cursor:pointer; }
 /* Bug fix: a bare `width:18px;height:18px` on the checkbox looked
    fine on desktop but was ignored on some mobile browsers, which
    fall back to their native checkbox at its own native size (~48px
