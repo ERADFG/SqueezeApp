@@ -2018,7 +2018,8 @@ html:has(> body.oc-sheet-open) { overflow:hidden; }
      browser where the visualViewport 'resize' listener never fired;
      100dvh as the guaranteed first-line fallback fixes that. */
   .modal.gc-modal {
-    width:100%; max-width:100%; border-radius:0; padding-top:52px;
+    width:100%; max-width:100%; border-radius:0;
+    padding-top:calc(52px + env(safe-area-inset-top, 0px));
     height:100%; height:100dvh; height:var(--vvh, 100dvh);
     max-height:100vh; max-height:100dvh; max-height:var(--vvh, 100dvh);
     display:flex; flex-direction:column; overflow:hidden;
@@ -2038,7 +2039,7 @@ html:has(> body.oc-sheet-open) { overflow:hidden; }
      align-items:flex-start keeps the avatar+textarea pinned to the
      TOP of the (still full-height, still scrollable) row, X-app style,
      so any leftover space falls below the text where it belongs. */
-  .modal.gc-modal .gc-row { flex:0 1 auto; min-height:0; max-height:100%; overflow-y:auto; align-items:flex-start; }
+  .modal.gc-modal .gc-row { flex:0 1 auto; min-height:0; max-height:100%; overflow-y:auto; align-items:flex-start; margin-top:6px; }
   .modal.gc-modal .ga-row { flex:none; }
   /* Absorbs whatever vertical space the draft + audience pill don't
      use, so the toolbar still pins to the bottom of the screen (right
