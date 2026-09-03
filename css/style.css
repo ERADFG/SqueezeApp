@@ -877,7 +877,7 @@ select {
 
 /* ── COMMUNITIES — sidebar box rows, browse list, and single-community page ── */
 .comm-avatar {
-  flex:none; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  flex:none; width:40px; height:40px; border-radius:22%; display:flex; align-items:center; justify-content:center;
   background:var(--maroon); color:#fff; font-weight:800; font-size:16px; overflow:hidden;
 }
 .comm-avatar-plus { background:var(--hover-bg); color:var(--maroon); border:1.5px dashed var(--maroon); }
@@ -1115,7 +1115,7 @@ select {
 .comm-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
 .comm-avatar-pick {
   position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-  border-radius:50%; background:rgba(15,20,25,.5); color:#fff; opacity:0; cursor:pointer; transition:opacity .12s ease;
+  border-radius:22%; background:rgba(15,20,25,.5); color:#fff; opacity:0; cursor:pointer; transition:opacity .12s ease;
 }
 .comm-avatar-pick:hover { opacity:1; }
 .comm-avatar-pick svg { width:20px; height:20px; }
@@ -5654,10 +5654,8 @@ body[data-page="home"] #board-hdr .xtabs-indicator { display:none; }
    sitting on top. Scoped to these two pages only. ── */
 body[data-page="community"] .comm-avatar,
 body[data-page="communities"] .comm-avatar {
-  border-radius:24%;
   background:linear-gradient(135deg,var(--mustard),var(--maroon-dk));
 }
-body[data-page="community"] .comm-avatar-pick { border-radius:24%; }
 
 body[data-page="community"] .comm-avatar-wrap,
 body[data-page="community"] .comm-avatar-lg,
