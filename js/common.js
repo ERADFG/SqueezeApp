@@ -1680,6 +1680,7 @@ function updateGcBtnState() {
   const bodyEl = document.getElementById('gc-body');
   const btn = document.getElementById('gc-btn');
   if (!bodyEl || !btn) return;
+  if (postCooldownRemainingMs() > 0) return; // cooldown countdown owns disabled/label right now
   btn.disabled = bodyEl.value.trim().length === 0;
 }
 
@@ -1804,6 +1805,7 @@ async function submitGlobalCompose() {
   if (!body) { showErr(errEl, "Post can't be empty."); return; }
   if (body.length > 500) { showErr(errEl, 'Post too long (max 500 chars).'); return; }
   if (!validatePollAndSchedule('gc', errEl)) return;
+  if (!enforceCooldown(errEl)) return;
   if (!ensureCaptchaRevealed('gc-captcha')) return;
   if (!(await verifyHuman('gc-captcha', errEl))) return;
   if (!(await checkTextModeration('text', body, null, errEl))) return;
@@ -1855,6 +1857,8 @@ async function submitGlobalCompose() {
     resetComposeExtras('gc');
     stEl.textContent = '';
     closeGlobalCompose();
+    markPosted();
+    startCooldownCountdown(btn, 'Post');
 
     if (scheduled_at) {
       alert(`Post scheduled for ${new Date(scheduled_at).toLocaleString()}.`);
@@ -1875,7 +1879,6 @@ async function submitGlobalCompose() {
     showErr(errEl, e.message || 'Failed to post.');
     stEl.textContent = '';
   } finally {
-    btn.disabled = false;
     updateGcBtnState();
   }
 }
