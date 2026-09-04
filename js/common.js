@@ -6139,8 +6139,14 @@ async function uploadMedia(file, onStatus) {
   // failing their message on the first hiccup.
   let error;
   for (let attempt = 0; attempt < 2; attempt++) {
+    // Same fix as uploadAvatar() in auth.js: this path is a fresh
+    // crypto.randomUUID() every time and is never overwritten
+    // (upsert:false), so the file at this URL never changes — safe to
+    // cache for as long as possible instead of the old 1hr, which was
+    // forcing every post image/video/GIF to be re-fetched from
+    // Supabase on every return visit.
     ({ error } = await sb.storage.from(MEDIA_BUCKET).upload(path, file, {
-      cacheControl: '3600',
+      cacheControl: '31536000',
       upsert: false,
       contentType: file.type
     }));

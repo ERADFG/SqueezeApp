@@ -668,8 +668,16 @@ async function logOut() {
 async function uploadAvatar(file, userId) {
   const ext = file.name.split('.').pop().toLowerCase();
   const path = `${userId}/${crypto.randomUUID()}.${ext}`;
+  // cacheControl was 3600 (1hr) — way too short. Every upload gets a
+  // brand-new random UUID path (upsert:false, never overwritten), so
+  // the URL for a given file never changes and is safe to cache for
+  // as long as browsers/CDNs will keep it. A returning visitor was
+  // re-downloading the same avatar/banner from Supabase every hour;
+  // now it's fetched once and served from cache/CDN indefinitely —
+  // the single biggest lever for "profile photo and banner load
+  // faster" since these are the largest images loaded on every page.
   const { error } = await sb.storage.from('avatars').upload(path, file, {
-    cacheControl: '3600', upsert: false, contentType: file.type
+    cacheControl: '31536000', upsert: false, contentType: file.type
   });
   if (error) throw error;
   const { data } = sb.storage.from('avatars').getPublicUrl(path);
