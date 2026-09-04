@@ -2823,7 +2823,38 @@ function sharePost(id, btn) {
 // lets any anchoring correction settle first without weakening the
 // real behavior: an actual scroll still closes the menu the moment the
 // window elapses.
+//
+// That 250ms window turned out not to be long enough on its own. The
+// post's own attached image (see renderMedia() below) is loaded with
+// `loading="lazy"` and has no reserved width/height, so on anything
+// but a fast connection it can finish decoding — and suddenly grow
+// the card from a few lines of text up to its full height — well
+// after the 250ms grace period has already passed. That late growth
+// triggers the exact same self-inflicted scroll-anchoring correction
+// described above, but now outside the guard, so the "scroll"
+// listener a few lines down treated it as a real scroll and closed
+// the menu out from under whoever just opened it. Reopen, and the
+// same image (still loading, or another one further down the feed
+// doing the same thing) does it again — that's the dropdown visibly
+// flashing open/closed on a loop that a fixed timer can never fully
+// cover, since the delay it needs to wait for is a network fetch, not
+// a fixed number of frames.
+//
+// Rather than guessing a longer timer, this tracks the last moment a
+// *person* actually did something scroll-shaped — wheel, touch-drag,
+// or a scroll key — and only lets the listener close the menu if a
+// "scroll" event follows one of those within a beat. A scroll-anchoring
+// correction fires a real "scroll" event too, but never preceded by
+// any of this input, so it's told apart regardless of how long after
+// opening it happens.
 let _menuOpenedAt = 0;
+let _lastScrollIntentAt = -Infinity;
+const _SCROLL_KEYS = new Set(['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' ']);
+document.addEventListener('wheel', () => { _lastScrollIntentAt = performance.now(); }, { passive: true, capture: true });
+document.addEventListener('touchmove', () => { _lastScrollIntentAt = performance.now(); }, { passive: true, capture: true });
+document.addEventListener('keydown', (ev) => {
+  if (_SCROLL_KEYS.has(ev.key)) _lastScrollIntentAt = performance.now();
+}, { capture: true });
 
 // Toggles the small "···" dropdown (Report, etc.) on a post/reply header.
 function togglePostMenu(id, ev) {
@@ -2922,10 +2953,18 @@ document.addEventListener('click', (e) => {
 // elsewhere (X/Twitter, most mobile apps): scrolling dismisses them
 // rather than leaving them stranded mid-air.
 document.addEventListener('scroll', () => {
-  // Skip the scroll-anchoring correction that can fire right after a
-  // menu opens (see _menuOpenedAt above) — a real scroll from the user
-  // will still close the menu as soon as this short window passes.
-  if (performance.now() - _menuOpenedAt < 250) return;
+  // Only close for a "scroll" that actually followed a person doing
+  // something scroll-shaped a moment ago (see _lastScrollIntentAt
+  // above) — a self-inflicted scroll-anchoring correction (from the
+  // menu's own layout change, or a late image load elsewhere on the
+  // page) fires a real "scroll" event too, but with no such input
+  // behind it, so it's left alone instead of snapping the menu shut.
+  // The short time-since-open check stays as a second guard for the
+  // very first frame or two right after opening, when the browser's
+  // own correction can land before this listener has even seen a
+  // "real" scroll to compare against.
+  if (performance.now() - _menuOpenedAt < 100) return;
+  if (performance.now() - _lastScrollIntentAt > 150) return;
   document.querySelectorAll('.pc-menu-wrap.open, .rp-menu-wrap.open').forEach(w => w.classList.remove('open'));
 }, { passive: true, capture: true });
 

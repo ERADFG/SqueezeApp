@@ -1616,6 +1616,25 @@ select {
 .pm img  {
   max-width:100%; max-height:380px; border:1px solid var(--line); border-radius:20px;
   cursor:pointer; display:block; transition:opacity .12s ease;
+  /* No width/height is known for a post's attached image until it
+     actually loads (the database never stores the original
+     dimensions — see renderMedia() in common.js), and it's fetched
+     with loading="lazy". Without this, the <img> box sits at 0
+     height, then jumps straight to its full rendered height the
+     moment it finishes downloading — a real, and often late (network-
+     dependent), layout shift. That shift is exactly what was making
+     the "···" report/menu dropdown on this same card appear to blink
+     open and shut: growing the card triggers the browser's scroll-
+     anchoring correction, which fires a genuine "scroll" event, which
+     used to always close any open menu (see the scroll listener and
+     _lastScrollIntentAt notes near togglePostMenu). Reserving a
+     reasonable minimum height up front keeps that jump small — most
+     photos land well within it — instead of eliminating it outright,
+     since the true aspect ratio still isn't known ahead of time.
+     Paired with the scroll listener no longer treating anchoring
+     corrections as real scrolls, the two fixes cover both a large
+     jump and a small one. */
+  min-height:180px; background:var(--hover-bg);
 }
 .pm img:hover { opacity:.96; }
 .pm img.exp { max-height:none; }
