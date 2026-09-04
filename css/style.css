@@ -808,7 +808,14 @@ select {
 }
 .sec-bar .sub { font-weight:400; font-size:13px; color:var(--muted); }
 .sec-bar h1 { font:inherit; font-weight:inherit; margin:0; color:inherit; }
-.sec-bar a.back { color:var(--maroon); font-size:14px; font-weight:700; margin-left:auto; text-decoration:none; }
+.sec-bar a.back {
+  color:var(--maroon); font-size:22px; font-weight:800; margin-left:auto; text-decoration:none;
+  /* The arrow is a plain "←" text glyph, not an SVG, so its stroke
+     weight comes entirely from font-weight/font rendering, which only
+     goes so far — a subtle text-stroke on top gives it real visual
+     heft ("thicker") without needing to swap it for an icon. */
+  -webkit-text-stroke:.5px currentColor;
+}
 .sec-bar a.back:hover { text-decoration:underline; }
 
 /* ── MAIN LAYOUT ── */
