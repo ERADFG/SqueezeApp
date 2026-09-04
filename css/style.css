@@ -1440,8 +1440,25 @@ select {
    in. That clipped the popover mid-item on small cards instead of
    letting it float over the content below. Suspending containment
    while a popover inside this card is open lets it paint normally,
-   without giving up the off-screen perf win everywhere else. */
-.pc:has(.pc-menu-wrap.open), .pc:has(.rp-menu-wrap.open) {
+   without giving up the off-screen perf win everywhere else.
+
+   The `.closing` variants matter just as much as `.open`: closing one
+   of these menus doesn't remove it from the page instantly — the
+   popover fades/scales out over ~130-150ms first (see the closed-state
+   `transition` on .pc-menu-dd/.rp-menu-dd below) — but `content-
+   visibility:auto` implies `contain:layout`, which (like `transform`)
+   makes this card a containing block for the popover's JS-computed
+   `position:fixed` coordinates. Matching only `.open` here meant
+   containment came straight back the instant the menu STARTED closing,
+   not once it finished, handing those already-fixed pixels back to
+   this card mid fade-out — visibly snapping the popover from the
+   viewport position it was drawn at to one resolved against the
+   card's own (possibly very differently sized/positioned, on a long
+   post) box while it was still on screen fading away. Common.js adds
+   `.closing` for exactly this long enough to cover that transition
+   before letting containment resume. */
+.pc:has(.pc-menu-wrap.open), .pc:has(.pc-menu-wrap.closing),
+.pc:has(.rp-menu-wrap.open), .pc:has(.rp-menu-wrap.closing) {
   content-visibility:visible;
   /* content-visibility:auto (on every .pc, including this one's
      siblings) creates a containment box, which is also a stacking
@@ -3727,8 +3744,10 @@ a.auth-submit { text-align:center; text-decoration:none; }
    painted straight through the middle of the open menu. Bumping this
    above 5 only while the menu is open (same targeted-escalation
    trick as .pc:has(.pc-menu-wrap.open) above) fixes it without
-   touching the tab bar or affecting normal layout. */
-.profile-hdr-top:has(.pc-menu-wrap.open) { z-index:6; }
+   touching the tab bar or affecting normal layout. Also matches
+   `.closing` so the same close-transition window covered by the
+   containment fix above doesn't lose the z-index bump early either. */
+.profile-hdr-top:has(.pc-menu-wrap.open), .profile-hdr-top:has(.pc-menu-wrap.closing) { z-index:6; }
 #pv-avatar { position:relative; z-index:1; }
 
 /* ── header action row: message + "···" menu + follow/edit ── */

@@ -2856,6 +2856,46 @@ document.addEventListener('keydown', (ev) => {
   if (_SCROLL_KEYS.has(ev.key)) _lastScrollIntentAt = performance.now();
 }, { capture: true });
 
+// The "···"/Repost popovers are closed from a dozen+ places across the
+// codebase (click-away below, the scroll-close listener, opening a
+// different menu, chat.js/community.js/list.js/profile.js's own
+// page-specific cleanups...) and every one of them just does
+// `wrap.classList.remove('open')`. That's fine for the popover itself,
+// which fades out on its own over ~130-150ms (see the closed-state
+// `transition` on .pc-menu-dd/.rp-menu-dd in style.css) — but
+// `.pc:has(.pc-menu-wrap.open), .pc:has(.rp-menu-wrap.open)` in
+// style.css, which suspends this card's `content-visibility:auto`
+// containment while a popover is open (content-visibility:auto implies
+// contain:layout, which — like a CSS transform — makes the card a
+// containing block for the popover's JS-computed position:fixed
+// coordinates), stops matching the instant `open` is removed, not once
+// that fade-out actually finishes. That handed the popover's
+// already-fixed pixels back to the (now-reinstated) containing card
+// while it was still visibly on screen mid fade-out, snapping it from
+// its correct viewport position to one resolved against the card's own
+// box instead — barely noticeable on a short card whose box happens to
+// sit close to the popover's real position, obvious on a long post
+// whose box doesn't.
+//
+// Rather than touching every one of those close call sites individually,
+// this watches for the `open` class disappearing on any of these wraps
+// and holds a `.closing` class (which style.css's `:has()` rules also
+// match) for exactly as long as that close transition needs, so
+// containment doesn't come back until the popover is actually gone.
+(() => {
+  const CLOSE_TRANSITION_MS = 170; // covers the .13s/.15s close transitions with margin
+  new MutationObserver((mutations) => {
+    for (const m of mutations) {
+      const el = m.target;
+      if (!(el.classList.contains('pc-menu-wrap') || el.classList.contains('rp-menu-wrap'))) continue;
+      const wasOpen = (m.oldValue || '').split(/\s+/).includes('open');
+      if (!wasOpen || el.classList.contains('open') || el.classList.contains('closing')) continue;
+      el.classList.add('closing');
+      setTimeout(() => el.classList.remove('closing'), CLOSE_TRANSITION_MS);
+    }
+  }).observe(document.body, { attributes: true, attributeFilter: ['class'], attributeOldValue: true, subtree: true });
+})();
+
 // Toggles the small "···" dropdown (Report, etc.) on a post/reply header.
 function togglePostMenu(id, ev) {
   if (ev) ev.stopPropagation();
