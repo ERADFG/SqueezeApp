@@ -700,21 +700,12 @@ const ICON = {
 // the style reference for this set. home/gear are fully redesigned;
 // the rest are re-drafted with the same rounder, bolder language.
 const NAV_ICON = {
-  // These five (home/search/bell/chat/user) are deliberately solid
-  // silhouettes, not outline+stroke like the rest of NAV_ICON below —
-  // picked from the 10-option icon sheet (option 5, "solid/filled"),
-  // with the profile slot redrawn as an actual person silhouette
-  // instead of the sheet's placeholder ring-and-dot glyph. They carry
-  // their own fill="currentColor" stroke="none" right on the shapes
-  // so they render solid regardless of the ambient outline CSS
-  // (#hdr nav a .navicon svg / #m-tabbar a svg) that the rest of
-  // this object still relies on.
-  home:     '<svg viewBox="0 0 24 24"><path fill-rule="evenodd" fill="currentColor" stroke="none" d="M12 4.3 L19.6 10.9 V19.2 H4.4 V10.9 Z M9.9 19.2 V14.6 A1 1 0 0 1 10.9 13.6 H13.1 A1 1 0 0 1 14.1 14.6 V19.2 Z"/></svg>',
-  search:   '<svg viewBox="0 0 24 24"><path fill-rule="evenodd" fill="currentColor" stroke="none" d="M16.6 10.3 A6.3 6.3 0 1 0 4 10.3 A6.3 6.3 0 1 0 16.6 10.3 M14.3 10.3 A4 4 0 1 0 6.3 10.3 A4 4 0 1 0 14.3 10.3"/><line x1="15.6" y1="15.6" x2="20.5" y2="20.5" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/></svg>',
-  bell:     '<svg viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M6.3 16.8 V11 A5.7 5.7 0 0 1 17.7 11 V16.8 L19.5 18.7 H4.5 Z"/><circle cx="12" cy="20.9" r="1.6" fill="currentColor" stroke="none"/></svg>',
-  chat:     '<svg viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M4.5 6 A2 2 0 0 1 6.5 4 H17.5 A2 2 0 0 1 19.5 6 V14 A2 2 0 0 1 17.5 16 H10.4 L6.2 19.7 A0.6 0.6 0 0 1 5.2 19.2 V16 A2 2 0 0 1 3.2 14 Z"/></svg>',
+  home:     '<svg viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M5 20V12.3Q5 11.5 5.6 11L11.3 5.7Q12 5.1 12.7 5.7L18.4 11Q19 11.5 19 12.3V20Q19 20.6 18.4 20.6H5.6Q5 20.6 5 20Z"/></svg>',
+  search:   '<svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.9"/><path d="m19.5 19.5-4.35-4.35"/></svg>',
+  bell:     '<svg viewBox="0 0 24 24"><path d="M12 3.1a5.9 5.9 0 0 0-5.9 5.9v2.5c0 .95-.35 1.85-1 2.55l-.85.95c-1 1.1-.2 2.85 1.28 2.85h13.94c1.48 0 2.28-1.75 1.28-2.85l-.85-.95c-.65-.7-1-1.6-1-2.55V9A5.9 5.9 0 0 0 12 3.1Z"/><path d="M9.3 19.5a2.7 2.7 0 0 0 5.4 0"/></svg>',
+  chat:     '<svg viewBox="0 0 24 24"><path d="M14.3 8.6a2.3 2.3 0 0 1-2.3 2.3H6.4l-3.65 3.4V4.3a2.3 2.3 0 0 1 2.3-2.3h6.95a2.3 2.3 0 0 1 2.3 2.3Z"/><path d="M18.1 8.6H20a2 2 0 0 1 2 2v10.5l-3.65-3.4h-5.75a2 2 0 0 1-2-2v-.7"/></svg>',
   bookmark: '<svg viewBox="0 0 24 24"><path d="M6.4 5.6A2.2 2.2 0 0 1 8.6 3.4h6.8a2.2 2.2 0 0 1 2.2 2.2V20a.75.75 0 0 1-1.2.6L12 16.7l-4.4 3.9A.75.75 0 0 1 6.4 20Z"/></svg>',
-  user:     '<svg viewBox="0 0 24 24"><circle cx="12" cy="8.3" r="4" fill="currentColor" stroke="none"/><path fill="currentColor" stroke="none" d="M4.2 24 V20.6 C4.2 16.6 7.4 13.6 12 13.6 C16.6 13.6 19.8 16.6 19.8 20.6 V24 Z"/></svg>',
+  user:     '<svg viewBox="0 0 24 24"><circle cx="12" cy="8.1" r="4"/><path d="M4.3 19.7c1.05-4.3 3.95-6.4 7.7-6.4s6.65 2.1 7.7 6.4"/></svg>',
   gear:     '<svg viewBox="0 0 24 24"><path d="M12.00 3.40C11.15 3.40 10.45 5.39 9.44 5.81C8.42 6.23 6.52 5.31 5.92 5.92C5.31 6.52 6.23 8.42 5.81 9.44C5.39 10.45 3.40 11.15 3.40 12.00C3.40 12.85 5.39 13.55 5.81 14.56C6.23 15.58 5.31 17.48 5.92 18.08C6.52 18.69 8.42 17.77 9.44 18.19C10.45 18.61 11.15 20.60 12.00 20.60C12.85 20.60 13.55 18.61 14.56 18.19C15.58 17.77 17.48 18.69 18.08 18.08C18.69 17.48 17.77 15.58 18.19 14.56C18.61 13.55 20.60 12.85 20.60 12.00C20.60 11.15 18.61 10.45 18.19 9.44C17.77 8.42 18.69 6.52 18.08 5.92C17.48 5.31 15.58 6.23 14.56 5.81C13.55 5.39 12.85 3.40 12.00 3.40Z"/><circle cx="12" cy="12" r="3.3"/></svg>',
   doc:      '<svg viewBox="0 0 24 24"><path d="M6.5 3.5h7.2a1.7 1.7 0 0 1 1.2.5l3.6 3.6a1.7 1.7 0 0 1 .5 1.2V19a1.6 1.6 0 0 1-1.6 1.6h-10.9a1.6 1.6 0 0 1-1.6-1.6V5.1a1.6 1.6 0 0 1 1.6-1.6Z"/><path d="M14.3 3.6V7.4a1.5 1.5 0 0 0 1.5 1.5h3.8"/><path d="M8.3 13.2h7.4M8.3 16.6h5.2"/></svg>',
   // Open book — used for Blog so it reads distinctly from the
@@ -6148,14 +6139,8 @@ async function uploadMedia(file, onStatus) {
   // failing their message on the first hiccup.
   let error;
   for (let attempt = 0; attempt < 2; attempt++) {
-    // Same fix as uploadAvatar() in auth.js: this path is a fresh
-    // crypto.randomUUID() every time and is never overwritten
-    // (upsert:false), so the file at this URL never changes — safe to
-    // cache for as long as possible instead of the old 1hr, which was
-    // forcing every post image/video/GIF to be re-fetched from
-    // Supabase on every return visit.
     ({ error } = await sb.storage.from(MEDIA_BUCKET).upload(path, file, {
-      cacheControl: '31536000',
+      cacheControl: '3600',
       upsert: false,
       contentType: file.type
     }));

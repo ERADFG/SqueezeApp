@@ -198,20 +198,14 @@ function applyCropModal() {
 
   ctx.drawImage(s.img, sx, sy, visW, visH, 0, 0, outW, outH);
 
-  // Always export as JPEG. This crop is always drawn onto an opaque
-  // canvas (avatars/banners never need transparency), so keeping PNG
-  // for PNG-sourced files — e.g. a screenshot picked as an avatar —
-  // bought nothing but a much bigger upload: PNG re-encodes a full
-  // photographic crop losslessly, which is typically 5-10x heavier
-  // than a JPEG that looks the same to the eye. That bigger file is
-  // exactly what every visitor's browser has to download every time
-  // it renders this avatar/banner, so this is a direct "profile
-  // photo and banner load faster" win, not just a smaller upload.
+  const ext = (s.srcName.split('.').pop() || 'jpg').toLowerCase();
+  const mime = ext === 'png' ? 'image/png' : 'image/jpeg';
   canvas.toBlob(blob => {
     if (!blob) return;
-    const outFile = new File([blob], 'crop.jpg', { type: 'image/jpeg' });
+    const outName = `crop.${mime === 'image/png' ? 'png' : 'jpg'}`;
+    const outFile = new File([blob], outName, { type: mime });
     const cb = s.onApply;
     closeCropModal();
     cb(outFile);
-  }, 'image/jpeg', 0.87);
+  }, mime, 0.92);
 }
