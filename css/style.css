@@ -5873,6 +5873,13 @@ html[data-theme="dim"], html[data-theme="dark"] {
   width:42px; height:42px; border-radius:50%; background:var(--cat-tint,var(--hover-bg)); color:var(--cat-c,var(--ink));
   border:1px solid var(--line); display:flex; align-items:center; justify-content:center; margin-bottom:14px;
   transition:background-color .15s ease, color .15s ease;
+  /* Sits inside a flex row on the category hero (.help-cat-hero below)
+     and the article-list rows — without this, a flex item can still
+     shrink below its set width when its siblings (a long heading, a
+     wrapping description) need the space. flex-shrink only ever
+     compresses width, never height, so the fixed-size circle was
+     getting squashed into a narrow oval instead of staying round. */
+  flex-shrink:0;
 }
 .help-card:hover .help-card-icon { background:var(--cat-c,var(--ink)); color:#fff; border-color:transparent; }
 .help-card-icon svg { width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:2.1; stroke-linecap:round; stroke-linejoin:round; }

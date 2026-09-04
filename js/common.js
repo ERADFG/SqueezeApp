@@ -6757,7 +6757,19 @@ async function fetchGifs(url) {
     const res = await fetch(url);
     const json = await res.json();
     const items = json.data || [];
-    if (!items.length) { grid.innerHTML = `<div class="no-t">No GIFs found.</div>`; return; }
+    if (!items.length) {
+      // api/giphy.js fails soft with an empty `data` array (HTTP 200)
+      // both when a search genuinely has zero results AND when
+      // GIPHY_API_KEY hasn't been set in the deployment's environment
+      // variables yet — the two looked identical here ("No GIFs
+      // found."), which reads as a broken picker instead of a missing
+      // setup step. json.error is only ever present in the
+      // not-configured case, so use it to tell them apart.
+      grid.innerHTML = json.error
+        ? `<div class="errmsg">GIF search isn't set up yet — a site admin needs to add a GIPHY API key.</div>`
+        : `<div class="no-t">No GIFs found.</div>`;
+      return;
+    }
     grid.innerHTML = items.map(g => {
       const thumb = g.images?.fixed_width?.url || g.images?.original?.url || '';
       const full = g.images?.original?.url || thumb;
