@@ -2491,6 +2491,7 @@ function toggleRepostMenu(id, ev) {
   document.querySelectorAll('.rp-menu-wrap.open, .pc-menu-wrap.open').forEach(w => w.classList.remove('open'));
   if (willOpen) {
     wrap.classList.add('open');
+    _menuOpenedAt = performance.now();
     // Mobile turns this into a full-screen bottom sheet, so the page
     // behind it shouldn't also scroll while it's open.
     if (window.matchMedia('(max-width: 640px)').matches) document.body.classList.add('oc-sheet-open');
@@ -2804,6 +2805,26 @@ function sharePost(id, btn) {
   }
 }
 
+// Both the "···" post menu and the Repost/Quote menu switch their card
+// from `content-visibility:auto` to `visible` the instant they open
+// (see `.pc:has(.pc-menu-wrap.open), .pc:has(.rp-menu-wrap.open)` in
+// style.css — needed so the popover isn't clipped by the card's own
+// off-screen containment box). On a card whose top edge sits above the
+// current scroll position, that sudden height change is exactly what
+// the browser's built-in scroll anchoring watches for: it silently
+// nudges scrollTop a frame later to keep the visible content pinned in
+// place, which fires a completely real, but self-inflicted, 'scroll'
+// event. The capture-phase scroll listener further down (which closes
+// any open menu the instant the user scrolls) couldn't tell that scroll
+// apart from a real one, so it closed the menu on the same tap that
+// opened it — the dropdown would flash open for a frame and immediately
+// snap shut, over and over on every retry. Recording when a menu was
+// just opened and skipping the scroll-close for a brief window after
+// lets any anchoring correction settle first without weakening the
+// real behavior: an actual scroll still closes the menu the moment the
+// window elapses.
+let _menuOpenedAt = 0;
+
 // Toggles the small "···" dropdown (Report, etc.) on a post/reply header.
 function togglePostMenu(id, ev) {
   if (ev) ev.stopPropagation();
@@ -2817,6 +2838,7 @@ function togglePostMenu(id, ev) {
   document.body.classList.remove('oc-sheet-open');
   if (willOpen) {
     wrap.classList.add('open');
+    _menuOpenedAt = performance.now();
     positionMenuDd(wrap);
     // A fast re-tap can land while the browser's own chrome (the
     // address bar hiding/showing as the page scrolls) is still
@@ -2900,6 +2922,10 @@ document.addEventListener('click', (e) => {
 // elsewhere (X/Twitter, most mobile apps): scrolling dismisses them
 // rather than leaving them stranded mid-air.
 document.addEventListener('scroll', () => {
+  // Skip the scroll-anchoring correction that can fire right after a
+  // menu opens (see _menuOpenedAt above) — a real scroll from the user
+  // will still close the menu as soon as this short window passes.
+  if (performance.now() - _menuOpenedAt < 250) return;
   document.querySelectorAll('.pc-menu-wrap.open, .rp-menu-wrap.open').forEach(w => w.classList.remove('open'));
 }, { passive: true, capture: true });
 
