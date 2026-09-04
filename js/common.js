@@ -700,7 +700,7 @@ const ICON = {
 // the style reference for this set. home/gear are fully redesigned;
 // the rest are re-drafted with the same rounder, bolder language.
 const NAV_ICON = {
-  home:     '<svg viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M5 20V12.3Q5 11.5 5.6 11L11.3 5.7Q12 5.1 12.7 5.7L18.4 11Q19 11.5 19 12.3V20Q19 20.6 18.4 20.6H5.6Q5 20.6 5 20Z"/></svg>',
+  home:     '<svg viewBox="0 0 24 24"><path d="M5 19.4V11.7Q5 10.85 5.65 10.3L11.15 5.65Q12 4.95 12.85 5.65L18.35 10.3Q19 10.85 19 11.7V19.4Q19 20.6 17.8 20.6H15.3Q14.1 20.6 14.1 19.4V16.1Q14.1 14.9 12.9 14.9H11.1Q9.9 14.9 9.9 16.1V19.4Q9.9 20.6 8.7 20.6H6.2Q5 20.6 5 19.4Z"/></svg>',
   search:   '<svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.9"/><path d="m19.5 19.5-4.35-4.35"/></svg>',
   bell:     '<svg viewBox="0 0 24 24"><path d="M12 3.1a5.9 5.9 0 0 0-5.9 5.9v2.5c0 .95-.35 1.85-1 2.55l-.85.95c-1 1.1-.2 2.85 1.28 2.85h13.94c1.48 0 2.28-1.75 1.28-2.85l-.85-.95c-.65-.7-1-1.6-1-2.55V9A5.9 5.9 0 0 0 12 3.1Z"/><path d="M9.3 19.5a2.7 2.7 0 0 0 5.4 0"/></svg>',
   chat:     '<svg viewBox="0 0 24 24"><path d="M14.3 8.6a2.3 2.3 0 0 1-2.3 2.3H6.4l-3.65 3.4V4.3a2.3 2.3 0 0 1 2.3-2.3h6.95a2.3 2.3 0 0 1 2.3 2.3Z"/><path d="M18.1 8.6H20a2 2 0 0 1 2 2v10.5l-3.65-3.4h-5.75a2 2 0 0 1-2-2v-.7"/></svg>',
