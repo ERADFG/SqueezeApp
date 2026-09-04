@@ -1389,21 +1389,26 @@ select {
      their own tap handling via cardClick()'s target check. */
   -webkit-touch-callout:none; -webkit-user-select:none; user-select:none;
   touch-action:manipulation;
-  /* fill-mode intentionally omitted (was `both`) — with `both`/`forwards`,
-     the animation's final `transform:translateY(0)` keyframe stays applied
-     to this element forever after the .2s entrance finishes. A transform
-     value other than the literal keyword `none` — even a no-op identity
-     one like translateY(0) — makes the element a CSS containing block for
-     any `position:fixed` descendant. Every "···" menu (.pc-menu-dd) is
+  /* Opacity-only entrance — deliberately NOT `oc-fade-in`, which also
+     animates `transform`. A `transform` value other than the literal
+     keyword `none` (including mid-animation, not just a fill-mode
+     leftover) makes the element a CSS containing block for any
+     `position:fixed` descendant. Every "···" menu (.pc-menu-dd) is
      positioned by JS as position:fixed using viewport coordinates
-     (see positionMenuDd() in js/common.js), so once a card's entrance
-     animation finished, its menu started resolving those coordinates
-     against the card's own box instead of the viewport — landing the
-     dropdown far from the "···" button, worse the further down the
-     feed the card sat. Dropping the fill-mode lets `transform` revert
-     to `none` once the animation ends, same visual entrance, no lasting
-     containing block. */
-  animation:oc-fade-in .2s ease;
+     (see positionMenuDd() in js/common.js). Tapping "···" on a card
+     while ITS OWN entrance animation was still playing (very easy to
+     do right after a card scrolls into view via infinite scroll) had
+     positionMenuDd() compute coordinates while `.pc` was mid-transform
+     and therefore the fixed descendant's containing block — correct
+     numbers for that instant, but resolved against the card's box
+     instead of the viewport. The moment the animation finished a beat
+     later and `transform` reverted to `none`, the browser re-resolved
+     those same left/top pixels against the viewport instead — visibly
+     snapping the dropdown from "off to the side" to its correct spot
+     with no further JS involved. Using the opacity-only keyframe here
+     removes `transform` from the equation entirely, so `.pc` is never
+     a containing block, at any point — same fade-in feel, no snap. */
+  animation:oc-fade-in-opacity .2s ease;
   /* Off-screen cards skip layout/paint/style work entirely until they
      scroll near the viewport — the single biggest lever for keeping
      long feeds/threads smooth, since a 200-post feed only ever pays
@@ -2105,12 +2110,15 @@ html:has(> body.oc-sheet-open) { overflow:hidden; }
    is a reply-to-a-reply. That's the look here: constant left padding,
    a connector line, and a small "Replying to @x" tag on nested ones. */
 .rw { margin-top:0; }
-/* animation fill-mode intentionally omitted here too — see the long
-   comment on .pc above: `both`/`forwards` would permanently pin a
-   non-"none" transform on this card after the entrance animation ends,
-   turning it into a containing block that breaks the fixed-position
-   "···" menu the same way it did on .pc. */
-.rc { background:var(--cream-card); border:none; border-bottom:1px solid var(--line); border-radius:0; padding:12px 16px; margin-bottom:0; box-shadow:none; position:relative; transition:background-color .15s ease; cursor:pointer; animation:oc-fade-in .12s ease; }
+/* Opacity-only entrance, same reason as .pc above: this card has its
+   own "···" menu too (postMenuHtml() in common.js is used for replies
+   as well as posts), so `transform`-animating this element makes it a
+   containing block for that menu's `position:fixed` dropdown while
+   the animation plays — tapping "···" right as a reply scrolls in
+   would have the dropdown briefly land relative to the card, then
+   visibly snap to its correct viewport position when the animation
+   ended a beat later. */
+.rc { background:var(--cream-card); border:none; border-bottom:1px solid var(--line); border-radius:0; padding:12px 16px; margin-bottom:0; box-shadow:none; position:relative; transition:background-color .15s ease; cursor:pointer; animation:oc-fade-in-opacity .12s ease; }
 .rc:hover { background:var(--hover-bg); }
 .rc:active { background:var(--hover-bg); }
 
@@ -4592,7 +4600,13 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
    throughout) with the speech-bubble "tail" only on the last bubble
    of the group — same convention as iMessage/Telegram — instead of
    every single message getting its own tail and full gap. */
-.msg-row { display:flex; align-items:flex-end; gap:6px; margin-top:2px; animation:oc-fade-in .15s ease; }
+/* Opacity-only entrance — same fixed-position "···" menu issue as .pc
+   and .rc (see the comment on .pc): each message row carries its own
+   pc-menu-wrap/pc-menu-dd (see .msg-menu-wrap below), so animating
+   `transform` here would let a tap on a just-arrived message's "···"
+   button get positioned against this row instead of the viewport for
+   the animation's duration, then visibly snap once it finished. */
+.msg-row { display:flex; align-items:flex-end; gap:6px; margin-top:2px; animation:oc-fade-in-opacity .15s ease; }
 .msg-row.g-start { margin-top:14px; }
 .chat-daydivider + .msg-row.g-start { margin-top:0; }
 .msg-row.mine { justify-content:flex-end; }
