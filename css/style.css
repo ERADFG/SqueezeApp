@@ -2212,9 +2212,17 @@ html:has(> body.oc-sheet-open) { overflow:hidden; }
 .modal .gif-search-row input[type="text"], .modal .cx-emoji-search-row input[type="text"] {
   margin:0; width:auto; flex:1; min-width:0; color:var(--ink);
 }
-.gif-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; max-height:420px; overflow-y:auto; padding:0 16px; }
-.gif-item { padding:0; border:none; border-radius:16px; overflow:hidden; cursor:pointer; background:var(--hover-bg); aspect-ratio:1/1; }
-.gif-item img { width:100%; height:100%; object-fit:cover; display:block; }
+.gif-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; max-height:420px; overflow-y:auto; padding:0 16px; align-items:start; }
+/* Square tiles via the classic padding-top hack instead of the
+   `aspect-ratio` property — on browsers/WebViews that don't honor
+   `aspect-ratio` on a <button> (e.g. older Samsung Internet), the
+   button was collapsing to the raw image's own aspect ratio instead
+   of staying square, so rows ended up different heights and the
+   tiles visually overlapped/stacked. padding-top:100% + an
+   absolutely-positioned image is supported everywhere and can't
+   silently fail like that. */
+.gif-item { position:relative; display:block; width:100%; height:0; padding:0 0 100%; margin:0; border:none; border-radius:16px; overflow:hidden; cursor:pointer; background:var(--hover-bg); }
+.gif-item img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
 .gif-item:hover { outline:2px solid var(--maroon); outline-offset:-2px; }
 .gif-attrib { font-size:11px; color:var(--muted); text-align:center; padding:10px 0 0; }
 
