@@ -130,7 +130,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid body' });
   }
 
-  const { userId, table, contentId, contentType, mediaUrl, mediaType } = body || {};
+  const { userId, table, contentId, contentType, mediaUrl, mediaType, transcript } = body || {};
   if (!userId || !mediaUrl) {
     return res.status(400).json({ error: 'userId and mediaUrl are required' });
   }
@@ -146,20 +146,35 @@ export default async function handler(req, res) {
   const type = mediaType === 'video' ? 'video' : 'image'; // gifs classify fine as images (first-frame based)
 
   // Run NSFW + category checks in parallel — independent categories,
-  // no reason to serialize them. Audio moderation only applies to
-  // video (images have no audio track) — /audio-moderate itself
-  // handles a silent/no-audio video gracefully, but there's no point
-  // calling it at all for a still image.
+  // no reason to serialize them. `transcript`, when present, comes from
+  // js/audio-transcribe.js running Whisper-tiny client-side (see
+  // nsfw-service/main.py's header comment for why ASR moved to the
+  // browser) — this endpoint doesn't fetch or transcribe audio itself
+  // anymore, it just classifies whatever transcript text arrives, same
+  // toxicity/category models as always.
   const [nsfwResult, categoryResult, audioResult, csamResult] = await Promise.all([
     callModerationService('/classify', { url: mediaUrl, type }),
     callModerationService('/categories', { url: mediaUrl, type }),
-    type === 'video' ? callModerationService('/audio-moderate', { url: mediaUrl }) : Promise.resolve(null),
+    type === 'video' && transcript ? callModerationService('/transcript-moderate', { transcript }) : Promise.resolve(null),
     checkCsamHash(mediaUrl),
   ]);
 
   const nsfw = nsfwResult?.nsfw_probability ?? null;
   const categories = categoryResult?.categories ?? [];
-  const topCategoryScore = categories.length ? Math.max(...categories.map((c) => c.score)) : 0;
+  // Self-harm/suicide content is split out from the generic category
+  // pool on purpose. Everything else in `categories` (weapons, drugs,
+  // gore, sexual solicitation) is fine to auto-block at high
+  // confidence — but auto-deleting someone's cry for help because a
+  // classifier scored it highly is a real harm on its own, and this
+  // category is exactly the kind of thing a false-positive-prone
+  // zero-shot model gets wrong on dark humor or someone quoting a
+  // hotline number. This never contributes to a 'block' decision
+  // below, only 'human_review' — a person always makes the actual
+  // call on this category, the model just surfaces it faster.
+  const selfHarmCategories = categories.filter((c) => c.label.toLowerCase().includes('self-harm') || c.label.toLowerCase().includes('suicide'));
+  const blockableCategories = categories.filter((c) => !selfHarmCategories.includes(c));
+  const topCategoryScore = blockableCategories.length ? Math.max(...blockableCategories.map((c) => c.score)) : 0;
+  const topSelfHarmScore = selfHarmCategories.length ? Math.max(...selfHarmCategories.map((c) => c.score)) : 0;
   const transcript = audioResult?.transcript ?? '';
   const audioToxicity = audioResult?.toxicity_probability ?? 0;
   const audioCategories = audioResult?.categories ?? [];
@@ -210,7 +225,8 @@ export default async function handler(req, res) {
     (nsfw !== null && nsfw >= 0.45) ||
     topCategoryScore >= 0.4 ||
     topAudioCategoryScore >= 0.4 ||
-    audioToxicity >= 0.4
+    audioToxicity >= 0.4 ||
+    topSelfHarmScore >= 0.3 // lower bar than the other categories — err toward a human seeing it sooner, not toward blocking it
   ) {
     decision = 'human_review';
   } else {

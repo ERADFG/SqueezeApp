@@ -1776,13 +1776,13 @@ async function checkTextModeration(contentType, text, contentRef, errEl) {
 // call site. Unlike checkTextModeration above, this does NOT fail
 // open: a failed request just leaves the row pending (invisible to
 // everyone but the author) rather than defaulting it to visible.
-async function checkMediaModeration(table, contentId, contentType, mediaUrl, mediaType) {
+async function checkMediaModeration(table, contentId, contentType, mediaUrl, mediaType, transcript) {
   try {
     const res = await fetch('/api/moderate-media', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        userId: currentSession.user.id, table, contentId, contentType, mediaUrl, mediaType,
+        userId: currentSession.user.id, table, contentId, contentType, mediaUrl, mediaType, transcript,
       }),
     });
     if (!res.ok) return { decision: 'human_review' };
@@ -1842,13 +1842,20 @@ async function submitGlobalCompose() {
 
     if (media_url) {
       stEl.textContent = 'Checking upload…';
-      const mod = await checkMediaModeration('posts', data.id, 'post', media_url, media_type);
+      const transcript = media_type === 'video' && file ? await transcribeVideoForModeration(file) : '';
+      const mod = await checkMediaModeration('posts', data.id, 'post', media_url, media_type, transcript);
       if (mod.decision === 'block') {
         stEl.textContent = '';
         showErr(errEl, "Your post was published but the media didn't pass review, so it's hidden from others.");
       } else if (mod.decision === 'human_review') {
+        // Visible already — moderation_media_pipeline.sql's RESTRICTIVE
+        // policy deliberately keeps human_review rows public while
+        // pending review (only 'blocked'/unchecked 'pending' are
+        // actually hidden), so no "wait for review" toast here; it
+        // would just be inaccurate. Deploy nsfw-service (see
+        // MODERATION_SETUP.md) so most uploads get a real allow/block
+        // decision instead of falling back to human_review.
         stEl.textContent = '';
-        showErr(errEl, "Your post is up, but the media needs a quick manual review before others can see it.");
       }
     }
 
@@ -2035,11 +2042,18 @@ async function submitReplyPopup() {
 
     if (media_url) {
       stEl.textContent = 'Checking upload…';
-      const mod = await checkMediaModeration('replies', data.id, 'reply', media_url, media_type);
+      const transcript = media_type === 'video' && file ? await transcribeVideoForModeration(file) : '';
+      const mod = await checkMediaModeration('replies', data.id, 'reply', media_url, media_type, transcript);
       if (mod.decision === 'block') {
         showErr(errEl, "Your reply was posted but the media didn't pass review, so it's hidden from others.");
       } else if (mod.decision === 'human_review') {
-        showErr(errEl, 'Your reply is up, but the media needs a quick manual review before others can see it.');
+        // Visible already — moderation_media_pipeline.sql's RESTRICTIVE
+        // policy deliberately keeps human_review rows public while
+        // pending review (only 'blocked'/unchecked 'pending' are
+        // actually hidden), so no "wait for review" toast here; it
+        // would just be inaccurate. Deploy nsfw-service (see
+        // MODERATION_SETUP.md) so most uploads get a real allow/block
+        // decision instead of falling back to human_review.
       }
     }
 

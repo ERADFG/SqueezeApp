@@ -583,13 +583,20 @@ async function submitReply(parentReplyId = currentFocusedReplyId()) {
 
     if (media_url) {
       stEl.textContent = 'Checking upload…';
-      const mod = await checkMediaModeration('replies', data.id, 'reply', media_url, media_type);
+      const transcript = media_type === 'video' && file ? await transcribeVideoForModeration(file) : '';
+      const mod = await checkMediaModeration('replies', data.id, 'reply', media_url, media_type, transcript);
       if (mod.decision === 'block') {
         stEl.textContent = '';
         showErr(errEl, "Your reply was posted but the media didn't pass review, so it's hidden from others.");
       } else if (mod.decision === 'human_review') {
+        // Visible already — moderation_media_pipeline.sql's RESTRICTIVE
+        // policy deliberately keeps human_review rows public while
+        // pending review (only 'blocked'/unchecked 'pending' are
+        // actually hidden), so no "wait for review" toast here; it
+        // would just be inaccurate. Deploy nsfw-service (see
+        // MODERATION_SETUP.md) so most uploads get a real allow/block
+        // decision instead of falling back to human_review.
         stEl.textContent = '';
-        showErr(errEl, 'Your reply is up, but the media needs a quick manual review before others can see it.');
       }
     }
 

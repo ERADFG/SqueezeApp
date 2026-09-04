@@ -164,7 +164,14 @@ export default async function handler(req, res) {
     needsDeepCheck ? toxicityScore(text) : Promise.resolve(0),
     needsDeepCheck ? categoryScores(text) : Promise.resolve([]),
   ]);
-  const topCategory = categories[0] ?? null;
+  // Self-harm/suicide gets pulled out of the general category pool —
+  // see the matching comment in api/moderate-media.js. It should
+  // never auto-block on its own; a wrongly-blocked post about, say,
+  // wanting to talk to someone stays reachable to a human reviewer
+  // instead of silently vanishing.
+  const selfHarmCategory = categories.find((c) => c.label.toLowerCase().includes('self-harm') || c.label.toLowerCase().includes('suicide')) ?? null;
+  const blockableCategories = categories.filter((c) => c !== selfHarmCategory);
+  const topCategory = blockableCategories[0] ?? null;
 
   // Thresholds tightened (was 0.85/0.8/0.85 block, 0.6/0.5/0.6
   // soft_flag) — auto-blocks more of what used to only get flagged.
@@ -176,7 +183,7 @@ export default async function handler(req, res) {
   let decision = 'allow';
   if (doxHits.length > 0) decision = 'human_review';
   else if (toxic >= 0.7 || spam >= 0.65 || (topCategory && topCategory.score >= 0.7)) decision = 'block';
-  else if (badword || toxic >= 0.4 || spam >= 0.35 || (topCategory && topCategory.score >= 0.4)) decision = 'soft_flag';
+  else if (badword || toxic >= 0.4 || spam >= 0.35 || (topCategory && topCategory.score >= 0.4) || (selfHarmCategory && selfHarmCategory.score >= 0.3)) decision = 'soft_flag';
 
   // Log every decision for the admin panel / audit trail. Uses the same
   // service-role pattern as your other SECURITY DEFINER RPCs.

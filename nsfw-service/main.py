@@ -1,32 +1,29 @@
 # nsfw-service/main.py
 #
 # Self-hosted content moderation service: NSFW image/video classification,
-# text toxicity classification, zero-shot category detection for
-# drugs/weapons/illegal-goods in both images and text, AND (new) audio
-# transcription for video — all open-source models running on your own
-# server. Free forever, no external API key, no third-party account.
-# (Google's Perspective API — the previous toxicity option — is shutting
-# down entirely on Dec 31, 2026 with no migration path, so this avoids
-# that dependency altogether.)
+# text toxicity classification, and zero-shot category detection for
+# drugs/weapons/violence/self-harm/illegal-goods in both images and text —
+# open-source models running on your own server. Free forever, no external
+# API key, no third-party account. (Google's Perspective API — the
+# previous toxicity option — is shutting down entirely on Dec 31, 2026
+# with no migration path, so this avoids that dependency altogether.)
 #
-# Models:
+# Models (all distilled/smaller variants chosen specifically to keep RAM
+# down without dropping a category — see the memory-budget note below):
 #   - Falconsai/nsfw_image_detection    (NSFW images/video frames)
-#   - unitary/toxic-bert                (text toxicity)
+#   - martin-ha/toxic-comment-model     (text toxicity — DistilBERT, ~4x
+#                                         smaller than the original
+#                                         toxic-bert at ~97% of its
+#                                         accuracy on standard benchmarks)
 #   - openai/clip-vit-base-patch32      (zero-shot image categories —
-#                                         weapons/drugs/illegal goods)
-#   - facebook/bart-large-mnli          (zero-shot text categories — same,
+#                                         weapons/drugs/violence)
+#   - valhalla/distilbart-mnli-12-3     (zero-shot text categories — same,
 #                                         for coded/slang phrasing keyword
-#                                         lists miss, e.g. "plug for that
-#                                         gas, dm 4 menu" — plus sexual
-#                                         solicitation/explicit text)
-#   - openai/whisper-base                (speech-to-text for video's audio
-#                                         track — the transcript then runs
-#                                         through the SAME toxicity + text-
-#                                         category classifiers above (drug/
-#                                         weapon sale, sexual solicitation),
-#                                         so someone can't say in the audio
-#                                         what would get their post text
-#                                         blocked)
+#                                         lists miss, drug/weapon sale,
+#                                         self-harm, sexual solicitation,
+#                                         spam. Distilled MNLI model —
+#                                         much smaller than bart-large-mnli,
+#                                         same zero-shot approach)
 #
 # What this deliberately does NOT do: detect CSAM. That requires
 # hash-matching against a database of known material via a legally
@@ -36,19 +33,45 @@
 # is illegal outside a handful of authorized organizations. Don't add
 # that here; wire the provider call into api/moderate-media.js instead.
 #
+# What this ALSO deliberately does not do (as of this revision): video
+# audio transcription. That used to run here via Whisper, but Whisper
+# was the single heaviest model for the narrowest payoff (only applies
+# to a video's spoken audio track). It's moved to the browser instead —
+# see js/audio-transcribe.js, which runs a real open-source Whisper-tiny
+# model client-side via @xenova/transformers (WebAssembly, ~40MB,
+# cached after first load). The resulting transcript is still sent here
+# and classified by the SAME toxicity/category models below, so a video
+# someone narrates a drug sale over still gets caught — the only actual
+# security trade-off is that a technically adversarial user could send a
+# blank/faked transcript from devtools and dodge THAT specific channel.
+# The video's actual frames are still scanned server-side either way,
+# completely unaffected by this change.
+#
+# Memory budget (why these specific models, at bf16):
+#   Falconsai NSFW  ~170MB   CLIP           ~300MB
+#   toxic-comment   ~130MB   distilbart-mnli ~280MB
+#   + FastAPI/PyTorch runtime baseline: ~150-300MB
+#   Total: roughly 900MB-1.1GB. That's a real, substantial cut from the
+#   ~3GB+ the original fp32 five-model setup needed — but it does NOT
+#   fit a true 512MB free tier. Nothing left to cut gets you there
+#   without dropping NSFW, weapon/drug/violence, or self-harm detection
+#   outright, which is the one thing this revision was built to avoid.
+#   Budget for Railway Hobby (~$5/mo) or a Render paid tier.
+#
 # Run locally:
 #   pip install -r requirements.txt
 #   uvicorn main:app --host 0.0.0.0 --port 8000
 #
-# Deploy for free/cheap: Fly.io, Railway, or a $5/mo VPS. The category
-# and whisper models are heavier than the original two — give the box
-# at least 2GB RAM (3GB+ if audio moderation sees real traffic), and
-# expect slower cold starts.
+# Deploy: Railway or Fly.io (~$5/mo minimum as of 2026 — neither has a
+# real free tier anymore). Give the box at least 1.5GB RAM for headroom
+# beyond the ~1GB steady-state above (model loading briefly spikes
+# higher than steady-state, and video frame sampling needs scratch
+# space too).
 
 import os
 import tempfile
 import subprocess
-import numpy as np
+import torch
 from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel
 from transformers import pipeline
@@ -58,28 +81,16 @@ app = FastAPI()
 
 SHARED_SECRET = os.environ.get("NSFW_SERVICE_TOKEN", "changeme")
 
-# Cap on how much audio we'll ever transcribe from one video, in seconds.
-# Protects the box from a 3-hour upload tying up a worker — moderation
-# only needs to see the content, not process the whole runtime of
-# anything absurdly long. Tune via env var if your community posts
-# longer videos.
-MAX_AUDIO_SECONDS = int(os.environ.get("MAX_AUDIO_SECONDS", "600"))
-WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "openai/whisper-base")
+# bfloat16 over float16: float16 has spotty/slow support in many CPU
+# kernels (it's really designed for GPU), while bfloat16 runs natively
+# and reasonably fast on modern CPUs and still halves memory vs fp32.
+MODEL_DTYPE = torch.bfloat16
 
 # Loaded once at startup, reused for every request.
-nsfw_classifier = pipeline("image-classification", model="Falconsai/nsfw_image_detection")
-toxicity_classifier = pipeline("text-classification", model="unitary/toxic-bert", top_k=None)
-image_category_classifier = pipeline("zero-shot-image-classification", model="openai/clip-vit-base-patch32")
-text_category_classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
-# chunk_length_s/stride_length_s enable long-form transcription (the
-# model's own window is ~30s) — without this, anything past the first
-# 30 seconds of audio would just be silently dropped.
-speech_transcriber = pipeline(
-    "automatic-speech-recognition",
-    model=WHISPER_MODEL,
-    chunk_length_s=30,
-    stride_length_s=5,
-)
+nsfw_classifier = pipeline("image-classification", model="Falconsai/nsfw_image_detection", torch_dtype=MODEL_DTYPE)
+toxicity_classifier = pipeline("text-classification", model="martin-ha/toxic-comment-model", top_k=None, torch_dtype=MODEL_DTYPE)
+image_category_classifier = pipeline("zero-shot-image-classification", model="openai/clip-vit-base-patch32", torch_dtype=MODEL_DTYPE)
+text_category_classifier = pipeline("zero-shot-classification", model="valhalla/distilbart-mnli-12-3", torch_dtype=MODEL_DTYPE)
 
 # Candidate labels for the "illegal/dangerous goods" sweep. Tune these
 # to your community — narrower labels give sharper scores than broad
@@ -88,12 +99,16 @@ speech_transcriber = pipeline(
 IMAGE_CATEGORY_LABELS = [
     "firearm or weapon",
     "illegal drugs or drug paraphernalia",
+    "graphic violence, gore, or a depiction of serious injury",
     "a normal, unremarkable photo",
 ]
 TEXT_CATEGORY_LABELS = [
     "selling illegal drugs",
     "selling or trading weapons",
     "sexual solicitation or explicit sexual content",
+    "graphic violence or threats of violence against a person",
+    "self-harm, suicide, or suicidal ideation",
+    "spam, scam, or phishing content",
     "ordinary conversation",
 ]
 # Labels ending in "a normal photo" / "ordinary conversation" are the
@@ -121,8 +136,8 @@ class CategoryTextRequest(BaseModel):
     text: str
 
 
-class AudioModerateRequest(BaseModel):
-    url: str
+class TranscriptModerateRequest(BaseModel):
+    transcript: str
 
 
 def classify_image_bytes(path: str) -> float:
@@ -144,66 +159,26 @@ def sample_video_frames(video_path: str, out_dir: str, every_n_seconds: int = 3)
     )
 
 
-def extract_audio_waveform(video_path: str) -> np.ndarray | None:
-    """Extracts the audio track as 16kHz mono float32 PCM via ffmpeg,
-    piped straight to memory (no intermediate wav file needed). Returns
-    None if the video has no audio track at all, which is common and
-    not an error — ffmpeg exits non-zero for "no audio stream", so we
-    check for that specifically rather than raising.
-    """
-    cmd = [
-        "ffmpeg", "-i", video_path,
-        "-t", str(MAX_AUDIO_SECONDS),
-        "-vn",                 # drop video stream, audio only
-        "-ac", "1",            # mono
-        "-ar", "16000",        # 16kHz — what whisper expects
-        "-f", "f32le",         # raw float32 PCM, no container
-        "-hide_banner", "-loglevel", "error",
-        "pipe:1",
-    ]
-    result = subprocess.run(cmd, capture_output=True)
-    if result.returncode != 0 or not result.stdout:
-        return None
-    return np.frombuffer(result.stdout, dtype=np.float32)
+@app.post("/transcript-moderate")
+def transcript_moderate(req: TranscriptModerateRequest, authorization: str = Header(None)):
+    """Classifies a video's transcript — same toxicity + drug/weapon-sale/
+    self-harm/etc category checks /toxicity and /text-categories run on
+    post text. The transcript itself is produced client-side now (see
+    js/audio-transcribe.js's in-browser Whisper-tiny via
+    @xenova/transformers) rather than this server downloading and
+    transcribing the video's audio track — that was the single heaviest
+    model here for the narrowest payoff. The actual classification of
+    whatever transcript text arrives still happens here, server-side,
+    same as always."""
+    if authorization != f"Bearer {SHARED_SECRET}":
+        raise HTTPException(status_code=401, detail="unauthorized")
 
-
-def transcribe_and_moderate(video_path: str) -> dict:
-    """Extracts audio, transcribes it with whisper, then runs the same
-    toxicity + drug/weapon-sale classifiers that already run on post
-    text against the transcript. Returns a result even when there's no
-    audio track (empty transcript, zero scores) rather than erroring,
-    since plenty of legitimate video posts are silent or music-only."""
-    waveform = extract_audio_waveform(video_path)
-    if waveform is None or waveform.size == 0:
-        return {"transcript": "", "toxicity_probability": 0.0, "categories": []}
-
-    asr_result = speech_transcriber({"array": waveform, "sampling_rate": 16000})
-    transcript = (asr_result.get("text") or "").strip()
-
+    transcript = (req.transcript or "").strip()
     return {
         "transcript": transcript,
         "toxicity_probability": text_toxicity(transcript),
         "categories": text_categories_for(transcript),
     }
-
-
-@app.post("/audio-moderate")
-def audio_moderate(req: AudioModerateRequest, authorization: str = Header(None)):
-    """Transcribes a video's audio track and runs it through the same
-    toxicity + drug/weapon-sale-language checks /toxicity and
-    /text-categories run on post text. Call this alongside /classify
-    and /categories for video uploads — see api/moderate-media.js."""
-    if authorization != f"Bearer {SHARED_SECRET}":
-        raise HTTPException(status_code=401, detail="unauthorized")
-
-    with tempfile.TemporaryDirectory() as tmp:
-        local_path = os.path.join(tmp, "input")
-        resp = requests.get(req.url, timeout=30)
-        resp.raise_for_status()
-        with open(local_path, "wb") as f:
-            f.write(resp.content)
-
-        return transcribe_and_moderate(local_path)
 
 
 @app.post("/classify")
@@ -233,17 +208,18 @@ def classify(req: ClassifyRequest, authorization: str = Header(None)):
 
 def text_toxicity(text: str) -> float:
     """Returns probability the text is toxic (0.0 - 1.0). Shared by the
-    /toxicity endpoint and the audio-transcript pipeline below, so
-    someone can't say in a video's audio what would get their post
-    text blocked."""
+    /toxicity endpoint and /transcript-moderate, so someone can't say
+    in a video's audio what would get their post text blocked."""
     if not text.strip():
         return 0.0
     results = toxicity_classifier(text[:512])  # model's max useful input length
-    # unitary/toxic-bert returns multiple labels (toxic, severe_toxic, obscene,
-    # threat, insult, identity_hate) each with their own score — take the max,
-    # same "worst attribute wins" approach Perspective used.
-    scores = [r["score"] for r in results[0] if r["label"] != "non_toxic"] if results else [0.0]
-    return round(float(max(scores)), 4)
+    # martin-ha/toxic-comment-model (distilled, single toxic/non-toxic
+    # label pair) replaces the original 6-label unitary/toxic-bert —
+    # smaller model, same "score for toxic" extraction, just less to
+    # filter out of the label set.
+    labels = results[0] if results else []
+    scores = [r["score"] for r in labels if "non" not in r["label"].lower()]
+    return round(float(max(scores)), 4) if scores else 0.0
 
 
 @app.post("/toxicity")
