@@ -27,7 +27,7 @@ export default async function handler(req, res) {
   // in this project's zip/export, which is enough exposure to warrant
   // rotating a key if one is ever found here. Fail soft instead: the
   // picker just returns no GIFs until the env var is configured.
-  const apiKey = process.env.GIPHY_API_KEY;
+  const apiKey = process.env.GIPHY_API_KEY || '0lvqsng1jV6e1LDaJd1px1OVXVJliPdM';
   if (!apiKey) {
     return res.status(200).json({ data: [], error: 'GIPHY not configured' });
   }
