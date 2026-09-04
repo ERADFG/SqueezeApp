@@ -5940,6 +5940,25 @@ html[data-theme="dim"], html[data-theme="dark"] {
    only --achv-c (set inline per-badge from the tier color map in
    js/achievements.js) is new, and it's scoped to unlocked badges.
    ═══════════════════════════════════════════════════════════════ */
+/* Each medal (.achv-badge-icon) stacks several box-shadows plus
+   conic/radial gradients to get its glossy coin look — enough
+   layered paint effects that mobile browsers commonly promote every
+   single medal to its own GPU compositing layer. Without a stacking
+   context around the whole grid, those individually-promoted layers
+   get compared against the *page's* layers instead of staying
+   contained here, and they end up painting above #m-topbar/#m-tabbar
+   (z-index:900) regardless of the badges' own much lower z-index —
+   the medals "float" above the fixed header/nav as ghost circles.
+   Previously this was only patched for the drawer-open state
+   (html.oc-drawer-open #achv-root { display:none }, below), which
+   left it broken the rest of the time. isolation:isolate here makes
+   #achv-root its own stacking context so every badge layer inside it
+   is contained and compared as one unit against the rest of the
+   page — same fix already used for #m-topbar/#m-tabbar/.m-drawer-bg
+   themselves, just applied at the source instead of only patching
+   the one state that got reported. */
+#achv-root { isolation:isolate; }
+
 .achv-level-card {
   display:flex; align-items:center; gap:20px;
   margin:14px 16px; padding:18px; border:1px solid var(--line); border-radius:var(--r-lg,20px);
