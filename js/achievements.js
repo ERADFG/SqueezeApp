@@ -19,12 +19,27 @@ const ACHV_CATEGORY_ORDER = [
   'Polls', 'Streaks', 'Special'
 ];
 
+// Tier ladder is Bronze → Silver → Gold → (everything harder) — the
+// original spread put unrelated hues (pink/orange/red/cyan) on tiers
+// above Gold, which reads as random rather than "this is further up
+// the ladder." Every tier past Gold is now a single purple family
+// that deepens/saturates as the tier gets harder, so the progression
+// is legible at a glance: bronze → silver → gold → purple, with
+// purple itself getting richer the further up you go. Special (one-
+// off badges like Joined/Verified/Moderator — not part of the
+// grind ladder) keeps the brand blue so it reads as its own category
+// rather than another rung on the ladder.
 const ACHV_TIER_COLOR = {
-  Bronze: '#B08D57', Silver: '#9AA3AC', Gold: '#EAB308', Platinum: '#8B9BB4',
-  Diamond: '#38BDF8', Master: '#7C3AED', Grandmaster: '#EC4899',
-  Legendary: '#F97316', Mythic: '#EF4444', Eternal: '#0EA5E9',
-  Ascendant: '#EAB308', Special: '#0B6FE0'
+  Bronze: '#B08D57', Silver: '#9BA4AD', Gold: '#EAB308',
+  Platinum: '#C4B5FD', Diamond: '#A78BFA', Master: '#8B5CF6',
+  Grandmaster: '#7C3AED', Legendary: '#6D28D9', Mythic: '#5B21B6',
+  Eternal: '#4C1D95', Ascendant: '#3B0B78', Special: '#0B6FE0'
 };
+// Rarest rung on the ladder — gets an animated shimmer sweep on top
+// of its (very dark) purple so it still reads as the prestige tier
+// instead of just "the dark one." See .achv-badge[data-tier="Ascendant"]
+// and .achv-modal-icon[data-tier="Ascendant"] in style.css.
+const ACHV_SHIMMER_TIERS = new Set(['Ascendant']);
 
 // ── ICON SET — premium stroke-line SVGs, one per metric, swapped in
 // for the old emoji so unlocked badges look consistent and crisp at
@@ -166,7 +181,7 @@ function achvBadgeHtml(a, isNew) {
   const style = unlocked ? `--achv-c:${color};` : '';
   const progressPct = a.threshold > 0 ? Math.max(0, Math.min(100, (a.current_value / a.threshold) * 100)) : 0;
   return `
-    <button class="achv-badge${unlocked ? ' unlocked' : ' locked'}${isNew ? ' achv-badge-new' : ''}" style="${style}" onclick="openAchvModal('${a.id}')" data-achv-id="${esc(a.id)}">
+    <button class="achv-badge${unlocked ? ' unlocked' : ' locked'}${isNew ? ' achv-badge-new' : ''}" style="${style}" data-tier="${esc(a.tier)}" onclick="openAchvModal('${a.id}')" data-achv-id="${esc(a.id)}">
       <span class="achv-badge-icon">${unlocked ? achvIconFor(a) : ACHV_LOCK_ICON}</span>
       <span class="achv-badge-title">${unlocked ? esc(a.title) : '???'}</span>
       ${!unlocked ? `<span class="achv-badge-progress"><span class="achv-badge-progress-fill" style="width:${progressPct}%;"></span></span>` : ''}
@@ -215,7 +230,7 @@ function achvModalBodyHtml(a) {
   const dateStr = a.unlocked_at ? new Date(a.unlocked_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : '';
   const progressPct = a.threshold > 0 ? Math.max(0, Math.min(100, (a.current_value / a.threshold) * 100)) : 0;
   return `
-    <div class="achv-modal-icon" style="--achv-c:${color};">
+    <div class="achv-modal-icon" style="--achv-c:${color};" data-tier="${esc(a.tier)}">
       ${unlocked ? achvIconFor(a) : ACHV_LOCK_ICON}
     </div>
     <h2 class="achv-modal-title">${unlocked ? esc(a.title) : 'Locked Achievement'}</h2>
@@ -340,13 +355,15 @@ function achvCelebrateLevelUp(level) {
   setTimeout(() => overlay.classList.remove('show'), 2400);
 }
 
-const ACHV_CONFETTI_COLORS = ['#F97316', '#EAB308', '#EC4899', '#38BDF8', '#7C3AED', '#22C55E'];
+const ACHV_CONFETTI_COLORS = ['#EAB308', '#8B5CF6', '#B08D57', '#9BA4AD', '#C4B5FD', '#38BDF8'];
 function achvConfettiBurst(container) {
   const field = document.createElement('div');
   field.className = 'achv-confetti-field';
-  for (let i = 0; i < 36; i++) {
+  for (let i = 0; i < 40; i++) {
     const piece = document.createElement('span');
-    piece.className = 'achv-confetti-piece';
+    // Every 4th piece is a little four-point star instead of a plain
+    // rect — same fall animation, just a bit more sparkle in the mix.
+    piece.className = 'achv-confetti-piece' + (i % 4 === 0 ? ' star' : '');
     const x = (Math.random() * 100).toFixed(1);
     const delay = (Math.random() * 0.25).toFixed(2);
     const duration = (1.6 + Math.random() * 0.9).toFixed(2);

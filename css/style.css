@@ -6051,6 +6051,26 @@ html[data-theme="dim"], html[data-theme="dark"] {
 }
 .achv-badge.locked .achv-badge-icon svg { width:23px; height:23px; color:#b8c0c8; opacity:.9; filter:none; }
 
+/* Rarest tier on the ladder (Ascendant) gets an animated diagonal
+   shine sweeping across the medal face on a loop, on top of its own
+   (very dark) purple — otherwise the deepest tier color reads as
+   "the dark/dull one" instead of "the hardest one." The gradient is
+   painted on a pseudo-element the same size/shape as the medal, so
+   it's automatically clipped to the circle by the medal's own
+   border-radius — no extra wrapper or overflow:hidden needed. */
+.achv-badge[data-tier="Ascendant"].unlocked .achv-badge-icon::after,
+.achv-modal-icon[data-tier="Ascendant"]::after {
+  content:""; position:absolute; inset:0; border-radius:50%; z-index:2; pointer-events:none;
+  background:linear-gradient(115deg, transparent 35%, rgba(255,255,255,.65) 50%, transparent 65%);
+  background-size:240% 100%; background-position:140% 0;
+  animation:achv-shimmer-sweep 2.8s ease-in-out infinite;
+}
+@keyframes achv-shimmer-sweep {
+  0%, 42%  { background-position:140% 0; }
+  62%      { background-position:-40% 0; }
+  100%     { background-position:-40% 0; }
+}
+
 .achv-badge-title { font-size:11.5px; font-weight:700; color:var(--ink); line-height:1.25; }
 .achv-badge.locked .achv-badge-title { color:var(--muted); letter-spacing:.06em; }
 .achv-badge-progress { display:block; width:74%; height:4px; border-radius:99px; background:var(--line); overflow:hidden; margin:0 auto; }
@@ -6184,17 +6204,58 @@ html[data-theme="dim"], html[data-theme="dark"] {
 }
 .achv-levelup-overlay.show { opacity:1; }
 .achv-levelup-card {
+  position:relative;
   display:flex; flex-direction:column; align-items:center; gap:2px;
   transform:scale(.6); opacity:0;
   transition:transform .5s cubic-bezier(.34,1.56,.64,1), opacity .35s ease;
 }
 .achv-levelup-overlay.show .achv-levelup-card { transform:scale(1); opacity:1; }
-.achv-levelup-kicker { font-size:15px; font-weight:800; letter-spacing:.18em; text-transform:uppercase; color:#fff; opacity:.85; }
+/* Expanding shockwave rings behind the number — two, staggered, so
+   the burst reads as one continuous pulse rather than a single flat
+   ring. Centered on the card via negative margin instead of
+   translate(-50%,-50%) so it doesn't fight the card's own scale
+   transition on the same element. */
+.achv-levelup-card::before, .achv-levelup-card::after {
+  content:""; position:absolute; left:50%; top:46%; width:220px; height:220px;
+  margin:-110px 0 0 -110px; border-radius:50%;
+  border:2px solid color-mix(in srgb, var(--maroon) 65%, #fff 15%);
+  opacity:0; pointer-events:none;
+}
+.achv-levelup-overlay.show .achv-levelup-card::before { animation:achv-ring-burst .9s cubic-bezier(.2,.7,.3,1) .08s both; }
+.achv-levelup-overlay.show .achv-levelup-card::after  { animation:achv-ring-burst 1.15s cubic-bezier(.2,.7,.3,1) .26s both; }
+@keyframes achv-ring-burst {
+  0%   { transform:scale(.35); opacity:.9; }
+  100% { transform:scale(1.5); opacity:0; }
+}
+.achv-levelup-kicker {
+  font-size:15px; font-weight:800; letter-spacing:.18em; text-transform:uppercase; color:#fff; opacity:0;
+}
+.achv-levelup-overlay.show .achv-levelup-kicker { animation:achv-kicker-in .5s ease .45s both; }
+@keyframes achv-kicker-in {
+  0%   { opacity:0; transform:translateY(6px); letter-spacing:.5em; }
+  100% { opacity:.85; transform:translateY(0); letter-spacing:.18em; }
+}
 .achv-levelup-num {
   font-size:104px; font-weight:900; line-height:1; color:#fff;
   background:linear-gradient(145deg, #ffe9a8, var(--maroon, #EAB308));
   -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
-  filter:drop-shadow(0 4px 24px rgba(234,179,8,.55));
+}
+/* Bounce-settle on entry, then two slow glow breaths so the number
+   keeps a little life while the overlay is up instead of sitting
+   static for the full 2.4s — same idea as the ring burst, just on
+   the number itself. */
+.achv-levelup-overlay.show .achv-levelup-num {
+  animation:achv-num-settle .55s cubic-bezier(.34,1.56,.64,1) .18s both,
+            achv-num-glow-pulse 1.7s ease-in-out .75s 2;
+}
+@keyframes achv-num-settle {
+  0%   { transform:scale(.4) rotate(-8deg); filter:drop-shadow(0 4px 24px rgba(234,179,8,.55)); }
+  60%  { transform:scale(1.14) rotate(3deg); }
+  100% { transform:scale(1) rotate(0deg); filter:drop-shadow(0 4px 24px rgba(234,179,8,.55)); }
+}
+@keyframes achv-num-glow-pulse {
+  0%, 100% { filter:drop-shadow(0 4px 24px rgba(234,179,8,.55)); }
+  50%      { filter:drop-shadow(0 4px 40px rgba(234,179,8,.95)); }
 }
 
 .achv-confetti-field { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
@@ -6202,6 +6263,13 @@ html[data-theme="dim"], html[data-theme="dark"] {
   position:absolute; top:-10%; width:8px; height:14px; background:var(--achv-color);
   border-radius:2px; opacity:.95;
   animation-name:achv-confetti-fall; animation-timing-function:cubic-bezier(.35,0,.65,1); animation-fill-mode:forwards;
+}
+/* Every 4th confetti piece (see achvConfettiBurst in achievements.js)
+   is a small 4-point star instead of a rect — same fall animation,
+   just breaks up the grid of rectangles with a bit of sparkle. */
+.achv-confetti-piece.star {
+  width:12px; height:12px; border-radius:0;
+  clip-path:polygon(50% 0%, 62% 36%, 100% 36%, 69% 58%, 81% 94%, 50% 72%, 19% 94%, 31% 58%, 0% 36%, 38% 36%);
 }
 @keyframes achv-confetti-fall {
   0%   { transform:translateY(0) rotate(0deg); opacity:1; }
