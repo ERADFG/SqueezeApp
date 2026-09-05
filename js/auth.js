@@ -111,6 +111,7 @@ async function renderAuthArea() {
     renderSideNav(); renderMobileChrome();
     if (el) el.innerHTML = `<div class="auth-cta"><a class="cta-primary" href="start.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"></path></svg><span>Create account</span></a></div>`;
     refreshPostGates();
+    maybeShowOnboardGate();
     return;
   }
 
@@ -258,6 +259,57 @@ document.addEventListener('click', (e) => {
     if (!wrap.contains(e.target)) wrap.classList.remove('open');
   });
 });
+
+// ── ONBOARDING GATE — see the CSS comment above .gate-bg in
+// css/style.css for what this is and why. Built lazily (same
+// pattern as gcModalEl() in common.js) so it costs nothing on pages
+// that never need it, and only ever shown from maybeShowOnboardGate()
+// below, which renderAuthArea() calls once session state is known.
+function onboardGateEl() {
+  let el = document.getElementById('onboard-gate');
+  if (el) return el;
+  el = document.createElement('div');
+  el.id = 'onboard-gate';
+  el.className = 'modal-bg gate-bg';
+  el.addEventListener('click', e => { if (e.target === el) dismissOnboardGate(); });
+  el.innerHTML = `
+    <div class="gate-card">
+      <button type="button" class="gate-close" onclick="dismissOnboardGate();return false;" aria-label="Close">&#10005;</button>
+      <span class="gate-logo">
+        <img class="logo-mark-light" src="img/logo-light.png" width="44" height="44" alt="">
+        <img class="logo-mark-dark" src="img/logo-dark.png" width="44" height="44" alt="">
+      </span>
+      <span class="gate-wordmark">Interact<em>Ink</em></span>
+      <h2 class="gate-tag">Real people.<br>Real conversations.<br><span class="gate-tag-muted">A feed you control.</span></h2>
+      <a class="gate-cta" href="start.html">Create account</a>
+      <button type="button" class="gate-explore" onclick="dismissOnboardGate();return false;">Explore the app</button>
+      <p class="gate-signin">Already have an account? <a href="login.html">Sign in</a></p>
+    </div>`;
+  document.body.appendChild(el);
+  return el;
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('onboard-gate')?.classList.contains('open')) dismissOnboardGate();
+});
+
+function dismissOnboardGate() {
+  try { sessionStorage.setItem('ii-gate-seen', '1'); } catch (e) {}
+  document.getElementById('onboard-gate')?.classList.remove('open');
+  document.body.classList.remove('oc-sheet-open');
+}
+
+// #xtabs (the For you / Following tabs) only exists on the home feed
+// — every locale's homepage included — so it's a reliable "is this
+// the home page" check without needing a data-page attribute that
+// not every localized copy of index.html actually sets.
+function maybeShowOnboardGate() {
+  if (currentSession) return;
+  if (!document.getElementById('xtabs')) return;
+  try { if (sessionStorage.getItem('ii-gate-seen')) return; } catch (e) {}
+  const el = onboardGateEl();
+  document.body.classList.add('oc-sheet-open');
+  requestAnimationFrame(() => el.classList.add('open'));
+}
 
 // Board/thread pages call this to show either the real post form or a
 // "log in to post" gate, depending on session state.
