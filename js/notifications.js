@@ -13,7 +13,13 @@ const NOTIF_ICON = {
   mention: '<svg viewBox="0 0 24 24"><path d="M15.5 12a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"/><path d="M15.5 12v1.2c0 1.3 1 2.3 2.3 2.3s2.2-1 2.2-3.5a8 8 0 1 0-3.5 6.6"/></svg>',
   follow:  '<svg viewBox="0 0 24 24"><circle cx="12" cy="8.3" r="3.6"/><path d="M4.5 20c1.2-4 4-6 7.5-6s6.3 2 7.5 6"/></svg>',
   message: ICON.chat,
-  group_invite: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.3" r="3.3"/><path d="M2.8 20c.9-3.7 3.2-5.6 6.2-5.6s5.3 1.9 6.2 5.6"/><path d="M15.6 5.3a3.2 3.2 0 0 1 0 6.1"/><path d="M16.2 14.8c2.4.5 4.1 2.2 4.9 5.2"/></svg>'
+  group_invite: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.3" r="3.3"/><path d="M2.8 20c.9-3.7 3.2-5.6 6.2-5.6s5.3 1.9 6.2 5.6"/><path d="M15.6 5.3a3.2 3.2 0 0 1 0 6.1"/><path d="M16.2 14.8c2.4.5 4.1 2.2 4.9 5.2"/></svg>',
+  // Same person-silhouette body as the plain `follow` icon above, with
+  // a small padlock swapped in for the head — reads as "a follow,
+  // but gated" at a glance, and stays legible at the 11x11 size every
+  // notif-badge is rendered at.
+  follow_request: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 20c1.2-4 4-6 7.5-6s6.3 2 7.5 6"/><rect x="9.3" y="5.6" width="5.4" height="4.4" rx="1"/><path d="M10.4 5.6V4.5a1.6 1.6 0 0 1 3.2 0v1.1"/></svg>',
+  follow_request_accepted: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8.3" r="3.6"/><path d="M4.5 20c1.2-4 4-6 7.5-6s6.3 2 7.5 6"/></svg>'
 };
 
 // Path for a group/channel thread — mirrors groupMessagesUrl() in
@@ -30,11 +36,13 @@ function notifText(n) {
   if (n.type === 'follow') return `${who} followed you`;
   if (n.type === 'message') return `${who} sent you a message`;
   if (n.type === 'group_invite') return `${who} invited you to join <b>${esc(n.conversation?.name || (n.conversation?.kind === 'channel' ? 'a channel' : 'a group'))}</b>`;
+  if (n.type === 'follow_request') return `${who} requested to follow you`;
+  if (n.type === 'follow_request_accepted') return `${who} accepted your follow request`;
   return who;
 }
 
 function notifHref(n) {
-  if (n.type === 'follow') return n.actor?.username ? profileUrl(n.actor.username) : '#';
+  if (n.type === 'follow' || n.type === 'follow_request' || n.type === 'follow_request_accepted') return n.actor?.username ? profileUrl(n.actor.username) : '#';
   if (n.type === 'message') return n.actor?.username ? messagesUrl(n.actor.username) : '#';
   if (n.type === 'group_invite') return n.conversation?.id ? notifGroupUrl(n.conversation.id) : '#';
   if (n.post && !n.post.is_deleted) return postUrlById(n.post.id, n.post.profile?.username || n.post.author?.username);
@@ -44,6 +52,7 @@ function notifHref(n) {
 function notifItemHtml(n) {
   if (n.type === 'mention') return mentionItemHtml(n);
   if (n.type === 'group_invite') return groupInviteItemHtml(n);
+  if (n.type === 'follow_request') return followRequestItemHtml(n);
   const actorAvatar = avatarUrl(n.actor?.avatar_url);
   // A mention inside a reply used to snippet the parent post's body
   // (all notifications link post_id to the parent post, for
@@ -52,7 +61,7 @@ function notifItemHtml(n) {
   // attached, same as every other type's snippet reflects the actual
   // content the notification is about.
   const snipSource = (n.post && !n.post.is_deleted) ? n.post : null;
-  const snippet = (n.type !== 'follow' && n.type !== 'message' && snipSource) ? `<div class="notif-snip">${renderBody((snipSource.body || '').slice(0, 140))}</div>` : '';
+  const snippet = (n.type !== 'follow' && n.type !== 'message' && n.type !== 'follow_request_accepted' && snipSource) ? `<div class="notif-snip">${renderBody((snipSource.body || '').slice(0, 140))}</div>` : '';
   return `
   <a class="notif-item${n.read ? '' : ' unread'}" href="${notifHref(n)}">
     <span class="notif-avatar-wrap${avSqClass(n.actor) ? ' notif-avatar-wrap-sq' : ''}">
@@ -173,6 +182,72 @@ async function respondGroupInviteFromNotif(btnEl, convId, accept) {
   }
 }
 
+// Follow request — Accept/Decline live right on the card, same
+// pattern as the group/channel invite above (reuses its
+// .notif-item-invite/.notif-invite-actions/.notif-invite-status CSS
+// wholesale — the class names were never group_invite-specific).
+// n.requestStatus is computed in loadNotifications() below rather
+// than carried on the row itself, since accepting/declining doesn't
+// touch the notifications row, only follow_requests/follows (see
+// supabase/private_account_follow_requests.sql): 'pending' shows the
+// two buttons, 'accepted' shows a confirmation linking to their
+// profile, 'gone' means it was declined (or the requester canceled
+// it themselves) and there's nothing left to act on.
+function followRequestItemHtml(n) {
+  const actorAvatar = avatarUrl(n.actor?.avatar_url);
+  const status = n.requestStatus;
+  const actionsHtml = status === 'pending' ? `
+      <div class="notif-invite-actions">
+        <button type="button" class="notif-invite-decline-btn" onclick="respondFollowRequestFromNotif(this,'${esc(n.actor_id || '')}',false)">Decline</button>
+        <button type="button" class="notif-invite-accept-btn" onclick="respondFollowRequestFromNotif(this,'${esc(n.actor_id || '')}',true)">Accept</button>
+      </div>`
+    : status === 'accepted' ? `<div class="notif-invite-status notif-invite-status-joined">Accepted &middot; <a href="${notifHref(n)}">View profile</a></div>`
+    : `<div class="notif-invite-status">Request no longer available</div>`;
+  return `
+  <div class="notif-item notif-item-invite${n.read ? '' : ' unread'}">
+    <a class="notif-invite-linkwrap" href="${notifHref(n)}">
+      <span class="notif-avatar-wrap${avSqClass(n.actor) ? ' notif-avatar-wrap-sq' : ''}">
+        <img class="avatar${avSqClass(n.actor)}" src="${esc(actorAvatar)}" alt="" loading="lazy" decoding="async">
+        <span class="notif-badge follow_request">${NOTIF_ICON.follow_request}</span>
+      </span>
+      <div class="notif-body">
+        <div class="notif-txt">${notifText(n)}</div>
+        <div class="notif-time">${timeAgo(n.created_at)}</div>
+      </div>
+    </a>
+    ${actionsHtml}
+    ${n.read ? '' : '<span class="notif-dot" aria-hidden="true"></span>'}
+  </div>`;
+}
+
+// Decline (and the requester's own cancel, from js/profile.js) are
+// plain deletes covered by follow_requests_delete RLS — either side
+// of the row can remove it. Accept has to go through the
+// accept_follow_request() RPC since it inserts into follows on the
+// REQUESTER's behalf, which no client-safe RLS policy on follows
+// should ever allow directly.
+async function respondFollowRequestFromNotif(btnEl, requesterId, accept) {
+  if (!currentSession || !requesterId) return;
+  const card = btnEl.closest('.notif-item-invite');
+  const actionsEl = card?.querySelector('.notif-invite-actions');
+  actionsEl?.querySelectorAll('button').forEach(b => b.disabled = true);
+  const { error } = accept
+    ? await acceptFollowRequest(requesterId)
+    : await cancelFollowRequest(requesterId, currentSession.user.id);
+  if (error) {
+    toast(error.message || 'Could not respond to that request.', 'error');
+    actionsEl?.querySelectorAll('button').forEach(b => b.disabled = false);
+    return;
+  }
+  toast(accept ? 'Follow request accepted.' : 'Follow request declined.');
+  if (actionsEl) {
+    const href = card.querySelector('.notif-invite-linkwrap')?.getAttribute('href') || '#';
+    actionsEl.outerHTML = accept
+      ? `<div class="notif-invite-status notif-invite-status-joined">Accepted &middot; <a href="${href}">View profile</a></div>`
+      : `<div class="notif-invite-status">Request declined</div>`;
+  }
+}
+
 // Buckets rows the way most notification inboxes do: anything unread
 // jumps to its own "New" group regardless of age, then everything
 // else (already read — from an earlier visit) is grouped by day so a
@@ -246,6 +321,26 @@ async function loadNotifications() {
       .eq('user_id', session.user.id).in('conversation_id', inviteConvIds);
     const statusByConv = new Map((memberRows || []).map(r => [r.conversation_id, r.status]));
     data.forEach(n => { if (n.type === 'group_invite') n.inviteStatus = statusByConv.get(n.conversation?.id) || 'gone'; });
+  }
+
+  // Same idea for follow_request: accepting/declining touches
+  // follow_requests/follows, never the notification row itself, so
+  // "still pending" has to be looked up separately. Unlike the invite
+  // case above there's no single status column to read — the request
+  // row is deleted either way it's resolved — so accepted vs.
+  // declined is told apart by whether a real follows row exists now.
+  const frActorIds = [...new Set(data.filter(n => n.type === 'follow_request' && n.actor_id).map(n => n.actor_id))];
+  if (frActorIds.length) {
+    const [{ data: pendingRows }, { data: followRows }] = await Promise.all([
+      sb.from('follow_requests').select('requester_id').eq('target_id', session.user.id).in('requester_id', frActorIds),
+      sb.from('follows').select('follower_id').eq('followee_id', session.user.id).in('follower_id', frActorIds)
+    ]);
+    const pendingSet = new Set((pendingRows || []).map(r => r.requester_id));
+    const followingMeSet = new Set((followRows || []).map(r => r.follower_id));
+    data.forEach(n => {
+      if (n.type !== 'follow_request') return;
+      n.requestStatus = pendingSet.has(n.actor_id) ? 'pending' : followingMeSet.has(n.actor_id) ? 'accepted' : 'gone';
+    });
   }
 
   renderNotifGroups(root, data);

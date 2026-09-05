@@ -223,7 +223,11 @@ async function saveAccountPrivacy() {
   const checkbox = document.getElementById('private-account');
   const checked = checkbox.checked;
   // Reuses the already-resolved shared session — see the note in
-  // saveNotifSetting() above.
+  // saveNotifSetting() above. The actual gating (posts/replies hidden
+  // from non-followers, new follows becoming pending requests) lives
+  // entirely in RLS/triggers on the DB side — see
+  // supabase/private_account_follow_requests.sql — this is just
+  // flipping the flag those read.
   const session = currentSession;
   if (!session) return;
   const { error } = await sb.from('profiles').update({ is_private: checked }).eq('id', session.user.id);

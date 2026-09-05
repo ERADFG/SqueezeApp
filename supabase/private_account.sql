@@ -5,4 +5,4 @@
 alter table profiles
   add column if not exists is_private boolean not null default false;
 
-comment on column profiles.is_private is 'When true, the account is marked private. Purely a display flag for now — it does not yet gate access to posts, profile, or follows via RLS.';
+comment on column profiles.is_private is 'When true, the account is private: posts/replies are hidden from everyone except accepted followers (RLS gate in supabase/private_account_follow_requests.sql), and new followers require an accepted follow_requests row first.';

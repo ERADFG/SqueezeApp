@@ -5162,6 +5162,45 @@ async function unfollowUser(followeeId) {
     .eq('follower_id', currentSession.user.id).eq('followee_id', followeeId);
 }
 
+// ── PRIVATE ACCOUNTS / FOLLOW REQUESTS ──
+// Whether an account is private can't be trusted from whatever the
+// client last fetched, so the actual decision (follow now vs. drop a
+// pending request) happens server-side in request_follow() —
+// see supabase/private_account_follow_requests.sql. Returns
+// 'followed' or 'requested' so callers (js/profile.js) know which
+// button state to show.
+async function requestFollow(targetId) {
+  const { data, error } = await sb.rpc('request_follow', { target_id: targetId });
+  return { status: data, error };
+}
+
+// Whether *I* currently have a pending outgoing request to targetId.
+async function hasPendingFollowRequest(targetId) {
+  if (!currentSession) return false;
+  const { data } = await sb.from('follow_requests').select('requester_id')
+    .eq('requester_id', currentSession.user.id).eq('target_id', targetId).maybeSingle();
+  return !!data;
+}
+
+// Canceling my own outgoing request (tapping "Requested" again) is a
+// plain delete — follow_requests_delete in the migration above lets
+// either side of a request remove it. Declining someone else's
+// incoming request from the notifications page uses the exact same
+// call with the ids swapped (see respondFollowRequestFromNotif() in
+// js/notifications.js).
+async function cancelFollowRequest(requesterId, targetId) {
+  return sb.from('follow_requests').delete()
+    .eq('requester_id', requesterId).eq('target_id', targetId);
+}
+
+// Accepting has to be an RPC — it inserts into follows on the
+// REQUESTER's behalf, which no client-safe RLS policy should ever
+// allow directly. See accept_follow_request() in
+// supabase/private_account_follow_requests.sql.
+async function acceptFollowRequest(requesterId) {
+  return sb.rpc('accept_follow_request', { p_requester_id: requesterId });
+}
+
 // ── MUTE / BLOCK — same shape as follow/unfollow above. Muting only
 // affects your own feeds (nothing to tell the other person); blocking
 // is mutual-visible, same as Twitter, and the DB trigger in

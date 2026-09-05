@@ -135,8 +135,21 @@ async function loadProfile() {
     return;
   }
 
+  // PRIVATE ACCOUNT — the profile header (avatar/bio/stats/follow
+  // button) always renders; only the posts underneath are gated.
+  // isFollowerAlready is computed once here (rather than inside the
+  // isFollowing().then() below, which only fires after the header's
+  // already on the page) because whether to show the lock notice at
+  // all has to be known before root.innerHTML is built. Actual
+  // enforcement is server-side regardless — the RESTRICTIVE RLS
+  // policy in supabase/private_account_follow_requests.sql hides the
+  // rows either way, this is just what decides which UI to paint.
+  const isFollowerAlready = !isOwnProfile && session ? await isFollowing(profile.id) : false;
+  const isPrivateLocked = !!profile.is_private && !isOwnProfile && !isFollowerAlready;
+  const hasPendingRequest = (isPrivateLocked && session) ? await hasPendingFollowRequest(profile.id) : false;
+
   setPageH1(profile.display_name ? `${profile.display_name} (@${profile.username})` : `@${profile.username}`);
-  setPageDescription(profile.bio || `@${profile.username}'s posts on InteractInk.`);
+  setPageDescription(isPrivateLocked ? `This account is private.` : (profile.bio || `@${profile.username}'s posts on InteractInk.`));
   // Canonicalize casing (usernames are matched case-insensitively
   // above via ilike) and upgrade a legacy ?u= link, same idea as
   // thread.js's /i/status/ -> /<username>/status/ upgrade.
@@ -176,7 +189,7 @@ async function loadProfile() {
               <button class="pc-menu-btn profile-icon-btn" onclick="togglePostMenu('profile-${profile.id}', event)">${ICON.menu}</button>
               <div class="pc-menu-dd" id="profile-menu-dd">${profileMenuItemsHtml(profile)}</div>
             </div>` : ''}
-          ${!isOwnProfile && session ? `<button class="follow-btn" id="follow-btn" onclick="toggleFollow()">${t('action.follow')}</button>` : ''}
+          ${!isOwnProfile && session ? `<button class="follow-btn${hasPendingRequest ? ' following requested' : ''}" id="follow-btn" onclick="toggleFollow()">${hasPendingRequest ? 'Requested' : t('action.follow')}</button>` : ''}
           ${!isOwnProfile && !session ? `<a class="follow-btn" href="login.html">${t('action.follow')}</a>` : ''}
           ${isOwnProfile ? `<a class="profile-edit-btn" href="editprofile.html">Edit Profile</a>` : ''}
         </div>
@@ -185,7 +198,7 @@ async function loadProfile() {
         <div class="uname-row">
           <div class="uname">${esc(profile.display_name || profile.username)}${vBadge(profile)}</div>
         </div>
-        <div class="handle">@${esc(profile.username)}</div>
+        <div class="handle">${isPrivateLocked ? ICON_LOCK_SM : ''}@${esc(profile.username)}</div>
         <div class="profile-stats">
           <a class="stat-item" href="${flu('following')}"><b id="stat-following">${fmtCount(profile.following_count)}</b> Following</a>
           <a class="stat-item" href="${flu('followers')}"><b id="stat-followers">${fmtCount(profile.followers_count)}</b> Followers</a>
@@ -203,6 +216,12 @@ async function loadProfile() {
 
     <div id="profile-community"></div>
 
+    ${isPrivateLocked ? `
+    <div class="blocked-notice" id="private-gate">
+      <span class="private-gate-icon">${ICON_LOCK_SM}</span>
+      <h1>This account is private</h1>
+      <p>Follow @${esc(profile.username)} to see their posts.</p>
+    </div>` : `
     <div id="profile-tabs" class="sec-bar profile-tabs" style="padding:0;">
       <div class="xtabs">
         <button class="xtab active" id="ptab-posts" onclick="switchProfileTab('posts');return false;">Posts</button>
@@ -210,7 +229,7 @@ async function loadProfile() {
         ${isOwnProfile ? `<button class="xtab" id="ptab-scheduled" onclick="switchProfileTab('scheduled');return false;">Scheduled</button>` : ''}
       </div>
     </div>
-    <div id="profile-posts">${skeletonFeedHtml(3)}</div>
+    <div id="profile-posts">${skeletonFeedHtml(3)}</div>`}
   `;
 
   // Bug fix: a banner URL that 404s or otherwise fails to load used to
@@ -246,7 +265,10 @@ async function loadProfile() {
   }
 
   if (!isOwnProfile && session) {
-    isFollowing(profile.id).then(f => setFollowBtnState(f));
+    // isFollowerAlready/hasPendingRequest were already resolved above
+    // (needed before the header HTML itself could be built), so this
+    // just paints the button state rather than re-fetching it.
+    setFollowBtnState(isFollowerAlready ? 'following' : hasPendingRequest ? 'requested' : 'none');
     loadFollowedBy(profile.id);
     isMuted(profile.id).then(m => { const b = document.getElementById('pm-mute-btn'); if (b && m) b.textContent = 'Unmute'; });
     // (no isBlocked() check needed here — we already returned above
@@ -254,15 +276,19 @@ async function loadProfile() {
     // this point it's always false and the menu button stays "Block")
   }
 
-  // profiles.posts_count only tracks top-level posts (see the comment
-  // on confirmDeletePost() in common.js) — replies count toward the
-  // "Posts" stat too (10 posts + 10 replies shows 20), so patch the
-  // number in once the reply count comes back rather than blocking
-  // the whole header render on an extra query.
-  loadReplyCountIntoStat(profile.id, profile.posts_count || 0);
-
   loadProfileCommunity(profile.id, profile.show_community);
-  loadUserPosts(profile.id);
+
+  if (!isPrivateLocked) {
+    // profiles.posts_count only tracks top-level posts (see the
+    // comment on confirmDeletePost() in common.js) — replies count
+    // toward the "Posts" stat too (10 posts + 10 replies shows 20),
+    // so patch the number in once the reply count comes back rather
+    // than blocking the whole header render on an extra query. Only
+    // fetched when there's actually a #profile-posts feed on the
+    // page to load — the private-gate notice above replaces both.
+    loadReplyCountIntoStat(profile.id, profile.posts_count || 0);
+    loadUserPosts(profile.id);
+  }
 }
 
 // "Community" section — shows a community this profile created,
@@ -668,39 +694,53 @@ function replyCardHtml(r, replyingToProfile, opUsername = null) {
 }
 
 // ── FOLLOW BUTTON ──
+// Three states now instead of a plain boolean: 'none' (Follow),
+// 'following' (Following — click to unfollow), and 'requested' (sent
+// to a private account, click to cancel). 'requested' reuses the
+// same .following CSS (outline pill that reddens on hover to hint
+// "tap to undo") rather than introducing new styling, since
+// canceling a request and unfollowing are the same kind of undo
+// action from the button's point of view.
 let followBusy = false;
-function setFollowBtnState(following) {
+function setFollowBtnState(state) {
   const btn = document.getElementById('follow-btn');
   if (!btn) return;
   if (isProtectedFollowUsername(viewedProfile?.username)) {
     btn.innerHTML = `${ICON_LOCK_SM}${t('action.following')}`;
     btn.classList.add('following', 'locked');
+    btn.classList.remove('requested');
     btn.disabled = true;
     btn.title = "You can't unfollow this account.";
     return;
   }
-  btn.textContent = following ? t('action.following') : t('action.follow');
-  btn.classList.toggle('following', following);
+  btn.textContent = state === 'following' ? t('action.following') : state === 'requested' ? 'Requested' : t('action.follow');
+  btn.classList.toggle('following', state === 'following' || state === 'requested');
+  btn.classList.toggle('requested', state === 'requested');
 }
 
 async function toggleFollow() {
   if (!requireLogin() || followBusy || !viewedProfile) return;
   if (isProtectedFollowUsername(viewedProfile.username)) return;
   const btn = document.getElementById('follow-btn');
-  const following = btn.classList.contains('following');
+  const state = btn.classList.contains('requested') ? 'requested' : btn.classList.contains('following') ? 'following' : 'none';
   followBusy = true;
   btn.disabled = true;
   try {
-    if (following) {
+    if (state === 'following') {
       const { error } = await unfollowUser(viewedProfile.id);
       if (error) throw error;
-      setFollowBtnState(false);
+      setFollowBtnState('none');
       bumpStat('stat-followers', -1);
-    } else {
-      const { error } = await followUser(viewedProfile.id);
+    } else if (state === 'requested') {
+      const { error } = await cancelFollowRequest(currentSession.user.id, viewedProfile.id);
       if (error) throw error;
-      setFollowBtnState(true);
-      bumpStat('stat-followers', 1);
+      setFollowBtnState('none');
+    } else {
+      const { status, error } = await requestFollow(viewedProfile.id);
+      if (error) throw error;
+      setFollowBtnState(status === 'requested' ? 'requested' : 'following');
+      if (status === 'followed') bumpStat('stat-followers', 1);
+      else toast(`Follow request sent to @${viewedProfile.username}.`);
     }
   } catch (e) {
     toast(e.message || 'Could not update follow status.', 'error');
