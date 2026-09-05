@@ -2512,41 +2512,33 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
    js/auth.js. Session-only (sessionStorage) — dismissing it doesn't
    nag again for the rest of that tab's session, but a fresh tab/visit
    sees it again, same as the reference app. ── */
-.gate-bg { background:rgba(11,111,224,.35); }
-/* Overrides the shared .modal-bg.open backdrop animation (which dims
-   to a neutral gray) with a faded blue tint, just for this gate —
-   other modals keep the standard dim backdrop. */
-.gate-bg.open { animation:gate-backdrop-in .15s ease both; }
-@keyframes gate-backdrop-in { from { background:rgba(11,111,224,0); } to { background:rgba(11,111,224,.35); } }
+.gate-bg { background:rgba(15,20,25,.55); }
 /* Fixed blue/white palette for the gate — independent of whatever
    --maroon accent the visitor (or a signed-in session) has picked,
-   so this stays on-brand blue no matter what. */
+   so this stays on-brand blue no matter what. The card itself fades
+   from solid blue at the top (behind the mark/wordmark) down to
+   white behind the heading and buttons, rather than being one flat
+   color. */
 .gate-card {
   --gate-blue:#0B6FE0; --gate-blue-dk:#0857B3;
   position:relative; width:100%; max-width:400px; max-height:92vh;
   overflow:auto; border-radius:var(--r-lg); text-align:center;
-  padding:56px 32px 32px; background:#FFFFFF; /* solid — was a gradient that
-     started on a near-transparent tint, letting the feed behind it show
-     through the top of the card */
+  padding:56px 32px 32px;
+  background:linear-gradient(180deg, var(--gate-blue) 0px, var(--gate-blue) 130px, #FFFFFF 230px);
   border:1px solid var(--line); box-shadow:var(--shadow-pop);
   animation:gate-slide-up .32s cubic-bezier(.22,1,.36,1) both;
 }
 @keyframes gate-slide-up { from { opacity:0; transform:translateY(56px); } to { opacity:1; transform:translateY(0); } }
 .gate-close {
   position:absolute; top:14px; right:14px; width:34px; height:34px; border-radius:50%;
-  display:flex; align-items:center; justify-content:center; background:var(--hover-bg);
-  color:var(--ink); border:none; cursor:pointer; font-size:16px; line-height:1;
+  display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.25);
+  color:#fff; border:none; cursor:pointer; font-size:16px; line-height:1;
 }
-.gate-close:hover { background:var(--line); }
+.gate-close:hover { background:rgba(255,255,255,.4); }
 .gate-logo { display:flex; justify-content:center; margin-bottom:14px; }
-/* Single white mark on a solid blue badge — replaces the old two
-   stacked light/dark-mode <img>s, which both rendered at once (the
-   dark-mode variant had no "hide by default" rule) and showed up as
-   two overlapping logos. */
-.gate-logo-badge { width:56px; height:56px; border-radius:50%; background:var(--gate-blue); display:flex; align-items:center; justify-content:center; flex:none; }
-.gate-logo-badge img { display:block; width:28px; height:28px; object-fit:contain; }
-.gate-wordmark { display:block; font-size:21px; font-weight:800; color:var(--ink); margin-bottom:30px; }
-.gate-wordmark em { font-style:normal; color:var(--gate-blue); }
+.gate-logo img { display:block; width:44px; height:44px; object-fit:contain; }
+.gate-wordmark { display:block; font-size:21px; font-weight:800; color:#fff; margin-bottom:30px; }
+.gate-wordmark em { font-style:normal; color:rgba(255,255,255,.75); }
 .gate-tag { font-size:25px; line-height:1.3; font-weight:800; color:var(--ink); margin:0 0 34px; }
 .gate-tag-muted { color:var(--muted); }
 .gate-cta {
@@ -2563,6 +2555,7 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
 .gate-signin a { color:var(--gate-blue); font-weight:700; text-decoration:none; }
 .gate-signin a:hover { text-decoration:underline; }
 @media (max-width:520px) {
+
   .gate-bg { align-items:flex-end; padding:0; }
   .gate-card { max-width:none; max-height:88vh; border-radius:24px 24px 0 0; padding:48px 24px 28px; }
 }
