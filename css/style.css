@@ -2512,7 +2512,12 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
    js/auth.js. Session-only (sessionStorage) — dismissing it doesn't
    nag again for the rest of that tab's session, but a fresh tab/visit
    sees it again, same as the reference app. ── */
-.gate-bg { background:rgba(15,20,25,.55); }
+.gate-bg { background:rgba(11,111,224,.35); }
+/* Overrides the shared .modal-bg.open backdrop animation (which dims
+   to a neutral gray) with a faded blue tint, just for this gate —
+   other modals keep the standard dim backdrop. */
+.gate-bg.open { animation:gate-backdrop-in .15s ease both; }
+@keyframes gate-backdrop-in { from { background:rgba(11,111,224,0); } to { background:rgba(11,111,224,.35); } }
 /* Fixed blue/white palette for the gate — independent of whatever
    --maroon accent the visitor (or a signed-in session) has picked,
    so this stays on-brand blue no matter what. */

@@ -279,7 +279,7 @@ function onboardGateEl() {
         <span class="gate-logo-badge"><img src="img/logo-dark.png" width="28" height="28" alt=""></span>
       </span>
       <span class="gate-wordmark">Interact<em>Ink</em></span>
-      <h2 class="gate-tag">Discover more.<br><span class="gate-tag-muted">Connect deeper.</span></h2>
+      <h2 class="gate-tag">Discover the web.</h2>
       <a class="gate-cta" href="start.html">Create account</a>
       <button type="button" class="gate-explore" onclick="dismissOnboardGate();return false;">Explore the app</button>
       <p class="gate-signin">Already have an account? <a href="login.html">Sign in</a></p>
