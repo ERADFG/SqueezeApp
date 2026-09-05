@@ -281,7 +281,7 @@ function onboardGateEl() {
       <span class="gate-wordmark">Interact<em>Ink</em></span>
       <h2 class="gate-tag">Discover more.<br><span class="gate-tag-muted">Connect deeper.</span></h2>
       <a class="gate-cta" href="start.html" onclick="dismissOnboardGate('start.html');return false;">Create account</a>
-      <button type="button" class="gate-explore" onclick="dismissOnboardGate();return false;">Discover the web</button>
+      <button type="button" class="gate-explore" onclick="dismissOnboardGate('index.html');return false;">Discover the web</button>
       <p class="gate-signin">Already have an account? <a href="login.html" onclick="dismissOnboardGate('login.html');return false;">Sign in</a></p>
     </div>`;
   document.body.appendChild(el);
@@ -330,9 +330,23 @@ function maybeShowOnboardGate() {
   if (currentSession) return;
   if (!document.getElementById('xtabs')) return;
   try { if (sessionStorage.getItem('ii-gate-seen')) return; } catch (e) {}
-  const el = onboardGateEl();
-  document.body.classList.add('oc-sheet-open');
-  requestAnimationFrame(() => el.classList.add('open'));
+  const show = () => {
+    const el = onboardGateEl();
+    document.body.classList.add('oc-sheet-open');
+    requestAnimationFrame(() => el.classList.add('open'));
+  };
+  // Mobile browsers collapse their address bar during the first
+  // moments of a page load, which resizes the viewport out from
+  // under this position:fixed sheet — right while it's sliding in —
+  // and looks like the card is jumping/bouncing on its own. Waiting
+  // for the page (and that browser-chrome resize) to settle before
+  // showing it means only our own slide-up plays, nothing else
+  // fighting it.
+  if (document.readyState === 'complete') {
+    setTimeout(show, 350);
+  } else {
+    window.addEventListener('load', () => setTimeout(show, 350), { once: true });
+  }
 }
 
 // Board/thread pages call this to show either the real post form or a
