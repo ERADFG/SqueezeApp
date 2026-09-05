@@ -3507,7 +3507,6 @@ html[data-theme="dim"] .auth-hero, html[data-theme="dark"] .auth-hero {
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 15%);
   mask-image: linear-gradient(to bottom, transparent 0%, #000 15%);
 }
-html[data-theme="dim"] .auth-hero-scene, html[data-theme="dark"] .auth-hero-scene { color:#3B9EFF; opacity:.6; display:block; }
 .auth-hero-scene .scene-fill { fill:var(--bg); stroke:none; opacity:1; }
 .auth-hero-scene .scene-cloud { fill:#fff; stroke:none; opacity:.9; }
 html[data-theme="dim"] .auth-hero-scene .scene-cloud, html[data-theme="dark"] .auth-hero-scene .scene-cloud { fill:#EAF4FF; opacity:.12; }
@@ -3526,15 +3525,29 @@ html[data-theme="dim"] .auth-hero-scene .scene-cloud, html[data-theme="dark"] .a
    anchors the skyline to the bottom edge so it's the buildings (not
    the empty sky above them in the source image) that stay visible —
    on very tall containers (tall phone screens) any overflow gets
-   cropped from the top of the sky instead, which is never noticed. No
-   dark-theme version of
-   the artwork exists, so dark/dim keep the original tinted line-art
-   SVG above instead of showing a light illustration against a dark
-   gradient. */
-.auth-hero-illustration {
+   cropped from the top of the sky instead, which is never noticed.
+   A recolored dark-theme companion (.auth-hero-illustration-dark,
+   same file duotoned into the dark gradient's navy/accent-blue
+   palette) sits in the exact same box and swaps in on dark/dim —
+   see below — so dark mode gets the same artwork instead of falling
+   back to the plain line-art scene. */
+.auth-hero-illustration, .auth-hero-illustration-dark {
   position:absolute; top:0; left:0; right:0; bottom:0; width:100%; height:100%; object-fit:cover; object-position:center bottom; display:block;
 }
+.auth-hero-illustration-dark {
+  display:none;
+  /* Unlike the light photo (whose own sky fades to near-white at the
+     bottom, matching light mode's white page bg), this recolored
+     duotone doesn't reach true black at its bottom edge, so without
+     help it shows a hard seam where the image meets the page
+     background below. Fading the bottom ~14% to transparent lets
+     dark/dim's actual --bg (pure black vs. #15202B) show through and
+     blend, whichever one is active. */
+  -webkit-mask-image: linear-gradient(to bottom, #000 84%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 84%, transparent 100%);
+}
 html[data-theme="dim"] .auth-hero-illustration, html[data-theme="dark"] .auth-hero-illustration { display:none; }
+html[data-theme="dim"] .auth-hero-illustration-dark, html[data-theme="dark"] .auth-hero-illustration-dark { display:block; }
 /* Floating circular back button, overlaid top-left on the hero —
    same translucent dark/blurred treatment as .profile-back-btn so it
    reads consistently with the rest of the app. Sits inside .auth-hero
