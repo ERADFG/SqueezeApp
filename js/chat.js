@@ -162,7 +162,7 @@ const ICON_CAMERA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" 
 // composer's icon set (js/common.js) even though a couple overlap
 // visually, since chat's toolbar lives in a different file and has
 // no reason to depend on common.js's internal icon names.
-const ICON_ATTACH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10.5" r="1.6"/><path d="m4 17 5-5 3.5 3.5L17 11l3 3"/></svg>';
+const ICON_ATTACH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 3.6h8.4a2 2 0 0 1 2 2v8.4"/><rect x="4.1" y="8.1" width="11.8" height="12.3" rx="2.3"/><circle cx="8.1" cy="12.1" r="1.15" fill="currentColor" stroke="none"/><path d="M6 17.9l3-3 1.9 1.9 2.5-2.5 2.4 2.4"/></svg>';
 const ICON_MIC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>';
 const ICON_STOP = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
 const ICON_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m-9 0 1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/></svg>';

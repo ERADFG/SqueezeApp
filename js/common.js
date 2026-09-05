@@ -703,10 +703,10 @@ const NAV_ICON = {
   home:     '<svg viewBox="0 0 24 24"><path d="M5 19.4V11.7Q5 10.85 5.65 10.3L11.15 5.65Q12 4.95 12.85 5.65L18.35 10.3Q19 10.85 19 11.7V19.4Q19 20.6 17.8 20.6H15.3Q14.1 20.6 14.1 19.4V16.1Q14.1 14.9 12.9 14.9H11.1Q9.9 14.9 9.9 16.1V19.4Q9.9 20.6 8.7 20.6H6.2Q5 20.6 5 19.4Z"/></svg>',
   search:   '<svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.9"/><path d="m19.5 19.5-4.35-4.35"/></svg>',
   bell:     '<svg viewBox="0 0 24 24"><path d="M12 3.1a5.9 5.9 0 0 0-5.9 5.9v2.5c0 .95-.35 1.85-1 2.55l-.85.95c-1 1.1-.2 2.85 1.28 2.85h13.94c1.48 0 2.28-1.75 1.28-2.85l-.85-.95c-.65-.7-1-1.6-1-2.55V9A5.9 5.9 0 0 0 12 3.1Z"/><path d="M9.3 19.5a2.7 2.7 0 0 0 5.4 0"/></svg>',
-  chat:     '<svg viewBox="0 0 24 24"><path d="M14.3 8.6a2.3 2.3 0 0 1-2.3 2.3H6.4l-3.65 3.4V4.3a2.3 2.3 0 0 1 2.3-2.3h6.95a2.3 2.3 0 0 1 2.3 2.3Z"/><path d="M18.1 8.6H20a2 2 0 0 1 2 2v10.5l-3.65-3.4h-5.75a2 2 0 0 1-2-2v-.7"/></svg>',
+  chat:     '<svg viewBox="0 0 24 24"><path d="M7.44 19.29 3.52 19.91 4.41 16.04A8.6 8.6 0 1 1 7.44 19.29Z"/><circle cx="9" cy="12" r="1.05" fill="currentColor" stroke="none"/><circle cx="12.5" cy="12" r="1.05" fill="currentColor" stroke="none"/><circle cx="16" cy="12" r="1.05" fill="currentColor" stroke="none"/></svg>',
   bookmark: '<svg viewBox="0 0 24 24"><path d="M6.4 5.6A2.2 2.2 0 0 1 8.6 3.4h6.8a2.2 2.2 0 0 1 2.2 2.2V20a.75.75 0 0 1-1.2.6L12 16.7l-4.4 3.9A.75.75 0 0 1 6.4 20Z"/></svg>',
   user:     '<svg viewBox="0 0 24 24"><circle cx="12" cy="8.1" r="4"/><path d="M4.3 19.7c1.05-4.3 3.95-6.4 7.7-6.4s6.65 2.1 7.7 6.4"/></svg>',
-  gear:     '<svg viewBox="0 0 24 24"><path d="M12.00 3.40C11.15 3.40 10.45 5.39 9.44 5.81C8.42 6.23 6.52 5.31 5.92 5.92C5.31 6.52 6.23 8.42 5.81 9.44C5.39 10.45 3.40 11.15 3.40 12.00C3.40 12.85 5.39 13.55 5.81 14.56C6.23 15.58 5.31 17.48 5.92 18.08C6.52 18.69 8.42 17.77 9.44 18.19C10.45 18.61 11.15 20.60 12.00 20.60C12.85 20.60 13.55 18.61 14.56 18.19C15.58 17.77 17.48 18.69 18.08 18.08C18.69 17.48 17.77 15.58 18.19 14.56C18.61 13.55 20.60 12.85 20.60 12.00C20.60 11.15 18.61 10.45 18.19 9.44C17.77 8.42 18.69 6.52 18.08 5.92C17.48 5.31 15.58 6.23 14.56 5.81C13.55 5.39 12.85 3.40 12.00 3.40Z"/><circle cx="12" cy="12" r="3.3"/></svg>',
+  gear:     '<svg viewBox="0 0 24 24"><path d="M10.57 5.05 10.26 2.97 13.74 2.97 13.43 5.05 15.91 6.07 17.16 4.38 19.62 6.84 17.93 8.09 18.95 10.57 21.03 10.26 21.03 13.74 18.95 13.43 17.93 15.91 19.62 17.16 17.16 19.62 15.91 17.93 13.43 18.95 13.74 21.03 10.26 21.03 10.57 18.95 8.09 17.93 6.84 19.62 4.38 17.16 6.07 15.91 5.05 13.43 2.97 13.74 2.97 10.26 5.05 10.57 6.07 8.09 4.38 6.84 6.84 4.38 8.09 6.07Z" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.3"/></svg>',
   doc:      '<svg viewBox="0 0 24 24"><path d="M6.5 3.5h7.2a1.7 1.7 0 0 1 1.2.5l3.6 3.6a1.7 1.7 0 0 1 .5 1.2V19a1.6 1.6 0 0 1-1.6 1.6h-10.9a1.6 1.6 0 0 1-1.6-1.6V5.1a1.6 1.6 0 0 1 1.6-1.6Z"/><path d="M14.3 3.6V7.4a1.5 1.5 0 0 0 1.5 1.5h3.8"/><path d="M8.3 13.2h7.4M8.3 16.6h5.2"/></svg>',
   // Open book — used for Blog so it reads distinctly from the
   // folded-corner "doc" icon shared by Rules/Terms.
@@ -721,7 +721,7 @@ const NAV_ICON = {
   globe:    '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.1"/><path d="M2.9 12h18.2"/><path d="M12 2.9c2.6 2.6 3.95 6 3.95 9.1s-1.35 6.5-3.95 9.1c-2.6-2.6-3.95-6-3.95-9.1S9.4 5.5 12 2.9Z"/></svg>',
   palette:  '<svg viewBox="0 0 24 24"><path d="M12 3.1a8.9 8.9 0 1 0 0 17.8c1.05 0 1.85-.85 1.85-1.85 0-.5-.2-.95-.5-1.28-.32-.32-.5-.76-.5-1.24 0-.98.8-1.78 1.85-1.78h2c2.45 0 4.4-1.95 4.4-4.4C21 6.35 16.6 3.1 12 3.1Z" stroke-linejoin="round"/><circle cx="7.5" cy="11.2" r="1.3" fill="currentColor" stroke="none"/><circle cx="10.2" cy="7.2" r="1.3" fill="currentColor" stroke="none"/><circle cx="15.1" cy="7.6" r="1.3" fill="currentColor" stroke="none"/><circle cx="17.2" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg>',
   help:     '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.1"/><path d="M9.1 9.35a2.9 2.9 0 1 1 4.2 2.6c-.75.4-1.3 1.05-1.3 1.9v.35"/><circle cx="12" cy="17.2" r="1.15" fill="currentColor" stroke="none"/></svg>',
-  trophy:   '<svg viewBox="0 0 24 24"><path d="M6.8 4.3h10.4v4.5c0 3.25-2.35 5.65-5.2 5.65s-5.2-2.4-5.2-5.65Z" stroke-linejoin="round"/><path d="M6.8 5.4H4.2c0 2.5.95 4.2 3 4.6M17.2 5.4h2.6c0 2.5-.95 4.2-3 4.6"/><path d="M12 14.45V18.3M8.6 19.7h6.8" stroke-linecap="round"/></svg>'
+  trophy:   '<svg viewBox="0 0 24 24"><path d="M7.5 4h9v4.2c0 3-2 5.3-4.5 5.3s-4.5-2.3-4.5-5.3Z" stroke-linejoin="round"/><path d="M7.5 5.1H4.8c0 2.4.9 4 2.9 4.4M16.5 5.1h2.7c0 2.4-.9 4-2.9 4.4"/><path d="M12 13.5v3.2M9 19.5h6" stroke-linecap="round"/><path d="M12 6 12.62 7.75 14.47 7.8 13 8.92 13.53 10.7 12 9.65 10.47 10.7 11 8.92 9.53 7.8 11.38 7.75Z" stroke-linejoin="round"/></svg>'
 };
 
 // ── THEME — Default (light) / Dim / Lights out (dark), applied via
@@ -1643,16 +1643,16 @@ function gcModalEl() {
       <div class="pf-toolbar gc-toolbar">
         <div class="pf-icons">
           <button type="button" class="pf-ic" title="Media" aria-label="Media" onclick="document.getElementById('gc-file').click();return false;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10.5" r="1.6"/><path d="m4 17 5-5 3.5 3.5L17 11l3 3"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 3.6h8.4a2 2 0 0 1 2 2v8.4"/><rect x="4.1" y="8.1" width="11.8" height="12.3" rx="2.3"/><circle cx="8.1" cy="12.1" r="1.15" fill="currentColor" stroke="none"/><path d="M6 17.9l3-3 1.9 1.9 2.5-2.5 2.4 2.4"/></svg>
           </button>
           <button type="button" class="pf-ic" title="GIF" aria-label="GIF" onclick="openGifPicker('gc');return false;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="14" rx="3.5"/><text x="12" y="15.2" font-family="Arial,Helvetica,sans-serif" font-size="7.3" font-weight="700" letter-spacing="0.3" text-anchor="middle" fill="currentColor" stroke="none">GIF</text></svg>
           </button>
           <button type="button" class="pf-ic" title="Poll" aria-label="Poll" onclick="togglePollBuilder('gc');return false;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 15v2M12 11v6M17 8v10"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 15.2v-2.4M12 15.2V9.8M15 15.2v-4.9"/></svg>
           </button>
           <button type="button" class="pf-ic" title="Emoji" aria-label="Emoji" onclick="toggleEmojiPicker('gc', this);return false;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8.5 10h.01M15.5 10h.01M8 14.5c1 1.2 2.3 1.8 4 1.8s3-.6 4-1.8"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1.1" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1.1" fill="currentColor" stroke="none"/><path d="M8.3 14c.9 1.3 2.1 2 3.7 2s2.8-.7 3.7-2" stroke-linecap="round"/></svg>
           </button>
           <button type="button" class="pf-ic" title="Schedule" aria-label="Schedule" onclick="toggleScheduleBuilder('gc');return false;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="5" width="17" height="16" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="M8 13.5h1M12 13.5h1M16 13.5h1M8 17h1M12 17h1"/></svg>
@@ -1930,13 +1930,13 @@ function rpcModalEl() {
       <div class="pf-toolbar gc-toolbar">
         <div class="pf-icons">
           <button type="button" class="pf-ic" title="Media" aria-label="Media" onclick="document.getElementById('rpc-file').click();return false;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10.5" r="1.6"/><path d="m4 17 5-5 3.5 3.5L17 11l3 3"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 3.6h8.4a2 2 0 0 1 2 2v8.4"/><rect x="4.1" y="8.1" width="11.8" height="12.3" rx="2.3"/><circle cx="8.1" cy="12.1" r="1.15" fill="currentColor" stroke="none"/><path d="M6 17.9l3-3 1.9 1.9 2.5-2.5 2.4 2.4"/></svg>
           </button>
           <button type="button" class="pf-ic" title="GIF" aria-label="GIF" onclick="openGifPicker('rpc');return false;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="14" rx="3.5"/><text x="12" y="15.2" font-family="Arial,Helvetica,sans-serif" font-size="7.3" font-weight="700" letter-spacing="0.3" text-anchor="middle" fill="currentColor" stroke="none">GIF</text></svg>
           </button>
           <button type="button" class="pf-ic" title="Emoji" aria-label="Emoji" onclick="toggleEmojiPicker('rpc', this);return false;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8.5 10h.01M15.5 10h.01M8 14.5c1 1.2 2.3 1.8 4 1.8s3-.6 4-1.8"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1.1" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1.1" fill="currentColor" stroke="none"/><path d="M8.3 14c.9 1.3 2.1 2 3.7 2s2.8-.7 3.7-2" stroke-linecap="round"/></svg>
           </button>
           <input type="file" id="rpc-file" accept="image/*,video/*" style="display:none;">
         </div>

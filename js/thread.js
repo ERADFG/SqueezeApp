@@ -260,13 +260,13 @@ function replyComposerHtml() {
         ${captchaCardHtml('rf-captcha')}
         <div class="rfm-row">
           <button type="button" class="pf-ic" title="Media" aria-label="Media" onclick="document.getElementById('rf-file').click();return false;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10.5" r="1.6"/><path d="m4 17 5-5 3.5 3.5L17 11l3 3"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 3.6h8.4a2 2 0 0 1 2 2v8.4"/><rect x="4.1" y="8.1" width="11.8" height="12.3" rx="2.3"/><circle cx="8.1" cy="12.1" r="1.15" fill="currentColor" stroke="none"/><path d="M6 17.9l3-3 1.9 1.9 2.5-2.5 2.4 2.4"/></svg>
           </button>
           <button type="button" class="pf-ic" title="GIF" aria-label="GIF" onclick="openGifPicker('rf');return false;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="14" rx="3.5"/><text x="12" y="15.2" font-family="Arial,Helvetica,sans-serif" font-size="7.3" font-weight="700" letter-spacing="0.3" text-anchor="middle" fill="currentColor" stroke="none">GIF</text></svg>
           </button>
           <button type="button" class="pf-ic" title="Emoji" aria-label="Emoji" onclick="toggleEmojiPicker('rf', this);return false;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8.5 10h.01M15.5 10h.01M8 14.5c1 1.2 2.3 1.8 4 1.8s3-.6 4-1.8"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1.1" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1.1" fill="currentColor" stroke="none"/><path d="M8.3 14c.9 1.3 2.1 2 3.7 2s2.8-.7 3.7-2" stroke-linecap="round"/></svg>
           </button>
           <input type="file" id="rf-file" accept="image/*,video/*" style="display:none;">
           <span id="rf-st" style="font-size:11px;color:var(--muted);"></span>
