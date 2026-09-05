@@ -276,13 +276,13 @@ function onboardGateEl() {
     <div class="gate-card">
       <button type="button" class="gate-close" onclick="dismissOnboardGate();return false;" aria-label="Close">&#10005;</button>
       <span class="gate-logo">
-        <img src="img/logo-dark.png" width="44" height="44" alt="">
+        <span class="gate-logo-badge"><img src="img/logo-dark.png" width="28" height="28" alt=""></span>
       </span>
       <span class="gate-wordmark">Interact<em>Ink</em></span>
       <h2 class="gate-tag">Discover more.<br><span class="gate-tag-muted">Connect deeper.</span></h2>
-      <a class="gate-cta" href="start.html" onclick="dismissOnboardGate('start.html');return false;">Create account</a>
-      <button type="button" class="gate-explore" onclick="dismissOnboardGate();return false;">Discover the web</button>
-      <p class="gate-signin">Already have an account? <a href="login.html" onclick="dismissOnboardGate('login.html');return false;">Sign in</a></p>
+      <a class="gate-cta" href="start.html">Create account</a>
+      <button type="button" class="gate-explore" onclick="dismissOnboardGate();return false;">Explore the app</button>
+      <p class="gate-signin">Already have an account? <a href="login.html">Sign in</a></p>
     </div>`;
   document.body.appendChild(el);
   return el;
@@ -291,42 +291,10 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && document.getElementById('onboard-gate')?.classList.contains('open')) dismissOnboardGate();
 });
 
-// Closes the gate. Every button routes through here (rather than
-// just yanking the 'open' class off) so the card always plays its
-// slide-DOWN exit first — including "Create account"/"Sign in",
-// which pass the page to head to afterward via navigateTo so the
-// slide finishes before moving on. navigateTo goes through
-// pjaxNavigate (see js/pjax.js) instead of location.href, so it's a
-// fetch + DOM swap rather than a full reload — a hard reload was
-// what made the whole page flash white for a moment on every tap.
-function dismissOnboardGate(navigateTo) {
-  const goTo = (url) => {
-    if (typeof window.pjaxNavigate === 'function') window.pjaxNavigate(url);
-    else location.href = url;
-  };
-  const bg = document.getElementById('onboard-gate');
-  if (!bg || !bg.classList.contains('open')) {
-    if (navigateTo) goTo(navigateTo);
-    return;
-  }
+function dismissOnboardGate() {
   try { sessionStorage.setItem('ii-gate-seen', '1'); } catch (e) {}
-  const card = bg.querySelector('.gate-card');
-  let done = false;
-  const finish = () => {
-    if (done) return;
-    done = true;
-    bg.classList.remove('open');
-    document.body.classList.remove('oc-sheet-open');
-    card?.classList.remove('closing');
-    if (navigateTo) goTo(navigateTo);
-  };
-  if (card) {
-    card.classList.add('closing');
-    card.addEventListener('animationend', finish, { once: true });
-    setTimeout(finish, 320); // safety net in case animationend never fires
-  } else {
-    finish();
-  }
+  document.getElementById('onboard-gate')?.classList.remove('open');
+  document.body.classList.remove('oc-sheet-open');
 }
 
 // #xtabs (the For you / Following tabs) only exists on the home feed
@@ -337,23 +305,9 @@ function maybeShowOnboardGate() {
   if (currentSession) return;
   if (!document.getElementById('xtabs')) return;
   try { if (sessionStorage.getItem('ii-gate-seen')) return; } catch (e) {}
-  const show = () => {
-    const el = onboardGateEl();
-    document.body.classList.add('oc-sheet-open');
-    requestAnimationFrame(() => el.classList.add('open'));
-  };
-  // Mobile browsers collapse their address bar during the first
-  // moments of a page load, which resizes the viewport out from
-  // under this position:fixed sheet — right while it's sliding in —
-  // and looks like the card is jumping/bouncing on its own. Waiting
-  // for the page (and that browser-chrome resize) to settle before
-  // showing it means only our own slide-up plays, nothing else
-  // fighting it.
-  if (document.readyState === 'complete') {
-    setTimeout(show, 350);
-  } else {
-    window.addEventListener('load', () => setTimeout(show, 350), { once: true });
-  }
+  const el = onboardGateEl();
+  document.body.classList.add('oc-sheet-open');
+  requestAnimationFrame(() => el.classList.add('open'));
 }
 
 // Board/thread pages call this to show either the real post form or a
