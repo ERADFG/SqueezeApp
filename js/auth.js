@@ -276,10 +276,11 @@ function onboardGateEl() {
     <div class="gate-card">
       <button type="button" class="gate-close" onclick="dismissOnboardGate();return false;" aria-label="Close">&#10005;</button>
       <span class="gate-logo">
-        <span class="gate-logo-badge"><img src="img/logo-dark.png" width="28" height="28" alt=""></span>
+        <img class="logo-mark-light" src="img/logo-light.png" width="44" height="44" alt="">
+        <img class="logo-mark-dark" src="img/logo-dark.png" width="44" height="44" alt="">
       </span>
       <span class="gate-wordmark">Interact<em>Ink</em></span>
-      <h2 class="gate-tag">Discover more.<br><span class="gate-tag-muted">Connect deeper.</span></h2>
+      <h2 class="gate-tag">Real people.<br>Real conversations.<br><span class="gate-tag-muted">A feed you control.</span></h2>
       <a class="gate-cta" href="start.html">Create account</a>
       <button type="button" class="gate-explore" onclick="dismissOnboardGate();return false;">Explore the app</button>
       <p class="gate-signin">Already have an account? <a href="login.html">Sign in</a></p>
