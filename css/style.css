@@ -2526,9 +2526,14 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
   padding:56px 32px 32px;
   background:linear-gradient(180deg, var(--gate-blue) 0px, var(--gate-blue) 130px, #FFFFFF 230px);
   border:1px solid var(--line); box-shadow:var(--shadow-pop);
-  animation:gate-slide-up .32s cubic-bezier(.22,1,.36,1) both;
+  animation:gate-slide-up .34s cubic-bezier(.22,1,.36,1) both;
+  will-change:transform;
 }
-@keyframes gate-slide-up { from { opacity:0; transform:translateY(56px); } to { opacity:1; transform:translateY(0); } }
+/* Transform only — no opacity fade. Animating opacity forces the
+   gradient/shadow underneath to repaint every frame, which is what
+   caused the visible flicker; a transform-only slide is cheap
+   (GPU-composited) and stays rock solid while it moves. */
+@keyframes gate-slide-up { from { transform:translateY(70px); } to { transform:translateY(0); } }
 .gate-close {
   position:absolute; top:14px; right:14px; width:34px; height:34px; border-radius:50%;
   display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.25);
