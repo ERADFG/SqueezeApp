@@ -281,7 +281,7 @@ function onboardGateEl() {
       <span class="gate-wordmark">Interact<em>Ink</em></span>
       <h2 class="gate-tag">Discover more.<br><span class="gate-tag-muted">Connect deeper.</span></h2>
       <a class="gate-cta" href="start.html" onclick="dismissOnboardGate('start.html');return false;">Create account</a>
-      <button type="button" class="gate-explore" onclick="dismissOnboardGate('index.html');return false;">Discover the web</button>
+      <button type="button" class="gate-explore" onclick="dismissOnboardGate();return false;">Discover the web</button>
       <p class="gate-signin">Already have an account? <a href="login.html" onclick="dismissOnboardGate('login.html');return false;">Sign in</a></p>
     </div>`;
   document.body.appendChild(el);
@@ -295,11 +295,18 @@ document.addEventListener('keydown', e => {
 // just yanking the 'open' class off) so the card always plays its
 // slide-DOWN exit first — including "Create account"/"Sign in",
 // which pass the page to head to afterward via navigateTo so the
-// slide finishes before the browser navigates away.
+// slide finishes before moving on. navigateTo goes through
+// pjaxNavigate (see js/pjax.js) instead of location.href, so it's a
+// fetch + DOM swap rather than a full reload — a hard reload was
+// what made the whole page flash white for a moment on every tap.
 function dismissOnboardGate(navigateTo) {
+  const goTo = (url) => {
+    if (typeof window.pjaxNavigate === 'function') window.pjaxNavigate(url);
+    else location.href = url;
+  };
   const bg = document.getElementById('onboard-gate');
   if (!bg || !bg.classList.contains('open')) {
-    if (navigateTo) location.href = navigateTo;
+    if (navigateTo) goTo(navigateTo);
     return;
   }
   try { sessionStorage.setItem('ii-gate-seen', '1'); } catch (e) {}
@@ -311,7 +318,7 @@ function dismissOnboardGate(navigateTo) {
     bg.classList.remove('open');
     document.body.classList.remove('oc-sheet-open');
     card?.classList.remove('closing');
-    if (navigateTo) location.href = navigateTo;
+    if (navigateTo) goTo(navigateTo);
   };
   if (card) {
     card.classList.add('closing');
