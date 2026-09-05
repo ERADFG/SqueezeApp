@@ -2534,6 +2534,13 @@ html[data-theme="dim"] .errmsg, html[data-theme="dark"] .errmsg { background:rgb
    caused the visible flicker; a transform-only slide is cheap
    (GPU-composited) and stays rock solid while it moves. */
 @keyframes gate-slide-up { from { transform:translateY(70px); } to { transform:translateY(0); } }
+/* Exit — added by dismissOnboardGate() before it removes .open or
+   navigates away, so every button (close, Create account, Sign in,
+   Discover the web) slides the card back down first instead of
+   just vanishing. Higher specificity than the base animation above
+   so it takes over cleanly. */
+.gate-card.closing { animation:gate-slide-down .26s cubic-bezier(.4,0,1,1) both; }
+@keyframes gate-slide-down { from { transform:translateY(0); } to { transform:translateY(70px); } }
 .gate-close {
   position:absolute; top:14px; right:14px; width:34px; height:34px; border-radius:50%;
   display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.25);
