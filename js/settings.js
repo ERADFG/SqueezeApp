@@ -84,6 +84,7 @@ async function loadSettings() {
 
   const { data: settings } = await sb.from('user_settings').select('*').eq('user_id', session.user.id).single();
   const s = settings || { notify_likes: true, notify_replies: true, notify_follows: true, notify_mentions: true, dm_privacy: 'everyone' };
+  const isPrivate = !!profile?.is_private;
 
   root.innerHTML = `
     <div class="settings-header-card">
@@ -134,6 +135,7 @@ async function loadSettings() {
 
       ${settingsRowHtml('privacy', NAV_ICON.shield, t('settings.privacy'))}
       <div class="settings-panel" id="panel-privacy">
+        ${toggleRowHtml('private-account', 'Private account', 'Only your followers can see your posts and profile details.', isPrivate).replace("onchange=\"saveNotifSetting('private-account')\"", 'onchange="saveAccountPrivacy()"')}
         <div class="settings-row">
           <div>
             <div class="lbl">Who can message you</div>
@@ -213,6 +215,20 @@ async function saveNotifSetting(id) {
   const { error } = await sb.from('user_settings').update({ [id]: checked }).eq('user_id', session.user.id);
   if (error) {
     document.getElementById(id).checked = !checked; // revert on failure
+    alert(error.message || 'Could not save that setting.');
+  }
+}
+
+async function saveAccountPrivacy() {
+  const checkbox = document.getElementById('private-account');
+  const checked = checkbox.checked;
+  // Reuses the already-resolved shared session — see the note in
+  // saveNotifSetting() above.
+  const session = currentSession;
+  if (!session) return;
+  const { error } = await sb.from('profiles').update({ is_private: checked }).eq('id', session.user.id);
+  if (error) {
+    checkbox.checked = !checked; // revert on failure
     alert(error.message || 'Could not save that setting.');
   }
 }
