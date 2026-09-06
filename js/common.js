@@ -5170,7 +5170,12 @@ async function unfollowUser(followeeId) {
 // 'followed' or 'requested' so callers (js/profile.js) know which
 // button state to show.
 async function requestFollow(targetId) {
-  const { data, error } = await sb.rpc('request_follow', { target_id: targetId });
+  // Named-argument RPC call — the key has to match the Postgres
+  // parameter name exactly, which is p_target_id (not target_id; see
+  // the comment on request_follow() in
+  // supabase/private_account_follow_requests.sql for why it's
+  // prefixed).
+  const { data, error } = await sb.rpc('request_follow', { p_target_id: targetId });
   return { status: data, error };
 }
 

@@ -86,8 +86,23 @@ create trigger trg_notify_follow_request
 -- trusted from the client: it looks the target up itself and either
 -- follows immediately (public account) or drops a pending request
 -- (private account), returning which one happened so the button
--- knows whether to show "Following" or "Requested".
-create or replace function public.request_follow(target_id uuid)
+-- knows whether to show "Following" or "Requested". (Parameter is
+-- p_target_id rather than target_id — naming it target_id caused
+-- "column reference target_id is ambiguous" on the insert into
+-- follow_requests below, since that table also has a target_id
+-- column; same reason accept_follow_request() further down uses
+-- p_requester_id instead of requester_id.)
+--
+-- DROP first, not just CREATE OR REPLACE: this migration originally
+-- shipped with the parameter named target_id (see the comment
+-- above), and Postgres refuses to rename an existing function's
+-- parameter via CREATE OR REPLACE ("cannot change name of input
+-- parameter") — it has to actually be dropped and recreated. Anyone
+-- who already ran the old version of this file needs the drop; a
+-- fresh install has nothing to drop, so `if exists` keeps this safe
+-- either way.
+drop function if exists public.request_follow(uuid);
+create or replace function public.request_follow(p_target_id uuid)
 returns text
 language plpgsql
 security definer
@@ -98,30 +113,30 @@ declare
   is_priv boolean;
 begin
   if me is null then raise exception 'not authenticated'; end if;
-  if me = target_id then raise exception 'cannot follow yourself'; end if;
+  if me = p_target_id then raise exception 'cannot follow yourself'; end if;
 
   if exists (
     select 1 from public.blocks
-    where (blocker_id = me and blocked_id = target_id)
-       or (blocker_id = target_id and blocked_id = me)
+    where (blocker_id = me and blocked_id = p_target_id)
+       or (blocker_id = p_target_id and blocked_id = me)
   ) then
     raise exception 'cannot follow this account';
   end if;
 
-  select is_private into is_priv from public.profiles where id = target_id;
+  select is_private into is_priv from public.profiles where id = p_target_id;
   if is_priv is null then raise exception 'account not found'; end if;
 
-  if exists (select 1 from public.follows where follower_id = me and followee_id = target_id) then
+  if exists (select 1 from public.follows where follower_id = me and followee_id = p_target_id) then
     return 'followed';
   end if;
 
   if not is_priv then
-    insert into public.follows (follower_id, followee_id) values (me, target_id)
+    insert into public.follows (follower_id, followee_id) values (me, p_target_id)
       on conflict do nothing;
     return 'followed';
   end if;
 
-  insert into public.follow_requests (requester_id, target_id) values (me, target_id)
+  insert into public.follow_requests (requester_id, target_id) values (me, p_target_id)
     on conflict (requester_id, target_id) do nothing;
   return 'requested';
 end;
