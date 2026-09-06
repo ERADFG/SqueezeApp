@@ -362,7 +362,7 @@ const ICON_CAL = '<span class="pmr-icon"><svg viewBox="0 0 24 24" fill="none" st
 // Analytics/Insights entry point — own-profile only, sits next to
 // Edit Profile in the header actions row. A simple bar-chart glyph so
 // it reads distinctly from the message/menu icons beside it.
-const ICON_CHART = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 20H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v3"/><path d="M6.5 8.5h7"/><path d="M6.5 12h4"/><path d="m6 17 3-3 2.5 2.5L17 11"/><path d="M13.5 11h3.5v3.5"/></svg>';
+const ICON_CHART = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="rotate(33 12 8)"><rect x="2.3" y="7.6" width="3.2" height="2.8" rx=".7"/><rect x="5.8" y="6.8" width="6.4" height="4.4" rx=".8"/><rect x="12.4" y="4.3" width="6.8" height="8.8" rx="1.6"/></g><circle cx="9.6" cy="15.2" r="2.4"/><path d="M7 21 9.1 16.9"/><path d="M13.5 21 11.4 17.3"/></svg>';
 
 // Best-effort, fire-and-forget: records a view of `profile` on
 // api/log-profile-view.js (see supabase/analytics_setup.sql) so its

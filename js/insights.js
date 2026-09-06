@@ -284,12 +284,6 @@ function insAudienceHtml() {
   const ageRows = demo.age || [];
   const ageKnown = ageRows.reduce((s, a) => s + a.cnt, 0);
 
-  const countryRows = demo.countries || [];
-  const countryKnown = countryRows.reduce((s, c) => s + c.cnt, 0);
-
-  const viewerRows = insData.viewerLocations || [];
-  const viewerKnown = viewerRows.reduce((s, c) => s + c.cnt, 0);
-
   return `
     <div class="ins-section">
       <h2 class="ins-section-title">Followers</h2>
@@ -311,25 +305,58 @@ function insAudienceHtml() {
       ${ageRows.map(a => insBarRowHtml(a.bucket, a.cnt, ageKnown)).join('')}
     </div>` : ''}
 
-    ${countryRows.length ? `
     <div class="ins-section">
-      <h2 class="ins-section-title">Follower locations</h2>
-      <p class="ins-section-sub">Based on ${fmtCount(countryKnown)} of ${fmtCount(total)} followers with a detected country.</p>
-      ${countryRows.map(c => insBarRowHtml(insCountryName(c.country), c.cnt, countryKnown)).join('')}
-    </div>` : ''}
-
-    ${viewerRows.length ? `
-    <div class="ins-section">
-      <h2 class="ins-section-title">Where your viewers are from</h2>
-      <p class="ins-section-sub">Based on ${fmtCount(viewerKnown)} profile views with a detected country, last ${insDays} days. Includes everyone who's visited, not just followers.</p>
-      ${viewerRows.map(c => insBarRowHtml(insCountryName(c.country), c.cnt, viewerKnown)).join('')}
-    </div>` : ''}
+      <h2 class="ins-section-title">Locations</h2>
+      <div class="ins-loc-toggle">
+        <button type="button" class="ins-loc-btn${insLocView === 'followers' ? ' active' : ''}" onclick="insSetLocView('followers')">Followers</button>
+        <button type="button" class="ins-loc-btn${insLocView === 'viewers' ? ' active' : ''}" onclick="insSetLocView('viewers')">Viewers</button>
+      </div>
+      <div id="ins-loc-body">${insLocationsHtml()}</div>
+    </div>
 
     <div class="ins-section">
       <h2 class="ins-section-title">Profile visit times</h2>
       <p class="ins-section-sub">Based on all profile views in the last ${insDays} days, in your current time zone.</p>
       ${insActiveTimesHtml()}
     </div>
+  `;
+}
+
+// Locations toggle — "Followers" is who's actually following you
+// (countryRows/countryKnown from get_audience_demographics), "Viewers"
+// is everyone who's visited your profile, follower or not, in the
+// current day range (viewerRows/viewerKnown from get_viewer_locations).
+// Same underlying numbers as before, just one section with a switch
+// instead of two always-stacked ones.
+let insLocView = 'followers';
+function insSetLocView(view) {
+  insLocView = view;
+  document.querySelectorAll('.ins-loc-btn').forEach(b => b.classList.remove('active'));
+  const idx = view === 'followers' ? 0 : 1;
+  document.querySelectorAll('.ins-loc-btn')[idx]?.classList.add('active');
+  const body = document.getElementById('ins-loc-body');
+  if (body) body.innerHTML = insLocationsHtml();
+}
+
+function insLocationsHtml() {
+  const demo = insData.demo;
+  const total = demo.total_followers || 0;
+  const countryRows = demo.countries || [];
+  const countryKnown = countryRows.reduce((s, c) => s + c.cnt, 0);
+  const viewerRows = insData.viewerLocations || [];
+  const viewerKnown = viewerRows.reduce((s, c) => s + c.cnt, 0);
+
+  if (insLocView === 'followers') {
+    if (!countryRows.length) return `<div class="ins-empty-note">Not enough followers with a detected country yet.</div>`;
+    return `
+      <p class="ins-section-sub">Based on ${fmtCount(countryKnown)} of ${fmtCount(total)} followers with a detected country.</p>
+      ${countryRows.map(c => insBarRowHtml(insCountryName(c.country), c.cnt, countryKnown)).join('')}
+    `;
+  }
+  if (!viewerRows.length) return `<div class="ins-empty-note">Not enough profile views with a detected country yet.</div>`;
+  return `
+    <p class="ins-section-sub">Based on ${fmtCount(viewerKnown)} profile views with a detected country, last ${insDays} days. Includes everyone who's visited, not just followers.</p>
+    ${viewerRows.map(c => insBarRowHtml(insCountryName(c.country), c.cnt, viewerKnown)).join('')}
   `;
 }
 
