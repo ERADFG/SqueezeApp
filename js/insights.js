@@ -56,11 +56,26 @@ async function loadInsights() {
   try {
     await insFetchAll();
   } catch (e) {
-    root.innerHTML = `<div class="errmsg">Couldn't load Insights right now. Try refreshing.</div>`;
+    console.error('[insights] failed to load:', e);
+    root.innerHTML = insErrorHtml(e);
     return;
   }
 
   insRender();
+}
+
+// Postgres error 42883 = "function ... does not exist" — the exact
+// error every RPC here throws if supabase/analytics_setup.sql hasn't
+// been run in the Supabase SQL editor yet. Surface that distinctly
+// instead of the generic message so it's obvious what to do, instead
+// of just "try refreshing" (which can't fix a missing migration).
+function insErrorHtml(e) {
+  const code = e && e.code;
+  const msg = (e && (e.message || e.details || '')) || '';
+  if (code === '42883' || /function .* does not exist/i.test(msg) || /schema cache/i.test(msg)) {
+    return `<div class="errmsg">Insights isn't set up on this project yet — run <code>supabase/analytics_setup.sql</code> in the Supabase SQL editor, then refresh this page.</div>`;
+  }
+  return `<div class="errmsg">Couldn't load Insights right now. Try refreshing.</div>`;
 }
 
 async function insFetchAll() {
@@ -115,8 +130,9 @@ function insSetRange(days) {
   insDays = days;
   const root = document.getElementById('insights-root');
   if (root) root.innerHTML = `<div class="skel-form"><div class="skel-field"><div class="skel-line label w20"></div><div class="skel-line input w90"></div></div></div>`;
-  insFetchAll().then(insRender).catch(() => {
-    if (root) root.innerHTML = `<div class="errmsg">Couldn't load Insights right now. Try refreshing.</div>`;
+  insFetchAll().then(insRender).catch((e) => {
+    console.error('[insights] failed to load:', e);
+    if (root) root.innerHTML = insErrorHtml(e);
   });
 }
 
