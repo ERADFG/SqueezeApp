@@ -848,11 +848,79 @@ async function loadUserPosts(userId) {
   }
 
   if (!combined.length) {
-    el.innerHTML = postsHtmlCache = `<div class="empty-note">No posts yet.</div>`;
+    el.innerHTML = `<div class="empty-note">No posts yet.</div><div id="profile-empty-suggest"></div>`;
+    postsHtmlCache = el.innerHTML;
+    renderProfileEmptySuggestions(userId);
     return;
   }
   await attachQuotedPosts(combined);
   el.innerHTML = postsHtmlCache = combined.map(p => postCardHtml(p)).join('');
+}
+
+// ── EMPTY-PROFILE SUGGESTIONS — when an account has no posts to show
+// (the branch just above), a bare "No posts yet." is a dead end, so
+// this backfills the same real estate with a "Who to follow" row of
+// suggested accounts — same idea as X's own Who-to-follow module,
+// but a horizontal, swipeable strip of 10 richer cards instead of the
+// sidebar's compact 3-row list (see renderWhoToFollow() in
+// common.js, which this deliberately doesn't reuse — that one always
+// targets a fixed #who-to-follow sidebar box, and only ever shows 3).
+async function renderProfileEmptySuggestions(userId) {
+  const box = document.getElementById('profile-empty-suggest');
+  if (!box) return; // tab switched away before this resolved
+
+  const excludeIds = new Set([userId]); // never suggest the empty profile itself
+  if (currentSession) {
+    excludeIds.add(currentSession.user.id);
+    const [{ data: follows }, { data: pending }] = await Promise.all([
+      sb.from('follows').select('followee_id').eq('follower_id', currentSession.user.id),
+      sb.from('follow_requests').select('target_id').eq('requester_id', currentSession.user.id)
+    ]);
+    (follows || []).forEach(f => excludeIds.add(f.followee_id));
+    (pending || []).forEach(f => excludeIds.add(f.target_id));
+  }
+
+  // Overfetch a pool of recently-active accounts and filter client-side,
+  // same trick renderWhoToFollow() uses — simplest thing that works at
+  // this size, no dedicated recommendation RPC needed.
+  const { data, error } = await sb.from('profiles')
+    .select('id,username,display_name,avatar_url,banner_url,bio,verified,verification_type')
+    .order('created_at', { ascending: false })
+    .limit(40);
+  if (error || !data || !box.isConnected) return;
+
+  const suggestions = data.filter(p => !excludeIds.has(p.id)).slice(0, 10);
+  if (!suggestions.length) { box.remove(); return; }
+
+  box.outerHTML = `
+    <div class="profile-suggest">
+      <div class="expl-hdr">Who to follow</div>
+      <div class="profile-suggest-strip">${suggestions.map(p => profileSuggestCardHtml(p)).join('')}</div>
+    </div>`;
+  // Re-freeze the cache now that the suggestions are actually in the
+  // DOM, so switching to Replies and back repaints them instantly
+  // instead of re-fetching (see postsHtmlCache elsewhere in this file).
+  const postsEl = document.getElementById('profile-posts');
+  if (postsEl) postsHtmlCache = postsEl.innerHTML;
+}
+
+function profileSuggestCardHtml(p) {
+  const uname = p.username || 'unknown';
+  const bio = (p.bio || '').trim();
+  const bannerAttr = p.banner_url ? ` style="background-image:url('${esc(p.banner_url)}')"` : '';
+  return `
+    <div class="suggest-card">
+      <a class="suggest-card-banner${p.banner_url ? '' : ' suggest-card-banner-blank'}" href="${profileUrl(uname)}"${bannerAttr} tabindex="-1"></a>
+      <a class="suggest-card-avatar-wrap" href="${profileUrl(uname)}">
+        <img class="avatar${avSqClass(p)}" src="${esc(avatarUrl(p.avatar_url))}" alt="" loading="lazy" decoding="async">
+      </a>
+      <div class="suggest-card-follow-wrap">${followBtnHtml(p, false, false)}</div>
+      <div class="suggest-card-body">
+        <a class="suggest-card-name" href="${profileUrl(uname)}">${esc(p.display_name || uname)}${vBadge(p)}</a>
+        <a class="suggest-card-handle" href="${profileUrl(uname)}">@${esc(uname)}</a>
+        ${bio ? `<div class="suggest-card-bio">${esc(bio.slice(0, 100))}</div>` : ''}
+      </div>
+    </div>`;
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
