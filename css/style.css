@@ -2381,10 +2381,22 @@ html:has(> body.oc-sheet-open) { overflow:hidden; }
 .recent-clear { display:flex; color:var(--muted); text-decoration:none; padding:6px; margin:-6px; border-radius:50%; transition:background-color .12s ease, color .12s ease; }
 .recent-clear:hover { background:var(--hover-bg); color:var(--ink); }
 .recent-clear svg { width:16px; height:16px; }
-.recent-section .recent-row { padding:10px 16px; border-top:1px solid var(--line); border-radius:0; }
-.recent-section .recent-row:first-of-type { border-top:none; }
-.recent-query-icon { display:flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; background:var(--hover-bg); color:var(--muted); flex:none; }
-.recent-query-icon svg { width:16px; height:16px; }
+/* Side-by-side, swipeable strip of recently-tapped profiles — one
+   scroll-snapping row instead of stacked full-width rows, same idea
+   as X's own "Recent" chips. Scrollbar hidden (WebKit + standard)
+   since the row of chips itself already signals "more, swipe over". */
+.recent-strip { display:flex; gap:6px; padding:10px 8px 14px; overflow-x:auto; scroll-snap-type:x proximity; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+.recent-strip::-webkit-scrollbar { display:none; }
+.recent-chip {
+  display:flex; flex-direction:column; align-items:center; gap:6px; flex:none; width:84px; padding:8px 4px;
+  text-align:center; text-decoration:none; color:var(--ink); border-radius:var(--r-sm); scroll-snap-align:start;
+  transition:background-color .12s ease;
+}
+.recent-chip:hover { background:var(--hover-bg); text-decoration:none; }
+.recent-chip .avatar { width:56px; height:56px; border-radius:50%; }
+.recent-chip-name { font-size:12px; font-weight:800; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.recent-chip-name .verified-badge { width:12px; height:12px; margin-left:2px; vertical-align:middle; }
+.recent-chip-handle { font-size:11px; color:var(--muted); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
 /* ── NESTED REPLIES (reply-to-a-reply) ── */
 .rc-children { margin:0; }

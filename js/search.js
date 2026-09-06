@@ -44,7 +44,6 @@ async function resolveSearchCommunity() {
 // search.html silently dropping it.
 function submitSearchForm() {
   const q = document.getElementById('sp-input').value.trim();
-  if (q) addRecentQuery(q); // Twitter-style recent-search list — see RECENT SEARCHES below
   const params = new URLSearchParams();
   if (q) params.set('q', q);
   if (searchCommunitySlug) params.set('community', searchCommunitySlug);
@@ -253,39 +252,38 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // ─────────────────────────────────────────────────────────────
-// RECENT SEARCHES — Twitter-style "Recent" list shown on the empty
-// Explore panel: every submitted text search (see submitSearchForm)
-// and every profile tapped from the People tab (see
+// RECENT SEARCHES — Twitter-style "Recent" strip shown on the empty
+// Explore panel: every profile tapped from the People tab (see
 // recordRecentProfileAt below) gets remembered here, purely
 // client-side in localStorage, so it's still there next time this
-// browser opens Search with nothing typed yet.
+// browser opens Search with nothing typed yet. Deliberately profiles
+// only, not raw text queries — tapping "Ali" the profile after
+// searching "ali" the text used to leave two separate, redundant
+// entries.
 // ─────────────────────────────────────────────────────────────
 
 const RECENT_SEARCH_KEY = 'ii-recent-search';
 const RECENT_SEARCH_MAX = 12;
 
+// Filters to type==='user' on every read, so any older, already-saved
+// text-query entries (from before profiles-only) just quietly stop
+// showing up — no separate migration step needed, since the filtered
+// (i.e. cleaned) result is exactly what every write path saves back.
 function loadRecentSearches() {
   try {
     const arr = JSON.parse(localStorage.getItem(RECENT_SEARCH_KEY) || '[]');
-    return Array.isArray(arr) ? arr : [];
+    return (Array.isArray(arr) ? arr : []).filter(r => r && r.type === 'user');
   } catch (e) { return []; }
 }
 function saveRecentSearches(arr) {
   try { localStorage.setItem(RECENT_SEARCH_KEY, JSON.stringify(arr.slice(0, RECENT_SEARCH_MAX))); } catch (e) {}
-}
-function addRecentQuery(q) {
-  q = (q || '').trim();
-  if (!q) return;
-  const arr = loadRecentSearches().filter(r => !(r.type === 'query' && r.q.toLowerCase() === q.toLowerCase()));
-  arr.unshift({ type: 'query', q });
-  saveRecentSearches(arr);
 }
 // Called via onclick on a People-tab result row (fire-and-forget —
 // never preventDefault, the link still navigates normally).
 function recordRecentProfileAt(i) {
   const p = lastPeopleResults[i];
   if (!p) return;
-  const arr = loadRecentSearches().filter(r => !(r.type === 'user' && r.username === p.username));
+  const arr = loadRecentSearches().filter(r => r.username !== p.username);
   arr.unshift({
     type: 'user', username: p.username, display_name: p.display_name || '',
     avatar_url: p.avatar_url || '', verified: !!p.verified, verification_type: p.verification_type || null
@@ -297,25 +295,18 @@ function clearRecentSearches() {
   if (exploreTab === 'explore' && !searchQuery.trim()) runExplore();
 }
 
-function recentSearchRowHtml(item) {
-  if (item.type === 'user') {
-    const fakeProfile = { verified: item.verified, verification_type: item.verification_type };
-    return `
-      <a class="ulrow recent-row" href="${profileUrl(item.username)}">
-        <img class="avatar pfp-md${avSqClass(fakeProfile)}" src="${esc(avatarUrl(item.avatar_url))}" alt="" loading="lazy" decoding="async">
-        <div class="ulrow-txt">
-          <span class="ulrow-name">${esc(item.display_name || item.username)}${vBadge(fakeProfile)}</span>
-          <span class="ulrow-handle">@${esc(item.username)}</span>
-        </div>
-      </a>`;
-  }
+// Horizontal chip, not a full-width row — matches the side-by-side,
+// swipeable layout X's own "Recent" uses (see .recent-strip in
+// css/style.css for the scroll-x container these sit in).
+function recentSearchChipHtml(item) {
+  const fakeProfile = { verified: item.verified, verification_type: item.verification_type };
   return `
-    <a class="ulrow recent-row recent-row-query" href="search.html?q=${encodeURIComponent(item.q)}">
-      <span class="recent-query-icon">${ICON_SEARCH_MINI}</span>
-      <div class="ulrow-txt"><span class="ulrow-name">${esc(item.q)}</span></div>
+    <a class="recent-chip" href="${profileUrl(item.username)}">
+      <img class="avatar${avSqClass(fakeProfile)}" src="${esc(avatarUrl(item.avatar_url))}" alt="" loading="lazy" decoding="async">
+      <span class="recent-chip-name">${esc(item.display_name || item.username)}${vBadge(fakeProfile)}</span>
+      <span class="recent-chip-handle">@${esc(item.username)}</span>
     </a>`;
 }
-const ICON_SEARCH_MINI = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>';
 const ICON_CLOSE_MINI = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
 
 function renderRecentSection() {
@@ -327,7 +318,7 @@ function renderRecentSection() {
         <span>Recent</span>
         <a href="#" class="recent-clear" onclick="clearRecentSearches();return false;" aria-label="Clear recent searches">${ICON_CLOSE_MINI}</a>
       </div>
-      ${recents.map(r => recentSearchRowHtml(r)).join('')}
+      <div class="recent-strip">${recents.map(r => recentSearchChipHtml(r)).join('')}</div>
     </div>`;
 }
 
