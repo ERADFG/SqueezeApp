@@ -122,22 +122,68 @@ async function searchPosts(root) {
   root.innerHTML = data.map(p => postCardHtml(p)).join('');
 }
 
+// Trims a leading '@' — people often type the handle the way it's
+// displayed everywhere else in the app (@name), but the username
+// column itself never stores that character, so an unstripped query
+// would ilike-match nothing at all.
+function normalizeSearchQuery(q) {
+  return q.trim().replace(/^@+/, '');
+}
+
+let searchMyFollowing = new Set(); // ids the viewer follows — for the People tab's follow buttons
+let searchMyPending = new Set();   // ids the viewer has a pending request out to
+async function loadSearchMyFollowState() {
+  searchMyFollowing = new Set();
+  searchMyPending = new Set();
+  await authReady;
+  if (!currentSession) return;
+  const [{ data: followData }, { data: pendingData }] = await Promise.all([
+    sb.from('follows').select('followee_id').eq('follower_id', currentSession.user.id),
+    sb.from('follow_requests').select('target_id').eq('requester_id', currentSession.user.id)
+  ]);
+  searchMyFollowing = new Set((followData || []).map(r => r.followee_id));
+  searchMyPending = new Set((pendingData || []).map(r => r.target_id));
+}
+
 async function searchPeople(root) {
+  const q = normalizeSearchQuery(searchQuery);
+  await loadSearchMyFollowState();
   const { data, error } = await sb.from('profiles').select('*')
-    .or(`username.ilike.%${searchQuery}%,display_name.ilike.%${searchQuery}%`)
-    .order('followers_count', { ascending: false })
+    .or(`username.ilike.%${q}%,display_name.ilike.%${q}%,bio.ilike.%${q}%`)
     .limit(50);
 
   if (error) { root.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
   if (!data.length) { root.innerHTML = `<div id="feed-empty">No users found for &ldquo;${esc(searchQuery)}&rdquo;.</div>`; return; }
+
+  // followers_count alone (the old sort) ranks a merely-loose match
+  // from a huge account above an exact handle match from a small one
+  // — "smarter" here means matching quality decides the order first,
+  // popularity only breaks ties within the same tier: exact username
+  // match, then either field starting with the query, then everything
+  // else (a substring match buried mid-bio or mid-name), each tier
+  // sorted by followers_count.
+  const qLower = q.toLowerCase();
+  const tier = p => {
+    const uname = (p.username || '').toLowerCase();
+    const dname = (p.display_name || '').toLowerCase();
+    if (uname === qLower) return 0;
+    if (uname.startsWith(qLower) || dname.startsWith(qLower)) return 1;
+    return 2;
+  };
+  data.sort((a, b) => tier(a) - tier(b) || (b.followers_count || 0) - (a.followers_count || 0));
+
+  const viewerId = currentSession?.user?.id || null;
   root.innerHTML = data.map(profile => `
-    <a class="ulrow" style="padding:12px 16px;border-bottom:1px solid var(--line);border-radius:0;" href="${profileUrl(profile.username)}">
-      <img class="avatar pfp-md${avSqClass(profile)}" src="${esc(avatarUrl(profile.avatar_url))}" alt="" loading="lazy" decoding="async">
-      <div class="ulrow-txt">
-        <span class="ulrow-name">${esc(profile.display_name || profile.username)}${vBadge(profile)}</span>
-        <span class="ulrow-handle">@${esc(profile.username)}</span>
-      </div>
-    </a>`).join('');
+    <div class="fl-row" style="padding:8px 16px;border-bottom:1px solid var(--line);">
+      <a class="ulrow" style="flex:1;min-width:0;" href="${profileUrl(profile.username)}">
+        <img class="avatar pfp-md${avSqClass(profile)}" src="${esc(avatarUrl(profile.avatar_url))}" alt="" loading="lazy" decoding="async">
+        <div class="ulrow-txt">
+          <span class="ulrow-name">${esc(profile.display_name || profile.username)}${vBadge(profile)}</span>
+          <span class="ulrow-handle">@${esc(profile.username)}</span>
+        </div>
+      </a>
+      ${currentSession && profile.id !== viewerId ? followBtnHtml(profile, searchMyFollowing.has(profile.id), searchMyPending.has(profile.id)) : ''}
+    </div>`).join('');
 }
 
 document.addEventListener('DOMContentLoaded', async () => {

@@ -5206,6 +5206,56 @@ async function acceptFollowRequest(requesterId) {
   return sb.rpc('accept_follow_request', { p_requester_id: requesterId });
 }
 
+// Tri-state follow button for a profile row OUTSIDE a dedicated
+// profile page — js/search.js's People tab and js/followlist.js's
+// followers/following lists both show many of these on one page, so
+// unlike toggleFollow() in js/profile.js (which only ever has the one
+// `viewedProfile` on the whole page to worry about) this reads/writes
+// its state entirely off the clicked button itself, and the caller
+// resolves `following`/`pending` up front from a batched query
+// instead of one follows/follow_requests lookup per row.
+function followBtnHtml(profile, following, pending) {
+  if (following && isProtectedFollowUsername(profile.username)) {
+    return `<button class="follow-btn following locked" disabled title="You can't unfollow this account." aria-label="You can't unfollow this account.">${ICON_LOCK_SM}${t('action.following')}</button>`;
+  }
+  const label = following ? t('action.following') : pending ? 'Requested' : t('action.follow');
+  const cls = following ? ' following' : pending ? ' following requested' : '';
+  return `<button class="follow-btn${cls}" onclick="genericToggleFollow('${profile.id}', this)">${label}</button>`;
+}
+
+async function genericToggleFollow(targetId, btn) {
+  if (!requireLogin() || btn.disabled) return;
+  const state = btn.classList.contains('requested') ? 'requested' : btn.classList.contains('following') ? 'following' : 'none';
+  btn.disabled = true;
+  try {
+    if (state === 'following') {
+      const { error } = await unfollowUser(targetId);
+      if (error) throw error;
+      btn.className = 'follow-btn';
+      btn.textContent = t('action.follow');
+    } else if (state === 'requested') {
+      const { error } = await cancelFollowRequest(currentSession.user.id, targetId);
+      if (error) throw error;
+      btn.className = 'follow-btn';
+      btn.textContent = t('action.follow');
+    } else {
+      const { status, error } = await requestFollow(targetId);
+      if (error) throw error;
+      if (status === 'requested') {
+        btn.className = 'follow-btn following requested';
+        btn.textContent = 'Requested';
+      } else {
+        btn.className = 'follow-btn following';
+        btn.textContent = t('action.following');
+      }
+    }
+  } catch (e) {
+    toast(e.message || 'Could not update follow status.', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 // ── MUTE / BLOCK — same shape as follow/unfollow above. Muting only
 // affects your own feeds (nothing to tell the other person); blocking
 // is mutual-visible, same as Twitter, and the DB trigger in

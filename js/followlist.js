@@ -19,6 +19,7 @@ let flUsername = null;
 let flTab = 'followers';
 let flProfile = null;
 let flMyFollowing = new Set(); // ids of people the *viewer* (logged-in user) follows
+let flMyPending = new Set(); // ids of private accounts the viewer has a pending request out to
 
 function flRenderTabs() {
   const el = document.getElementById('fl-tabs');
@@ -41,10 +42,7 @@ function flRowHtml(profile, viewerId) {
   const uname = profile?.username || 'unknown';
   const showBtn = currentSession && profile.id !== viewerId;
   const following = flMyFollowing.has(profile.id);
-  const locked = showBtn && following && isProtectedFollowUsername(uname);
-  const btnHtml = locked
-    ? `<button class="follow-btn following locked" disabled title="You can't unfollow this account." aria-label="You can't unfollow this account.">${ICON_LOCK_SM}${t('action.following')}</button>`
-    : `<button class="follow-btn${following ? ' following' : ''}" onclick="flToggleFollow('${profile.id}', this)">${following ? t('action.following') : t('action.follow')}</button>`;
+  const pending = flMyPending.has(profile.id);
   return `
   <div class="fl-row">
     <a class="ulrow" style="flex:1;min-width:0;" href="${profileUrl(uname)}">
@@ -54,7 +52,7 @@ function flRowHtml(profile, viewerId) {
         <span class="ulrow-handle">@${esc(uname)}</span>
       </div>
     </a>
-    ${showBtn ? btnHtml : ''}
+    ${showBtn ? followBtnHtml(profile, following, pending) : ''}
   </div>`;
 }
 
@@ -81,40 +79,29 @@ async function flLoadList() {
 }
 
 async function flToggleFollow(userId, btn) {
-  if (!requireLogin()) return;
-  const following = btn.classList.contains('following');
-  btn.disabled = true;
-  try {
-    if (following) {
-      const { error } = await unfollowUser(userId);
-      if (error) throw error;
-      flMyFollowing.delete(userId);
-      btn.classList.remove('following');
-      btn.textContent = t('action.follow');
-    } else {
-      const { error } = await followUser(userId);
-      if (error) throw error;
-      flMyFollowing.add(userId);
-      btn.classList.add('following');
-      btn.textContent = t('action.following');
-    }
-  } catch (e) {
-    alert(e.message || 'Could not update follow status.');
-  } finally {
-    btn.disabled = false;
-  }
+  // Kept only so nothing breaks if some other page still calls this
+  // by name — the follow buttons this file renders now go through
+  // genericToggleFollow() in js/common.js instead (see flRowHtml()
+  // above), since that one actually knows how to request a private
+  // account instead of always following instantly.
+  return genericToggleFollow(userId, btn);
 }
 
 async function flLoadMyFollowing() {
   flMyFollowing = new Set();
+  flMyPending = new Set();
   // Reuses the already-resolved session from auth.js instead of calling
   // sb.auth.getSession() again — see the note in ensureLikesLoaded()
   // (js/common.js).
   await authReady;
   const session = currentSession;
   if (!session) return;
-  const { data } = await sb.from('follows').select('followee_id').eq('follower_id', session.user.id);
-  flMyFollowing = new Set((data || []).map(r => r.followee_id));
+  const [{ data: followData }, { data: pendingData }] = await Promise.all([
+    sb.from('follows').select('followee_id').eq('follower_id', session.user.id),
+    sb.from('follow_requests').select('target_id').eq('requester_id', session.user.id)
+  ]);
+  flMyFollowing = new Set((followData || []).map(r => r.followee_id));
+  flMyPending = new Set((pendingData || []).map(r => r.target_id));
 }
 
 async function loadFollowList() {
