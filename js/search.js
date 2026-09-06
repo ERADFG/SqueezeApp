@@ -19,7 +19,17 @@ let searchQuery = searchParams.get('q') || '';
 // lookup community.js itself does in loadCommunity(). Forces the
 // People tab off since a community only has posts to search.
 let searchCommunitySlug = searchParams.get('community') || '';
-let searchTab = (!searchCommunitySlug && searchParams.get('t') === 'people') ? 'people' : 'posts';
+// Valid non-scoped search tabs. 'posts' is kept as an accepted URL alias
+// for 'latest' so any old ?t=posts links out in the wild still land
+// somewhere sensible instead of falling through to the default.
+const SEARCH_TABS = ['latest', 'viral', 'people', 'communities'];
+const SEARCH_COMMUNITY_TABS = ['latest', 'viral']; // community-scoped search only ever has posts to search
+function normalizeSearchTabParam(raw, scoped) {
+  const t = raw === 'posts' ? 'latest' : raw;
+  const allowed = scoped ? SEARCH_COMMUNITY_TABS : SEARCH_TABS;
+  return allowed.includes(t) ? t : 'latest';
+}
+let searchTab = normalizeSearchTabParam(searchParams.get('t'), !!searchCommunitySlug);
 let exploreTab = 'explore'; // 'explore' | 'news' | 'sports' | 'entertainment' | 'gaming' | 'technology' | 'music' | 'science'
 
 let searchCommunity = null; // {id,name,slug} once resolved, or false if it doesn't exist
@@ -34,10 +44,11 @@ async function resolveSearchCommunity() {
 // search.html silently dropping it.
 function submitSearchForm() {
   const q = document.getElementById('sp-input').value.trim();
+  if (q) addRecentQuery(q); // Twitter-style recent-search list — see RECENT SEARCHES below
   const params = new URLSearchParams();
   if (q) params.set('q', q);
   if (searchCommunitySlug) params.set('community', searchCommunitySlug);
-  if (searchTab === 'people') params.set('t', 'people');
+  if (searchTab !== 'latest') params.set('t', searchTab);
   location.href = 'search.html' + (params.toString() ? `?${params.toString()}` : '');
 }
 function renderSearchScope(root) {
@@ -60,10 +71,11 @@ function renderTabs() {
       <button class="xtab${exploreTab === t ? ' active' : ''}" onclick="setExploreTab('${t}')">${t[0].toUpperCase()}${t.slice(1)}</button>`).join('');
     return;
   }
-  el.innerHTML = searchCommunitySlug
-    ? `<button class="xtab active">Posts</button>`
-    : `<button class="xtab${searchTab === 'posts' ? ' active' : ''}" onclick="setSearchTab('posts')">Posts</button>
-       <button class="xtab${searchTab === 'people' ? ' active' : ''}" onclick="setSearchTab('people')">People</button>`;
+  const tabs = searchCommunitySlug
+    ? [['latest', 'Latest'], ['viral', 'Viral']]
+    : [['latest', 'Latest'], ['viral', 'Viral'], ['people', 'People'], ['communities', 'Community']];
+  el.innerHTML = tabs.map(([t, label]) =>
+    `<button class="xtab${searchTab === t ? ' active' : ''}" onclick="setSearchTab('${t}')">${label}</button>`).join('');
 }
 
 function setSearchTab(tab) {
@@ -93,7 +105,7 @@ async function runSearch() {
     setPageH1(`Search ${comm.name}`);
     if (!searchQuery.trim()) { root.innerHTML = `<div id="feed-empty">Type something to search posts in ${esc(comm.name)}.</div>`; return; }
     root.innerHTML = skeletonFeedHtml();
-    return searchPosts(root);
+    return searchTab === 'viral' ? searchPostsViral(root) : searchPosts(root);
   }
   if (scopeEl) scopeEl.innerHTML = '';
 
@@ -106,6 +118,8 @@ async function runSearch() {
   setPageH1(`Search: ${searchQuery}`);
   root.innerHTML = skeletonFeedHtml();
   if (searchTab === 'people') return searchPeople(root);
+  if (searchTab === 'viral') return searchPostsViral(root);
+  if (searchTab === 'communities') return searchCommunities(root);
   return searchPosts(root);
 }
 
@@ -120,6 +134,41 @@ async function searchPosts(root) {
   if (!data.length) { root.innerHTML = `<div id="feed-empty">No posts found${searchQuery ? ` for &ldquo;${esc(searchQuery)}&rdquo;` : ''}.</div>`; return; }
   await attachQuotedPosts(data);
   root.innerHTML = data.map(p => postCardHtml(p)).join('');
+}
+
+// "Viral" tab — same matching posts as Latest, just ranked by
+// engagementScore() (already used to badge Hot posts in Explore, see
+// below) instead of recency. Supabase can't sort by that computed
+// score server-side, so this overfetches a larger recent-first page
+// and re-sorts client-side, same trick fetchTopPostsToday() uses.
+async function searchPostsViral(root) {
+  await ensureFeedPrereqsLoaded();
+  let query = sb.from('posts').select(POST_SELECT).eq('is_deleted', false);
+  if (searchCommunitySlug && searchCommunity) query = query.eq('community_id', searchCommunity.id);
+  if (searchQuery.trim()) query = query.ilike('body', `%${searchQuery}%`);
+  const { data, error } = await query.order('created_at', { ascending: false }).limit(200);
+
+  if (error) { root.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
+  if (!data.length) { root.innerHTML = `<div id="feed-empty">No posts found${searchQuery ? ` for &ldquo;${esc(searchQuery)}&rdquo;` : ''}.</div>`; return; }
+  const top = data.sort((a, b) => engagementScore(b) - engagementScore(a)).slice(0, 50);
+  await attachQuotedPosts(top);
+  root.innerHTML = top.map(p => postCardHtml(p)).join('');
+}
+
+// "Community" tab — matches communities by name or slug, reusing the
+// same comm-row markup (and joined-state lookup) Explore's "Discover
+// Communities" section already uses.
+async function searchCommunities(root) {
+  const q = searchQuery.trim();
+  const { data, error } = await sb.from('communities').select('id,name,slug,avatar_url,member_count')
+    .or(`name.ilike.%${q}%,slug.ilike.%${q}%`)
+    .order('member_count', { ascending: false })
+    .limit(50);
+
+  if (error) { root.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
+  if (!data.length) { root.innerHTML = `<div id="feed-empty">No communities found for &ldquo;${esc(q)}&rdquo;.</div>`; return; }
+  const joined = await getExploreJoinedIds();
+  root.innerHTML = data.map(c => communityRowHtml(c, joined.has(c.id))).join('');
 }
 
 // Trims a leading '@' — people often type the handle the way it's
@@ -145,6 +194,7 @@ async function loadSearchMyFollowState() {
   searchMyPending = new Set((pendingData || []).map(r => r.target_id));
 }
 
+let lastPeopleResults = []; // last People-tab search results, indexed by recordRecentProfileAt() below
 async function searchPeople(root) {
   const q = normalizeSearchQuery(searchQuery);
   await loadSearchMyFollowState();
@@ -171,11 +221,12 @@ async function searchPeople(root) {
     return 2;
   };
   data.sort((a, b) => tier(a) - tier(b) || (b.followers_count || 0) - (a.followers_count || 0));
+  lastPeopleResults = data;
 
   const viewerId = currentSession?.user?.id || null;
-  root.innerHTML = data.map(profile => `
+  root.innerHTML = data.map((profile, i) => `
     <div class="fl-row" style="padding:8px 16px;border-bottom:1px solid var(--line);">
-      <a class="ulrow" style="flex:1;min-width:0;" href="${profileUrl(profile.username)}">
+      <a class="ulrow" style="flex:1;min-width:0;" href="${profileUrl(profile.username)}" onclick="recordRecentProfileAt(${i})">
         <img class="avatar pfp-md${avSqClass(profile)}" src="${esc(avatarUrl(profile.avatar_url))}" alt="" loading="lazy" decoding="async">
         <div class="ulrow-txt">
           <span class="ulrow-name">${esc(profile.display_name || profile.username)}${vBadge(profile)}</span>
@@ -193,13 +244,92 @@ document.addEventListener('DOMContentLoaded', async () => {
   searchParams = new URLSearchParams(location.search);
   searchQuery = searchParams.get('q') || '';
   searchCommunitySlug = searchParams.get('community') || '';
-  searchTab = (!searchCommunitySlug && searchParams.get('t') === 'people') ? 'people' : 'posts';
+  searchTab = normalizeSearchTabParam(searchParams.get('t'), !!searchCommunitySlug);
   searchCommunity = null;
   exploreJoinedIds = null;
   await authReady; // see auth.js — otherwise cards can render before we know who's logged in
   renderTabs();
   runSearch();
 });
+
+// ─────────────────────────────────────────────────────────────
+// RECENT SEARCHES — Twitter-style "Recent" list shown on the empty
+// Explore panel: every submitted text search (see submitSearchForm)
+// and every profile tapped from the People tab (see
+// recordRecentProfileAt below) gets remembered here, purely
+// client-side in localStorage, so it's still there next time this
+// browser opens Search with nothing typed yet.
+// ─────────────────────────────────────────────────────────────
+
+const RECENT_SEARCH_KEY = 'ii-recent-search';
+const RECENT_SEARCH_MAX = 12;
+
+function loadRecentSearches() {
+  try {
+    const arr = JSON.parse(localStorage.getItem(RECENT_SEARCH_KEY) || '[]');
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) { return []; }
+}
+function saveRecentSearches(arr) {
+  try { localStorage.setItem(RECENT_SEARCH_KEY, JSON.stringify(arr.slice(0, RECENT_SEARCH_MAX))); } catch (e) {}
+}
+function addRecentQuery(q) {
+  q = (q || '').trim();
+  if (!q) return;
+  const arr = loadRecentSearches().filter(r => !(r.type === 'query' && r.q.toLowerCase() === q.toLowerCase()));
+  arr.unshift({ type: 'query', q });
+  saveRecentSearches(arr);
+}
+// Called via onclick on a People-tab result row (fire-and-forget —
+// never preventDefault, the link still navigates normally).
+function recordRecentProfileAt(i) {
+  const p = lastPeopleResults[i];
+  if (!p) return;
+  const arr = loadRecentSearches().filter(r => !(r.type === 'user' && r.username === p.username));
+  arr.unshift({
+    type: 'user', username: p.username, display_name: p.display_name || '',
+    avatar_url: p.avatar_url || '', verified: !!p.verified, verification_type: p.verification_type || null
+  });
+  saveRecentSearches(arr);
+}
+function clearRecentSearches() {
+  saveRecentSearches([]);
+  if (exploreTab === 'explore' && !searchQuery.trim()) runExplore();
+}
+
+function recentSearchRowHtml(item) {
+  if (item.type === 'user') {
+    const fakeProfile = { verified: item.verified, verification_type: item.verification_type };
+    return `
+      <a class="ulrow recent-row" href="${profileUrl(item.username)}">
+        <img class="avatar pfp-md${avSqClass(fakeProfile)}" src="${esc(avatarUrl(item.avatar_url))}" alt="" loading="lazy" decoding="async">
+        <div class="ulrow-txt">
+          <span class="ulrow-name">${esc(item.display_name || item.username)}${vBadge(fakeProfile)}</span>
+          <span class="ulrow-handle">@${esc(item.username)}</span>
+        </div>
+      </a>`;
+  }
+  return `
+    <a class="ulrow recent-row recent-row-query" href="search.html?q=${encodeURIComponent(item.q)}">
+      <span class="recent-query-icon">${ICON_SEARCH_MINI}</span>
+      <div class="ulrow-txt"><span class="ulrow-name">${esc(item.q)}</span></div>
+    </a>`;
+}
+const ICON_SEARCH_MINI = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>';
+const ICON_CLOSE_MINI = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
+
+function renderRecentSection() {
+  const recents = loadRecentSearches();
+  if (!recents.length) return '';
+  return `
+    <div class="expl-section recent-section">
+      <div class="expl-hdr recent-hdr">
+        <span>Recent</span>
+        <a href="#" class="recent-clear" onclick="clearRecentSearches();return false;" aria-label="Clear recent searches">${ICON_CLOSE_MINI}</a>
+      </div>
+      ${recents.map(r => recentSearchRowHtml(r)).join('')}
+    </div>`;
+}
 
 // ─────────────────────────────────────────────────────────────
 // EXPLORE — shown on search.html with no query, Twitter-Explore-style:
@@ -333,6 +463,7 @@ async function renderExploreTab(root) {
     : '';
 
   root.innerHTML = `
+    ${renderRecentSection()}
     <div class="expl-section">
       <div class="expl-hdr">Today's Posts</div>
       ${postsHtml}

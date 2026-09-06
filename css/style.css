@@ -2372,6 +2372,20 @@ html:has(> body.oc-sheet-open) { overflow:hidden; }
 .expl-showmore { display:block; padding:14px 16px; font-size:15px; color:var(--link); text-decoration:none; }
 .expl-showmore:hover { background:var(--hover-bg); text-decoration:none; }
 
+/* "Recent" searches — Twitter-style list shown on the empty Explore
+   panel (see renderRecentSection() in js/search.js). Reuses .ulrow
+   (profile-row look) for both recorded profile taps and recorded
+   text searches, given the row-separator treatment .comm-row already
+   gets above since .ulrow's own border isn't scoped for this list. */
+.recent-hdr { display:flex; align-items:center; justify-content:space-between; }
+.recent-clear { display:flex; color:var(--muted); text-decoration:none; padding:6px; margin:-6px; border-radius:50%; transition:background-color .12s ease, color .12s ease; }
+.recent-clear:hover { background:var(--hover-bg); color:var(--ink); }
+.recent-clear svg { width:16px; height:16px; }
+.recent-section .recent-row { padding:10px 16px; border-top:1px solid var(--line); border-radius:0; }
+.recent-section .recent-row:first-of-type { border-top:none; }
+.recent-query-icon { display:flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; background:var(--hover-bg); color:var(--muted); flex:none; }
+.recent-query-icon svg { width:16px; height:16px; }
+
 /* ── NESTED REPLIES (reply-to-a-reply) ── */
 .rc-children { margin:0; }
 .rc-parent-tag { font-size:13px; color:var(--muted); margin:0 0 2px; }
