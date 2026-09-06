@@ -390,3 +390,21 @@ begin
   return;
 end;
 $$;
+
+-- ── 9. notifications_type_check didn't know about the new types ──
+-- The base schema's notifications table (not part of this updates
+-- folder) has a CHECK constraint enumerating every allowed
+-- notifications.type value. 'follow_request' and
+-- 'follow_request_accepted' weren't on that list, so the inserts in
+-- notify_follow_request() and accept_follow_request() above were
+-- rejected with "violates check constraint notifications_type_check"
+-- the moment either fired. Widened here to the existing list (every
+-- type actually used anywhere in this project, per
+-- js/notifications.js's NOTIF_ICON keys and the trigger inserts
+-- across supabase/*.sql) plus the two new ones. Safe to re-run.
+alter table public.notifications drop constraint if exists notifications_type_check;
+alter table public.notifications add constraint notifications_type_check
+  check (type in (
+    'like', 'reply', 'repost', 'quote', 'mention', 'follow', 'message', 'group_invite',
+    'follow_request', 'follow_request_accepted'
+  ));
