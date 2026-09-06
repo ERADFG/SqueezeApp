@@ -2088,18 +2088,208 @@ async function submitReplyPopup() {
 }
 
 
-// Wires the (formerly decorative) sidebar search box: Enter jumps to
-// the search results page with the typed query.
-function wireSidebarSearch() {
-  const input = document.getElementById('side-search');
-  if (!input) return;
+// ─────────────────────────────────────────────────────────────
+// SMART SEARCH — live typeahead dropdown for the sidebar quick-search
+// (#side-search, present on almost every page) and the dedicated
+// search page's own top box (#sp-input, see js/search.js). Plain
+// Enter-to-navigate used to be the whole feature; this adds a
+// debounced live preview of matching people and communities as you
+// type, straight from the same tables the full People/Community
+// search tabs query (see searchPeople()/searchCommunities() in
+// js/search.js) — a real preview of the results, not a canned list.
+// Typing, then hitting Enter (or clicking the "Search for …" row)
+// without picking a person/community falls through to the exact same
+// full-search navigation Enter always did; that path doesn't change.
+//
+// One popover element is shared and appended straight to <body>
+// (position:fixed, positioned off the focused input's own
+// getBoundingClientRect()) rather than nested inside each .xsearch —
+// #sidebar and a couple of other ancestors clip overflow, which would
+// cut a nested dropdown off. <body> itself is never touched by pjax's
+// page swap (see js/pjax.js's own top comment), so the popover — and
+// the window/document listeners that position/dismiss it — are set
+// up exactly once for the app's whole lifetime the first time this
+// runs, then just reused; only the small per-input wiring below runs
+// again on every pjax re-navigation, against whatever fresh
+// #side-search/#sp-input element the new page brought in.
+// ─────────────────────────────────────────────────────────────
+const SMART_SEARCH_DEBOUNCE_MS = 220;
+const SMART_SEARCH_LIMIT = 4;
+
+function smartSearchPopover() {
+  let pop = document.getElementById('xsd-pop');
+  if (pop) return pop;
+
+  pop = document.createElement('div');
+  pop.id = 'xsd-pop';
+  pop.className = 'xsd-pop';
+  pop._state = null; // { input, wrap, extraParams, items, activeIdx, reqToken } of whichever input currently owns it
+  document.body.appendChild(pop);
+
+  pop._close = () => {
+    pop.classList.remove('open');
+    pop.innerHTML = '';
+    pop._state = null;
+  };
+  pop._position = () => {
+    const wrap = pop._state?.wrap;
+    if (!wrap) return;
+    const r = wrap.getBoundingClientRect();
+    pop.style.left = `${Math.round(r.left)}px`;
+    pop.style.top = `${Math.round(r.bottom + 6)}px`;
+    pop.style.width = `${Math.round(r.width)}px`;
+  };
+  pop._setActive = idx => {
+    const rows = pop.querySelectorAll('.xsd-row');
+    rows.forEach(el => el.classList.remove('xsd-active'));
+    if (!pop._state) return;
+    pop._state.activeIdx = idx;
+    if (idx < 0) return;
+    rows[idx]?.classList.add('xsd-active');
+    rows[idx]?.scrollIntoView({ block: 'nearest' });
+  };
+
+  // These three listeners live on document/window, which persist across
+  // pjax navigations — registered once here rather than per-input-wiring,
+  // so re-wiring a fresh input after every navigation never stacks up
+  // duplicate copies of them.
+  window.addEventListener('resize', () => { if (pop.classList.contains('open')) pop._position(); });
+  window.addEventListener('scroll', () => { if (pop.classList.contains('open')) pop._position(); }, true);
+  document.addEventListener('pointerdown', e => {
+    const st = pop._state;
+    if (!st) return;
+    if (e.target === st.input || pop.contains(e.target) || (st.wrap && st.wrap.contains(e.target))) return;
+    pop._close();
+  });
+  pop.addEventListener('click', e => { if (e.target.closest('.xsd-row')) pop._close(); });
+
+  return pop;
+}
+
+// Trims a leading '@' the same way js/search.js's normalizeSearchQuery()
+// does — people often type the handle as it's shown everywhere (@name),
+// but the username column never stores that character. Duplicated here
+// (rather than shared) since js/search.js only loads on search.html
+// itself, not the other pages this dropdown runs on.
+function smartSearchNormalize(q) { return q.trim().replace(/^@+/, ''); }
+
+function smartSearchRowHtml(kind, href, avatarInner, name, handle, isImg) {
+  return `
+    <a class="xsd-row" href="${href}" data-xsd-kind="${kind}">
+      ${isImg ? `<img class="avatar pfp-md" src="${avatarInner}" alt="" loading="lazy" decoding="async">` : `<span class="comm-avatar">${avatarInner}</span>`}
+      <span class="xsd-row-txt">
+        <span class="xsd-row-name">${name}</span>
+        <span class="xsd-row-handle">${handle}</span>
+      </span>
+    </a>`;
+}
+
+function smartSearchPersonRowHtml(p) {
+  return smartSearchRowHtml('person', profileUrl(p.username),
+    esc(avatarUrl(p.avatar_url)), `${esc(p.display_name || p.username)}${vBadge(p)}`, `@${esc(p.username)}`, true);
+}
+
+function smartSearchCommunityRowHtml(c) {
+  return smartSearchRowHtml('community', communityUrl(c.slug),
+    communityAvatarInner(c), esc(c.name), `${fmtCount(c.member_count)} member${c.member_count === 1 ? '' : 's'}`, false);
+}
+
+function smartSearchForRowHtml(q, searchHref) {
+  return `
+    <a class="xsd-row xsd-searchfor" href="${searchHref}" data-xsd-kind="searchfor">
+      <span class="xsd-searchfor-icon">${ICON_SEARCH}</span>
+      <span class="xsd-row-txt"><span class="xsd-row-name">Search for &ldquo;${esc(q)}&rdquo;</span></span>
+    </a>`;
+}
+
+// Wires one #side-search/#sp-input element to the shared popover. Safe
+// to call repeatedly across pjax re-navigations — guarded per-element
+// so a still-alive element never gets bound twice, and every fresh
+// element the new page brings in gets bound on its own.
+function wireSmartSearchInput(input, extraParams) {
+  if (!input || input.__smartSearchWired) return;
+  input.__smartSearchWired = true;
+  const wrap = input.closest('.xsearch');
+  const pop = smartSearchPopover();
+
+  function searchHrefFor(q) {
+    const params = new URLSearchParams(extraParams || {});
+    if (q) params.set('q', q);
+    return `search.html${params.toString() ? `?${params.toString()}` : ''}`;
+  }
+
+  async function runQuery(raw) {
+    const st = { input, wrap, extraParams, items: [], activeIdx: -1, reqToken: (pop._state?.reqToken || 0) + 1 };
+    pop._state = st;
+    const token = st.reqToken;
+    const q = raw.trim();
+    if (!q) { pop._close(); return; }
+    const term = smartSearchNormalize(q);
+    const [{ data: people }, { data: comms }] = await Promise.all([
+      sb.from('profiles').select('id,username,display_name,avatar_url,verified,verification_type')
+        .or(`username.ilike.%${term}%,display_name.ilike.%${term}%`).limit(SMART_SEARCH_LIMIT),
+      sb.from('communities').select('id,name,slug,avatar_url,member_count')
+        .or(`name.ilike.%${term}%,slug.ilike.%${term}%`).order('member_count', { ascending: false }).limit(SMART_SEARCH_LIMIT)
+    ]);
+    if (pop._state !== st) return; // a newer keystroke (or a different input) already superseded this response
+    const peopleRows = people || [], commRows = comms || [];
+    st.items = [{ href: searchHrefFor(q) }]
+      .concat(peopleRows.map(p => ({ href: profileUrl(p.username) })))
+      .concat(commRows.map(c => ({ href: communityUrl(c.slug) })));
+    const peopleHtml = peopleRows.length ? `<div class="xsd-sec-lbl">People</div>${peopleRows.map(smartSearchPersonRowHtml).join('')}` : '';
+    const commsHtml = commRows.length ? `<div class="xsd-sec-lbl">Communities</div>${commRows.map(smartSearchCommunityRowHtml).join('')}` : '';
+    const emptyHtml = (peopleRows.length || commRows.length) ? '' : `<div class="xsd-empty">No matching people or communities yet.</div>`;
+    pop.innerHTML = smartSearchForRowHtml(q, searchHrefFor(q)) + peopleHtml + commsHtml + emptyHtml;
+    pop._position();
+    pop.classList.add('open');
+  }
+
+  let debounceTimer = null;
+  input.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    const val = input.value;
+    debounceTimer = setTimeout(() => runQuery(val), SMART_SEARCH_DEBOUNCE_MS);
+  });
+  input.addEventListener('focus', () => { if (input.value.trim()) runQuery(input.value); });
   input.addEventListener('keydown', e => {
-    if (e.key !== 'Enter') return;
-    const q = input.value.trim();
-    if (q) location.href = `search.html?q=${encodeURIComponent(q)}`;
+    const isOpenHere = pop.classList.contains('open') && pop._state?.input === input;
+    if (e.key === 'ArrowDown' && isOpenHere) {
+      e.preventDefault();
+      pop._setActive(Math.min(pop._state.activeIdx + 1, pop._state.items.length - 1));
+    } else if (e.key === 'ArrowUp' && isOpenHere) {
+      e.preventDefault();
+      pop._setActive(Math.max(pop._state.activeIdx - 1, 0));
+    } else if (e.key === 'Enter') {
+      if (isOpenHere && pop._state.activeIdx >= 0) {
+        e.preventDefault();
+        location.href = pop._state.items[pop._state.activeIdx].href;
+      } else if (isOpenHere) {
+        pop._close();
+        // No row highlighted — fall through to whatever this input's own
+        // Enter/submit handling already does (plain full-search
+        // navigation), same as before this dropdown existed.
+      }
+    } else if (e.key === 'Escape' && isOpenHere) {
+      pop._close();
+    }
   });
 }
-document.addEventListener('DOMContentLoaded', wireSidebarSearch);
+
+function wireSmartSearchInputs() {
+  const pop = smartSearchPopover();
+  if (pop._state && !document.contains(pop._state.input)) pop._close(); // last page's input is gone
+  wireSmartSearchInput(document.getElementById('side-search'));
+  // search.html's own #sp-input already resolves its query against
+  // ?community=<slug> when present (see js/search.js) — carry that
+  // scope into the "Search for …" row's href too, so picking it
+  // doesn't silently drop back to an unscoped search.
+  const spInput = document.getElementById('sp-input');
+  if (spInput) {
+    const community = new URLSearchParams(location.search).get('community');
+    wireSmartSearchInput(spInput, community ? { community } : null);
+  }
+}
+document.addEventListener('DOMContentLoaded', wireSmartSearchInputs);
 
 // #sidebar (the right-hand "Search / Trending / Who to follow" column)
 // is position:fixed with its own overflow-y:auto, deliberately taken out
