@@ -838,6 +838,7 @@ function ttvReleasePlayer(root) {
   ttvViewportObserver.unobserve(root);
   const v = root.querySelector?.('.ttv-video');
   if (!v) return;
+  ttvWatchFlush(root, v); // don't drop unflushed watch time just because the card scrolled away
   try { v.pause(); v.removeAttribute('src'); v.load(); } catch (e) {}
 }
 new MutationObserver((mutations) => {
@@ -854,3 +855,66 @@ new MutationObserver((mutations) => {
     });
   }
 }).observe(document.body, { childList: true, subtree: true });
+
+// ── WATCH-TIME TRACKING ──
+// Feeds the recommendation engine (see supabase/recommendation_engine.sql
+// — record_watch_time() / _viewer_author_affinity()) real per-user watch
+// duration per video post, so "you watch a lot of X" can actually factor
+// into what gets suggested — nothing tracked this before (view_count is
+// just a +1-per-view counter, no duration attached).
+//
+// Only videos rendered with opts.postId (see ttvHtml() above — the
+// feed/thread/profile cards) carry data-post-id; a lightbox or shorts
+// preview player without one is simply skipped, nothing to attribute the
+// time to.
+const TTV_WATCH_FLUSH_MS = 5000; // batch into ~5s reports instead of one RPC call per tick
+const _ttvWatchState = new WeakMap(); // <video> -> { lastTime, pendingMs }
+
+function ttvWatchFlush(root, video) {
+  const state = _ttvWatchState.get(video);
+  const postId = root?.dataset?.postId;
+  if (!state || !state.pendingMs || !postId) { if (state) state.pendingMs = 0; return; }
+  const ms = Math.round(state.pendingMs);
+  state.pendingMs = 0;
+  if (typeof sb === 'undefined' || typeof currentSession === 'undefined' || !currentSession) return;
+  sb.rpc('record_watch_time', { p_post_id: postId, p_ms: ms }).then(({ error }) => {
+    if (error) console.warn('watch time rpc failed', error);
+  });
+}
+
+document.addEventListener('timeupdate', (e) => {
+  const v = e.target;
+  if (!v.classList?.contains('ttv-video')) return;
+  const root = ttvRoot(v);
+  if (!root?.dataset?.postId) return; // nothing to attribute time to
+
+  let state = _ttvWatchState.get(v);
+  if (!state) { state = { lastTime: v.currentTime, pendingMs: 0 }; _ttvWatchState.set(v, state); }
+
+  const delta = v.currentTime - state.lastTime;
+  state.lastTime = v.currentTime;
+  // A normal tick advances by roughly the time since the last tick.
+  // A negative delta (rewound) or an outsized jump (seek, loop restart)
+  // isn't real elapsed watch time, so it's dropped rather than counted.
+  if (!v.paused && delta > 0 && delta < 2) {
+    state.pendingMs += delta * 1000;
+    if (state.pendingMs >= TTV_WATCH_FLUSH_MS) ttvWatchFlush(root, v);
+  }
+}, true);
+
+// Flush whatever's left whenever playback stops for any reason, so a
+// short clip (or the last few seconds of a longer one) isn't lost just
+// for never crossing the 5s batch threshold above.
+['pause', 'ended'].forEach(type => {
+  document.addEventListener(type, (e) => {
+    const v = e.target;
+    if (!v.classList?.contains('ttv-video')) return;
+    ttvWatchFlush(ttvRoot(v), v);
+  }, true);
+});
+// Tab hidden/closed — best-effort flush (may not always complete before
+// the page actually unloads, same limitation as any beacon-less RPC).
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'hidden') return;
+  document.querySelectorAll('.ttv-video').forEach(v => ttvWatchFlush(ttvRoot(v), v));
+});

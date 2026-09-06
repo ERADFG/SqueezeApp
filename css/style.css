@@ -846,6 +846,7 @@ select {
 .who-row-txt { display:flex; flex-direction:column; min-width:0; flex:1; }
 .who-row-name { font-size:14px; font-weight:800; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .who-row-handle { font-size:13px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.who-row-reason { font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .who-follow-btn {
   flex:none; font-size:13px; font-weight:800; padding:6px 14px; border-radius:999px;
   background:var(--ink); color:var(--bg); border:none; cursor:pointer; transition:background-color .12s ease, filter .12s ease, transform .1s ease;

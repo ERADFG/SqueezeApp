@@ -2333,6 +2333,26 @@ async function renderWhoToFollow() {
   if (!box) return;
   box.innerHTML = `<div class="t-lbl">Who to follow</div><div class="no-t">Loading&hellip;</div>`;
 
+  // Real recommendations — see supabase/recommendation_engine.sql's
+  // get_suggested_accounts(): accounts you already like/comment on/save/
+  // watch a lot but don't follow yet, plus accounts followed by other
+  // viewers whose taste overlaps with yours. Only makes sense once
+  // signed in (it's scored against *your* interaction history).
+  if (currentSession) {
+    const { data, error } = await sb.rpc('get_suggested_accounts', {
+      viewer: currentSession.user.id, limit_n: 3
+    });
+    if (!error && data && data.length) {
+      box.innerHTML = `<div class="t-lbl">Who to follow</div>` +
+        data.map(whoRowHtml).join('') +
+        `<a class="show-more" href="search.html">Show more</a>`;
+      return;
+    }
+    // Falls through to the cold-start pool below on an RPC error or
+    // when a brand-new account has no interaction history yet for the
+    // recommender to score anything from.
+  }
+
   const excludeIds = new Set(currentSession ? [currentSession.user.id] : []);
   if (currentSession) {
     const { data: follows } = await sb.from('follows').select('followee_id')
@@ -2340,8 +2360,9 @@ async function renderWhoToFollow() {
     (follows || []).forEach(f => excludeIds.add(f.followee_id));
   }
 
-  // Pull a small pool of recently-active accounts and filter client-side —
-  // simplest thing that works for a suggestions box this size, no RPC needed.
+  // Cold-start fallback: a small pool of recently-active accounts,
+  // filtered client-side — simplest thing that works for a suggestions
+  // box this size when there's no interaction history to recommend from.
   const { data, error } = await sb.from('profiles')
     .select('id,username,display_name,avatar_url,verified,verification_type')
     .order('created_at', { ascending: false })
@@ -2366,6 +2387,7 @@ function whoRowHtml(profile) {
       <a class="who-row-txt" href="${profileUrl(uname)}">
         <span class="who-row-name">${esc(profile.display_name || uname)}${vBadge(profile)}</span>
         <span class="who-row-handle">@${esc(uname)}</span>
+        ${profile.reason ? `<span class="who-row-reason">${esc(profile.reason)}</span>` : ''}
       </a>
       <button class="who-follow-btn" onclick="whoToggleFollow('${profile.id}', this)">${t('action.follow')}</button>
     </div>`;
