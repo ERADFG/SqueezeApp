@@ -362,7 +362,7 @@ const ICON_CAL = '<span class="pmr-icon"><svg viewBox="0 0 24 24" fill="none" st
 // Analytics/Insights entry point — own-profile only, sits next to
 // Edit Profile in the header actions row. A simple bar-chart glyph so
 // it reads distinctly from the message/menu icons beside it.
-const ICON_CHART = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g transform="rotate(33 12 8)"><rect x="2.3" y="7.6" width="3.2" height="2.8" rx=".7"/><rect x="5.8" y="6.8" width="6.4" height="4.4" rx=".8"/><rect x="12.4" y="4.3" width="6.8" height="8.8" rx="1.6"/></g><circle cx="9.6" cy="15.2" r="2.4"/><path d="M7 21 9.1 16.9"/><path d="M13.5 21 11.4 17.3"/></svg>';
+const ICON_CHART = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><g transform="rotate(38 12 8)"><rect x="2" y="7.3" width="3.4" height="3" rx="1"/><rect x="5.6" y="6" width="8.6" height="5.6" rx="1.3"/><rect x="13.6" y="3.6" width="7.6" height="10" rx="2"/></g><circle cx="8.6" cy="16.5" r="2.6"/><path d="M5.9 21.3 8.2 17.9"/><path d="M13.2 21.3 10.9 18.1"/></svg>';
 
 // Best-effort, fire-and-forget: records a view of `profile` on
 // api/log-profile-view.js (see supabase/analytics_setup.sql) so its

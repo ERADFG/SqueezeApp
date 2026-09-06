@@ -3877,8 +3877,11 @@ a.auth-submit { text-align:center; text-decoration:none; }
 .profile-icon-btn svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2.1; stroke-linecap:round; stroke-linejoin:round; }
 /* Analytics button only — rounded square instead of the circle the
    other profile-icon-btns (Message, ···) use, so it reads distinctly
-   as a launch point for a different kind of screen. */
-.profile-icon-btn-square { border-radius:10px; }
+   as a launch point for a different kind of screen. Sized up a
+   little from the base 36px/18px so the telescope icon reads clearly
+   instead of feeling cramped. */
+.profile-icon-btn-square { width:40px; height:40px; border-radius:11px; }
+.profile-icon-btn-square svg { width:23px; height:23px; }
 .profile-hdr-actions .pc-menu-wrap { margin-left:0; }
 .profile-hdr-actions .pc-menu-dd { min-width:220px; }
 
