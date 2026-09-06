@@ -192,7 +192,7 @@ async function loadProfile() {
             </div>` : ''}
           ${!isOwnProfile && session ? `<button class="follow-btn${hasPendingRequest ? ' following requested' : ''}" id="follow-btn" onclick="toggleFollow()">${hasPendingRequest ? 'Requested' : t('action.follow')}</button>` : ''}
           ${!isOwnProfile && !session ? `<a class="follow-btn" href="login.html">${t('action.follow')}</a>` : ''}
-          ${isOwnProfile ? `<a class="profile-icon-btn" href="insights.html" title="Analytics" aria-label="Analytics">${ICON_CHART}</a>` : ''}
+          ${isOwnProfile ? `<a class="profile-icon-btn profile-icon-btn-square" href="insights.html" title="Analytics" aria-label="Analytics">${ICON_CHART}</a>` : ''}
           ${isOwnProfile ? `<a class="profile-edit-btn" href="editprofile.html">Edit Profile</a>` : ''}
         </div>
       </div>
@@ -362,7 +362,7 @@ const ICON_CAL = '<span class="pmr-icon"><svg viewBox="0 0 24 24" fill="none" st
 // Analytics/Insights entry point — own-profile only, sits next to
 // Edit Profile in the header actions row. A simple bar-chart glyph so
 // it reads distinctly from the message/menu icons beside it.
-const ICON_CHART = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20.5h16"/><rect x="6" y="13" width="3.2" height="7.5" rx=".6"/><rect x="10.4" y="8.5" width="3.2" height="12" rx=".6"/><rect x="14.8" y="4.5" width="3.2" height="16" rx=".6"/></svg>';
+const ICON_CHART = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 20H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v3"/><path d="M6.5 8.5h7"/><path d="M6.5 12h4"/><path d="m6 17 3-3 2.5 2.5L17 11"/><path d="M13.5 11h3.5v3.5"/></svg>';
 
 // Best-effort, fire-and-forget: records a view of `profile` on
 // api/log-profile-view.js (see supabase/analytics_setup.sql) so its

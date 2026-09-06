@@ -3875,6 +3875,10 @@ a.auth-submit { text-align:center; text-decoration:none; }
 .profile-icon-btn:hover { background:var(--hover-bg); border-color:var(--muted); }
 .profile-icon-btn:active { background:var(--maroon-tint); }
 .profile-icon-btn svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2.1; stroke-linecap:round; stroke-linejoin:round; }
+/* Analytics button only — rounded square instead of the circle the
+   other profile-icon-btns (Message, ···) use, so it reads distinctly
+   as a launch point for a different kind of screen. */
+.profile-icon-btn-square { border-radius:10px; }
 .profile-hdr-actions .pc-menu-wrap { margin-left:0; }
 .profile-hdr-actions .pc-menu-dd { min-width:220px; }
 
@@ -6516,6 +6520,31 @@ html[data-theme="dim"], html[data-theme="dark"] {
 .ins-empty-note { color:var(--muted); font-size:13px; padding:24px 16px; text-align:center; }
 .ins-note { font-size:11.5px; color:var(--muted); margin-top:6px; }
 .ins-gate { padding:40px 16px; text-align:center; color:var(--muted); font-size:14px; }
+
+/* ── Content tab — engagement tiles + top posts ── */
+.ins-engage-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; }
+.ins-engage-tile {
+  background:var(--cream-card); border:1px solid var(--line); border-radius:14px;
+  padding:12px 6px; text-align:center; color:var(--ink);
+}
+.ins-engage-icon { display:inline-flex; align-items:center; justify-content:center; color:var(--muted); }
+.ins-engage-icon svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.ins-engage-num { font-size:17px; font-weight:800; margin-top:6px; line-height:1.1; }
+.ins-engage-label { font-size:11px; color:var(--muted); font-weight:600; margin-top:2px; }
+
+.ins-top-posts { display:flex; flex-direction:column; gap:10px; }
+.ins-top-post {
+  display:flex; gap:10px; align-items:flex-start; text-decoration:none; color:var(--ink);
+  border:1px solid var(--line); border-radius:12px; padding:12px; transition:background-color .12s ease;
+}
+.ins-top-post:hover { background:var(--hover-bg); text-decoration:none; }
+.ins-top-post-rank { flex:none; font-size:13px; font-weight:800; color:var(--muted); min-width:22px; }
+.ins-top-post-body { min-width:0; flex:1; }
+.ins-top-post-snippet { display:block; font-size:14px; line-height:1.4; margin-bottom:8px; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.ins-top-post-stats { display:flex; flex-wrap:wrap; gap:12px; font-size:12.5px; color:var(--muted); font-weight:600; }
+.ins-top-post-stats span { display:inline-flex; align-items:center; gap:4px; }
+.ins-top-post-stats svg { width:14px; height:14px; flex:none; }
+.ins-top-post-stats .ins-ico-stroke svg { fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 
 @media (max-width:420px) {
   .ins-stat-num { font-size:18px; }

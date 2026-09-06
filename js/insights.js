@@ -6,14 +6,23 @@
 //   get_audience_demographics()    -> gender/age/country of current followers
 //   get_active_times(days)         -> raw view timestamps to bucket client-side
 //   get_content_view_totals()      -> summed post/reply view_count
+// ...plus supabase/analytics_engagement.sql:
+//   get_viewer_locations(days)     -> country breakdown of profile VIEWERS
+//   get_engagement_totals(days)    -> likes/reposts/saves/comments received
+//   get_top_posts(period)          -> top 3 posts by engagement, 'week'/'month'
 // Every RPC checks auth.uid() server-side — there is no way to load
 // anyone's insights but your own.
+//
+// No Shares metric: nothing in this schema logs a share event (see
+// the comment at the top of analytics_engagement.sql for why) — the
+// Content tab shows Likes/Reposts/Saves/Comments only.
 // ─────────────────────────────────────────────────────────────
 
 let insDays = 30;
 let insTab = 'overview';
-let insData = null;       // { viewStats, growth, demo, activeTimes, content }
+let insData = null;       // { viewStats, growth, demo, activeTimes, content, viewerLocations, engagement, topWeek, topMonth }
 let insActiveDay = new Date().getDay(); // 0=Sun .. 6=Sat, viewer's local "today"
+const INS_TABS = ['overview', 'content', 'audience'];
 
 const INS_COUNTRY_NAMES = {
   US:'United States', GB:'United Kingdom', CA:'Canada', AU:'Australia', IN:'India',
@@ -79,18 +88,26 @@ function insErrorHtml(e) {
 }
 
 async function insFetchAll() {
-  const [viewStatsRes, growthRes, demoRes, activeRes, contentRes] = await Promise.all([
+  const [viewStatsRes, growthRes, demoRes, activeRes, contentRes, viewerLocRes, engagementRes, topWeekRes, topMonthRes] = await Promise.all([
     sb.rpc('get_profile_view_stats', { p_days: insDays }),
     sb.rpc('get_follower_growth', { p_days: insDays }),
     sb.rpc('get_audience_demographics'),
     sb.rpc('get_active_times', { p_days: insDays }),
     sb.rpc('get_content_view_totals'),
+    sb.rpc('get_viewer_locations', { p_days: insDays }),
+    sb.rpc('get_engagement_totals', { p_days: null }),
+    sb.rpc('get_top_posts', { p_period: 'week' }),
+    sb.rpc('get_top_posts', { p_period: 'month' }),
   ]);
   if (viewStatsRes.error) throw viewStatsRes.error;
   if (growthRes.error) throw growthRes.error;
   if (demoRes.error) throw demoRes.error;
   if (activeRes.error) throw activeRes.error;
   if (contentRes.error) throw contentRes.error;
+  if (viewerLocRes.error) throw viewerLocRes.error;
+  if (engagementRes.error) throw engagementRes.error;
+  if (topWeekRes.error) throw topWeekRes.error;
+  if (topMonthRes.error) throw topMonthRes.error;
 
   insData = {
     viewStats: viewStatsRes.data,
@@ -98,6 +115,10 @@ async function insFetchAll() {
     demo: demoRes.data,
     activeTimes: (activeRes.data || []).map(r => new Date(r.viewed_at)),
     content: contentRes.data,
+    viewerLocations: viewerLocRes.data || [],
+    engagement: engagementRes.data,
+    topWeek: topWeekRes.data || [],
+    topMonth: topMonthRes.data || [],
   };
 }
 
@@ -112,6 +133,7 @@ function insRender() {
     <div class="sec-bar profile-tabs ins-tabs" style="padding:0;">
       <div class="xtabs">
         <button class="xtab${insTab === 'overview' ? ' active' : ''}" onclick="insSetTab('overview');return false;">Overview</button>
+        <button class="xtab${insTab === 'content' ? ' active' : ''}" onclick="insSetTab('content');return false;">Content</button>
         <button class="xtab${insTab === 'audience' ? ' active' : ''}" onclick="insSetTab('audience');return false;">Audience</button>
       </div>
     </div>
@@ -123,7 +145,7 @@ function insRender() {
 function insRenderTabBody() {
   const body = document.getElementById('ins-tab-body');
   if (!body) return;
-  body.innerHTML = insTab === 'overview' ? insOverviewHtml() : insAudienceHtml();
+  body.innerHTML = insTab === 'overview' ? insOverviewHtml() : insTab === 'content' ? insContentHtml() : insAudienceHtml();
 }
 
 function insSetRange(days) {
@@ -139,7 +161,7 @@ function insSetRange(days) {
 function insSetTab(tab) {
   insTab = tab;
   document.querySelectorAll('.ins-tabs .xtab').forEach(b => b.classList.remove('active'));
-  const idx = tab === 'overview' ? 0 : 1;
+  const idx = INS_TABS.indexOf(tab);
   document.querySelectorAll('.ins-tabs .xtab')[idx]?.classList.add('active');
   insRenderTabBody();
 }
@@ -148,7 +170,6 @@ function insSetTab(tab) {
 function insOverviewHtml() {
   const vs = insData.viewStats;
   const gr = insData.growth;
-  const ct = insData.content;
 
   return `
     <div class="ins-stats-grid">
@@ -159,10 +180,6 @@ function insOverviewHtml() {
       <div class="ins-stat-tile">
         <div class="ins-stat-num">${fmtCount(gr.new_followers)}</div>
         <div class="ins-stat-label">New followers</div>
-      </div>
-      <div class="ins-stat-tile">
-        <div class="ins-stat-num">${fmtCount(ct.total)}</div>
-        <div class="ins-stat-label">Post &amp; reply views</div>
       </div>
     </div>
 
@@ -180,6 +197,82 @@ function insOverviewHtml() {
   `;
 }
 
+// ── CONTENT TAB ──────────────────────────────────────────────
+const INS_ENGAGEMENT_META = [
+  { key: 'likes',    label: 'Likes',    icon: ICON.heart },
+  { key: 'reposts',  label: 'Reposts',  icon: ICON.repost },
+  { key: 'comments', label: 'Comments', icon: ICON.reply },
+  { key: 'saves',    label: 'Saves',    icon: ICON.bookmark },
+];
+
+function insContentHtml() {
+  const ct = insData.content;
+  const eng = insData.engagement || { likes: 0, reposts: 0, comments: 0, saves: 0 };
+
+  return `
+    <div class="ins-stats-grid">
+      <div class="ins-stat-tile">
+        <div class="ins-stat-num">${fmtCount(ct.total)}</div>
+        <div class="ins-stat-label">Post &amp; reply views</div>
+      </div>
+      <div class="ins-stat-tile">
+        <div class="ins-stat-num">${fmtCount(ct.post_views)}</div>
+        <div class="ins-stat-label">Post views</div>
+      </div>
+      <div class="ins-stat-tile">
+        <div class="ins-stat-num">${fmtCount(ct.reply_views)}</div>
+        <div class="ins-stat-label">Reply views</div>
+      </div>
+    </div>
+
+    <div class="ins-section">
+      <h2 class="ins-section-title">Engagement</h2>
+      <p class="ins-section-sub">All-time, across everything you've posted.</p>
+      <div class="ins-engage-grid">
+        ${INS_ENGAGEMENT_META.map(m => `
+          <div class="ins-engage-tile">
+            <span class="ins-engage-icon">${m.icon}</span>
+            <div class="ins-engage-num">${fmtCount(eng[m.key] || 0)}</div>
+            <div class="ins-engage-label">${m.label}</div>
+          </div>`).join('')}
+      </div>
+      <p class="ins-note" style="margin-top:10px;">No Shares number here — InteractInk's share button opens your device's share sheet without reporting back whether anything was actually sent, so there's nothing reliable to count yet.</p>
+    </div>
+
+    <div class="ins-section">
+      <h2 class="ins-section-title">Trending this week</h2>
+      <p class="ins-section-sub">Your top 3 posts by likes, reposts, comments, and saves in the last 7 days.</p>
+      ${insTopPostsHtml(insData.topWeek)}
+    </div>
+
+    <div class="ins-section">
+      <h2 class="ins-section-title">Trending this month</h2>
+      <p class="ins-section-sub">Your top 3 posts by likes, reposts, comments, and saves in the last 30 days.</p>
+      ${insTopPostsHtml(insData.topMonth)}
+    </div>
+  `;
+}
+
+function insTopPostsHtml(posts) {
+  if (!posts || !posts.length) {
+    return `<div class="ins-empty-note">Not enough activity yet to surface a top post here.</div>`;
+  }
+  return `<div class="ins-top-posts">${posts.map((p, i) => `
+    <a class="ins-top-post" href="${postUrlById(p.id, currentProfile?.username)}">
+      <span class="ins-top-post-rank">#${i + 1}</span>
+      <span class="ins-top-post-body">
+        <span class="ins-top-post-snippet">${esc(p.snippet || '')}</span>
+        <span class="ins-top-post-stats">
+          <span class="ins-ico-stroke">${ICON.heart} ${fmtCount(p.likes)}</span>
+          <span class="ins-ico-stroke">${ICON.repost} ${fmtCount(p.reposts)}</span>
+          <span class="ins-ico-stroke">${ICON.reply} ${fmtCount(p.comments)}</span>
+          <span class="ins-ico-stroke">${ICON.bookmark} ${fmtCount(p.saves)}</span>
+          <span class="ins-ico-solid">${ICON.views} ${fmtCount(p.view_count)}</span>
+        </span>
+      </span>
+    </a>`).join('')}</div>`;
+}
+
 // ── AUDIENCE TAB ─────────────────────────────────────────────
 function insAudienceHtml() {
   const demo = insData.demo;
@@ -193,6 +286,9 @@ function insAudienceHtml() {
 
   const countryRows = demo.countries || [];
   const countryKnown = countryRows.reduce((s, c) => s + c.cnt, 0);
+
+  const viewerRows = insData.viewerLocations || [];
+  const viewerKnown = viewerRows.reduce((s, c) => s + c.cnt, 0);
 
   return `
     <div class="ins-section">
@@ -217,9 +313,16 @@ function insAudienceHtml() {
 
     ${countryRows.length ? `
     <div class="ins-section">
-      <h2 class="ins-section-title">Top locations</h2>
+      <h2 class="ins-section-title">Follower locations</h2>
       <p class="ins-section-sub">Based on ${fmtCount(countryKnown)} of ${fmtCount(total)} followers with a detected country.</p>
       ${countryRows.map(c => insBarRowHtml(insCountryName(c.country), c.cnt, countryKnown)).join('')}
+    </div>` : ''}
+
+    ${viewerRows.length ? `
+    <div class="ins-section">
+      <h2 class="ins-section-title">Where your viewers are from</h2>
+      <p class="ins-section-sub">Based on ${fmtCount(viewerKnown)} profile views with a detected country, last ${insDays} days. Includes everyone who's visited, not just followers.</p>
+      ${viewerRows.map(c => insBarRowHtml(insCountryName(c.country), c.cnt, viewerKnown)).join('')}
     </div>` : ''}
 
     <div class="ins-section">
