@@ -22,8 +22,8 @@ let searchCommunitySlug = searchParams.get('community') || '';
 // Valid non-scoped search tabs. 'posts' is kept as an accepted URL alias
 // for 'latest' so any old ?t=posts links out in the wild still land
 // somewhere sensible instead of falling through to the default.
-const SEARCH_TABS = ['latest', 'viral', 'people', 'communities'];
-const SEARCH_COMMUNITY_TABS = ['latest', 'viral']; // community-scoped search only ever has posts to search
+const SEARCH_TABS = ['latest', 'viral', 'media', 'people', 'communities'];
+const SEARCH_COMMUNITY_TABS = ['latest', 'viral', 'media']; // community-scoped search only ever has posts to search
 function normalizeSearchTabParam(raw, scoped) {
   const t = raw === 'posts' ? 'latest' : raw;
   const allowed = scoped ? SEARCH_COMMUNITY_TABS : SEARCH_TABS;
@@ -71,8 +71,8 @@ function renderTabs() {
     return;
   }
   const tabs = searchCommunitySlug
-    ? [['latest', 'Latest'], ['viral', 'Viral']]
-    : [['latest', 'Latest'], ['viral', 'Viral'], ['people', 'People'], ['communities', 'Community']];
+    ? [['latest', 'Latest'], ['viral', 'Viral'], ['media', 'Media']]
+    : [['latest', 'Latest'], ['viral', 'Viral'], ['media', 'Media'], ['people', 'People'], ['communities', 'Community']];
   el.innerHTML = tabs.map(([t, label]) =>
     `<button class="xtab${searchTab === t ? ' active' : ''}" onclick="setSearchTab('${t}')">${label}</button>`).join('');
 }
@@ -104,7 +104,9 @@ async function runSearch() {
     setPageH1(`Search ${comm.name}`);
     if (!searchQuery.trim()) { root.innerHTML = `<div id="feed-empty">Type something to search posts in ${esc(comm.name)}.</div>`; return; }
     root.innerHTML = skeletonFeedHtml();
-    return searchTab === 'viral' ? searchPostsViral(root) : searchPosts(root);
+    if (searchTab === 'viral') return searchPostsViral(root);
+    if (searchTab === 'media') return searchPostsMedia(root);
+    return searchPosts(root);
   }
   if (scopeEl) scopeEl.innerHTML = '';
 
@@ -118,6 +120,7 @@ async function runSearch() {
   root.innerHTML = skeletonFeedHtml();
   if (searchTab === 'people') return searchPeople(root);
   if (searchTab === 'viral') return searchPostsViral(root);
+  if (searchTab === 'media') return searchPostsMedia(root);
   if (searchTab === 'communities') return searchCommunities(root);
   return searchPosts(root);
 }
@@ -152,6 +155,23 @@ async function searchPostsViral(root) {
   const top = data.sort((a, b) => engagementScore(b) - engagementScore(a)).slice(0, 50);
   await attachQuotedPosts(top);
   root.innerHTML = top.map(p => postCardHtml(p)).join('');
+}
+
+// "Media" tab — same matching posts as Latest, restricted to ones
+// with an attached image/gif/video (media_url set), for people who
+// specifically want to browse photos/videos on a topic rather than
+// wade through text-only posts.
+async function searchPostsMedia(root) {
+  await ensureFeedPrereqsLoaded();
+  let query = sb.from('posts').select(POST_SELECT).eq('is_deleted', false).not('media_url', 'is', null);
+  if (searchCommunitySlug && searchCommunity) query = query.eq('community_id', searchCommunity.id);
+  if (searchQuery.trim()) query = query.ilike('body', `%${searchQuery}%`);
+  const { data, error } = await query.order('created_at', { ascending: false }).limit(50);
+
+  if (error) { root.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
+  if (!data.length) { root.innerHTML = `<div id="feed-empty">No media posts found${searchQuery ? ` for &ldquo;${esc(searchQuery)}&rdquo;` : ''}.</div>`; return; }
+  await attachQuotedPosts(data);
+  root.innerHTML = data.map(p => postCardHtml(p)).join('');
 }
 
 // "Community" tab — matches communities by name or slug, reusing the
@@ -344,7 +364,7 @@ async function fetchTopPostsToday(limit = 3) {
 
 function explorePostHtml(p) {
   const title = (p.body || '').trim().slice(0, 140) || (p.media_url ? '' : '(no text)');
-  const engagement = (p.reply_count || 0) + (p.like_count || 0) + (p.repost_count || 0) + (p.bookmark_count || 0);
+  const commentCount = p.reply_count || 0;
   return `
     <a class="expl-post" href="${postUrl(p)}">
       <div class="expl-post-top">
@@ -358,7 +378,7 @@ function explorePostHtml(p) {
         <span class="dot"></span>
         <span>${timeAgo(p.created_at)}</span>
         <span class="dot"></span>
-        <span>${fmtCount(engagement)} interactions</span>
+        <span>${fmtCount(commentCount)} comment${commentCount === 1 ? '' : 's'}</span>
       </div>
     </a>`;
 }
