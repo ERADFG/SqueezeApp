@@ -378,7 +378,16 @@ async function doOAuth(provider, btn) {
   } catch (err) {
     console.error('OAuth sign-in failed:', err);
     const name = OAUTH_PROVIDER_NAMES[provider] || provider;
-    alert(`Couldn't continue with ${name} right now. Try again in a moment, or use a different sign-in option.`);
+    // Temporarily surfacing the real error text (err.message /
+    // err.error_description) instead of the generic copy below it —
+    // this only ever fires before any redirect to the provider even
+    // happens, so the cause is almost always a Supabase-side config
+    // problem (provider not enabled, bad Site URL/Redirect URLs,
+    // storage/cookies blocked) rather than anything wrong with this
+    // page. Seeing the exact message narrows down which. Revert to
+    // the plain alert below once the underlying issue is found.
+    const detail = err?.error_description || err?.message || String(err);
+    alert(`Couldn't continue with ${name} right now. Try again in a moment, or use a different sign-in option.\n\n[debug] ${detail}`);
     if (btn) { btn.disabled = false; btn.style.opacity = ''; }
   }
 }
