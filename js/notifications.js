@@ -18,7 +18,14 @@ const NOTIF_ICON = {
   // a small padlock swapped in for the head — reads as "a follow,
   // but gated" at a glance, and stays legible at the 11x11 size every
   // notif-badge is rendered at.
-  follow_request: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 20c1.2-4 4-6 7.5-6s6.3 2 7.5 6"/><rect x="9.3" y="5.6" width="5.4" height="4.4" rx="1"/><path d="M10.4 5.6V4.5a1.6 1.6 0 0 1 3.2 0v1.1"/></svg>',
+  // Plain padlock — same rect+shackle shape as ICON_LOCK_SM in
+  // js/common.js, just without its inline width/height (the shared
+  // .notif-badge svg rule below handles sizing here instead). Used to
+  // combine this with a person-shoulders silhouette underneath to
+  // read as "a follow, but gated" — at the 11x11 size every
+  // notif-badge renders at, that combination just reads as a
+  // frowning face, so it's a lock on its own now.
+  follow_request: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="10.5" width="13" height="9" rx="1.5"/><path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3"/></svg>',
   follow_request_accepted: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8.3" r="3.6"/><path d="M4.5 20c1.2-4 4-6 7.5-6s6.3 2 7.5 6"/></svg>'
 };
 
