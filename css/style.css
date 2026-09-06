@@ -6459,3 +6459,65 @@ html[data-theme="dim"], html[data-theme="dark"] {
   .achv-levelup-num { font-size:76px; }
   .achv-toast-stack { top:calc(10px + env(safe-area-inset-top, 0px)); }
 }
+
+/* ── INSIGHTS — /insights.html, the analytics dashboard reached via
+   the chart-icon button on your own profile (js/profile.js). Scoped
+   under body[data-page="insights"] where it needs page-specific
+   layout, but the stat-tile/bar-row/chart pieces are reused as plain
+   classes since nothing else on the site currently needs them. ── */
+.ins-range-pills { display:flex; gap:6px; margin:12px 16px 4px; }
+.ins-range-pill {
+  flex:none; padding:6px 14px; border-radius:20px; border:1px solid var(--line);
+  background:var(--cream-card); color:var(--muted); font-size:13px; font-weight:700; cursor:pointer;
+}
+.ins-range-pill.active { background:var(--maroon); color:#fff; border-color:var(--maroon); }
+.ins-range-pill:hover:not(.active) { background:var(--hover-bg); }
+
+.ins-tabs { margin:4px 16px 0; }
+
+.ins-stats-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin:14px 16px; }
+.ins-stat-tile { background:var(--cream-card); border:1px solid var(--line); border-radius:14px; padding:12px 10px; text-align:left; }
+.ins-stat-num { font-size:21px; font-weight:800; color:var(--ink); line-height:1.15; }
+.ins-stat-label { font-size:11.5px; color:var(--muted); margin-top:3px; font-weight:600; }
+
+.ins-section { margin:22px 16px; }
+.ins-section-title { font-size:16px; font-weight:800; color:var(--ink); margin:0 0 4px; }
+.ins-section-sub { font-size:12.5px; color:var(--muted); margin:0 0 12px; }
+
+.ins-chart-wrap { margin-top:8px; }
+.ins-chart-wrap svg { width:100%; height:auto; display:block; overflow:visible; }
+.ins-chart-empty { color:var(--muted); font-size:13px; padding:24px 0; text-align:center; }
+
+.ins-bar-row { margin-bottom:16px; }
+.ins-bar-row:last-child { margin-bottom:0; }
+.ins-bar-label { font-size:14px; font-weight:700; color:var(--ink); display:block; margin-bottom:6px; }
+.ins-bar-line { display:flex; align-items:center; gap:10px; }
+.ins-bar-track { flex:1; height:8px; background:var(--line); border-radius:4px; overflow:hidden; }
+.ins-bar-fill { height:100%; background:var(--maroon); border-radius:4px; min-width:2px; }
+.ins-bar-fill.alt { background:var(--repost); }
+.ins-bar-pct { font-size:13px; font-weight:700; color:var(--ink); min-width:44px; text-align:right; flex:none; }
+
+.ins-legend { display:flex; gap:16px; margin-bottom:12px; font-size:12.5px; color:var(--muted); font-weight:600; }
+.ins-legend-dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; vertical-align:middle; }
+
+.ins-day-pills { display:flex; gap:6px; overflow-x:auto; margin-bottom:16px; padding-bottom:2px; }
+.ins-day-pills::-webkit-scrollbar { display:none; }
+.ins-day-pill {
+  flex:none; padding:8px 14px; border-radius:20px; border:1px solid var(--line);
+  background:var(--cream-card); font-size:13px; font-weight:700; color:var(--muted); cursor:pointer;
+}
+.ins-day-pill.active { background:var(--hover-bg); color:var(--ink); border-color:var(--muted); }
+
+.ins-active-row { display:flex; justify-content:space-between; align-items:baseline; padding:10px 0; border-bottom:1px solid var(--line); }
+.ins-active-row:last-child { border-bottom:none; }
+.ins-active-day { font-weight:800; font-size:14px; }
+.ins-active-range { color:var(--muted); font-size:13px; }
+
+.ins-empty-note { color:var(--muted); font-size:13px; padding:24px 16px; text-align:center; }
+.ins-note { font-size:11.5px; color:var(--muted); margin-top:6px; }
+.ins-gate { padding:40px 16px; text-align:center; color:var(--muted); font-size:14px; }
+
+@media (max-width:420px) {
+  .ins-stat-num { font-size:18px; }
+  .ins-stat-label { font-size:10.5px; }
+}

@@ -55,6 +55,7 @@ async function loadProfile() {
   viewedProfile = profile;
   isOwnProfile = session && session.user.id === profile.id;
   document.title = `@${profile.username} — InteractInk`;
+  logProfileViewIfNeeded(profile, session);
 
   // SUSPENDED — same behavior as X: the profile itself, everyone's
   // posts/replies quoting it, and the username stay put (nothing is
@@ -191,6 +192,7 @@ async function loadProfile() {
             </div>` : ''}
           ${!isOwnProfile && session ? `<button class="follow-btn${hasPendingRequest ? ' following requested' : ''}" id="follow-btn" onclick="toggleFollow()">${hasPendingRequest ? 'Requested' : t('action.follow')}</button>` : ''}
           ${!isOwnProfile && !session ? `<a class="follow-btn" href="login.html">${t('action.follow')}</a>` : ''}
+          ${isOwnProfile ? `<a class="profile-icon-btn" href="insights.html" title="Analytics" aria-label="Analytics">${ICON_CHART}</a>` : ''}
           ${isOwnProfile ? `<a class="profile-edit-btn" href="editprofile.html">Edit Profile</a>` : ''}
         </div>
       </div>
@@ -357,6 +359,30 @@ const ICON_LOC_RAW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 const ICON_LOC = `<span class="pmr-icon">${ICON_LOC_RAW}</span>`;
 const ICON_LINK = '<span class="pmr-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.5 14.5 14.5 9.5"/><path d="M11 7.5 12.6 5.9a3.5 3.5 0 1 1 5 5L16 12.5"/><path d="M13 16.5 11.4 18.1a3.5 3.5 0 1 1-5-5L8 11.5"/></svg></span>';
 const ICON_CAL = '<span class="pmr-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="5" width="17" height="16" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg></span>';
+// Analytics/Insights entry point — own-profile only, sits next to
+// Edit Profile in the header actions row. A simple bar-chart glyph so
+// it reads distinctly from the message/menu icons beside it.
+const ICON_CHART = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20.5h16"/><rect x="6" y="13" width="3.2" height="7.5" rx=".6"/><rect x="10.4" y="8.5" width="3.2" height="12" rx=".6"/><rect x="14.8" y="4.5" width="3.2" height="16" rx=".6"/></svg>';
+
+// Best-effort, fire-and-forget: records a view of `profile` on
+// api/log-profile-view.js (see supabase/analytics_setup.sql) so its
+// owner's Insights page has something to show. Never awaited by the
+// caller and never surfaces an error — same "don't let this block or
+// break the page" philosophy as the post/reply view counters in
+// view_counts.sql.
+function logProfileViewIfNeeded(profile, session) {
+  if (!profile || (session && session.user.id === profile.id)) return;
+  try {
+    fetch('/api/log-profile-view', {
+      method: 'POST',
+      headers: Object.assign(
+        { 'Content-Type': 'application/json' },
+        session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}
+      ),
+      body: JSON.stringify({ username: profile.username }),
+    }).catch(() => {});
+  } catch (e) {}
+}
 
 // Twitter-style truncation: "domain.com/some-long-path..." capped at
 // maxLen visible characters (ellipsis included). Used for both the

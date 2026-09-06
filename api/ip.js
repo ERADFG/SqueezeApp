@@ -30,6 +30,16 @@ export default async function handler(req, res) {
   const ip = (req.headers['x-forwarded-for']?.split(',')[0] || req.socket?.remoteAddress || '').trim();
   if (!ip) return res.status(200).json({ banned: false });
 
+  // Vercel's edge network sets this from the request's real geo-IP
+  // lookup before this function ever runs — same trust model as
+  // x-forwarded-for above, never anything the browser could supply
+  // itself. Feeds public.profiles.country for the Insights page's
+  // "Top locations" chart (see supabase/analytics_setup.sql). Absent
+  // on `vercel dev`/non-Vercel hosting, which is fine — it just means
+  // country stays unset there, same as any account whose traffic never
+  // hit this endpoint.
+  const country = (req.headers['x-vercel-ip-country'] || '').trim();
+
   const SUPABASE_URL = 'https://pyitivzoqleukuclajrf.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5aXRpdnpvcWxldWt1Y2xhanJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5Nzg0ODcsImV4cCI6MjEwMTU1NDQ4N30.gKvqOaAREY5wcptIv7OHfjHhZR5ogIaMY8I98jHRmFs';
 
@@ -47,6 +57,20 @@ export default async function handler(req, res) {
         },
         body: JSON.stringify({ p_ip: ip }),
       });
+      // Best-effort, fire-and-forget alongside the ban check above —
+      // a failure here shouldn't affect the ban result this endpoint
+      // exists to return, so it isn't awaited into the response path.
+      if (country) {
+        fetch(`${SUPABASE_URL}/rest/v1/rpc/update_my_country`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: auth,
+          },
+          body: JSON.stringify({ p_country: country }),
+        }).catch(() => {});
+      }
       if (!rpcRes.ok) return res.status(200).json({ banned: false });
       const banned = await rpcRes.json();
       return res.status(200).json({ banned: banned === true });
