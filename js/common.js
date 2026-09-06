@@ -1186,8 +1186,8 @@ function renderMobileChrome() {
           <div class="m-drawer-menu">
             <a href="${ownHref}">${NAV_ICON.user}Profile</a>
             <a href="${lp || '/'}">${NAV_ICON.home}Home</a>
-            <a href="notifications.html">${NAV_ICON.bell}${badge}Notifications</a>
-            <a href="chat.html">${NAV_ICON.chat}${chatBadge}Chat</a>
+            <a href="notifications.html">${NAV_ICON.bell}Notifications${badge}</a>
+            <a href="chat.html">${NAV_ICON.chat}Chat${chatBadge}</a>
             <a href="search.html">${NAV_ICON.search}Explore</a>
             <a href="${lp}/communities">${NAV_ICON.people}Communities</a>
             <a href="lists.html">${NAV_ICON.list}Lists</a>
