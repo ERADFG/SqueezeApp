@@ -36,7 +36,7 @@
 // canonical domain instead of being trusted. Same guard as
 // api/sitemap.js's safeOrigin(); keep both in sync if this ever
 // changes.
-const CANONICAL_HOST = 'interactink.vercel.app';
+const CANONICAL_HOST = 'interactink.com';
 function safeOrigin(req) {
   const host = (req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim().toLowerCase();
   const proto = (req.headers['x-forwarded-proto'] || 'https').split(',')[0];

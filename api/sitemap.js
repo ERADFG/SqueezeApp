@@ -60,7 +60,7 @@ const PAGE_SIZE = 1000;
 // (see the comment this replaced, above). Anything else — including
 // a spoofed Host — falls back to the canonical domain instead of
 // being trusted.
-const CANONICAL_HOST = 'interactink.vercel.app';
+const CANONICAL_HOST = 'interactink.com';
 function safeOrigin(req) {
   const host = (req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim().toLowerCase();
   const proto = (req.headers['x-forwarded-proto'] || 'https').split(',')[0];

@@ -696,7 +696,7 @@ module.exports = async function handler(req, res) {
   // CANONICAL_HOST is this project's real domain; *.vercel.app is
   // still allowed through for preview deployments, anything else
   // (including a spoofed Host) falls back to the canonical domain.
-  const CANONICAL_HOST = 'interactink.vercel.app';
+  const CANONICAL_HOST = 'interactink.com';
   const rawHost = (req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim().toLowerCase();
   const proto = (req.headers['x-forwarded-proto'] || 'https').split(',')[0];
   const host = (rawHost === CANONICAL_HOST || rawHost.endsWith('.vercel.app')) ? rawHost : CANONICAL_HOST;

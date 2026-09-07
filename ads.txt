@@ -1,4 +1,4 @@
-# ads.txt for interactink.vercel.app
+# ads.txt for interactink.com
 #
 # Placeholder — no authorized sellers declared yet.
 # Once the AdSense publisher ID is confirmed, replace this file's
