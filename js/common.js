@@ -5131,15 +5131,24 @@ const DEFAULT_AVATAR = "img/default-avatar.webp";
 function imgTransformOK() {
   try { return sessionStorage.getItem('oc_imgtx') !== '0'; } catch (e) { return true; }
 }
-function resizeSupabaseUrl(url, width, quality = 75) {
+function resizeSupabaseUrl(url, width, height = null, quality = 75) {
   if (!url || !width || !imgTransformOK()) return url;
   const marker = '/storage/v1/object/public/';
   const i = url.indexOf(marker);
   if (i === -1) return url; // not a Supabase Storage public URL — nothing to transform
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const w = Math.max(24, Math.round(width * dpr));
+  // resize=cover needs BOTH dimensions to know the target box it's
+  // covering — given width alone, it has no target aspect to scale
+  // the source down to first, so it was cropping a literal w×w pixel
+  // square straight out of the original full-resolution photo instead
+  // of shrinking the whole image down and then cropping. That's a
+  // digital-zoom crop, not a resize+crop — hence every avatar looking
+  // zoomed into one small patch of the source image. Passing height
+  // gives it a real target box to fit before cropping.
   const sep = url.includes('?') ? '&' : '?';
-  return url.slice(0, i) + '/storage/v1/render/image/public/' + url.slice(i + marker.length) + `${sep}width=${w}&quality=${quality}&resize=cover`;
+  const hParam = height != null ? `&height=${Math.max(24, Math.round(height * dpr))}` : '';
+  return url.slice(0, i) + '/storage/v1/render/image/public/' + url.slice(i + marker.length) + `${sep}width=${w}${hParam}&quality=${quality}&resize=cover`;
 }
 document.addEventListener('error', (e) => {
   const img = e.target;
@@ -5156,13 +5165,18 @@ document.addEventListener('error', (e) => {
 // uses up to @2x) — pass a bigger one for the rare full-size case
 // (e.g. the 96px profile header pfp, requested at ~240 for crispness).
 function avatarUrl(url, width = 176) {
-  return resizeSupabaseUrl(url || DEFAULT_AVATAR, width);
+  // Avatars are always square (see crop-modal.js's 'square' shape,
+  // 400×400 output), so height = width gives resize=cover a real
+  // target box to scale into before cropping.
+  return resizeSupabaseUrl(url || DEFAULT_AVATAR, width, width);
 }
 
 // Same idea for banner strips — these render much wider than tall, so
 // quality can drop further than an avatar without it being visible.
+// Left without an explicit height (matching prior behavior) since
+// banners weren't reported as affected by the crop bug above.
 function bannerUrl(url, width = 1000) {
-  return resizeSupabaseUrl(url, width, 68);
+  return resizeSupabaseUrl(url, width, null, 68);
 }
 
 // Renders the "author" chunk of a post/reply header: avatar + username,
