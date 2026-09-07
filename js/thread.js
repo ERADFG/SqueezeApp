@@ -547,7 +547,8 @@ async function submitReply(parentReplyId = currentFocusedReplyId()) {
   // the reply popup in common.js) makes; without it, replies posted
   // from a thread page skipped doxxing/toxicity/spam/drug-weapon-
   // language checks completely.
-  if (!(await checkTextModeration('chat', body, postId, errEl))) return;
+  const textDecision = await checkTextModeration('chat', body, postId, errEl);
+  if (!textDecision) return;
 
   btn.disabled = true;
   stEl.textContent = 'Posting…';
@@ -577,7 +578,7 @@ async function submitReply(parentReplyId = currentFocusedReplyId()) {
       body,
       media_url,
       media_type,
-      ...(media_url ? { moderation_status: 'pending' } : {}),
+      ...(media_url ? { moderation_status: 'pending' } : textDecision === 'human_review' ? { moderation_status: 'human_review' } : {}),
     }).select(REPLY_SELECT).single();
     if (error) throw error;
 
@@ -589,15 +590,14 @@ async function submitReply(parentReplyId = currentFocusedReplyId()) {
         stEl.textContent = '';
         showErr(errEl, "Your reply was posted but the media didn't pass review, so it's hidden from others.");
       } else if (mod.decision === 'human_review') {
-        // Visible already — moderation_media_pipeline.sql's RESTRICTIVE
-        // policy deliberately keeps human_review rows public while
-        // pending review (only 'blocked'/unchecked 'pending' are
-        // actually hidden), so no "wait for review" toast here; it
-        // would just be inaccurate. Deploy nsfw-service (see
-        // MODERATION_SETUP.md) so most uploads get a real allow/block
-        // decision instead of falling back to human_review.
+        // Held from public view until an admin clears it — see
+        // moderation_media_pipeline.sql's RESTRICTIVE policy.
         stEl.textContent = '';
+        showErr(errEl, "Your reply is awaiting a quick review before it's visible to others — you can still see it.");
       }
+    } else if (textDecision === 'human_review') {
+      stEl.textContent = '';
+      showErr(errEl, "Your reply is awaiting a quick review before it's visible to others — you can still see it.");
     }
 
     bodyEl.value = ''; if (fileEl) fileEl.value = '';

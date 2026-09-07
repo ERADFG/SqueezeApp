@@ -48,7 +48,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY,
 );
 
-const ALLOWED_TABLES = new Set(['posts', 'replies']);
+const ALLOWED_TABLES = new Set(['posts', 'replies', 'messages']);
 
 async function callModerationService(path, payload) {
   const serviceUrl = process.env.MODERATION_SERVICE_URL;
@@ -182,7 +182,7 @@ export default async function handler(req, res) {
   const topCategoryScore = blockableCategories.length ? Math.max(...blockableCategories.map((c) => c.score)) : 0;
   const topSelfHarmScore = selfHarmCategories.length ? Math.max(...selfHarmCategories.map((c) => c.score)) : 0;
   const topExtremismScore = extremismCategories.length ? Math.max(...extremismCategories.map((c) => c.score)) : 0;
-  const transcript = audioResult?.transcript ?? '';
+  const transcriptText = audioResult?.transcript ?? transcript ?? '';
   const audioToxicity = audioResult?.toxicity_probability ?? 0;
   const audioCategories = audioResult?.categories ?? [];
   const topAudioCategoryScore = audioCategories.length ? Math.max(...audioCategories.map((c) => c.score)) : 0;
@@ -270,7 +270,7 @@ export default async function handler(req, res) {
             // deciding a 'human_review' item, but there's no reason to
             // keep it once a video is 'visible' — truncate the same
             // way moderate-text.js truncates post excerpts.
-            transcriptExcerpt: transcript ? transcript.slice(0, 200) : '',
+            transcriptExcerpt: transcriptText ? transcriptText.slice(0, 200) : '',
             csamChecked: csamResult.configured,
           },
           moderation_checked_at: new Date().toISOString(),
@@ -293,7 +293,7 @@ export default async function handler(req, res) {
       p_decision: decision === 'block' ? 'block' : decision === 'human_review' ? 'human_review' : 'allow',
       p_csam_match: csamResult.matched,
       p_audio_toxicity: audioResult ? audioToxicity : null,
-      p_transcript_excerpt: transcript ? transcript.slice(0, 200) : null,
+      p_transcript_excerpt: transcriptText ? transcriptText.slice(0, 200) : null,
     });
   } catch (e) {
     console.error('[moderate-media] log failed', e);
@@ -327,7 +327,7 @@ export default async function handler(req, res) {
       categories,
       audioToxicity,
       audioCategories,
-      transcript,
+      transcript: transcriptText,
       csamMatched: csamResult.matched,
       csamConfigured: csamResult.configured,
     },

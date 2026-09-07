@@ -1995,6 +1995,15 @@ async function sendMessage() {
   const body = bodyEl.value.trim();
   const attachment = chatAttachment;
   if ((!body && !attachment) || !chatOther || !currentSession) return;
+  // Text moderation gate — chat messages were never checked at all
+  // (doxxing, coded drug/weapon-sale language, harassment, etc. sent
+  // via DM sailed straight through with zero server-side scrutiny,
+  // unlike every public post/reply). checkTextModeration() only
+  // refuses on a hard 'block' — a private 1:1 message doesn't have a
+  // "visible to others" concept to gate the way a public post does,
+  // so 'human_review'/'soft_flag' still send, just logged for the
+  // admin queue same as anywhere else.
+  if (body && !(await checkTextModeration('chat', body, chatOther.id, null))) return;
   bodyEl.value = '';
   autoGrowChatInput(bodyEl);
   hideTypingBubble();
@@ -2034,6 +2043,14 @@ async function sendMessage() {
   // body is sent as plain text over TLS and encrypted server-side by
   // messages_encrypt_body_trg the moment it's inserted — see
   // supabase/chat_encryption.sql. Nothing to do client-side.
+  // media_url present -> insert hidden from the recipient
+  // ('pending') until checkMediaModeration() below flips it — same
+  // pattern as posts/replies. Chat attachments were never run
+  // through server-side NSFW/category/CSAM checks at all before this;
+  // see supabase/chat_media_moderation.sql for the RPC-side filtering
+  // that actually enforces this (get_dm_thread/get_message etc. only
+  // return a pending/blocked attachment to its own sender).
+  if (media_url) insertRow.moderation_status = 'pending';
 
   const { data, error } = await sb.from('messages').insert(insertRow).select('*').single();
   if (error) { alert(error.message || t('chat.failedToSend')); return; }
@@ -2041,6 +2058,17 @@ async function sendMessage() {
   if (!document.getElementById(`msg-${data.id}`)) {
     appendChatMsg(data, currentSession.user.id);
     scrollChatToBottom();
+  }
+  if (media_url) {
+    const transcript = media_type === 'video' && attachment.file ? await transcribeVideoForModeration(attachment.file) : '';
+    const mod = await checkMediaModeration('messages', data.id, 'chat', media_url, media_type, transcript);
+    if (mod.decision === 'block' || mod.decision === 'human_review') {
+      // Own message bubble stays visible locally (we already rendered
+      // it above) — the recipient-facing RPCs are what actually hide
+      // it from them until/unless it clears review.
+      const bubble = document.getElementById(`msg-${data.id}`);
+      if (bubble) bubble.classList.add('msg-pending-review');
+    }
   }
 }
 
@@ -2345,6 +2373,9 @@ async function sendGroupMessage() {
   const body = bodyEl.value.trim();
   const attachment = chatAttachment;
   if ((!body && !attachment) || !chatGroup || !currentSession) return;
+  // Text moderation gate — same reasoning as sendMessage() above;
+  // group chat text was completely unchecked before this.
+  if (body && !(await checkTextModeration('chat', body, chatGroup.id, null))) return;
   bodyEl.value = '';
   autoGrowChatInput(bodyEl);
   const sendBtn = document.getElementById('chat-send-btn');
@@ -2375,6 +2406,10 @@ async function sendGroupMessage() {
 
   const insertRow = { conversation_id: chatGroup.id, sender_id: currentSession.user.id, body, media_url, media_type };
   if (attachment?.type === 'audio' && attachment.durationMs) insertRow.media_duration_ms = attachment.durationMs;
+  // Same pending-until-checked pattern as sendMessage() — group media
+  // attachments were never run through NSFW/category/CSAM checks at
+  // all before this.
+  if (media_url) insertRow.moderation_status = 'pending';
   const { data, error } = await sb.from('messages').insert(insertRow).select('*').single();
   if (error) { alert(error.message || t('chat.failedToSend')); return; }
   data._plain = body;
@@ -2383,6 +2418,14 @@ async function sendGroupMessage() {
     scrollChatToBottom();
   }
   sb.from('conversation_members').update({ last_read_at: new Date().toISOString() }).eq('conversation_id', chatGroup.id).eq('user_id', currentSession.user.id);
+  if (media_url) {
+    const transcript = media_type === 'video' && attachment.file ? await transcribeVideoForModeration(attachment.file) : '';
+    const mod = await checkMediaModeration('messages', data.id, 'chat', media_url, media_type, transcript);
+    if (mod.decision === 'block' || mod.decision === 'human_review') {
+      const bubble = document.getElementById(`msg-${data.id}`);
+      if (bubble) bubble.classList.add('msg-pending-review');
+    }
+  }
 }
 
 function appendGroupChatMsg(m, myId) {

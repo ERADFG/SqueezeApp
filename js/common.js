@@ -1727,6 +1727,14 @@ function closeGlobalCompose() {
 // automatically available on every page that already includes common.js,
 // with no extra HTML edits needed. Fails open on network errors so a
 // moderation-service outage never blocks someone from posting.
+// Returns false on 'block' (caller must bail out — unchanged contract),
+// or the decision string ('allow' | 'soft_flag' | 'human_review') on
+// anything that lets the post through. Every non-block decision string
+// is truthy, so every existing `if (!(await checkTextModeration(...)))
+// return;` call site keeps working unmodified. Callers that need to
+// gate a posts/replies insert on 'human_review' (so it lands hidden,
+// same as media — see moderation_media_pipeline.sql) capture the
+// return value instead of discarding it; see submitGlobalCompose() etc.
 async function checkTextModeration(contentType, text, contentRef, errEl) {
   // Instant local pass first (doxxing regex +, if the model's already
   // warm, an in-browser toxicity read) — see checkTextLocal above. Never
@@ -1741,24 +1749,48 @@ async function checkTextModeration(contentType, text, contentRef, errEl) {
     showErr(errEl, "This looks like it breaks our rules — please revise and try again.");
     return false;
   }
+  if (local.decision === 'human_review') {
+    // Doxxing hit from the local regex pass — the server call below
+    // still runs (it's the source of truth for logging), but we
+    // already know the floor is human_review, so a slow/failed server
+    // call can't accidentally downgrade this back to a bare 'allow'.
+    try {
+      const res = await fetch('/api/moderate-text', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentSession.user.id, contentType, text, contentRef: contentRef ?? null }),
+      });
+      if (res.ok) {
+        const { decision } = await res.json();
+        if (decision === 'block') {
+          showErr(errEl, "This looks like it breaks our rules — please revise and try again.");
+          return false;
+        }
+      }
+    } catch { /* fall through — floor stays human_review either way */ }
+    return 'human_review';
+  }
   try {
     const res = await fetch('/api/moderate-text', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId: currentSession.user.id, contentType, text, contentRef: contentRef ?? null }),
     });
-    if (!res.ok) return true; // fail open on outage
+    if (!res.ok) return 'allow'; // fail open on outage
     const { decision } = await res.json();
     if (decision === 'block') {
       showErr(errEl, "This looks like it breaks our rules — please revise and try again.");
       return false;
     }
-    // 'allow', 'soft_flag', and 'human_review' all let the post through;
-    // soft_flag/human_review are logged server-side for the admin queue
-    // (see admin_get_flagged_content() in moderation_pipeline.sql).
-    return true;
+    // 'allow' and 'soft_flag' both let the post through immediately;
+    // 'human_review' also lets it through here but the caller inserts
+    // it with moderation_status: 'human_review' so it's held from
+    // public view until an admin clears it — see
+    // moderation_media_pipeline.sql's RESTRICTIVE select policy, which
+    // now only shows 'visible' rows to non-authors/non-admins.
+    return decision;
   } catch {
-    return true; // fail open — never block a real user because of a network hiccup
+    return 'allow'; // fail open — never block a real user because of a network hiccup
   }
 }
 
@@ -1808,7 +1840,8 @@ async function submitGlobalCompose() {
   if (!enforceCooldown(errEl)) return;
   if (!ensureCaptchaRevealed('gc-captcha')) return;
   if (!(await verifyHuman('gc-captcha', errEl))) return;
-  if (!(await checkTextModeration('text', body, null, errEl))) return;
+  const textDecision = await checkTextModeration('text', body, null, errEl);
+  if (!textDecision) return;
 
   btn.disabled = true;
   stEl.textContent = 'Posting…';
@@ -1827,8 +1860,9 @@ async function submitGlobalCompose() {
     const scheduled_at = collectSchedule('gc');
     // media_url present -> insert hidden ('pending') until the server-side
     // check below flips it; see moderation_media_pipeline.sql's
-    // RESTRICTIVE select policy. Text-only posts skip straight to
-    // 'visible' (default) since checkTextModeration already gated them.
+    // RESTRICTIVE select policy. Text-only posts flagged human_review by
+    // checkTextModeration also start hidden the same way, instead of
+    // going straight to 'visible'.
     const { data, error } = await sb.from('posts').insert({
       author_id: currentSession.user.id,
       body, media_url, media_type,
@@ -1836,7 +1870,7 @@ async function submitGlobalCompose() {
       poll_ends_at: poll?.poll_ends_at || null,
       scheduled_at,
       reply_audience: getReplyAudience('gc'),
-      ...(media_url ? { moderation_status: 'pending' } : {}),
+      ...(media_url ? { moderation_status: 'pending' } : textDecision === 'human_review' ? { moderation_status: 'human_review' } : {}),
     }).select('*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)').single();
     if (error) throw error;
 
@@ -1848,15 +1882,17 @@ async function submitGlobalCompose() {
         stEl.textContent = '';
         showErr(errEl, "Your post was published but the media didn't pass review, so it's hidden from others.");
       } else if (mod.decision === 'human_review') {
-        // Visible already — moderation_media_pipeline.sql's RESTRICTIVE
-        // policy deliberately keeps human_review rows public while
-        // pending review (only 'blocked'/unchecked 'pending' are
-        // actually hidden), so no "wait for review" toast here; it
-        // would just be inaccurate. Deploy nsfw-service (see
-        // MODERATION_SETUP.md) so most uploads get a real allow/block
-        // decision instead of falling back to human_review.
+        // Held from public view until an admin clears it —
+        // moderation_media_pipeline.sql's RESTRICTIVE policy now only
+        // shows 'visible' rows to non-authors/non-admins. Deploy
+        // nsfw-service (see MODERATION_SETUP.md) so most uploads get a
+        // real allow/block decision instead of falling back here.
         stEl.textContent = '';
+        showErr(errEl, "Your post is awaiting a quick review before it's visible to others — you can still see it.");
       }
+    } else if (textDecision === 'human_review') {
+      stEl.textContent = '';
+      showErr(errEl, "Your post is awaiting a quick review before it's visible to others — you can still see it.");
     }
 
     bodyEl.value = ''; bodyEl.style.height = '';
@@ -2016,7 +2052,8 @@ async function submitReplyPopup() {
   if (body.length > 500) { showErr(errEl, 'Reply too long (max 500 chars).'); return; }
   if (!ensureCaptchaRevealed('rpc-captcha')) return;
   if (!(await verifyHuman('rpc-captcha', errEl))) return;
-  if (!(await checkTextModeration('chat', body, targetPostId, errEl))) return;
+  const textDecision = await checkTextModeration('chat', body, targetPostId, errEl);
+  if (!textDecision) return;
 
   btn.disabled = true;
   stEl.textContent = 'Posting…';
@@ -2036,7 +2073,7 @@ async function submitReplyPopup() {
       parent_reply_id: null,
       author_id: currentSession.user.id,
       body, media_url, media_type,
-      ...(media_url ? { moderation_status: 'pending' } : {}),
+      ...(media_url ? { moderation_status: 'pending' } : textDecision === 'human_review' ? { moderation_status: 'human_review' } : {}),
     }).select('*, profile:profiles(username,display_name,avatar_url,verified,verification_type)').single();
     if (error) throw error;
 
@@ -2047,14 +2084,12 @@ async function submitReplyPopup() {
       if (mod.decision === 'block') {
         showErr(errEl, "Your reply was posted but the media didn't pass review, so it's hidden from others.");
       } else if (mod.decision === 'human_review') {
-        // Visible already — moderation_media_pipeline.sql's RESTRICTIVE
-        // policy deliberately keeps human_review rows public while
-        // pending review (only 'blocked'/unchecked 'pending' are
-        // actually hidden), so no "wait for review" toast here; it
-        // would just be inaccurate. Deploy nsfw-service (see
-        // MODERATION_SETUP.md) so most uploads get a real allow/block
-        // decision instead of falling back to human_review.
+        // Held from public view until an admin clears it — see
+        // moderation_media_pipeline.sql's RESTRICTIVE policy.
+        showErr(errEl, "Your reply is awaiting a quick review before it's visible to others — you can still see it.");
       }
+    } else if (textDecision === 'human_review') {
+      showErr(errEl, "Your reply is awaiting a quick review before it's visible to others — you can still see it.");
     }
 
     bodyEl.value = ''; bodyEl.style.height = '';
@@ -2949,15 +2984,20 @@ async function submitQuote() {
   if (body.length > 500) { showErr(errEl, 'Comment too long (max 500 chars).'); return; }
   if (!ensureCaptchaRevealed('qm-captcha')) return;
   if (!(await verifyHuman('qm-captcha', errEl))) return;
-  if (!(await checkTextModeration('text', body, quotingPostId, errEl))) return;
+  const textDecision = await checkTextModeration('text', body, quotingPostId, errEl);
+  if (!textDecision) return;
   btn.disabled = true;
   try {
     const { data, error } = await sb.from('posts').insert({
       author_id: currentSession.user.id,
       body,
-      quote_of: quotingPostId
+      quote_of: quotingPostId,
+      ...(textDecision === 'human_review' ? { moderation_status: 'human_review' } : {}),
     }).select('*, profile:profiles!posts_author_id_fkey(username,display_name,avatar_url,verified,verification_type)').single();
     if (error) throw error;
+    if (textDecision === 'human_review') {
+      showErr(errEl, "Your quote post is awaiting a quick review before it's visible to others — you can still see it.");
+    }
     // We already have the quoted post in postCache (it's whatever card
     // the Quote button was clicked from) — reuse it directly instead of
     // an extra fetch. Falls back to attachQuotedPosts() if it's missing.
@@ -6358,11 +6398,21 @@ async function loadToxicityPipeline() {
   return _toxicityPipelinePromise;
 }
 // Opportunistic background preload — starts the (one-time, then cached
-// by the browser) model download on page load without blocking
-// anything, so by the time someone actually submits a post the model is
-// usually already warm. If it fails or is still loading, checkTextLocal
-// below just falls open with no local opinion — never a blocker.
-loadToxicityPipeline().catch(() => {});
+// by the browser) model download so by the time someone actually
+// submits a post the model is usually already warm. Deferred to an
+// idle moment (requestIdleCallback, falling back to a short setTimeout
+// where that API doesn't exist — e.g. Safari) rather than firing the
+// instant common.js runs: this is a multi-megabyte WASM/ONNX download
+// that has zero benefit for the large share of visits that never open
+// a composer, and starting it immediately competed with the actual
+// page's own images/fonts/scripts for bandwidth on exactly the
+// connections (slower mobile) where that contention is felt most as
+// lag. Still one-time per tab (loadToxicityPipeline caches its
+// promise, and common.js itself only loads once per tab thanks to
+// pjax's loadedScripts dedup), just no longer racing critical
+// first-paint resources for it.
+const _idleSchedule = window.requestIdleCallback || (fn => setTimeout(fn, 2000));
+_idleSchedule(() => { loadToxicityPipeline().catch(() => {}); });
 
 const TEXT_BLOCK_THRESHOLD = 0.9;
 const TEXT_REVIEW_THRESHOLD = 0.65;

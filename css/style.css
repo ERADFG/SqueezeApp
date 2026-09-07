@@ -4750,6 +4750,19 @@ body:has(.chat-thread) #chat-sec-bar { display:none; }
 .chat-daydivider + .msg-row.g-start { margin-top:0; }
 .msg-row.mine { justify-content:flex-end; }
 .msg-bubble { max-width:72%; padding:9px 14px; border-radius:22px; font-size:14.5px; line-height:1.4; white-space:pre-wrap; word-wrap:break-word; box-shadow:0 1px 1px rgba(0,0,0,.04); }
+/* Own attachment awaiting/failing moderation review — see
+   checkMediaModeration() call in sendMessage()/sendGroupMessage()
+   (js/chat.js), which adds this class to the .msg-row element itself
+   (id="msg-<id>" lives on the row, not the bubble inside it). Only
+   ever applied to the sender's own row (the recipient never sees a
+   pending/blocked attachment at all — see
+   supabase/chat_media_moderation.sql), so this is purely a "your
+   message is still under review" signal to the person who sent it. */
+.msg-row.msg-pending-review .msg-bubble { opacity:.6; }
+.msg-row.msg-pending-review::after {
+  content:"Attachment awaiting review — only you can see it for now";
+  display:block; font-size:11px; color:var(--muted); margin-top:2px; text-align:right;
+}
 /* Contains the floated .msg-meta (see below) so the bubble's
    background/padding wraps around it instead of the float poking out
    past the bubble's bottom edge. */

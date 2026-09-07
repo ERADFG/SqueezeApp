@@ -79,7 +79,18 @@ import requests
 
 app = FastAPI()
 
-SHARED_SECRET = os.environ.get("NSFW_SERVICE_TOKEN", "changeme")
+SHARED_SECRET = os.environ.get("NSFW_SERVICE_TOKEN")
+if not SHARED_SECRET:
+    # Fail loudly at startup instead of silently accepting requests
+    # authenticated with a guessable default ("changeme"). Every
+    # endpoint here gates real moderation decisions (NSFW, CSAM-
+    # adjacent categories, self-harm/extremism text) — an unset token
+    # must never mean "open to anyone who knows the old default."
+    raise RuntimeError(
+        "NSFW_SERVICE_TOKEN is not set. Set it to a long random secret "
+        "(matching MODERATION_SERVICE_TOKEN / NSFW_SERVICE_TOKEN in "
+        "Vercel's environment variables) before starting this service."
+    )
 
 # bfloat16 over float16: float16 has spotty/slow support in many CPU
 # kernels (it's really designed for GPU), while bfloat16 runs natively

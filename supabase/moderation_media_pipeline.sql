@@ -60,12 +60,20 @@ alter table public.communities add column if not exists image_moderation_flags j
 -- These narrow visibility on top of whatever SELECT policy you
 -- already have; they never replace or widen it.
 
+-- 'human_review' rows are hidden from everyone but the author and
+-- admins, same as 'pending'/'blocked' — only 'visible' is public.
+-- (Previously human_review stayed publicly visible pending review;
+-- tightened so anything flagged for a human look — doxxing, coded
+-- drug/weapon-sale language, borderline NSFW, self-harm content,
+-- etc. — can't sit in front of every visitor until an admin gets to
+-- it. See supabase/hide_human_review_content.sql if you need to run
+-- just this change against an existing database.)
 drop policy if exists posts_moderation_gate on public.posts;
 create policy posts_moderation_gate on public.posts
   as restrictive
   for select
   using (
-    moderation_status in ('visible', 'human_review')  -- human_review stays visible while pending human review, matching your "innocent until reviewed" cooldown-style approach; flip to just 'visible' below if you'd rather hide human_review items too
+    moderation_status = 'visible'
     or author_id = auth.uid()
     or public.is_admin()
   );
@@ -75,7 +83,7 @@ create policy replies_moderation_gate on public.replies
   as restrictive
   for select
   using (
-    moderation_status in ('visible', 'human_review')
+    moderation_status = 'visible'
     or author_id = auth.uid()
     or public.is_admin()
   );
