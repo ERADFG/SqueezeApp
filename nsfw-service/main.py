@@ -100,6 +100,7 @@ IMAGE_CATEGORY_LABELS = [
     "firearm or weapon",
     "illegal drugs or drug paraphernalia",
     "graphic violence, gore, or a depiction of serious injury",
+    "terrorist propaganda, extremist symbols, or a terrorist attack",
     "a normal, unremarkable photo",
 ]
 TEXT_CATEGORY_LABELS = [
@@ -108,6 +109,7 @@ TEXT_CATEGORY_LABELS = [
     "sexual solicitation or explicit sexual content",
     "graphic violence or threats of violence against a person",
     "self-harm, suicide, or suicidal ideation",
+    "terrorism, violent extremism, or praising/recruiting for a terrorist group or attack",
     "spam, scam, or phishing content",
     "ordinary conversation",
 ]

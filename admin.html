@@ -114,6 +114,8 @@
           <button class="adm-tab" data-tab="articles" onclick="switchAdminTab('articles')">Articles</button>
           <button class="adm-tab" data-tab="reports" onclick="switchAdminTab('reports')">Reports<span class="adm-tab-badge" id="adm-reports-badge"></span></button>
           <button class="adm-tab" data-tab="moderation" onclick="switchAdminTab('moderation')">Moderation<span class="adm-tab-badge" id="adm-moderation-badge"></span></button>
+          <button class="adm-tab" data-tab="ipbans" onclick="switchAdminTab('ipbans')">IP Bans</button>
+          <button class="adm-tab" data-tab="auditlog" onclick="switchAdminTab('auditlog')">Audit Log</button>
         </div>
 
         <div class="adm-panel active" id="adm-panel-users">
@@ -173,6 +175,34 @@
               <button class="adm-btn" data-status="allow" onclick="setModerationFilter('allow')">Allowed (flagged)</button>
             </div>
             <div id="adm-moderation-results"></div>
+          </div>
+        </div>
+
+        <div class="adm-panel" id="adm-panel-ipbans">
+          <div class="adm-section">
+            <!-- Direct IP-level bans — blocks a network from signing up
+                 or staying signed in even with no account tied to the
+                 ban yet. See admin_ban_ip()/admin_unban_ip() in
+                 supabase/moderation_safety_upgrade.sql. Suspending a
+                 user still auto-bans every IP on file for their account
+                 too (ip_ban.sql) — this tab is for adding one directly,
+                 e.g. a network traced through a community/account
+                 that's already been removed. -->
+            <div class="adm-ipban-form" style="display:flex; gap:8px; margin-bottom:14px;">
+              <input class="adm-search" id="adm-ipban-ip" placeholder="IP address to ban&hellip;" autocomplete="off" style="flex:1;">
+              <input class="adm-search" id="adm-ipban-reason" placeholder="Reason (optional)&hellip;" autocomplete="off" style="flex:1;">
+              <button class="adm-btn adm-btn-danger" style="flex:none;" onclick="submitBanIp()">Ban IP</button>
+            </div>
+            <div id="adm-ipban-results"></div>
+          </div>
+        </div>
+
+        <div class="adm-panel" id="adm-panel-auditlog">
+          <div class="adm-section">
+            <!-- Read-only trail of every admin action taken from this
+                 panel — see admin_list_audit_log() in
+                 supabase/moderation_safety_upgrade.sql. -->
+            <div id="adm-auditlog-results"></div>
           </div>
         </div>
       </div>

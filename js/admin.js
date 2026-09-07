@@ -76,8 +76,97 @@ function switchAdminTab(tab) {
   if (tab === 'articles' && !articlesLoadedOnce) { articlesLoadedOnce = true; loadRecentArticles(); }
   if (tab === 'reports' && !reportsLoadedOnce) { reportsLoadedOnce = true; loadReports(); }
   if (tab === 'moderation' && !moderationLoadedOnce) { moderationLoadedOnce = true; loadModerationQueue(); }
+  if (tab === 'ipbans' && !ipbansLoadedOnce) { ipbansLoadedOnce = true; loadBannedIps(); }
+  if (tab === 'auditlog' && !auditlogLoadedOnce) { auditlogLoadedOnce = true; loadAuditLog(); }
 }
-let repliesLoadedOnce = false, articlesLoadedOnce = false, reportsLoadedOnce = false, moderationLoadedOnce = false;
+let repliesLoadedOnce = false, articlesLoadedOnce = false, reportsLoadedOnce = false, moderationLoadedOnce = false, ipbansLoadedOnce = false, auditlogLoadedOnce = false;
+
+// ── IP BANS — direct network-level bans, independent of any one
+// account (see admin_ban_ip()/admin_unban_ip() in
+// supabase/moderation_safety_upgrade.sql). ──
+
+async function loadBannedIps() {
+  const box = document.getElementById('adm-ipban-results');
+  box.innerHTML = `<div class="no-t">Loading&hellip;</div>`;
+  const { data, error } = await sb.rpc('admin_list_banned_ips');
+  if (error) { box.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
+  box.innerHTML = (data || []).map(adminIpBanRowHtml).join('') || `<div class="no-t">No banned IPs.</div>`;
+}
+
+function adminIpBanRowHtml(b) {
+  const via = b.account_tied ? `via @${esc(b.username || 'deleted account')}` : 'direct ban (no account)';
+  return `
+  <div class="adm-row adm-post-row">
+    <div class="adm-row-txt">
+      <span class="adm-row-name">${esc(b.ip)}</span>
+      <span class="adm-row-meta">${via} &middot; ${timeAgo(b.banned_at)}</span>
+      ${b.reason ? `<span class="adm-row-meta">Reason: ${esc(b.reason)}</span>` : ''}
+    </div>
+    <div class="adm-row-acts">
+      ${!b.account_tied ? `<button class="adm-btn" onclick="adminUnbanIp('${esc(b.ip)}')">Unban</button>` : ''}
+    </div>
+  </div>`;
+}
+
+async function submitBanIp() {
+  const ipEl = document.getElementById('adm-ipban-ip');
+  const reasonEl = document.getElementById('adm-ipban-reason');
+  const ip = ipEl.value.trim();
+  if (!ip) { toast('Enter an IP to ban.', 'error'); return; }
+  try {
+    const { error } = await sb.rpc('admin_ban_ip', { p_ip: ip, p_reason: reasonEl.value.trim() || null });
+    if (error) throw error;
+    ipEl.value = ''; reasonEl.value = '';
+    toast(`${ip} banned.`);
+    loadBannedIps();
+  } catch (e) {
+    toast(e.message || 'Could not ban that IP.', 'error');
+  }
+}
+
+async function adminUnbanIp(ip) {
+  try {
+    const { error } = await sb.rpc('admin_unban_ip', { p_ip: ip });
+    if (error) throw error;
+    toast(`${ip} unbanned.`);
+    loadBannedIps();
+  } catch (e) {
+    toast(e.message || 'Could not unban that IP.', 'error');
+  }
+}
+
+// ── AUDIT LOG — read-only trail of every admin action (see
+// admin_list_audit_log() in supabase/moderation_safety_upgrade.sql).
+// ──
+
+async function loadAuditLog() {
+  const box = document.getElementById('adm-auditlog-results');
+  box.innerHTML = `<div class="no-t">Loading&hellip;</div>`;
+  const { data, error } = await sb.rpc('admin_list_audit_log', { p_limit: 200 });
+  if (error) { box.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
+  box.innerHTML = (data || []).map(adminAuditRowHtml).join('') || `<div class="no-t">No admin actions logged yet.</div>`;
+}
+
+const ADM_ACTION_LABEL = {
+  suspend_user: 'Suspended user', unsuspend_user: 'Unsuspended user',
+  verify_user: 'Verified user', unverify_user: 'Unverified user',
+  delete_post: 'Deleted post', delete_reply: 'Deleted reply',
+  delete_article: 'Deleted article', delete_community: 'Deleted community',
+  resolve_report: 'Resolved report', ban_ip: 'Banned IP', unban_ip: 'Unbanned IP',
+};
+
+function adminAuditRowHtml(a) {
+  const label = ADM_ACTION_LABEL[a.action] || esc(a.action);
+  const target = a.target_type === 'ip' ? esc(a.target_id) : `${esc(a.target_type || '')} ${esc((a.target_id || '').slice(0, 8))}`;
+  return `
+  <div class="adm-row adm-post-row">
+    <div class="adm-row-txt">
+      <span class="adm-row-name">${label} <span class="adm-row-meta">&mdash; ${target}</span></span>
+      <span class="adm-row-meta">by @${esc(a.admin_username || 'unknown')} &middot; ${timeAgo(a.created_at)}</span>
+      ${a.reason ? `<span class="adm-row-meta">Reason: ${esc(a.reason)}</span>` : ''}
+    </div>
+  </div>`;
+}
 
 // ── USERS: search by username, verify/unverify, suspend/unsuspend ──
 
@@ -593,11 +682,12 @@ async function loadReports() {
 
 function adminReportRowHtml(r) {
   // Whoever's actually responsible: a direct user report, or the
-  // author of the reported post/reply. A community report has no
-  // single person behind it, so targetId stays unset for those (no
-  // Suspend button — see below).
-  const targetId = r.reported_user_id || r.post_author_id || r.reply_author_id;
-  const targetUname = r.reported_username || r.post_author_username || r.reply_author_username || (r.community_id ? null : 'unknown');
+  // author of the reported post/reply, or — for a community report —
+  // the community's creator, so a community that exists purely to
+  // promote something like violent extremism doesn't leave the
+  // Suspend button with nobody to point at.
+  const targetId = r.reported_user_id || r.post_author_id || r.reply_author_id || r.community_creator_id;
+  const targetUname = r.reported_username || r.post_author_username || r.reply_author_username || r.community_creator_username || (r.community_id ? null : 'unknown');
   const reportedLabel = r.community_id ? `Reported: ${esc(r.community_name || 'a community')}` : `Reported: @${esc(targetUname)}`;
 
   let contentLine = '';
@@ -621,10 +711,29 @@ function adminReportRowHtml(r) {
     </div>
     <div class="adm-row-acts">
       ${targetId ? `<button class="adm-btn adm-btn-danger" onclick="openSuspendModal('${targetId}', '${esc(targetUname)}')">Suspend</button>` : ''}
+      ${r.community_id ? `<button class="adm-btn adm-btn-danger" onclick="adminDeleteCommunity('${r.community_id}', '${esc(r.community_name || 'this community')}')">Delete community</button>` : ''}
       ${r.status !== 'actioned' ? `<button class="adm-btn adm-btn-primary" onclick="resolveReport('${r.id}', 'actioned')">Mark actioned</button>` : ''}
       ${r.status !== 'dismissed' ? `<button class="adm-btn" onclick="resolveReport('${r.id}', 'dismissed')">Dismiss</button>` : ''}
     </div>
   </div>`;
+}
+
+// Permanently removes a reported community (and, via the same FK
+// cascades the owner-side delete in js/community.js already relies
+// on, everything hanging off it — posts, members, rules, etc.). No
+// undo, so this asks for one explicit confirmation naming the
+// community before it calls the RPC.
+async function adminDeleteCommunity(communityId, communityName) {
+  if (!confirm(`Permanently delete "${communityName}"? This removes it and every post in it for everyone. This can't be undone.`)) return;
+  try {
+    const { error } = await sb.rpc('admin_delete_community', { p_community_id: communityId });
+    if (error) throw error;
+    toast(`"${communityName}" deleted.`);
+    loadReports();
+    loadStats();
+  } catch (e) {
+    toast(e.message || 'Could not delete that community.', 'error');
+  }
 }
 
 async function resolveReport(reportId, status) {

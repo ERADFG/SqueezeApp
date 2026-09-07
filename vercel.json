@@ -24,7 +24,9 @@
         "X-Content-Type-Options": "nosniff",
         "X-Frame-Options": "DENY",
         "Referrer-Policy": "strict-origin-when-cross-origin",
-        "Permissions-Policy": "geolocation=(), camera=(), microphone=(self)"
+        "Permissions-Policy": "geolocation=(), camera=(), microphone=(self)",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains",
+        "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://pyitivzoqleukuclajrf.supabase.co wss://pyitivzoqleukuclajrf.supabase.co https://cdn.jsdelivr.net; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'"
       }, "continue": true },
 
     { "handle": "filesystem" },

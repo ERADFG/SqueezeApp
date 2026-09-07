@@ -170,7 +170,14 @@ export default async function handler(req, res) {
   // wanting to talk to someone stays reachable to a human reviewer
   // instead of silently vanishing.
   const selfHarmCategory = categories.find((c) => c.label.toLowerCase().includes('self-harm') || c.label.toLowerCase().includes('suicide')) ?? null;
-  const blockableCategories = categories.filter((c) => c !== selfHarmCategory);
+  // Terrorism/violent-extremism is pulled out the same way, but for
+  // the opposite reason: this is the one category that should NEVER
+  // just ride along with the generic 0.7-to-block / 0.4-to-soft_flag
+  // thresholds below. It gets its own, much lower, zero-tolerance
+  // bar — see the escalation block after the normal decision is
+  // computed.
+  const extremismCategory = categories.find((c) => /terroris|extremis/i.test(c.label)) ?? null;
+  const blockableCategories = categories.filter((c) => c !== selfHarmCategory && c !== extremismCategory);
   const topCategory = blockableCategories[0] ?? null;
 
   // Thresholds tightened (was 0.85/0.8/0.85 block, 0.6/0.5/0.6
@@ -184,6 +191,18 @@ export default async function handler(req, res) {
   if (doxHits.length > 0) decision = 'human_review';
   else if (toxic >= 0.7 || spam >= 0.65 || (topCategory && topCategory.score >= 0.7)) decision = 'block';
   else if (badword || toxic >= 0.4 || spam >= 0.35 || (topCategory && topCategory.score >= 0.4) || (selfHarmCategory && selfHarmCategory.score >= 0.3)) decision = 'soft_flag';
+
+  // Zero-tolerance escalation: any non-trivial terrorism/violent-
+  // extremism signal overrides whatever the checks above landed on —
+  // this is the one category where "soft flag and move on" is never
+  // an acceptable outcome. Never DOWNgrades a decision, only raises
+  // it, so a report that already tripped doxxing/toxicity stays at
+  // least as serious as it already was.
+  const DECISION_RANK = { allow: 0, soft_flag: 1, human_review: 2, block: 3 };
+  if (extremismCategory) {
+    const target = extremismCategory.score >= 0.35 ? 'block' : extremismCategory.score >= 0.15 ? 'human_review' : null;
+    if (target && DECISION_RANK[target] > DECISION_RANK[decision]) decision = target;
+  }
 
   // Log every decision for the admin panel / audit trail. Uses the same
   // service-role pattern as your other SECURITY DEFINER RPCs.

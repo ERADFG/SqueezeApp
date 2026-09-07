@@ -172,9 +172,16 @@ export default async function handler(req, res) {
   // below, only 'human_review' — a person always makes the actual
   // call on this category, the model just surfaces it faster.
   const selfHarmCategories = categories.filter((c) => c.label.toLowerCase().includes('self-harm') || c.label.toLowerCase().includes('suicide'));
-  const blockableCategories = categories.filter((c) => !selfHarmCategories.includes(c));
+  // Terrorism/violent-extremism, split out the same way self-harm is —
+  // but headed the opposite direction. See the zero-tolerance
+  // escalation block below, after `decision` is first computed: this
+  // category gets its own much lower bar and can only push the
+  // decision to something MORE severe, never less.
+  const extremismCategories = categories.filter((c) => /terroris|extremis/i.test(c.label));
+  const blockableCategories = categories.filter((c) => !selfHarmCategories.includes(c) && !extremismCategories.includes(c));
   const topCategoryScore = blockableCategories.length ? Math.max(...blockableCategories.map((c) => c.score)) : 0;
   const topSelfHarmScore = selfHarmCategories.length ? Math.max(...selfHarmCategories.map((c) => c.score)) : 0;
+  const topExtremismScore = extremismCategories.length ? Math.max(...extremismCategories.map((c) => c.score)) : 0;
   const transcript = audioResult?.transcript ?? '';
   const audioToxicity = audioResult?.toxicity_probability ?? 0;
   const audioCategories = audioResult?.categories ?? [];
@@ -232,6 +239,16 @@ export default async function handler(req, res) {
   } else {
     decision = 'visible';
   }
+
+  // Zero-tolerance escalation: any non-trivial terrorism/violent-
+  // extremism signal, from the frame or the audio track, overrides
+  // whatever the checks above landed on. A confirmed CSAM hash match
+  // stays 'block' regardless (already the most severe outcome), so
+  // this only ever raises 'visible'/'human_review' toward something
+  // stricter, never softens an existing block.
+  const DECISION_RANK = { visible: 0, human_review: 1, block: 2 };
+  const extremismTarget = topExtremismScore >= 0.35 ? 'block' : topExtremismScore >= 0.15 ? 'human_review' : null;
+  if (extremismTarget && DECISION_RANK[extremismTarget] > DECISION_RANK[decision]) decision = extremismTarget;
 
   // Flip the content row's moderation_status, when this call is gating
   // one (posts/replies). Service-role key bypasses RLS, which is
