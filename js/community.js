@@ -139,7 +139,7 @@ function renderHero() {
     <input type="file" id="hero-banner-file" accept="image/*" style="display:none;" onchange="changeCommunityBanner(this)">` : '';
 
   heroEl.innerHTML = `
-    <div class="community-banner-wrap" id="community-banner-wrap" style="${community.banner_url ? `--banner-img:url('${esc(community.banner_url)}')` : ''}">
+    <div class="community-banner-wrap" id="community-banner-wrap" style="${community.banner_url ? `--banner-img:url('${esc(bannerUrl(community.banner_url))}')` : ''}">
       ${bannerPick}
     </div>
     <div class="community-hero">

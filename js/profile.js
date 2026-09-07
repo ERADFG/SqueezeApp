@@ -97,7 +97,7 @@ async function loadProfile() {
     setPageDescription(`@${profile.username} is blocked.`);
     setCanonical(prettyProfileUrl(profile.username));
     root.innerHTML = `
-      <div class="profile-hdr${profile.banner_url ? ' banner-loading' : ''}" id="profile-hdr" style="${profile.banner_url ? `--banner-img:url('${esc(profile.banner_url)}')` : ''}">
+      <div class="profile-hdr${profile.banner_url ? ' banner-loading' : ''}" id="profile-hdr" style="${profile.banner_url ? `--banner-img:url('${esc(bannerUrl(profile.banner_url))}')` : ''}">
         <a class="profile-back-btn" href="index.html" aria-label="Back to home">${PROFILE_ICON_BACK}</a>
         <div class="profile-hdr-top">
           <img class="avatar pfp-lg${avSqClass(profile)}" src="${esc(avatarUrl(profile.avatar_url))}" width="96" height="96" decoding="async" fetchpriority="high" alt="">
@@ -130,7 +130,7 @@ async function loadProfile() {
         const hdrEl = document.getElementById('profile-hdr');
         if (hdrEl) { hdrEl.style.removeProperty('--banner-img'); hdrEl.classList.remove('banner-loading'); }
       };
-      bannerCheck.src = profile.banner_url;
+      bannerCheck.src = bannerUrl(profile.banner_url);
       setTimeout(() => { if (!bannerSettled) bannerCheck.onerror(); }, 6000);
     }
     return;
@@ -179,7 +179,7 @@ async function loadProfile() {
   const locationLabel = truncateLabel(locationFull);
 
   root.innerHTML = `
-    <div class="profile-hdr${profile.banner_url ? ' banner-loading' : ''}" id="profile-hdr" style="${profile.banner_url ? `--banner-img:url('${esc(profile.banner_url)}')` : ''}">
+    <div class="profile-hdr${profile.banner_url ? ' banner-loading' : ''}" id="profile-hdr" style="${profile.banner_url ? `--banner-img:url('${esc(bannerUrl(profile.banner_url))}')` : ''}">
       <a class="profile-back-btn" href="index.html" aria-label="Back to home">${PROFILE_ICON_BACK}</a>
       <div class="profile-hdr-top">
         <img class="avatar pfp-lg${avSqClass(profile)}" id="pv-avatar" src="${esc(avatarUrl(profile.avatar_url))}" width="96" height="96" decoding="async" fetchpriority="high" alt="">
@@ -256,7 +256,7 @@ async function loadProfile() {
       const hdrEl = document.getElementById('profile-hdr');
       if (hdrEl) { hdrEl.style.removeProperty('--banner-img'); hdrEl.classList.remove('banner-loading'); }
     };
-    bannerCheck.src = profile.banner_url;
+    bannerCheck.src = bannerUrl(profile.banner_url);
     // Bug fix: a banner that never fires load OR error (a request that
     // just hangs — flaky connection, a CDN that stalls instead of
     // 404ing) left .banner-loading applied forever, which meant the
@@ -933,7 +933,7 @@ async function renderProfileEmptySuggestions(userId) {
 function profileSuggestCardHtml(p) {
   const uname = p.username || 'unknown';
   const bio = (p.bio || '').trim();
-  const bannerAttr = p.banner_url ? ` style="background-image:url('${esc(p.banner_url)}')"` : '';
+  const bannerAttr = p.banner_url ? ` style="background-image:url('${esc(bannerUrl(p.banner_url))}')"` : '';
   return `
     <div class="suggest-card">
       <a class="suggest-card-banner${p.banner_url ? '' : ' suggest-card-banner-blank'}" href="${profileUrl(uname)}"${bannerAttr} tabindex="-1"></a>

@@ -103,7 +103,7 @@ function renderHero() {
     <input type="file" id="list-avatar-file" accept="image/*" style="display:none;" onchange="changeListAvatar(this)">` : '';
 
   heroEl.innerHTML = `
-    <div class="list-banner-wrap" id="list-banner-wrap" style="${list.banner_url ? `--banner-img:url('${esc(list.banner_url)}')` : ''}">
+    <div class="list-banner-wrap" id="list-banner-wrap" style="${list.banner_url ? `--banner-img:url('${esc(bannerUrl(list.banner_url))}')` : ''}">
       ${bannerPick}
     </div>
     <div class="list-hero">

@@ -4101,7 +4101,7 @@ async function leaveCommunity(communityId) {
 // community.html's own hero, so all three stay in sync the moment a
 // creator sets/changes their community's picture.
 function communityAvatarInner(c) {
-  return c.avatar_url ? `<img src="${esc(c.avatar_url)}" alt="">` : esc((c.name || '?').trim().charAt(0).toUpperCase() || '?');
+  return c.avatar_url ? `<img src="${esc(avatarUrl(c.avatar_url))}" alt="" loading="lazy" decoding="async">` : esc((c.name || '?').trim().charAt(0).toUpperCase() || '?');
 }
 
 // Compact list-row markup for a community — used by the sidebar box
@@ -4197,7 +4197,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // gets mistaken for a person or community at a glance, matching
 // Twitter's own square list icons.
 function listAvatarInner(l) {
-  return l.avatar_url ? `<img src="${esc(l.avatar_url)}" alt="">` : `<span class="list-avatar-glyph">${NAV_ICON.list}</span>`;
+  return l.avatar_url ? `<img src="${esc(avatarUrl(l.avatar_url))}" alt="" loading="lazy" decoding="async">` : `<span class="list-avatar-glyph">${NAV_ICON.list}</span>`;
 }
 
 // Deterministic accent color for a list's square glyph avatar (only
@@ -5108,8 +5108,58 @@ function getDeviceId() {
 // Grey cat/wolf silhouette shown when a user has no avatar_url set.
 const DEFAULT_AVATAR = "img/default-avatar.png";
 
-function avatarUrl(url) {
-  return url || DEFAULT_AVATAR;
+// ─────────────────────────────────────────────────────────────
+// IMAGE TRANSFORM — avatars/banners/post photos are uploaded and
+// stored at their original resolution (often several MB), then
+// displayed as a 32-96px circle or a capped-width banner strip.
+// Shipping the full file for that is most of what makes images feel
+// slow to appear. Supabase Storage can resize+recompress on the fly
+// (…/render/image/public/… instead of …/object/public/…) so the
+// browser only ever downloads pixels it's actually going to show.
+//
+// That endpoint is a paid-plan feature, so this is written to be
+// completely safe on projects where it isn't turned on: resizeSupabaseUrl()
+// only ever *adds* the transform, never changes which file is requested,
+// and the capture-phase 'error' listener below notices the very first
+// transformed image that fails to load, permanently turns transforms off
+// for the rest of this tab (sessionStorage — so every future <img> just
+// asks for the plain original), and swaps that one image back to its
+// original URL so nothing stays broken.
+function imgTransformOK() {
+  try { return sessionStorage.getItem('oc_imgtx') !== '0'; } catch (e) { return true; }
+}
+function resizeSupabaseUrl(url, width, quality = 75) {
+  if (!url || !width || !imgTransformOK()) return url;
+  const marker = '/storage/v1/object/public/';
+  const i = url.indexOf(marker);
+  if (i === -1) return url; // not a Supabase Storage public URL — nothing to transform
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.max(24, Math.round(width * dpr));
+  const sep = url.includes('?') ? '&' : '?';
+  return url.slice(0, i) + '/storage/v1/render/image/public/' + url.slice(i + marker.length) + `${sep}width=${w}&quality=${quality}&resize=cover`;
+}
+document.addEventListener('error', (e) => {
+  const img = e.target;
+  if (!(img instanceof HTMLImageElement)) return;
+  const marker = '/storage/v1/render/image/public/';
+  const i = img.src.indexOf(marker);
+  if (i === -1) return;
+  try { sessionStorage.setItem('oc_imgtx', '0'); } catch (err) {}
+  img.src = img.src.slice(0, i) + '/storage/v1/object/public/' + img.src.slice(i + marker.length).replace(/[?&](width|quality|resize)=[^&]*/g, '');
+}, true);
+
+// width: display size in CSS px the avatar is actually rendered at
+// (defaults to a generous 176, enough for every avatar size this app
+// uses up to @2x) — pass a bigger one for the rare full-size case
+// (e.g. the 96px profile header pfp, requested at ~240 for crispness).
+function avatarUrl(url, width = 176) {
+  return resizeSupabaseUrl(url || DEFAULT_AVATAR, width);
+}
+
+// Same idea for banner strips — these render much wider than tall, so
+// quality can drop further than an avatar without it being visible.
+function bannerUrl(url, width = 1000) {
+  return resizeSupabaseUrl(url, width, 68);
 }
 
 // Renders the "author" chunk of a post/reply header: avatar + username,
@@ -6542,7 +6592,10 @@ function renderMedia(url, type, extraClass = '', owner = null) {
   if (type === 'video') {
     return `<div class="pm">${ttvHtml(url, { postId: owner?.id || null })}</div>`;
   }
-  return `<div class="pm"><img src="${esc(url)}" class="${extraClass}" alt="" onclick="openLightbox(${idx})" loading="lazy" decoding="async"></div>`;
+  // Feed column never renders wider than ~600px, so a 900-wide source
+  // (already 2x for retina) is plenty — openLightbox(idx) still opens the
+  // full original via the untouched `url` stashed in registerLbMedia above.
+  return `<div class="pm"><img src="${esc(resizeSupabaseUrl(url, 600))}" class="${extraClass}" alt="" onclick="openLightbox(${idx})" loading="lazy" decoding="async"></div>`;
 }
 
 // ─────────────────────────────────────────────────────────────

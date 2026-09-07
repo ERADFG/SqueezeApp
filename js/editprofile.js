@@ -47,7 +47,7 @@ async function loadEditProfile() {
   document.title = `Edit profile — InteractInk`;
 
   root.innerHTML = `
-    <div class="ep-banner-wrap" id="ep-banner-wrap" style="${epProfile.banner_url ? `--banner-img:url('${esc(epProfile.banner_url)}')` : ''}">
+    <div class="ep-banner-wrap" id="ep-banner-wrap" style="${epProfile.banner_url ? `--banner-img:url('${esc(bannerUrl(epProfile.banner_url))}')` : ''}">
       <label class="ep-banner-pick" for="ep-banner-file">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h3l2-2h6l2 2h3v12H4V7Z"/><circle cx="12" cy="13" r="3.5"/></svg>
       </label>
