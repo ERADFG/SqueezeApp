@@ -10,17 +10,27 @@
 //   get_viewer_locations(days)     -> country breakdown of profile VIEWERS
 //   get_engagement_totals(days)    -> likes/reposts/saves/comments received
 //   get_top_posts(period)          -> top 3 posts by engagement, 'week'/'month'
+// ...plus supabase/analytics_engagement_v2.sql:
+//   get_video_watch_stats()        -> total/avg watch time + top 3 videos
+//   get_mentions_count(days)       -> @mentions received, lifetime + window
+//   get_prior_period_totals(days)  -> same metrics as above, for the window
+//                                      right before the current one (deltas)
 // Every RPC checks auth.uid() server-side — there is no way to load
 // anyone's insights but your own.
 //
 // No Shares metric: nothing in this schema logs a share event (see
 // the comment at the top of analytics_engagement.sql for why) — the
 // Content tab shows Likes/Reposts/Saves/Comments only.
+//
+// No video completion %: post_watch_events has watched time but no
+// stored video duration anywhere (js/video-player.js reads it live
+// from the <video> element, never persists it) — Video watch time
+// reports totals/averages only, not a "% watched" figure.
 // ─────────────────────────────────────────────────────────────
 
 let insDays = 30;
 let insTab = 'overview';
-let insData = null;       // { viewStats, growth, demo, activeTimes, content, viewerLocations, engagement, topWeek, topMonth }
+let insData = null;       // { viewStats, growth, demo, activeTimes, content, viewerLocations, engagement, periodEngagement, prior, topWeek, topMonth, video, mentions }
 let insActiveDay = new Date().getDay(); // 0=Sun .. 6=Sat, viewer's local "today"
 const INS_TABS = ['overview', 'content', 'audience'];
 
@@ -88,7 +98,7 @@ function insErrorHtml(e) {
 }
 
 async function insFetchAll() {
-  const [viewStatsRes, growthRes, demoRes, activeRes, contentRes, viewerLocRes, engagementRes, topWeekRes, topMonthRes] = await Promise.all([
+  const [viewStatsRes, growthRes, demoRes, activeRes, contentRes, viewerLocRes, engagementRes, topWeekRes, topMonthRes, periodEngagementRes, priorRes, videoRes, mentionsRes] = await Promise.all([
     sb.rpc('get_profile_view_stats', { p_days: insDays }),
     sb.rpc('get_follower_growth', { p_days: insDays }),
     sb.rpc('get_audience_demographics'),
@@ -98,6 +108,10 @@ async function insFetchAll() {
     sb.rpc('get_engagement_totals', { p_days: null }),
     sb.rpc('get_top_posts', { p_period: 'week' }),
     sb.rpc('get_top_posts', { p_period: 'month' }),
+    sb.rpc('get_engagement_totals', { p_days: insDays }),
+    sb.rpc('get_prior_period_totals', { p_days: insDays }),
+    sb.rpc('get_video_watch_stats'),
+    sb.rpc('get_mentions_count', { p_days: insDays }),
   ]);
   if (viewStatsRes.error) throw viewStatsRes.error;
   if (growthRes.error) throw growthRes.error;
@@ -108,6 +122,10 @@ async function insFetchAll() {
   if (engagementRes.error) throw engagementRes.error;
   if (topWeekRes.error) throw topWeekRes.error;
   if (topMonthRes.error) throw topMonthRes.error;
+  if (periodEngagementRes.error) throw periodEngagementRes.error;
+  if (priorRes.error) throw priorRes.error;
+  if (videoRes.error) throw videoRes.error;
+  if (mentionsRes.error) throw mentionsRes.error;
 
   insData = {
     viewStats: viewStatsRes.data,
@@ -117,9 +135,30 @@ async function insFetchAll() {
     content: contentRes.data,
     viewerLocations: viewerLocRes.data || [],
     engagement: engagementRes.data,
+    periodEngagement: periodEngagementRes.data,
+    prior: priorRes.data,
     topWeek: topWeekRes.data || [],
     topMonth: topMonthRes.data || [],
+    video: videoRes.data,
+    mentions: mentionsRes.data,
   };
+}
+
+// Small ▲/▼ delta badge comparing a current-period number to the
+// equal-length period right before it (from get_prior_period_totals).
+// No badge when both periods are zero (nothing to compare); "New"
+// when the prior period was zero but this one isn't (a %, undefined
+// mathematically, would be misleading here).
+function insDeltaBadge(current, previous) {
+  current = current || 0;
+  previous = previous || 0;
+  if (current === 0 && previous === 0) return '';
+  if (previous === 0) return `<span class="ins-delta up">New</span>`;
+  const pct = ((current - previous) / previous) * 100;
+  if (Math.abs(pct) < 0.5) return `<span class="ins-delta flat">flat</span>`;
+  const dir = pct > 0 ? 'up' : 'down';
+  const arrow = dir === 'up' ? '▲' : '▼';
+  return `<span class="ins-delta ${dir}">${arrow} ${Math.abs(pct).toFixed(0)}%</span>`;
 }
 
 function insRender() {
@@ -170,18 +209,20 @@ function insSetTab(tab) {
 function insOverviewHtml() {
   const vs = insData.viewStats;
   const gr = insData.growth;
+  const prior = insData.prior || {};
 
   return `
     <div class="ins-stats-grid">
       <div class="ins-stat-tile">
-        <div class="ins-stat-num">${fmtCount(vs.total_views)}</div>
+        <div class="ins-stat-num">${fmtCount(vs.total_views)} ${insDeltaBadge(vs.total_views, prior.views)}</div>
         <div class="ins-stat-label">Profile views</div>
       </div>
       <div class="ins-stat-tile">
-        <div class="ins-stat-num">${fmtCount(gr.new_followers)}</div>
+        <div class="ins-stat-num">${fmtCount(gr.new_followers)} ${insDeltaBadge(gr.new_followers, prior.new_followers)}</div>
         <div class="ins-stat-label">New followers</div>
       </div>
     </div>
+    <p class="ins-note" style="margin:-6px 16px 18px;">vs. the previous ${insDays} days.</p>
 
     <div class="ins-section">
       <h2 class="ins-section-title">Profile views</h2>
@@ -208,6 +249,13 @@ const INS_ENGAGEMENT_META = [
 function insContentHtml() {
   const ct = insData.content;
   const eng = insData.engagement || { likes: 0, reposts: 0, comments: 0, saves: 0 };
+  const periodEng = insData.periodEngagement || { likes: 0, reposts: 0, comments: 0, saves: 0 };
+  const prior = insData.prior || {};
+  const mentions = insData.mentions || { total: 0, period: 0 };
+  const video = insData.video || { total_watch_ms: 0, viewers: 0, avg_ms_per_viewer: 0, top_videos: [] };
+
+  const totalEngagement = (eng.likes || 0) + (eng.reposts || 0) + (eng.comments || 0) + (eng.saves || 0);
+  const engagementRate = ct.total > 0 ? (totalEngagement / ct.total) * 100 : 0;
 
   return `
     <div class="ins-stats-grid">
@@ -223,11 +271,34 @@ function insContentHtml() {
         <div class="ins-stat-num">${fmtCount(ct.reply_views)}</div>
         <div class="ins-stat-label">Reply views</div>
       </div>
+      <div class="ins-stat-tile">
+        <div class="ins-stat-num">${engagementRate.toFixed(1)}%</div>
+        <div class="ins-stat-label">Engagement rate</div>
+      </div>
+      <div class="ins-stat-tile">
+        <div class="ins-stat-num">${fmtCount(mentions.period)} ${insDeltaBadge(mentions.period, prior.mentions)}</div>
+        <div class="ins-stat-label">Mentions, last ${insDays}d</div>
+      </div>
+    </div>
+    <p class="ins-note" style="margin:-6px 16px 18px;">Engagement rate = (likes + reposts + comments + saves) ÷ post &amp; reply views, all-time.</p>
+
+    <div class="ins-section">
+      <h2 class="ins-section-title">This period</h2>
+      <p class="ins-section-sub">Last ${insDays} days, vs. the ${insDays} days before that.</p>
+      <div class="ins-engage-grid">
+        ${INS_ENGAGEMENT_META.map(m => `
+          <div class="ins-engage-tile">
+            <span class="ins-engage-icon">${m.icon}</span>
+            <div class="ins-engage-num">${fmtCount(periodEng[m.key] || 0)}</div>
+            <div class="ins-engage-label">${m.label}</div>
+            <div class="ins-engage-delta">${insDeltaBadge(periodEng[m.key], prior[m.key])}</div>
+          </div>`).join('')}
+      </div>
     </div>
 
     <div class="ins-section">
-      <h2 class="ins-section-title">Engagement</h2>
-      <p class="ins-section-sub">All-time, across everything you've posted.</p>
+      <h2 class="ins-section-title">All-time engagement</h2>
+      <p class="ins-section-sub">Across everything you've ever posted.</p>
       <div class="ins-engage-grid">
         ${INS_ENGAGEMENT_META.map(m => `
           <div class="ins-engage-tile">
@@ -237,6 +308,35 @@ function insContentHtml() {
           </div>`).join('')}
       </div>
       <p class="ins-note" style="margin-top:10px;">No Shares number here — InteractInk's share button opens your device's share sheet without reporting back whether anything was actually sent, so there's nothing reliable to count yet.</p>
+    </div>
+
+    <div class="ins-section">
+      <h2 class="ins-section-title">Video watch time</h2>
+      <p class="ins-section-sub">All-time, across videos you've posted. ${fmtCount(video.viewers)} people have watched at least some of one.</p>
+      <div class="ins-stats-grid" style="margin-left:0;margin-right:0;">
+        <div class="ins-stat-tile">
+          <div class="ins-stat-num">${insFmtDuration(video.total_watch_ms)}</div>
+          <div class="ins-stat-label">Total watch time</div>
+        </div>
+        <div class="ins-stat-tile">
+          <div class="ins-stat-num">${insFmtDuration(video.avg_ms_per_viewer)}</div>
+          <div class="ins-stat-label">Avg. per viewer</div>
+        </div>
+      </div>
+      <p class="ins-note" style="margin:6px 0 12px;">No completion % here — video length isn't stored anywhere in the app, only accumulated playback time, so there's nothing to compare it against.</p>
+      ${video.top_videos && video.top_videos.length ? `
+        <div class="ins-top-posts">${video.top_videos.map((v, i) => `
+          <a class="ins-top-post" href="${postUrlById(v.id, currentProfile?.username)}">
+            <span class="ins-top-post-rank">#${i + 1}</span>
+            <span class="ins-top-post-body">
+              <span class="ins-top-post-snippet">${esc(v.snippet || '')}</span>
+              <span class="ins-top-post-stats">
+                <span>${insFmtDuration(v.total_ms)} watched</span>
+                <span>${fmtCount(v.viewers)} viewers</span>
+              </span>
+            </span>
+          </a>`).join('')}</div>
+      ` : `<div class="ins-empty-note">No video watch time recorded yet.</div>`}
     </div>
 
     <div class="ins-section">
@@ -251,6 +351,17 @@ function insContentHtml() {
       ${insTopPostsHtml(insData.topMonth)}
     </div>
   `;
+}
+
+// ms -> "1h 12m" / "8m 04s" / "37s", whichever units are non-zero.
+function insFmtDuration(ms) {
+  const totalSec = Math.round((ms || 0) / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${String(s).padStart(2, '0')}s`;
+  return `${s}s`;
 }
 
 function insTopPostsHtml(posts) {
@@ -394,13 +505,15 @@ function insActiveTimesHtml() {
   const max = Math.max(1, ...dayCounts);
 
   // Top 3 (day, slot) combos across the whole window, for the
-  // "when people visit most" list below the chart.
+  // "when people visit most" list below the chart, and to turn #1
+  // into a direct "post around then" recommendation up top.
   const combos = [];
   grid.forEach((slots, day) => slots.forEach((cnt, slot) => { if (cnt > 0) combos.push({ day, slot, cnt }); }));
   combos.sort((a, b) => b.cnt - a.cnt);
   const top = combos.slice(0, 3);
 
   return `
+    ${top.length ? `<div class="ins-callout">Your audience is most active on <b>${INS_DAY_NAME[top[0].day]}</b>, <b>${INS_SLOT_RANGE[top[0].slot]}</b> — a good window to post.</div>` : ''}
     <div class="ins-day-pills">
       ${INS_DAY_LABEL.map((lbl, i) => `<button type="button" class="ins-day-pill${insActiveDay === i ? ' active' : ''}" onclick="insSetActiveDay(${i})">${lbl}</button>`).join('')}
     </div>

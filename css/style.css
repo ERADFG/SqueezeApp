@@ -6482,9 +6482,9 @@ html[data-theme="dim"], html[data-theme="dark"] {
 
 .ins-tabs { margin:4px 16px 0; }
 
-.ins-stats-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin:14px 16px; }
+.ins-stats-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(96px, 1fr)); gap:10px; margin:14px 16px; }
 .ins-stat-tile { background:var(--cream-card); border:1px solid var(--line); border-radius:14px; padding:12px 10px; text-align:left; }
-.ins-stat-num { font-size:21px; font-weight:800; color:var(--ink); line-height:1.15; }
+.ins-stat-num { font-size:21px; font-weight:800; color:var(--ink); line-height:1.15; display:flex; align-items:baseline; gap:6px; flex-wrap:wrap; }
 .ins-stat-label { font-size:11.5px; color:var(--muted); margin-top:3px; font-weight:600; }
 
 .ins-section { margin:22px 16px; }
@@ -6531,6 +6531,20 @@ html[data-theme="dim"], html[data-theme="dark"] {
 }
 .ins-loc-btn.active { background:var(--maroon); color:#fff; border-color:var(--maroon); }
 .ins-loc-btn:hover:not(.active) { background:var(--hover-bg); }
+
+/* ── Period-over-period delta badges ── */
+.ins-delta { font-size:11.5px; font-weight:800; padding:1px 6px; border-radius:8px; display:inline-block; vertical-align:middle; }
+.ins-delta.up { color:#1a7a3c; background:rgba(26,122,60,.12); }
+.ins-delta.down { color:#b3261e; background:rgba(179,38,30,.12); }
+.ins-delta.flat { color:var(--muted); background:var(--line); }
+.ins-engage-delta { margin-top:4px; }
+
+/* ── "Best time to post" callout ── */
+.ins-callout {
+  background:var(--maroon-tint); border:1px solid var(--maroon); border-radius:12px;
+  padding:12px 14px; font-size:13.5px; line-height:1.4; color:var(--ink); margin-bottom:16px;
+}
+.ins-callout b { color:var(--maroon); }
 
 /* ── Content tab — engagement tiles + top posts ── */
 .ins-engage-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; }
