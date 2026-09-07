@@ -500,11 +500,11 @@ grant execute on function public.get_top_posts(text) to authenticated;
 --       last period" next to each stat tile instead of a bare number.
 --
 -- ASSUMPTIONS FLAGGED:
---   - Video watch time comes entirely from public.post_watch_events
---     (recommendation_engine.sql). Only posts a viewer actually
---     played video on ever get a row there, so "posts with any
---     watch-time row" doubles as "your video posts" — there's no
---     separate is_video/media_type flag to check.
+--   - Video watch time comes entirely from public.post_watch_events.
+--     Only posts a viewer actually played video on ever get a row
+--     there, so "posts with any watch-time row" doubles as "your
+--     video posts" — there's no separate is_video/media_type flag
+--     to check.
 --   - No video duration is stored anywhere (js/video-player.js reads
 --     it live from the <video> element, never persists it), so this
 --     can only report total/average watched time, not a completion
@@ -513,6 +513,64 @@ grant execute on function public.get_top_posts(text) to authenticated;
 -- Run after analytics_setup.sql and analytics_engagement.sql.
 -- Additive/idempotent — safe to re-run.
 -- ============================================================
+
+-- ── post_watch_events + record_watch_time() ──
+-- get_video_watch_stats() below reads this table, so it has to exist
+-- even if recommendation_engine.sql was never run — this file's whole
+-- point is that you shouldn't have to track down which other .sql
+-- happens to define a dependency. Identical to the copy in
+-- recommendation_engine.sql; if you've already run that file this is
+-- a no-op (create table if not exists / create or replace function),
+-- and if you run recommendation_engine.sql later it's a no-op there
+-- too, so it's safe to have both.
+create table if not exists public.post_watch_events (
+  viewer_id  uuid not null references public.profiles(id) on delete cascade,
+  post_id    uuid not null references public.posts(id) on delete cascade,
+  watched_ms integer not null default 0,
+  updated_at timestamptz not null default now(),
+  primary key (viewer_id, post_id)
+);
+
+alter table public.post_watch_events enable row level security;
+
+do $$
+declare pol record;
+begin
+  for pol in
+    select policyname from pg_policies
+    where schemaname = 'public' and tablename = 'post_watch_events'
+  loop
+    execute format('drop policy %I on public.post_watch_events', pol.policyname);
+  end loop;
+end $$;
+
+create policy "watch events viewable by owner"
+  on public.post_watch_events for select
+  using (auth.uid() = viewer_id);
+
+-- No insert/update policy — every write goes through
+-- record_watch_time() (security definer) below.
+create or replace function public.record_watch_time(p_post_id uuid, p_ms integer)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  clamped integer;
+begin
+  if auth.uid() is null then return; end if;
+  clamped := greatest(0, least(coalesce(p_ms, 0), 30000));
+  if clamped = 0 or p_post_id is null then return; end if;
+
+  insert into public.post_watch_events (viewer_id, post_id, watched_ms, updated_at)
+  values (auth.uid(), p_post_id, clamped, now())
+  on conflict (viewer_id, post_id) do update
+    set watched_ms = public.post_watch_events.watched_ms + excluded.watched_ms,
+        updated_at = now();
+end;
+$$;
+grant execute on function public.record_watch_time(uuid, integer) to authenticated;
 
 -- ── get_video_watch_stats() — total/avg watch time + top 3 videos ──
 create or replace function public.get_video_watch_stats()

@@ -83,10 +83,13 @@ async function loadInsights() {
   insRender();
 }
 
-// Postgres error 42883 = "function ... does not exist" — the exact
-// error every RPC here throws if the SQL migration hasn't been run in
-// the Supabase SQL editor yet. Surface that distinctly instead of the
-// generic message so it's obvious what to do.
+// Postgres error 42883 = "function ... does not exist" and 42P01 =
+// "relation ... does not exist" — the two errors every RPC here can
+// throw if the SQL migration hasn't been (fully) run in the Supabase
+// SQL editor yet: 42883 when an RPC itself was never created, 42P01
+// when an RPC exists but a table it reads from wasn't. Surface both
+// distinctly instead of the generic message so it's obvious what to
+// do — "run the SQL file" — rather than a raw Postgres error code.
 //
 // For anything else, show the real error code/message from Postgres
 // instead of a generic "couldn't load" — a guess at the cause is
@@ -98,8 +101,8 @@ function insErrorHtml(e) {
   const code = e && e.code;
   const msg = (e && (e.message || e.details || e.hint)) || '';
   const retryBtn = `<button type="button" onclick="loadInsights()" style="margin-top:10px;background:var(--maroon);color:#fff;border:none;border-radius:var(--r-sm);padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;">Retry</button>`;
-  if (code === '42883' || /function .* does not exist/i.test(msg) || /schema cache/i.test(msg)) {
-    return `<div class="errmsg">Insights isn't set up on this project yet — run <code>insights_all_in_one.sql</code> in the Supabase SQL editor, then retry.<br>${retryBtn}</div>`;
+  if (code === '42883' || code === '42P01' || /function .* does not exist/i.test(msg) || /relation .* does not exist/i.test(msg) || /schema cache/i.test(msg)) {
+    return `<div class="errmsg">Insights isn't set up on this project yet — run <code>insights_all_in_one.sql</code> (the whole file, top to bottom) in the Supabase SQL editor, then retry.<br><br><code style="font-size:11px;word-break:break-word;display:block;margin-top:6px;">${esc(code || '')} ${esc(msg || '')}</code>${retryBtn}</div>`;
   }
   if (code === '42501' || /permission denied/i.test(msg)) {
     return `<div class="errmsg">Insights can't read some data it needs — a permission (RLS/GRANT) is blocking one of the report functions.<br><br><code style="font-size:11px;word-break:break-word;display:block;margin-top:6px;">${esc(code || '')} ${esc(msg || 'Unknown error')}</code>${retryBtn}</div>`;
