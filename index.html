@@ -10,11 +10,13 @@
 <meta content="InteractInk" property="og:site_name"/>
 <meta content="InteractInk" property="og:title"/>
 <meta content="InteractInk is a real-time social imageboard — post, reply, and follow people with a live For You and Following feed." property="og:description"/>
-<meta content="/img/logo-light.png" property="og:image"/>
-<meta content="summary" name="twitter:card"/>
+<meta content="/img/og/home.png" property="og:image"/>
+<meta content="1200" property="og:image:width"/>
+<meta content="630" property="og:image:height"/>
+<meta content="summary_large_image" name="twitter:card"/>
 <meta content="InteractInk" name="twitter:title"/>
 <meta content="InteractInk is a real-time social imageboard — post, reply, and follow people with a live For You and Following feed." name="twitter:description"/>
-<meta content="/img/logo-light.png" name="twitter:image"/>
+<meta content="/img/og/home.png" name="twitter:image"/>
 <link href="https://interactink.vercel.app/" rel="canonical"/>
 <meta content="https://interactink.vercel.app/" property="og:url"/>
 <link href="https://interactink.vercel.app/" hreflang="en" rel="alternate"/>
@@ -34,7 +36,7 @@
 <script>(function(){try{var t=localStorage.getItem('oc-theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}if(t&&t!=="light"){document.documentElement.setAttribute('data-theme',t);var f32=document.getElementById('fav32'),f512=document.getElementById('fav512');if(f32)f32.setAttribute('href',f32.getAttribute('href').replace('favicon-32.png','favicon-dark-32.png'));if(f512)f512.setAttribute('href',f512.getAttribute('href').replace('favicon.png','favicon-dark.png'));}var a=localStorage.getItem('oc-accent');if(a&&a!=="blue")document.documentElement.setAttribute('data-accent',a);}catch(e){}})();</script>
 <link href="https://pyitivzoqleukuclajrf.supabase.co" rel="preconnect"/>
 <link crossorigin="" href="https://cdn.jsdelivr.net" rel="preconnect"/>
-<link href="css/style.css?v=20260906f" rel="stylesheet"/>
+<link href="css/style.min.css?v=20260906f" rel="stylesheet"/>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"InteractInk","url":"https://interactink.vercel.app/","logo":"https://interactink.vercel.app/img/logo-light.png"}</script></head>
 <body data-page="home">
 <!-- BOOT SPLASH — shown for the very first paint on cold entry to the
@@ -57,8 +59,8 @@
   #boot-splash.bs-hide{opacity:0;pointer-events:none}
 </style>
 <div aria-hidden="true" id="boot-splash">
-<img alt="" class="bs-light" height="52" src="img/logo-light.png" width="52"/>
-<img alt="" class="bs-dark" height="52" src="img/logo-dark.png" width="52"/>
+<picture><source srcset="img/logo-light.webp" type="image/webp"/><img alt="" class="bs-light" height="52" src="img/logo-light.png" width="52"/></picture>
+<picture><source srcset="img/logo-dark.webp" type="image/webp"/><img alt="" class="bs-dark" height="52" src="img/logo-dark.png" width="52"/></picture>
 </div>
 <script>
 (function(){
@@ -80,8 +82,8 @@
 <div class="sb-top">
 <a class="logo" href="/">
 <span class="badge">
-<img alt="InteractInk logo" class="logo-mark logo-mark-light" height="36" src="img/logo-light.png" width="36"/>
-<img alt="InteractInk logo" class="logo-mark logo-mark-dark" height="36" src="img/logo-dark.png" width="36"/>
+<picture><source srcset="img/logo-light.webp" type="image/webp"/><img alt="InteractInk logo" class="logo-mark logo-mark-light" height="36" src="img/logo-light.png" width="36"/></picture>
+<picture><source srcset="img/logo-dark.webp" type="image/webp"/><img alt="InteractInk logo" class="logo-mark logo-mark-dark" height="36" src="img/logo-dark.png" width="36"/></picture>
 </span>
 <span class="wordmark">Interact<em>Ink</em></span>
 </a>
@@ -247,14 +249,14 @@
 </div>
 </div>
 <script defer="" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3"></script>
-<script defer="" src="js/supabase-config.js?v=20260820"></script>
-<script defer="" src="js/i18n.js?v=20260828e"></script>
-<script defer="" src="js/common.js?v=20260906b"></script>
-<script defer="" src="js/audio-transcribe.js?v=20260906a"></script>
-<script defer="" src="js/video-player.js?v=20260823e"></script>
-<script defer="" src="js/crop-modal.js?v=20260820"></script>
-<script defer="" src="js/auth.js?v=20260906a"></script>
-<script defer="" src="js/board.js?v=20260820"></script>
-<script defer="" src="/js/pjax.js?v=20260826"></script>
+<script defer="" src="js/supabase-config.min.js?v=20260820"></script>
+<script defer="" src="js/i18n.min.js?v=20260828e"></script>
+<script defer="" src="js/common.min.js?v=20260906b"></script>
+<script defer="" src="js/audio-transcribe.min.js?v=20260906a"></script>
+<script defer="" src="js/video-player.min.js?v=20260823e"></script>
+<script defer="" src="js/crop-modal.min.js?v=20260820"></script>
+<script defer="" src="js/auth.min.js?v=20260906a"></script>
+<script defer="" src="js/board.min.js?v=20260820"></script>
+<script defer="" src="/js/pjax.min.js?v=20260826"></script>
 </body>
 </html>

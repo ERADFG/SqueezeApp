@@ -5106,7 +5106,10 @@ function getDeviceId() {
 }
 
 // Grey cat/wolf silhouette shown when a user has no avatar_url set.
-const DEFAULT_AVATAR = "img/default-avatar.png";
+// Served as WebP — ~94% smaller than the original PNG (78KB -> 5KB) with
+// no visible quality loss; WebP decode support is effectively universal
+// across current browsers, so no PNG fallback is needed here.
+const DEFAULT_AVATAR = "img/default-avatar.webp";
 
 // ─────────────────────────────────────────────────────────────
 // IMAGE TRANSFORM — avatars/banners/post photos are uploaded and
@@ -5190,7 +5193,7 @@ function esc(str) {
 // have verified=true but no type (set before this column existed)
 // fall back to 'purple' so nothing changes visually for them.
 //
-// Uses the glossy 3D badge art in img/verified-badge-<type>-256.png
+// Uses the glossy 3D badge art in img/verified-badge-<type>-256.webp
 // as the source image — it's rendered ~4-16x larger than its
 // on-screen size (16-21px) so it stays crisp at any display density
 // instead of softening the way a source sized 1:1 to the CSS box
@@ -5205,8 +5208,10 @@ function badgeType(profile) {
 
 function vBadge(profile) {
   const type = badgeType(profile);
+  // WebP versions of these badges run 75-82% smaller than the source PNGs
+  // with no visible quality loss (see img/verified-badge-*.webp).
   return type
-    ? `<img class="verified-badge" src="img/verified-badge-${type}-256.png" alt="Verified" title="Verified">`
+    ? `<img class="verified-badge" src="img/verified-badge-${type}-256.webp" alt="Verified" title="Verified">`
     : '';
 }
 

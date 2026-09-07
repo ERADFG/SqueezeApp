@@ -12,7 +12,7 @@
 <script>(function(){try{var t=localStorage.getItem('oc-theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}if(t&&t!=="light"){document.documentElement.setAttribute('data-theme',t);}var a=localStorage.getItem('oc-accent');if(a&&a!=="blue")document.documentElement.setAttribute('data-accent',a);}catch(e){}})();</script>
 <link href="img/favicon-32.png" id="fav32" rel="icon" sizes="32x32" type="image/png"/>
 <link href="img/favicon.png" id="fav512" rel="icon" sizes="512x512" type="image/png"/>
-<link href="css/style.css?v=20260906f" rel="stylesheet"/>
+<link href="css/style.min.css?v=20260906f" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com" rel="preconnect"/>
 <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&display=swap" rel="stylesheet"/>
@@ -89,8 +89,8 @@
 
   <div class="err404-figure">
     <span class="err404-digit" aria-hidden="true">4</span>
-    <img class="err404-cat err404-cat-light" src="img/404-cat-light.png" width="360" height="588" alt="Fluffy cat wearing a pink shower cap" />
-    <img class="err404-cat err404-cat-dark" src="img/404-cat-dark.png" width="360" height="588" alt="Fluffy cat wearing a pink shower cap" />
+    <picture><source srcset="img/404-cat-light.webp" type="image/webp"/><img class="err404-cat err404-cat-light" src="img/404-cat-light.png" width="360" height="588" alt="Fluffy cat wearing a pink shower cap" /></picture>
+    <picture><source srcset="img/404-cat-dark.webp" type="image/webp"/><img class="err404-cat err404-cat-dark" src="img/404-cat-dark.png" width="360" height="588" alt="Fluffy cat wearing a pink shower cap" /></picture>
     <span class="err404-digit" aria-hidden="true">4</span>
   </div>
 
