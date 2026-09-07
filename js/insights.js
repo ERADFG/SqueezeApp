@@ -84,17 +84,27 @@ async function loadInsights() {
 }
 
 // Postgres error 42883 = "function ... does not exist" — the exact
-// error every RPC here throws if supabase/analytics_setup.sql hasn't
-// been run in the Supabase SQL editor yet. Surface that distinctly
-// instead of the generic message so it's obvious what to do, instead
-// of just "try refreshing" (which can't fix a missing migration).
+// error every RPC here throws if the SQL migration hasn't been run in
+// the Supabase SQL editor yet. Surface that distinctly instead of the
+// generic message so it's obvious what to do.
+//
+// For anything else, show the real error code/message from Postgres
+// instead of a generic "couldn't load" — a guess at the cause is
+// useless if it's wrong, and there's no way to know from here whether
+// a given project's schema matches the assumptions the SQL was
+// written against (table/column names, etc). Whatever this prints is
+// the actual thing to fix.
 function insErrorHtml(e) {
   const code = e && e.code;
-  const msg = (e && (e.message || e.details || '')) || '';
+  const msg = (e && (e.message || e.details || e.hint)) || '';
+  const retryBtn = `<button type="button" onclick="loadInsights()" style="margin-top:10px;background:var(--maroon);color:#fff;border:none;border-radius:var(--r-sm);padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;">Retry</button>`;
   if (code === '42883' || /function .* does not exist/i.test(msg) || /schema cache/i.test(msg)) {
-    return `<div class="errmsg">Insights isn't set up on this project yet — run <code>supabase/analytics_setup.sql</code> in the Supabase SQL editor, then refresh this page.</div>`;
+    return `<div class="errmsg">Insights isn't set up on this project yet — run <code>insights_all_in_one.sql</code> in the Supabase SQL editor, then retry.<br>${retryBtn}</div>`;
   }
-  return `<div class="errmsg">Couldn't load Insights right now. Try refreshing.</div>`;
+  if (code === '42501' || /permission denied/i.test(msg)) {
+    return `<div class="errmsg">Insights can't read some data it needs — a permission (RLS/GRANT) is blocking one of the report functions.<br><br><code style="font-size:11px;word-break:break-word;display:block;margin-top:6px;">${esc(code || '')} ${esc(msg || 'Unknown error')}</code>${retryBtn}</div>`;
+  }
+  return `<div class="errmsg">Couldn't load Insights right now.<br><br><code style="font-size:11px;word-break:break-word;display:block;margin-top:6px;">${esc(code || '')} ${esc(msg || 'Unknown error')}</code>${retryBtn}</div>`;
 }
 
 async function insFetchAll() {
