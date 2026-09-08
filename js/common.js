@@ -1162,9 +1162,9 @@ function renderMobileChrome() {
 
     <div id="m-tabbar">
       <a class="${cur('home')}" href="${lp || '/'}"><span class="m-tab-hit">${NAV_ICON.home}</span><span class="m-tab-label">Home</span></a>
-      <a class="${cur('search')}" href="search.html"><span class="m-tab-hit">${NAV_ICON.search}</span><span class="m-tab-label">Search</span></a>
-      <a class="${cur('messages')}" href="chat.html"><span class="m-tab-hit">${NAV_ICON.chat}${chatBadge}</span><span class="m-tab-label">Chat</span></a>
-      <a class="${cur('notifications')}" href="notifications.html"><span class="m-tab-hit">${NAV_ICON.bell}${badge}</span><span class="m-tab-label">Notifications</span></a>
+      <a class="${cur('search')}" href="/search"><span class="m-tab-hit">${NAV_ICON.search}</span><span class="m-tab-label">Search</span></a>
+      <a class="${cur('messages')}" href="${messagesUrl()}"><span class="m-tab-hit">${NAV_ICON.chat}${chatBadge}</span><span class="m-tab-label">Chat</span></a>
+      <a class="${cur('notifications')}" href="/notifications"><span class="m-tab-hit">${NAV_ICON.bell}${badge}</span><span class="m-tab-label">Notifications</span></a>
       <a class="${cur('profile')} m-tab-avatar" href="${ownHref}"><span class="m-tab-hit"><img class="avatar${avSqClass(currentProfile)}" src="${esc(avatar)}" decoding="async" alt=""></span><span class="m-tab-label">Profile</span></a>
     </div>
 
@@ -1186,12 +1186,12 @@ function renderMobileChrome() {
           <div class="m-drawer-menu">
             <a href="${ownHref}">${NAV_ICON.user}Profile</a>
             <a href="${lp || '/'}">${NAV_ICON.home}Home</a>
-            <a href="notifications.html">${NAV_ICON.bell}Notifications${badge}</a>
-            <a href="chat.html">${NAV_ICON.chat}Chat${chatBadge}</a>
-            <a href="search.html">${NAV_ICON.search}Explore</a>
+            <a href="/notifications">${NAV_ICON.bell}Notifications${badge}</a>
+            <a href="${messagesUrl()}">${NAV_ICON.chat}Chat${chatBadge}</a>
+            <a href="/search">${NAV_ICON.search}Explore</a>
             <a href="${lp}/communities">${NAV_ICON.people}Communities</a>
-            <a href="lists.html">${NAV_ICON.list}Lists</a>
-            <a href="bookmarks.html">${NAV_ICON.bookmark}Saved</a>
+            <a href="/lists">${NAV_ICON.list}Lists</a>
+            <a href="/bookmarks">${NAV_ICON.bookmark}Saved</a>
             <a href="/achievements">${NAV_ICON.trophy}Achievements</a>
             <a href="/settings">${NAV_ICON.gear}Settings</a>
           </div>
@@ -1217,9 +1217,9 @@ function renderMobileChrome() {
           <span class="m-drawer-handle">You need an account to post.</span>
           <hr>
           <div class="m-drawer-menu" style="margin-top:8px;">
-            <a href="search.html">${NAV_ICON.search}Explore</a>
+            <a href="/search">${NAV_ICON.search}Explore</a>
             <a href="${lp}/communities">${NAV_ICON.people}Communities</a>
-            <a href="lists.html">${NAV_ICON.list}Lists</a>
+            <a href="/lists">${NAV_ICON.list}Lists</a>
           </div>
           <span class="m-drawer-group-label">About</span>
           <div class="m-drawer-menu">
@@ -2250,7 +2250,7 @@ function wireSmartSearchInput(input, extraParams) {
   function searchHrefFor(q) {
     const params = new URLSearchParams(extraParams || {});
     if (q) params.set('q', q);
-    return `search.html${params.toString() ? `?${params.toString()}` : ''}`;
+    return `/search${params.toString() ? `?${params.toString()}` : ''}`;
   }
 
   async function runQuery(raw) {
@@ -2380,7 +2380,7 @@ async function renderWhoToFollow() {
     if (!error && data && data.length) {
       box.innerHTML = `<div class="t-lbl">Who to follow</div>` +
         data.map(whoRowHtml).join('') +
-        `<a class="show-more" href="search.html">Show more</a>`;
+        `<a class="show-more" href="/search">Show more</a>`;
       return;
     }
     // Falls through to the cold-start pool below on an RPC error or
@@ -2409,7 +2409,7 @@ async function renderWhoToFollow() {
 
   box.innerHTML = `<div class="t-lbl">Who to follow</div>` +
     suggestions.map(whoRowHtml).join('') +
-    `<a class="show-more" href="search.html">Show more</a>`;
+    `<a class="show-more" href="/search">Show more</a>`;
 }
 
 function whoRowHtml(profile) {
@@ -4712,7 +4712,7 @@ async function renderMyLists() {
 
   if (!currentSession) {
     box.innerHTML = header + createRow +
-      `<a class="show-more" href="lists.html">Browse Lists</a>`;
+      `<a class="show-more" href="/lists">Browse Lists</a>`;
     return;
   }
 
@@ -4731,7 +4731,7 @@ async function renderMyLists() {
 
   box.innerHTML = header + createRow +
     mine.map(l => listRowHtml(l)).join('') +
-    `<a class="show-more" href="lists.html">${mine.length ? 'See all' : 'Browse Lists'}</a>`;
+    `<a class="show-more" href="/lists">${mine.length ? 'See all' : 'Browse Lists'}</a>`;
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -5321,7 +5321,7 @@ function linkifyText(escaped) {
       if (mHandle) {
         return `${mBefore}<a href="${profileUrl(mHandle)}" class="body-mention" onclick="event.stopPropagation()">@${mHandle}</a>`;
       }
-      return `${hBefore}<a href="search.html?q=${encodeURIComponent('#' + hTag)}" class="body-hashtag" onclick="event.stopPropagation()">#${hTag}</a>`;
+      return `${hBefore}<a href="/search?q=${encodeURIComponent('#' + hTag)}" class="body-hashtag" onclick="event.stopPropagation()">#${hTag}</a>`;
     }
   );
 }

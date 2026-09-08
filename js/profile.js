@@ -31,7 +31,20 @@ async function loadProfile() {
   const root = document.getElementById('profile-root');
   if (!root) return;
   if (!viewUsername) {
-    root.innerHTML = `<div class="errmsg">No user specified.</div>`;
+    // Reaching profile.html with no username to show (no pretty-path
+    // segment, no legacy ?u= param) used to be a dead end: a static
+    // error box with nothing to click, so the very next tap anywhere
+    // in the tab bar looked like it "did nothing" — really it just
+    // left the person stuck on this same unrecoverable screen. Give
+    // them real ways out instead of stranding them here.
+    root.innerHTML = `
+      <div class="errmsg">
+        No user specified.
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+          <a href="/home" class="profile-edit-btn">Go home</a>
+          <a href="/search" class="profile-edit-btn">Search InteractInk</a>
+        </div>
+      </div>`;
     return;
   }
 

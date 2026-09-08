@@ -150,7 +150,7 @@ function renderHero() {
             <button type="button" class="pc-menu-btn profile-icon-btn" title="More" aria-label="More options" onclick="togglePostMenu('community', event)">${ICON.menu}</button>
             <div class="pc-menu-dd">${communityMenuItemsHtml()}</div>
           </div>
-          <a class="profile-icon-btn" href="search.html?community=${encodeURIComponent(community.slug)}" title="Search posts in this community" aria-label="Search posts in this community">${NAV_ICON.search}</a>
+          <a class="profile-icon-btn" href="/search?community=${encodeURIComponent(community.slug)}" title="Search posts in this community" aria-label="Search posts in this community">${NAV_ICON.search}</a>
           ${actionBtn}
         </div>
       </div>
