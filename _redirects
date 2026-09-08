@@ -1,0 +1,124 @@
+# Cloudflare Pages equivalent of vercel.json's rewrite rules
+# 200 = rewrite (URL in browser stays the same, this file's content is served)
+# More specific rules must come before the generic /:username catch-all at the bottom
+
+# --- static utility pages with clean URLs ---
+/notifications  /notifications.html  200
+/bookmarks  /bookmarks.html  200
+/settings  /settings.html  200
+/insights  /insights.html  200
+/achievements  /achievements.html  200
+/search  /search.html  200
+/rules  /rules.html  200
+/about  /about.html  200
+/contact  /contact.html  200
+/privacy  /privacy.html  200
+/terms  /terms.html  200
+/login  /login.html  200
+/signup  /signup.html  200
+/start  /start.html  200
+/communities  /communities.html  200
+/admin  /admin.html  200
+/home  /index.html  200
+/lists  /lists.html  200
+/articles  /articles.html  200
+/messages  /chat.html  200
+
+# --- help + blog ---
+/help  /help/index.html  200
+/help/:cat  /help/:cat/index.html  200
+/blog  /blog/index.html  200
+/blog/:post  /blog/:post.html  200
+
+# --- messages ---
+/messages/g/:gid  /chat.html  200
+/messages/:username  /chat.html  200
+
+# --- localized pages ---
+/es  /es/index.html  200
+/es/home  /es/index.html  200
+/es/rules  /es/rules.html  200
+/es/about  /es/about.html  200
+/es/contact  /es/contact.html  200
+/es/privacy  /es/privacy.html  200
+/es/terms  /es/terms.html  200
+/es/login  /es/login.html  200
+/es/signup  /es/signup.html  200
+/es/communities  /es/communities.html  200
+/es/articles  /es/articles.html  200
+
+/fr  /fr/index.html  200
+/fr/home  /fr/index.html  200
+/fr/rules  /fr/rules.html  200
+/fr/about  /fr/about.html  200
+/fr/contact  /fr/contact.html  200
+/fr/privacy  /fr/privacy.html  200
+/fr/terms  /fr/terms.html  200
+/fr/login  /fr/login.html  200
+/fr/signup  /fr/signup.html  200
+/fr/communities  /fr/communities.html  200
+/fr/articles  /fr/articles.html  200
+
+/de  /de/index.html  200
+/de/home  /de/index.html  200
+/de/rules  /de/rules.html  200
+/de/about  /de/about.html  200
+/de/contact  /de/contact.html  200
+/de/privacy  /de/privacy.html  200
+/de/terms  /de/terms.html  200
+/de/login  /de/login.html  200
+/de/signup  /de/signup.html  200
+/de/communities  /de/communities.html  200
+/de/articles  /de/articles.html  200
+
+/pt  /pt/index.html  200
+/pt/home  /pt/index.html  200
+/pt/rules  /pt/rules.html  200
+/pt/about  /pt/about.html  200
+/pt/contact  /pt/contact.html  200
+/pt/privacy  /pt/privacy.html  200
+/pt/terms  /pt/terms.html  200
+/pt/login  /pt/login.html  200
+/pt/signup  /pt/signup.html  200
+/pt/communities  /pt/communities.html  200
+/pt/articles  /pt/articles.html  200
+
+/ja  /ja/index.html  200
+/ja/home  /ja/index.html  200
+/ja/rules  /ja/rules.html  200
+/ja/about  /ja/about.html  200
+/ja/contact  /ja/contact.html  200
+/ja/privacy  /ja/privacy.html  200
+/ja/terms  /ja/terms.html  200
+/ja/login  /ja/login.html  200
+/ja/signup  /ja/signup.html  200
+/ja/communities  /ja/communities.html  200
+/ja/articles  /ja/articles.html  200
+
+/ru  /ru/index.html  200
+/ru/home  /ru/index.html  200
+/ru/rules  /ru/rules.html  200
+/ru/about  /ru/about.html  200
+/ru/contact  /ru/contact.html  200
+/ru/privacy  /ru/privacy.html  200
+/ru/terms  /ru/terms.html  200
+/ru/login  /ru/login.html  200
+/ru/signup  /ru/signup.html  200
+/ru/communities  /ru/communities.html  200
+/ru/articles  /ru/articles.html  200
+
+# --- dynamic content pages (were server-prerendered via api/prerender.js on Vercel) ---
+# NOTE: rewritten straight to the static shell page for now. These pages still work for
+# real visitors (JS fetches the content client-side), but they lose the server-rendered
+# SEO meta tags / social link-preview cards Vercel's prerender.js used to generate.
+/communities/:slug  /community.html  200
+/i/lists/:id  /list.html  200
+/i/articles/:id  /article.html  200
+/i/status/:id  /thread.html  200
+/:username/status/:id  /thread.html  200
+/:username/followers  /followlist.html  200
+/:username/following  /followlist.html  200
+/:username/lists  /profilelists.html  200
+
+# --- generic username profile catch-all: MUST be last, least specific ---
+/:username  /profile.html  200

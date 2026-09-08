@@ -1,0 +1,29 @@
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), camera=(), microphone=(self)
+  Strict-Transport-Security: max-age=63072000; includeSubDomains
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://pyitivzoqleukuclajrf.supabase.co wss://pyitivzoqleukuclajrf.supabase.co https://cdn.jsdelivr.net; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'
+  Cache-Control: public, max-age=60, stale-while-revalidate=604800
+
+/js/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/css/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/img/*
+  Cache-Control: public, max-age=31536000, stale-while-revalidate=604800
+
+/version.json
+  Cache-Control: no-store
+
+/admin
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/admin.html
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/ads.txt
+  Content-Type: text/plain; charset=utf-8
