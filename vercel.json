@@ -150,12 +150,12 @@
     { "src": "^/i/status/(?<id>[^/]+)$", "dest": "/api/prerender?type=thread&id=$id" },
     { "src": "^/@(?<username>[^/@]+)/status/(?<id>[^/]+)$", "dest": "/api/prerender?type=thread&username=$username&id=$id" },
 
-    { "src": "^/(?<username>[^/]+)/status/(?<id>[^/]+)$", "status": 308, "headers": { "Location": "/@$username/status/$id" } },
-    { "src": "^/(?<username>[^/]+)/followers$", "status": 308, "headers": { "Location": "/@$username/followers" } },
-    { "src": "^/(?<username>[^/]+)/following$", "status": 308, "headers": { "Location": "/@$username/following" } },
-    { "src": "^/(?<username>[^/]+)/lists$", "status": 308, "headers": { "Location": "/@$username/lists" } },
+    { "src": "^/(?<username>[^/@]+)/status/(?<id>[^/]+)$", "status": 308, "headers": { "Location": "/@$username/status/$id" } },
+    { "src": "^/(?<username>[^/@]+)/followers$", "status": 308, "headers": { "Location": "/@$username/followers" } },
+    { "src": "^/(?<username>[^/@]+)/following$", "status": 308, "headers": { "Location": "/@$username/following" } },
+    { "src": "^/(?<username>[^/@]+)/lists$", "status": 308, "headers": { "Location": "/@$username/lists" } },
 
     { "src": "^/@(?<username>[^/@]+)$", "dest": "/api/prerender?type=profile&username=$username" },
-    { "src": "^/(?<username>[^/]+)$", "status": 308, "headers": { "Location": "/@$username" } }
+    { "src": "^/(?<username>[^/@]+)$", "status": 308, "headers": { "Location": "/@$username" } }
   ]
 }

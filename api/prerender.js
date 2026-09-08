@@ -78,7 +78,11 @@ function esc(str) {
 // firing on: each dirty link this file serves is a fresh trip around
 // that redirect, which is how a single tap on a dirty profile turns
 // into ERR_TOO_MANY_REDIRECTS.
-function cleanUsername(u) { return String(u ?? '').replace(/^@+/, ''); }
+// Strips '@' anywhere, not just a leading run — see the matching
+// comment on cleanUsername() in js/common.js for why (an embedded '@',
+// e.g. from a username that was ever saved as a raw email address, is
+// just as invalid as a leading one and needs the same guard).
+function cleanUsername(u) { return String(u ?? '').replace(/@/g, ''); }
 
 // Applies cleanUsername() to every profile.username this file pulled
 // out of Supabase for a list of rows shaped like `{ profile: { username

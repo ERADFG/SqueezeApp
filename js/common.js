@@ -381,7 +381,13 @@ function u_(s) { return encodeURIComponent(s); }
 // /@@@@@@@@@@username links that don't resolve to anything. Trims ALL
 // leading '@'s (not just one) so it self-heals even from already-mangled
 // input, not just the single-'@' case.
-function cleanUsername(u) { return String(u ?? '').replace(/^@+/, ''); }
+// Strips '@' anywhere in a stored username, not just a leading run —
+// a dirty row can end up with an embedded '@' too (e.g. an OAuth
+// signup path that fell back to using the account's email address as
+// the username), and USERNAME_RE never allowed '@' in a real username
+// to begin with, so stripping only makes an already-invalid value
+// usable in a link — it never touches a genuinely clean username.
+function cleanUsername(u) { return String(u ?? '').replace(/@/g, ''); }
 
 // ── HOVER/TOUCH PREFETCH — this app does full page navigations (no
 // SPA router), so the biggest thing standing between a click and a
