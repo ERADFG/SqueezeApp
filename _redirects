@@ -2,18 +2,16 @@
 # 200 = rewrite (URL in browser stays the same, this file's content is served)
 # More specific rules must come before the generic /:username catch-all at the bottom
 #
-# NOTE: since wrangler.jsonc now points "main" at worker.js, Cloudflare runs
-# that Worker for every request and does NOT apply this file anymore (see
-# the caution note in Cloudflare's own _redirects docs: rules here are
-# skipped for requests served by Worker code). worker.js is the real,
+# NOTE: there is now a _worker.js file at the project root. Cloudflare Pages
+# auto-detects that filename and hands it full control of every request, so
+# this _redirects file is NOT applied anymore. _worker.js is the real,
 # up-to-date routing table now — it fixes a bug this file has where the
 # "/@:username"-style rules below never actually match (Cloudflare's
 # _redirects placeholders only match when they occupy a whole path segment,
 # not when fused onto a literal like "@"), which made every profile/thread
 # link fall through to the generic "/:username" rule at the bottom and get
 # redirected in an infinite, ever-growing "@@@@..." loop. This file is kept
-# only as a readable reference / fallback if the Worker is ever removed —
-# edit worker.js for any real routing change.
+# only as a readable reference — edit _worker.js for any real routing change.
 
 # --- root: html_handling "none" disables Cloudflare's automatic index.html-at-/ behavior, so this must be explicit ---
 /  /index.html  200

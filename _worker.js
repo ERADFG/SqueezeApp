@@ -24,11 +24,15 @@
 // "interactink.com/@@@@@@...@InteractInk — ERR_TOO_MANY_REDIRECTS" bug.
 //
 // This worker reimplements the same routing table in plain JS regex (which
-// has no such limitation) and is the actual routing authority now. The
-// `_redirects` file is left in place only as documentation/fallback; once a
-// Worker `main` script is configured (see wrangler.jsonc), Cloudflare stops
-// applying `_redirects` to requests the Worker handles, so this file is what
-// actually runs in production.
+// has no such limitation) and is the actual routing authority now. It's
+// named `_worker.js` (not "worker.js") on purpose: that's the exact
+// filename Cloudflare Pages' "Advanced Mode" looks for at the root of a
+// deployed project to hand it full control of every request — no dashboard
+// setting or wrangler.jsonc change needed, it's picked up automatically on
+// your next git push, same as every other file here. The `_redirects` file
+// is left in place only as documentation; once `_worker.js` exists,
+// Cloudflare stops applying `_redirects` entirely (its rules are folded
+// into this file instead).
 
 const LOCALES = ['es', 'fr', 'de', 'pt', 'ja', 'ru'];
 

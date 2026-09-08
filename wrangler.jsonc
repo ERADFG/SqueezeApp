@@ -1,11 +1,12 @@
 {
   "name": "interactink",
   "compatibility_date": "2026-09-07",
-  "main": "worker.js",
+  "main": "_worker.js",
   "assets": {
     "directory": ".",
     "binding": "ASSETS",
     "html_handling": "none",
-    "not_found_handling": "404-page"
+    "not_found_handling": "404-page",
+    "run_worker_first": true
   }
 }
