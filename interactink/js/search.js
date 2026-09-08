@@ -1,0 +1,519 @@
+// ─────────────────────────────────────────────────────────────
+// SEARCH PAGE — /search.html?q=<term>[&t=posts|people]
+// With no query, shows the Explore panel instead (see EXPLORE below).
+// ─────────────────────────────────────────────────────────────
+
+// Recomputed on every visit (see the DOMContentLoaded handler below)
+// rather than frozen here at module scope — pjax (js/pjax.js) keeps
+// this script loaded for the life of the tab, so a second search
+// later (a new ?q=, or arriving via a community's search icon)
+// would otherwise silently keep using the very first search's terms
+// forever, since this file only ever gets parsed once.
+let searchParams = new URLSearchParams(location.search);
+let searchQuery = searchParams.get('q') || '';
+
+// ── COMMUNITY-SCOPED SEARCH — search.html?community=<slug>, reached
+// from the search icon on a community page's hero (see community.js
+// renderHero()). Only scopes the Posts tab (there's no per-community
+// "People" to search) — resolved once and cached, same slug→row
+// lookup community.js itself does in loadCommunity(). Forces the
+// People tab off since a community only has posts to search.
+let searchCommunitySlug = searchParams.get('community') || '';
+// Valid non-scoped search tabs. 'posts' is kept as an accepted URL alias
+// for 'latest' so any old ?t=posts links out in the wild still land
+// somewhere sensible instead of falling through to the default.
+const SEARCH_TABS = ['latest', 'viral', 'media', 'people', 'communities'];
+const SEARCH_COMMUNITY_TABS = ['latest', 'viral', 'media']; // community-scoped search only ever has posts to search
+function normalizeSearchTabParam(raw, scoped) {
+  const t = raw === 'posts' ? 'latest' : raw;
+  const allowed = scoped ? SEARCH_COMMUNITY_TABS : SEARCH_TABS;
+  return allowed.includes(t) ? t : 'latest';
+}
+let searchTab = normalizeSearchTabParam(searchParams.get('t'), !!searchCommunitySlug);
+let exploreTab = 'explore'; // 'explore' | 'news' | 'sports' | 'entertainment' | 'gaming' | 'technology' | 'music' | 'science'
+
+let searchCommunity = null; // {id,name,slug} once resolved, or false if it doesn't exist
+async function resolveSearchCommunity() {
+  if (!searchCommunitySlug || searchCommunity) return searchCommunity;
+  const { data } = await sb.from('communities').select('id,name,slug').eq('slug', searchCommunitySlug).maybeSingle();
+  searchCommunity = data || false;
+  return searchCommunity;
+}
+// Keeps the community filter attached across a re-search (typing a new
+// term) or a tab switch, instead of the plain inline onsubmit in
+// search.html silently dropping it.
+function submitSearchForm() {
+  const q = document.getElementById('sp-input').value.trim();
+  const params = new URLSearchParams();
+  if (q) params.set('q', q);
+  if (searchCommunitySlug) params.set('community', searchCommunitySlug);
+  if (searchTab !== 'latest') params.set('t', searchTab);
+  location.href = '/search' + (params.toString() ? `?${params.toString()}` : '');
+}
+function renderSearchScope(root) {
+  if (!searchCommunitySlug) { root.innerHTML = ''; return; }
+  const name = searchCommunity ? esc(searchCommunity.name) : esc(searchCommunitySlug);
+  root.innerHTML = `
+    <div class="search-scope">
+      Searching posts in <b>${name}</b>
+      <a href="/search${searchQuery ? `?q=${encodeURIComponent(searchQuery)}` : ''}">Search everywhere instead</a>
+    </div>`;
+}
+
+// Plain-text Explore tabs — no per-tab icon (used to have one apiece,
+// including a fire icon on Trending, but the icons just added visual
+// noise next to a label that already says what the tab is).
+function renderTabs() {
+  const el = document.getElementById('search-tabs');
+  if (!searchQuery.trim()) {
+    el.innerHTML = ['explore', 'news', 'sports', 'entertainment', 'gaming', 'technology', 'music', 'science'].map(t => `
+      <button class="xtab${exploreTab === t ? ' active' : ''}" onclick="setExploreTab('${t}')">${t[0].toUpperCase()}${t.slice(1)}</button>`).join('');
+    return;
+  }
+  const tabs = searchCommunitySlug
+    ? [['latest', 'Latest'], ['viral', 'Viral'], ['media', 'Media']]
+    : [['latest', 'Latest'], ['viral', 'Viral'], ['media', 'Media'], ['people', 'People'], ['communities', 'Community']];
+  el.innerHTML = tabs.map(([t, label]) =>
+    `<button class="xtab${searchTab === t ? ' active' : ''}" onclick="setSearchTab('${t}')">${label}</button>`).join('');
+}
+
+function setSearchTab(tab) {
+  if (tab === searchTab) return;
+  searchTab = tab;
+  renderTabs();
+  runSearch();
+}
+
+function setExploreTab(tab) {
+  if (tab === exploreTab) return;
+  exploreTab = tab;
+  renderTabs();
+  runExplore();
+}
+
+async function runSearch() {
+  document.getElementById('sp-input').value = searchQuery;
+  const scopeEl = document.getElementById('search-scope');
+  const root = document.getElementById('search-root');
+
+  if (searchCommunitySlug) {
+    const comm = await resolveSearchCommunity();
+    if (scopeEl) renderSearchScope(scopeEl);
+    if (comm === false) { root.innerHTML = `<div id="feed-empty">This community doesn't exist.</div>`; return; }
+    document.title = `${searchQuery ? `${searchQuery} — ` : ''}${comm.name} — Search — InteractInk`;
+    setPageH1(`Search ${comm.name}`);
+    if (!searchQuery.trim()) { root.innerHTML = `<div id="feed-empty">Type something to search posts in ${esc(comm.name)}.</div>`; return; }
+    root.innerHTML = skeletonFeedHtml();
+    if (searchTab === 'viral') return searchPostsViral(root);
+    if (searchTab === 'media') return searchPostsMedia(root);
+    return searchPosts(root);
+  }
+  if (scopeEl) scopeEl.innerHTML = '';
+
+  if (!searchQuery.trim()) {
+    document.title = 'Explore — InteractInk';
+    setPageH1('Explore InteractInk');
+    return runExplore();
+  }
+  document.title = `${searchQuery} — Search — InteractInk`;
+  setPageH1(`Search: ${searchQuery}`);
+  root.innerHTML = skeletonFeedHtml();
+  if (searchTab === 'people') return searchPeople(root);
+  if (searchTab === 'viral') return searchPostsViral(root);
+  if (searchTab === 'media') return searchPostsMedia(root);
+  if (searchTab === 'communities') return searchCommunities(root);
+  return searchPosts(root);
+}
+
+async function searchPosts(root) {
+  await ensureFeedPrereqsLoaded();
+  let query = sb.from('posts').select(POST_SELECT).eq('is_deleted', false);
+  if (searchCommunitySlug && searchCommunity) query = query.eq('community_id', searchCommunity.id);
+  if (searchQuery.trim()) query = query.ilike('body', `%${searchQuery}%`);
+  const { data, error } = await query.order('created_at', { ascending: false }).limit(50);
+
+  if (error) { root.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
+  if (!data.length) { root.innerHTML = `<div id="feed-empty">No posts found${searchQuery ? ` for &ldquo;${esc(searchQuery)}&rdquo;` : ''}.</div>`; return; }
+  await attachQuotedPosts(data);
+  root.innerHTML = data.map(p => postCardHtml(p)).join('');
+}
+
+// "Viral" tab — same matching posts as Latest, just ranked by
+// engagementScore() (already used to badge Hot posts in Explore, see
+// below) instead of recency. Supabase can't sort by that computed
+// score server-side, so this overfetches a larger recent-first page
+// and re-sorts client-side, same trick fetchTopPostsToday() uses.
+async function searchPostsViral(root) {
+  await ensureFeedPrereqsLoaded();
+  let query = sb.from('posts').select(POST_SELECT).eq('is_deleted', false);
+  if (searchCommunitySlug && searchCommunity) query = query.eq('community_id', searchCommunity.id);
+  if (searchQuery.trim()) query = query.ilike('body', `%${searchQuery}%`);
+  const { data, error } = await query.order('created_at', { ascending: false }).limit(200);
+
+  if (error) { root.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
+  if (!data.length) { root.innerHTML = `<div id="feed-empty">No posts found${searchQuery ? ` for &ldquo;${esc(searchQuery)}&rdquo;` : ''}.</div>`; return; }
+  const top = data.sort((a, b) => engagementScore(b) - engagementScore(a)).slice(0, 50);
+  await attachQuotedPosts(top);
+  root.innerHTML = top.map(p => postCardHtml(p)).join('');
+}
+
+// "Media" tab — same matching posts as Latest, restricted to ones
+// with an attached image/gif/video (media_url set), for people who
+// specifically want to browse photos/videos on a topic rather than
+// wade through text-only posts.
+async function searchPostsMedia(root) {
+  await ensureFeedPrereqsLoaded();
+  let query = sb.from('posts').select(POST_SELECT).eq('is_deleted', false).not('media_url', 'is', null);
+  if (searchCommunitySlug && searchCommunity) query = query.eq('community_id', searchCommunity.id);
+  if (searchQuery.trim()) query = query.ilike('body', `%${searchQuery}%`);
+  const { data, error } = await query.order('created_at', { ascending: false }).limit(50);
+
+  if (error) { root.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
+  if (!data.length) { root.innerHTML = `<div id="feed-empty">No media posts found${searchQuery ? ` for &ldquo;${esc(searchQuery)}&rdquo;` : ''}.</div>`; return; }
+  await attachQuotedPosts(data);
+  root.innerHTML = data.map(p => postCardHtml(p)).join('');
+}
+
+// "Community" tab — matches communities by name or slug, reusing the
+// same comm-row markup (and joined-state lookup) Explore's "Discover
+// Communities" section already uses.
+async function searchCommunities(root) {
+  const q = searchQuery.trim();
+  const { data, error } = await sb.from('communities').select('id,name,slug,avatar_url,member_count')
+    .or(`name.ilike.%${q}%,slug.ilike.%${q}%`)
+    .order('member_count', { ascending: false })
+    .limit(50);
+
+  if (error) { root.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
+  if (!data.length) { root.innerHTML = `<div id="feed-empty">No communities found for &ldquo;${esc(q)}&rdquo;.</div>`; return; }
+  const joined = await getExploreJoinedIds();
+  root.innerHTML = data.map(c => communityRowHtml(c, joined.has(c.id))).join('');
+}
+
+// Trims a leading '@' — people often type the handle the way it's
+// displayed everywhere else in the app (@name), but the username
+// column itself never stores that character, so an unstripped query
+// would ilike-match nothing at all.
+function normalizeSearchQuery(q) {
+  return q.trim().replace(/^@+/, '');
+}
+
+let searchMyFollowing = new Set(); // ids the viewer follows — for the People tab's follow buttons
+let searchMyPending = new Set();   // ids the viewer has a pending request out to
+async function loadSearchMyFollowState() {
+  searchMyFollowing = new Set();
+  searchMyPending = new Set();
+  await authReady;
+  if (!currentSession) return;
+  const [{ data: followData }, { data: pendingData }] = await Promise.all([
+    sb.from('follows').select('followee_id').eq('follower_id', currentSession.user.id),
+    sb.from('follow_requests').select('target_id').eq('requester_id', currentSession.user.id)
+  ]);
+  searchMyFollowing = new Set((followData || []).map(r => r.followee_id));
+  searchMyPending = new Set((pendingData || []).map(r => r.target_id));
+}
+
+let lastPeopleResults = []; // last People-tab search results, indexed by recordRecentProfileAt() below
+async function searchPeople(root) {
+  const q = normalizeSearchQuery(searchQuery);
+  await loadSearchMyFollowState();
+  const { data, error } = await sb.from('profiles').select('*')
+    .or(`username.ilike.%${q}%,display_name.ilike.%${q}%,bio.ilike.%${q}%`)
+    .limit(50);
+
+  if (error) { root.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
+  if (!data.length) { root.innerHTML = `<div id="feed-empty">No users found for &ldquo;${esc(searchQuery)}&rdquo;.</div>`; return; }
+
+  // followers_count alone (the old sort) ranks a merely-loose match
+  // from a huge account above an exact handle match from a small one
+  // — "smarter" here means matching quality decides the order first,
+  // popularity only breaks ties within the same tier: exact username
+  // match, then either field starting with the query, then everything
+  // else (a substring match buried mid-bio or mid-name), each tier
+  // sorted by followers_count.
+  const qLower = q.toLowerCase();
+  const tier = p => {
+    const uname = (p.username || '').toLowerCase();
+    const dname = (p.display_name || '').toLowerCase();
+    if (uname === qLower) return 0;
+    if (uname.startsWith(qLower) || dname.startsWith(qLower)) return 1;
+    return 2;
+  };
+  data.sort((a, b) => tier(a) - tier(b) || (b.followers_count || 0) - (a.followers_count || 0));
+  lastPeopleResults = data;
+
+  const viewerId = currentSession?.user?.id || null;
+  root.innerHTML = data.map((profile, i) => `
+    <div class="fl-row" style="padding:8px 16px;border-bottom:1px solid var(--line);">
+      <a class="ulrow" style="flex:1;min-width:0;" href="${profileUrl(profile.username)}" onclick="recordRecentProfileAt(${i})">
+        <img class="avatar pfp-md${avSqClass(profile)}" src="${esc(avatarUrl(profile.avatar_url))}" alt="" loading="lazy" decoding="async">
+        <div class="ulrow-txt">
+          <span class="ulrow-name">${esc(profile.display_name || profile.username)}${vBadge(profile)}</span>
+          <span class="ulrow-handle">@${esc(profile.username)}</span>
+        </div>
+      </a>
+      ${currentSession && profile.id !== viewerId ? followBtnHtml(profile, searchMyFollowing.has(profile.id), searchMyPending.has(profile.id)) : ''}
+    </div>`).join('');
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  if (document.body.dataset.page !== 'search') return; // see js/notifications.js
+  // Recompute everything derived from the URL fresh on every visit —
+  // see the comment on searchParams's declaration above.
+  searchParams = new URLSearchParams(location.search);
+  searchQuery = searchParams.get('q') || '';
+  searchCommunitySlug = searchParams.get('community') || '';
+  searchTab = normalizeSearchTabParam(searchParams.get('t'), !!searchCommunitySlug);
+  searchCommunity = null;
+  exploreJoinedIds = null;
+  await authReady; // see auth.js — otherwise cards can render before we know who's logged in
+  renderTabs();
+  runSearch();
+});
+
+// ─────────────────────────────────────────────────────────────
+// RECENT SEARCHES — Twitter-style "Recent" strip shown on the empty
+// Explore panel: every profile tapped from the People tab (see
+// recordRecentProfileAt below) gets remembered here, purely
+// client-side in localStorage, so it's still there next time this
+// browser opens Search with nothing typed yet. Deliberately profiles
+// only, not raw text queries — tapping "Ali" the profile after
+// searching "ali" the text used to leave two separate, redundant
+// entries.
+// ─────────────────────────────────────────────────────────────
+
+const RECENT_SEARCH_KEY = 'ii-recent-search';
+const RECENT_SEARCH_MAX = 12;
+
+// Filters to type==='user' on every read, so any older, already-saved
+// text-query entries (from before profiles-only) just quietly stop
+// showing up — no separate migration step needed, since the filtered
+// (i.e. cleaned) result is exactly what every write path saves back.
+function loadRecentSearches() {
+  try {
+    const arr = JSON.parse(localStorage.getItem(RECENT_SEARCH_KEY) || '[]');
+    return (Array.isArray(arr) ? arr : []).filter(r => r && r.type === 'user');
+  } catch (e) { return []; }
+}
+function saveRecentSearches(arr) {
+  try { localStorage.setItem(RECENT_SEARCH_KEY, JSON.stringify(arr.slice(0, RECENT_SEARCH_MAX))); } catch (e) {}
+}
+// Called via onclick on a People-tab result row (fire-and-forget —
+// never preventDefault, the link still navigates normally).
+function recordRecentProfileAt(i) {
+  const p = lastPeopleResults[i];
+  if (!p) return;
+  const arr = loadRecentSearches().filter(r => r.username !== p.username);
+  arr.unshift({
+    type: 'user', username: p.username, display_name: p.display_name || '',
+    avatar_url: p.avatar_url || '', verified: !!p.verified, verification_type: p.verification_type || null
+  });
+  saveRecentSearches(arr);
+}
+function clearRecentSearches() {
+  saveRecentSearches([]);
+  if (exploreTab === 'explore' && !searchQuery.trim()) runExplore();
+}
+
+// Horizontal chip, not a full-width row — matches the side-by-side,
+// swipeable layout X's own "Recent" uses (see .recent-strip in
+// css/style.css for the scroll-x container these sit in).
+function recentSearchChipHtml(item) {
+  const fakeProfile = { verified: item.verified, verification_type: item.verification_type };
+  return `
+    <a class="recent-chip" href="${profileUrl(item.username)}">
+      <img class="avatar${avSqClass(fakeProfile)}" src="${esc(avatarUrl(item.avatar_url))}" alt="" loading="lazy" decoding="async">
+      <span class="recent-chip-name">${esc(item.display_name || item.username)}${vBadge(fakeProfile)}</span>
+      <span class="recent-chip-handle">@${esc(item.username)}</span>
+    </a>`;
+}
+const ICON_CLOSE_MINI = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
+
+function renderRecentSection() {
+  const recents = loadRecentSearches();
+  if (!recents.length) return '';
+  return `
+    <div class="expl-section recent-section">
+      <div class="expl-hdr recent-hdr">
+        <span>Recent</span>
+        <a href="#" class="recent-clear" onclick="clearRecentSearches();return false;" aria-label="Clear recent searches">${ICON_CLOSE_MINI}</a>
+      </div>
+      <div class="recent-strip">${recents.map(r => recentSearchChipHtml(r)).join('')}</div>
+    </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────
+// EXPLORE — shown on search.html with no query, Twitter-Explore-style:
+//   • "Today's Posts": the 3 most popular posts of the last 24h,
+//     each badged Hot / New / age — see postBadgeHtml() below.
+// ─────────────────────────────────────────────────────────────
+
+async function fetchTopPostsToday(limit = 3) {
+  const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+  const { data } = await sb.from('posts').select(POST_SELECT)
+    .eq('is_deleted', false)
+    .gte('created_at', since)
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  return (data || [])
+    .map(p => ({ ...p, _score: (p.like_count || 0) * 3 + (p.reply_count || 0) * 2 + (p.view_count || 0) }))
+    .sort((a, b) => b._score - a._score)
+    .slice(0, limit);
+}
+
+function explorePostHtml(p) {
+  const title = (p.body || '').trim().slice(0, 140) || (p.media_url ? '' : '(no text)');
+  const commentCount = p.reply_count || 0;
+  return `
+    <a class="expl-post" href="${postUrl(p)}">
+      <div class="expl-post-top">
+        ${title ? `<div class="expl-post-title">${esc(title)}</div>` : '<span></span>'}
+        ${postBadgeHtml(p)}
+      </div>
+      ${explorePostThumbHtml(p)}
+      <div class="expl-post-meta">
+        <img class="avatar${avSqClass(p.profile)}" src="${esc(avatarUrl(p.profile?.avatar_url))}" alt="" loading="lazy" decoding="async">
+        <span>${esc(p.profile?.display_name || p.profile?.username || 'unknown')}${vBadge(p.profile)}</span>
+        <span class="dot"></span>
+        <span>${timeAgo(p.created_at)}</span>
+        <span class="dot"></span>
+        <span>${fmtCount(commentCount)} comment${commentCount === 1 ? '' : 's'}</span>
+      </div>
+    </a>`;
+}
+
+// Compact, non-interactive thumbnail for a post's attached media on
+// the Explore page's "Today's Posts" cards. Deliberately NOT
+// the full renderMedia()/ttvHtml() treatment used in the feed — that
+// wires up its own click-to-play and lightbox handlers, which would
+// fight with the fact that the whole card here is already one big
+// <a> navigating to the post. A video gets a muted, non-interactive
+// <video> (renders its first frame same as a poster image would,
+// without needing a separately-stored poster URL) with a small play
+// badge so it doesn't look static, an image/gif gets a plain <img>.
+function explorePostThumbHtml(p) {
+  if (!p.media_url) return '';
+  if (p.media_type === 'video') {
+    return `<div class="expl-post-thumb expl-post-thumb-video">
+      <video src="${esc(p.media_url)}" muted playsinline preload="metadata"></video>
+      <span class="expl-post-thumb-play">${ICON_PLAY_MINI}</span>
+    </div>`;
+  }
+  return `<div class="expl-post-thumb"><img src="${esc(p.media_url)}" alt="" loading="lazy" decoding="async"></div>`;
+}
+const ICON_PLAY_MINI = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72c0 .6.66.96 1.17.65l10.9-6.86a.75.75 0 000-1.28L9.17 4.49A.75.75 0 008 5.14z"/></svg>';
+
+// A post only earns "Hot" from real engagement — views, likes,
+// replies, reposts (shares) and bookmarks (saves) it has actually
+// gathered — never just from being newest or from being #1 in a
+// short "Today's Posts" list (that used to say Hot even for a post
+// with zero engagement, just for landing first). Reposts and
+// bookmarks count for the most since sharing or saving something is
+// a stronger signal that it resonated than a quick like; a view
+// counts for the least since it costs the reader nothing. Tune
+// VIRAL_THRESHOLD if Hot ends up feeling too common or too rare for
+// how much traffic the site actually gets.
+const VIRAL_THRESHOLD = 60;
+function engagementScore(p) {
+  return (p.view_count || 0)
+    + (p.like_count || 0) * 8
+    + (p.reply_count || 0) * 8
+    + (p.repost_count || 0) * 12
+    + (p.bookmark_count || 0) * 12;
+}
+function isViralPost(p) {
+  return engagementScore(p) >= VIRAL_THRESHOLD;
+}
+
+// Hot when the numbers back it up (see isViralPost above), New for
+// anything posted within the last hour that hasn't earned Hot yet,
+// and otherwise just how long ago it went up.
+function postBadgeHtml(p) {
+  if (isViralPost(p)) return `<span class="trend-badge trend-badge-hot">${ICON_FIRE} Hot</span>`;
+  const ageMs = Date.now() - new Date(p.created_at).getTime();
+  if (ageMs < 3600 * 1000) return `<span class="trend-badge trend-badge-new">${ICON_UP} New</span>`;
+  return `<span class="trend-badge trend-badge-time">${timeAgo(p.created_at)}</span>`;
+}
+const ICON_FIRE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1 3-2 4.5-2 7.5a2 2 0 0 0 4 0c0-1-.5-1.5-.5-1.5 2 1 3.5 3.5 3.5 6a5 5 0 0 1-10 0c0-4 2.5-5.5 5-12Z"/></svg>';
+const ICON_UP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m17 7-10 10"/><path d="M9 7h8v8"/></svg>';
+
+// Local, search-page-only "which communities am I already in" lookup
+// — communities.js (and its own `joinedIds`) isn't loaded on this
+// page, so this can't reuse that global; a small self-contained
+// fetch keeps the Discover Communities section from suggesting
+// communities the person has already joined.
+let exploreJoinedIds = null; // Set, resolved once per page load
+async function getExploreJoinedIds() {
+  if (exploreJoinedIds) return exploreJoinedIds;
+  if (!currentSession) return (exploreJoinedIds = new Set());
+  const { data } = await sb.from('community_members').select('community_id').eq('user_id', currentSession.user.id);
+  return (exploreJoinedIds = new Set((data || []).map(r => r.community_id)));
+}
+
+async function fetchDiscoverCommunities(limit = 3) {
+  const joined = await getExploreJoinedIds();
+  const { data } = await sb.from('communities').select('id,name,slug,avatar_url,member_count')
+    .order('member_count', { ascending: false })
+    .limit(limit + joined.size); // overfetch a bit so filtering out joined ones still leaves enough
+  const list = (data || []).filter(c => !joined.has(c.id));
+  return list.slice(0, limit);
+}
+
+async function renderExploreTab(root) {
+  const [topPosts, communities] = await Promise.all([
+    fetchTopPostsToday(3), fetchDiscoverCommunities(3)
+  ]);
+
+  const postsHtml = topPosts.length
+    ? topPosts.map(p => explorePostHtml(p)).join('')
+    : `<div class="no-t">Nothing popular yet today.</div>`;
+
+  const commHtml = communities.length
+    ? communities.map(c => communityRowHtml(c, false)).join('')
+    : '';
+
+  root.innerHTML = `
+    ${renderRecentSection()}
+    <div class="expl-section">
+      <div class="expl-hdr">Today's Posts</div>
+      ${postsHtml}
+    </div>
+    ${commHtml ? `
+    <div class="expl-section">
+      <div class="expl-hdr">Discover Communities</div>
+      ${commHtml}
+      <a class="expl-showmore" href="/communities">Browse all communities</a>
+    </div>` : ''}`;
+}
+
+// News / Sports / Entertainment: best-effort — shows the latest posts
+// from any community whose name matches that topic. InteractInk doesn't
+// have a built-in post-classification system, so this is approximate
+// rather than curated, and just says so plainly when nothing matches.
+async function renderCategoryTab(root, category) {
+  const { data: comms } = await sb.from('communities').select('id,name').ilike('name', `%${category}%`).limit(10);
+  const ids = (comms || []).map(c => c.id);
+  if (!ids.length) {
+    root.innerHTML = `<div id="feed-empty">No ${esc(category)} communities yet — <a href="/communities">start one</a>?</div>`;
+    return;
+  }
+  await ensureFeedPrereqsLoaded();
+  const { data, error } = await sb.from('posts').select(POST_SELECT)
+    .eq('is_deleted', false)
+    .in('community_id', ids)
+    .order('created_at', { ascending: false })
+    .limit(30);
+
+  if (error) { root.innerHTML = `<div class="errmsg">${esc(error.message)}</div>`; return; }
+  if (!data.length) { root.innerHTML = `<div id="feed-empty">No ${esc(category)} posts yet.</div>`; return; }
+  await attachQuotedPosts(data);
+  root.innerHTML = data.map(p => postCardHtml(p)).join('');
+}
+
+async function runExplore() {
+  const root = document.getElementById('search-root');
+  root.innerHTML = skeletonFeedHtml(3);
+  if (exploreTab === 'explore') return renderExploreTab(root);
+  return renderCategoryTab(root, exploreTab);
+}
