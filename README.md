@@ -97,15 +97,15 @@ This is a plain static site — no build step, no Node server required.
 - `/home` (`index.html`) — board feed, new-thread form (accounts only), trending sidebar, realtime new-post updates
 - `/<username>/status/<uuid>` (`thread.html`) — single thread with all replies, realtime new-reply updates. Also reachable as `/i/status/<uuid>` before the author is known (e.g. a raw copy-pasted id) — the address bar upgrades to the canonical `/<username>/status/<uuid>` automatically once the post loads, same as x.com.
 - `/login`, `/signup` (`login.html` / `signup.html`) — create an account / sign in (instant — no email verification step)
-- `/<username>` (`profile.html`) — a user's public profile (banner, avatar, bio, their posts). Your own profile shows an "Edit Profile" button that goes to `editprofile.html`; visiting your own profile no longer auto-opens an edit form.
+- `/@<username>` (`profile.html`) — a user's public profile (banner, avatar, bio, their posts). Your own profile shows an "Edit Profile" button that goes to `editprofile.html`; visiting your own profile no longer auto-opens an edit form.
 - `editprofile.html` — its own page (Twitter's "Edit profile" screen) for banner, avatar, display name, and bio; logged-in users only, always edits your own account
-- `/<username>/followers`, `/<username>/following` (`followlist.html`) — its own page (Twitter's followers/following screen) with tabs, a Follow/Following button per row, live counts
+- `/@<username>/followers`, `/@<username>/following` (`followlist.html`) — its own page (Twitter's followers/following screen) with tabs, a Follow/Following button per row, live counts
 - `/articles` (`articles.html`) — "All Articles" / "Your Articles" tabs, search box, "+ Write" button. Replaces Lists as the sidebar's second primary nav item — see "Articles" below.
 - `/i/articles/<uuid>` (`article.html`) — a single Article: cover image (optional), title, author byline, full body, Edit/Delete for the author only
 - `/editarticle.html` or `/editarticle.html?id=<uuid>` (`editarticle.html`) — write a new Article or edit one you own; logged-in users only
 - `/lists` (`lists.html`) — "Your Lists" / "Lists you're on" tabs, "+ Create" button. No longer a primary sidebar item — reachable from the "···" **More** menu instead (see `js/common.js`'s `renderSideNav()`)
 - `/i/lists/<uuid>` (`list.html`) — a single List: header (Edit/Delete for the owner), a Posts tab (merged timeline of every member) and a Members tab (Remove button for the owner)
-- `/<username>/lists` (`profilelists.html`) — Lists a given profile is a (visible) member of; reached from that profile's "···" menu → "View Lists"
+- `/@<username>/lists` (`profilelists.html`) — Lists a given profile is a (visible) member of; reached from that profile's "···" menu → "View Lists"
 - `/search?q=<term>` (`search.html`) — search posts (body) or people (username/display name), tabbed
 - `/bookmarks` (`bookmarks.html`) — posts you've bookmarked (private to you)
 - `/notifications` (`notifications.html`) — likes, replies, and new followers; marks itself read on view, live badge count in the sidebar
@@ -119,8 +119,12 @@ while the address bar keeps the clean URL. Every internal link in the
 app is built through one of the helpers at the top of `js/common.js`
 (`profileUrl()`, `postUrl()`, `followListUrl()`, `messagesUrl()`), and
 those now build the pretty path directly (e.g. `profileUrl('marc')`
--> `/marc`), so the whole scheme lives in one place if it ever needs
-to change. That means pretty URLs need the `vercel.json` rewrites to
+-> `/@marc`), so the whole scheme lives in one place if it ever needs
+to change. Usernames are prefixed with `@` (like `/@marc`) so a
+profile path can never collide with a reserved single-segment route
+like `/login` or `/settings` — old bare `/marc` links still resolve
+and get redirected to the `/@marc` form (see the 301/308 rules in
+`vercel.json`/`_redirects`). That means pretty URLs need the `vercel.json` rewrites to
 actually be active — a real Vercel deploy, a Vercel Preview URL, or
 `vercel dev` locally — or every link 404s. Old-style links
 (`profile.html?u=marc`, `thread.html?id=<uuid>` — see the `legacy*()`

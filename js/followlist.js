@@ -10,7 +10,10 @@
 // first profile's list forever, since this file only ever gets
 // parsed once.
 function flReadUrl() {
-  const m = location.pathname.match(/^\/([^/]+)\/(followers|following)\/?$/);
+  // '@' is optional in the match so a legacy bare /<username>/followers
+  // link (pre-@ scheme) still resolves — loadFollowList() below then
+  // canonicalizes the address bar to the /@<username>/... form.
+  const m = location.pathname.match(/^\/@?([^/]+)\/(followers|following)\/?$/);
   if (m) return { flUsername: decodeURIComponent(m[1]), flTab: m[2] };
   const params = new URLSearchParams(location.search);
   return { flUsername: params.get('u'), flTab: params.get('tab') === 'following' ? 'following' : 'followers' };

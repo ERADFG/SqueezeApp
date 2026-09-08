@@ -264,7 +264,7 @@ module.exports = async function handler(req, res) {
   const blogUrlList = blogUrls(origin);
 
   const profileUrls = profiles.map(p =>
-    urlTag(`${origin}/${encodeURIComponent(p.username)}`, p.created_at, 'daily', '0.8'));
+    urlTag(`${origin}/@${encodeURIComponent(p.username)}`, p.created_at, 'daily', '0.8'));
 
   const postUrls = posts
     // a scheduled-but-not-yet-published post is invisible to everyone
@@ -272,7 +272,7 @@ module.exports = async function handler(req, res) {
     .filter(p => !p.scheduled_at || new Date(p.scheduled_at).getTime() <= now)
     .map(p => {
       const path = p.profile?.username
-        ? `/${encodeURIComponent(p.profile.username)}/status/${encodeURIComponent(p.id)}`
+        ? `/@${encodeURIComponent(p.profile.username)}/status/${encodeURIComponent(p.id)}`
         : `/i/status/${encodeURIComponent(p.id)}`;
       return urlTag(`${origin}${path}`, p.created_at, 'weekly', '0.6');
     });

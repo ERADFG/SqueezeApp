@@ -176,7 +176,7 @@ async function renderHome(origin) {
       itemListElement: posts.map((p, i) => ({
         '@type': 'ListItem', position: i + 1,
         url: p.profile?.username
-          ? `${origin}/${encodeURIComponent(p.profile.username)}/status/${encodeURIComponent(p.id)}`
+          ? `${origin}/@${encodeURIComponent(p.profile.username)}/status/${encodeURIComponent(p.id)}`
           : `${origin}/i/status/${encodeURIComponent(p.id)}`,
       })),
     },
@@ -185,7 +185,7 @@ async function renderHome(origin) {
   const postsHtml = posts.map(p => {
     const uname = p.profile?.username;
     const href = uname
-      ? `${origin}/${encodeURIComponent(uname)}/status/${encodeURIComponent(p.id)}`
+      ? `${origin}/@${encodeURIComponent(uname)}/status/${encodeURIComponent(p.id)}`
       : `${origin}/i/status/${encodeURIComponent(p.id)}`;
     return `<article>
   <a href="${href}"><strong>${esc(p.profile?.display_name || uname || 'unknown')}</strong> @${esc(uname || 'unknown')}</a>
@@ -228,7 +228,7 @@ async function renderProfile(origin, username) {
     return { status: 404, html };
   }
 
-  const canonical = `${origin}/${encodeURIComponent(profile.username)}`;
+  const canonical = `${origin}/@${encodeURIComponent(profile.username)}`;
   // "Posts" counts replies too (see loadReplyCountIntoStat() in
   // js/profile.js) — profiles.posts_count only tracks top-level posts,
   // so add the reply count here for the same total the live page shows.
@@ -256,7 +256,7 @@ async function renderProfile(origin, username) {
     },
   };
 
-  const postsHtml = posts.map(p => `<li><a href="${origin}/${encodeURIComponent(profile.username)}/status/${encodeURIComponent(p.id)}">${esc((p.body || '').slice(0, 140))}</a> <small>(${new Date(p.created_at).toLocaleDateString()})</small></li>`).join('\n');
+  const postsHtml = posts.map(p => `<li><a href="${origin}/@${encodeURIComponent(profile.username)}/status/${encodeURIComponent(p.id)}">${esc((p.body || '').slice(0, 140))}</a> <small>(${new Date(p.created_at).toLocaleDateString()})</small></li>`).join('\n');
 
   const profileRootHtml = `<article>
   <h1>${esc(profile.display_name || profile.username)}</h1>
@@ -337,7 +337,7 @@ async function renderCommunity(origin, slug) {
       itemListElement: posts.map((p, i) => ({
         '@type': 'ListItem', position: i + 1,
         url: p.profile?.username
-          ? `${origin}/${encodeURIComponent(p.profile.username)}/status/${encodeURIComponent(p.id)}`
+          ? `${origin}/@${encodeURIComponent(p.profile.username)}/status/${encodeURIComponent(p.id)}`
           : `${origin}/i/status/${encodeURIComponent(p.id)}`,
       })),
     },
@@ -346,7 +346,7 @@ async function renderCommunity(origin, slug) {
   const postsHtml = posts.map(p => {
     const uname = p.profile?.username;
     const href = uname
-      ? `${origin}/${encodeURIComponent(uname)}/status/${encodeURIComponent(p.id)}`
+      ? `${origin}/@${encodeURIComponent(uname)}/status/${encodeURIComponent(p.id)}`
       : `${origin}/i/status/${encodeURIComponent(p.id)}`;
     return `<article>
   <a href="${href}"><strong>${esc(p.profile?.display_name || uname || 'unknown')}</strong> @${esc(uname || 'unknown')}</a>
@@ -445,7 +445,7 @@ async function renderList(origin, id) {
       itemListElement: posts.map((p, i) => ({
         '@type': 'ListItem', position: i + 1,
         url: p.profile?.username
-          ? `${origin}/${encodeURIComponent(p.profile.username)}/status/${encodeURIComponent(p.id)}`
+          ? `${origin}/@${encodeURIComponent(p.profile.username)}/status/${encodeURIComponent(p.id)}`
           : `${origin}/i/status/${encodeURIComponent(p.id)}`,
       })),
     },
@@ -454,7 +454,7 @@ async function renderList(origin, id) {
   const postsHtml = posts.map(p => {
     const uname = p.profile?.username;
     const href = uname
-      ? `${origin}/${encodeURIComponent(uname)}/status/${encodeURIComponent(p.id)}`
+      ? `${origin}/@${encodeURIComponent(uname)}/status/${encodeURIComponent(p.id)}`
       : `${origin}/i/status/${encodeURIComponent(p.id)}`;
     return `<article>
   <a href="${href}"><strong>${esc(p.profile?.display_name || uname || 'unknown')}</strong> @${esc(uname || 'unknown')}</a>
@@ -544,7 +544,7 @@ async function renderArticle(origin, id) {
     author: author ? { '@type': 'Person', name: author.display_name || author.username } : undefined,
   };
 
-  const authorHref = author ? `${origin}/${encodeURIComponent(author.username)}` : null;
+  const authorHref = author ? `${origin}/@${encodeURIComponent(author.username)}` : null;
   const articleRootHtml = `<article>
   <h1>${esc(article.title)}</h1>
   ${author ? `<p><a href="${authorHref}">${esc(author.display_name || author.username)} @${esc(author.username)}</a> &middot; <small>${new Date(article.created_at).toLocaleString()}</small></p>` : ''}
@@ -615,7 +615,7 @@ async function renderThread(origin, username, id) {
   }
 
   const uname = post.profile?.username || username;
-  const canonicalPath = `/${encodeURIComponent(uname)}/status/${encodeURIComponent(post.id)}`;
+  const canonicalPath = `/@${encodeURIComponent(uname)}/status/${encodeURIComponent(post.id)}`;
   const canonical = origin + canonicalPath;
 
   const titleText = `${post.profile?.display_name || uname} on InteractInk: "${(post.body || '').slice(0, 60)}"`;
@@ -628,7 +628,7 @@ async function renderThread(origin, username, id) {
     author: {
       '@type': 'Person',
       name: post.profile?.display_name || uname,
-      url: `${origin}/${encodeURIComponent(uname)}`,
+      url: `${origin}/@${encodeURIComponent(uname)}`,
     },
     interactionStatistic: [
       { '@type': 'InteractionCounter', interactionType: 'https://schema.org/LikeAction', userInteractionCount: post.like_count || 0 },
@@ -639,7 +639,7 @@ async function renderThread(origin, username, id) {
   const repliesHtml = replies.map(r => `<li><strong>@${esc(r.profile?.username || 'unknown')}</strong>: ${esc((r.body || '').slice(0, 300))} <small>(${new Date(r.created_at).toLocaleString()})</small></li>`).join('\n');
 
   const threadRootHtml = `<article>
-  <a href="/${esc(uname)}"><strong>${esc(post.profile?.display_name || uname)}</strong> @${esc(uname)}</a>
+  <a href="/@${esc(uname)}"><strong>${esc(post.profile?.display_name || uname)}</strong> @${esc(uname)}</a>
   &middot; <small>${new Date(post.created_at).toLocaleString()}</small>
   <p>${esc(post.body)}</p>
   <small>${post.like_count || 0} likes &middot; ${post.reply_count || 0} replies &middot; ${post.repost_count || 0} reposts</small>

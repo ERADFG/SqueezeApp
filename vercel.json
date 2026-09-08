@@ -133,7 +133,7 @@
 
     { "src": "^/lists$",              "dest": "/lists.html" },
     { "src": "^/i/lists/(?<id>[^/]+)$", "dest": "/api/prerender?type=list&id=$id" },
-    { "src": "^/(?<username>[^/]+)/lists$", "dest": "/profilelists.html" },
+    { "src": "^/@(?<username>[^/]+)/lists$", "dest": "/profilelists.html" },
 
     { "src": "^/articles$",           "dest": "/articles.html" },
     { "src": "^/i/articles/(?<id>[^/]+)$", "dest": "/api/prerender?type=article&id=$id" },
@@ -142,12 +142,18 @@
     { "src": "^/messages/g/(?<gid>[^/]+)$", "dest": "/chat.html" },
     { "src": "^/messages/(?<username>[^/]+)$", "dest": "/chat.html" },
 
-    { "src": "^/(?<username>[^/]+)/followers$", "dest": "/followlist.html" },
-    { "src": "^/(?<username>[^/]+)/following$", "dest": "/followlist.html" },
+    { "src": "^/@(?<username>[^/]+)/followers$", "dest": "/followlist.html" },
+    { "src": "^/@(?<username>[^/]+)/following$", "dest": "/followlist.html" },
 
     { "src": "^/i/status/(?<id>[^/]+)$", "dest": "/api/prerender?type=thread&id=$id" },
-    { "src": "^/(?<username>[^/]+)/status/(?<id>[^/]+)$", "dest": "/api/prerender?type=thread&username=$username&id=$id" },
+    { "src": "^/@(?<username>[^/]+)/status/(?<id>[^/]+)$", "dest": "/api/prerender?type=thread&username=$username&id=$id" },
 
-    { "src": "^/(?<username>[^/]+)$", "dest": "/api/prerender?type=profile&username=$username" }
+    { "src": "^/(?<username>[^/]+)/status/(?<id>[^/]+)$", "status": 308, "headers": { "Location": "/@$username/status/$id" } },
+    { "src": "^/(?<username>[^/]+)/followers$", "status": 308, "headers": { "Location": "/@$username/followers" } },
+    { "src": "^/(?<username>[^/]+)/following$", "status": 308, "headers": { "Location": "/@$username/following" } },
+    { "src": "^/(?<username>[^/]+)/lists$", "status": 308, "headers": { "Location": "/@$username/lists" } },
+
+    { "src": "^/@(?<username>[^/]+)$", "dest": "/api/prerender?type=profile&username=$username" },
+    { "src": "^/(?<username>[^/]+)$", "status": 308, "headers": { "Location": "/@$username" } }
   ]
 }

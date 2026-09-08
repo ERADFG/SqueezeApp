@@ -530,20 +530,20 @@ if (window.visualViewport) {
 }
 syncViewportHeight();
 
-function profileUrl(username) { return `/${u_(username)}`; }
+function profileUrl(username) { return `/@${u_(username)}`; }
 function postUrl(post, replyId = null) {
   const id = replyId || post?.id;
-  const base = post?.profile?.username ? `/${u_(post.profile.username)}/status/${u_(post.id)}` : `/i/status/${u_(post?.id ?? id)}`;
+  const base = post?.profile?.username ? `/@${u_(post.profile.username)}/status/${u_(post.id)}` : `/i/status/${u_(post?.id ?? id)}`;
   return replyId ? `${base}#reply-${u_(replyId)}` : base;
 }
 function postUrlById(id, username = null) {
-  return username ? `/${u_(username)}/status/${u_(id)}` : `/i/status/${u_(id)}`;
+  return username ? `/@${u_(username)}/status/${u_(id)}` : `/i/status/${u_(id)}`;
 }
-function followListUrl(username, tab) { return `/${u_(username)}/${tab === 'following' ? 'following' : 'followers'}`; }
+function followListUrl(username, tab) { return `/@${u_(username)}/${tab === 'following' ? 'following' : 'followers'}`; }
 function messagesUrl(username = null) { return username ? `/messages/${u_(username)}` : '/messages'; }
 function communityUrl(slug) { return `/communities/${u_(slug)}`; }
 function listUrl(id) { return `/i/lists/${u_(id)}`; }
-function profileListsUrl(username) { return `/${u_(username)}/lists`; }
+function profileListsUrl(username) { return `/@${u_(username)}/lists`; }
 function articleUrl(id) { return `/i/articles/${u_(id)}`; }
 
 // Kept as prettyXxx() aliases too — profile.js/thread.js/followlist.js/
@@ -657,7 +657,21 @@ function currentArticleId() {
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
 function currentProfileUsername() {
   const seg = location.pathname.split('/').filter(Boolean)[0];
-  if (seg && USERNAME_RE.test(seg) && !RESERVED_TOP_LEVEL.has(seg.toLowerCase())) return decodeURIComponent(seg);
+  if (seg) {
+    // Canonical form is /@username. A leading '@' means the segment can
+    // only ever be a username (never a reserved word like /login or
+    // /settings, since none of those start with '@'), so it's checked
+    // first and needs no RESERVED_TOP_LEVEL lookup at all.
+    if (seg.startsWith('@')) {
+      const bare = seg.slice(1);
+      if (USERNAME_RE.test(bare)) return decodeURIComponent(bare);
+    } else if (USERNAME_RE.test(seg) && !RESERVED_TOP_LEVEL.has(seg.toLowerCase())) {
+      // Legacy bare /username link (pre-@ scheme, e.g. an old bookmark
+      // or shared link) — still resolved so it keeps working, then
+      // canonicalized to /@username by loadProfile()'s replaceState.
+      return decodeURIComponent(seg);
+    }
+  }
   return new URLSearchParams(location.search).get('u');
 }
 

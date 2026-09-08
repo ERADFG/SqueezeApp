@@ -118,10 +118,20 @@
 /i/lists/:id  /list.html  200
 /i/articles/:id  /article.html  200
 /i/status/:id  /thread.html  200
-/:username/status/:id  /thread.html  200
-/:username/followers  /followlist.html  200
-/:username/following  /followlist.html  200
-/:username/lists  /profilelists.html  200
+
+# --- username routes now live under /@username (matches profileUrl() etc. in js/common.js) ---
+/@:username/status/:id  /thread.html  200
+/@:username/followers  /followlist.html  200
+/@:username/following  /followlist.html  200
+/@:username/lists  /profilelists.html  200
+
+# --- legacy bare-username links (pre-@ scheme): 301 to the new /@username form so old
+# bookmarks/shared links keep working instead of 404ing ---
+/:username/status/:id  /@:username/status/:id  308
+/:username/followers  /@:username/followers  308
+/:username/following  /@:username/following  308
+/:username/lists  /@:username/lists  308
 
 # --- generic username profile catch-all: MUST be last, least specific ---
-/:username  /profile.html  200
+/@:username  /profile.html  200
+/:username  /@:username  308

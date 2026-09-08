@@ -14,7 +14,9 @@
 // the life of the tab, so viewing a *different* profile's Lists
 // later would otherwise silently keep showing the first one forever.
 function plReadUrl() {
-  const m = location.pathname.match(/^\/([^/]+)\/lists\/?$/);
+  // '@' optional so a legacy bare /<username>/lists link still resolves;
+  // loadProfileLists() below canonicalizes to /@<username>/lists.
+  const m = location.pathname.match(/^\/@?([^/]+)\/lists\/?$/);
   if (m) return decodeURIComponent(m[1]);
   return new URLSearchParams(location.search).get('u');
 }
