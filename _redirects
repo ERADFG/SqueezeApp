@@ -2,6 +2,9 @@
 # 200 = rewrite (URL in browser stays the same, this file's content is served)
 # More specific rules must come before the generic /:username catch-all at the bottom
 
+# --- root: html_handling "none" disables Cloudflare's automatic index.html-at-/ behavior, so this must be explicit ---
+/  /index.html  200
+
 # --- static utility pages with clean URLs ---
 /notifications  /notifications.html  200
 /bookmarks  /bookmarks.html  200
