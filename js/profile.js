@@ -65,6 +65,16 @@ async function loadProfile() {
     root.innerHTML = `<div class="errmsg">No user found with that username.</div>`;
     return;
   }
+  // Defense in depth against a dirty stored username (one or more
+  // stray leading '@'s baked into profiles.username — see
+  // supabase/fix_leading_at_usernames.sql). profileUrl()/cleanUsername()
+  // already guard every *Url() builder against this, but profile.username
+  // itself also gets used directly for display text (document.title,
+  // setPageH1/setPageDescription below, canonical) — sanitizing it once
+  // here, right after the fetch, means every use of `profile.username`
+  // for the rest of this function is guaranteed clean instead of
+  // depending on each call site remembering to clean it individually.
+  profile.username = cleanUsername(profile.username);
   viewedProfile = profile;
   isOwnProfile = session && session.user.id === profile.id;
   document.title = `@${profile.username} — InteractInk`;

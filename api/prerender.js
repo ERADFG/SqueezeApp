@@ -54,6 +54,45 @@ function esc(str) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+// Strips stray leading '@' character(s) off a *stored* profiles.username
+// value before it's ever used to build a "/@..." link or display text.
+//
+// ROOT CAUSE this guards against: profiles.username rows can end up with
+// one or more leading '@' baked in (e.g. "@interactink" or even
+// "@@@@@@@@@@interactink") — see supabase/fix_leading_at_usernames.sql
+// for how that happens and the one-time DB cleanup/constraint that
+// should be run to stop new rows from getting into this state.
+//
+// Until that migration has actually been run (or for any row that
+// somehow gets dirty again), every `/@${username}` this file builds —
+// canonical links, og:url, JSON-LD, post/author links, the visible
+// "@handle" text — MUST go through this first. Every function below
+// used to strip '@' off the *incoming request* username (which is
+// already clean 99% of the time, since js/common.js's cleanUsername()
+// does the same job client-side) but then turned around and built every
+// link from the *raw* profile.username / p.profile.username coming
+// straight out of Supabase — so a single dirty row was enough to hand
+// out "/@@@@@...username" links in cached, publicly-served HTML
+// (canonical tag, og:url, every post-author link) forever, which is
+// exactly what vercel.json's "^/@{2,}" collapse-redirect rule keeps
+// firing on: each dirty link this file serves is a fresh trip around
+// that redirect, which is how a single tap on a dirty profile turns
+// into ERR_TOO_MANY_REDIRECTS.
+function cleanUsername(u) { return String(u ?? '').replace(/^@+/, ''); }
+
+// Applies cleanUsername() to every profile.username this file pulled
+// out of Supabase for a list of rows shaped like `{ profile: { username
+// } }` (posts) — mutates in place, called right after each such fetch
+// so every consumer downstream (JSON-LD, postsHtml, etc.) automatically
+// gets the sanitized value without having to remember to clean it at
+// each of the many call sites below.
+function sanitizePostAuthors(rows) {
+  for (const r of (rows || [])) {
+    if (r && r.profile && r.profile.username) r.profile.username = cleanUsername(r.profile.username);
+  }
+  return rows;
+}
+
 async function sbGet(tbl, query) {
   const url = `${SUPABASE_URL}/rest/v1/${tbl}?${query}`;
   let resp;
@@ -163,8 +202,8 @@ function jsonLdScriptTag(obj) {
 // ── HOME ("/", "/home") ──
 
 async function renderHome(origin) {
-  const posts = await sbGet('posts',
-    `is_deleted=eq.false&select=id,body,created_at,like_count,reply_count,repost_count,profile:profiles!posts_author_id_fkey(username,display_name,avatar_url)&order=created_at.desc&limit=30`) || [];
+  const posts = sanitizePostAuthors(await sbGet('posts',
+    `is_deleted=eq.false&select=id,body,created_at,like_count,reply_count,repost_count,profile:profiles!posts_author_id_fkey(username,display_name,avatar_url)&order=created_at.desc&limit=30`) || []);
 
   let html = readTemplate('index.html');
 
@@ -221,6 +260,9 @@ async function renderProfile(origin, username) {
 
   const profiles = await sbGet('profiles', `username=ilike.${encodeURIComponent(username)}&select=*`);
   const profile = profiles && profiles[0];
+  // See cleanUsername() above — profile.username is the raw DB value
+  // and must never be used to build a link/title/canonical unsanitized.
+  if (profile) profile.username = cleanUsername(profile.username);
 
   if (!profile) {
     html = replaceLine(html, '<title>Profile — InteractInk</title>', '<title>User not found — InteractInk</title>');
@@ -328,8 +370,8 @@ async function renderCommunity(origin, slug) {
   }
 
   const canonical = `${origin}/communities/${encodeURIComponent(community.slug)}`;
-  const posts = await sbGet('posts',
-    `community_id=eq.${community.id}&is_deleted=eq.false&select=id,body,created_at,like_count,reply_count,repost_count,profile:profiles!posts_author_id_fkey(username,display_name,avatar_url)&order=created_at.desc&limit=20`) || [];
+  const posts = sanitizePostAuthors(await sbGet('posts',
+    `community_id=eq.${community.id}&is_deleted=eq.false&select=id,body,created_at,like_count,reply_count,repost_count,profile:profiles!posts_author_id_fkey(username,display_name,avatar_url)&order=created_at.desc&limit=20`) || []);
 
   const titleText = `${community.name} — InteractInk`;
   const descText = (community.description || `${community.name} — a community on InteractInk.`).slice(0, 200);
@@ -434,10 +476,10 @@ async function renderList(origin, id) {
   const memberRows = await sbGet('list_members', `list_id=eq.${list.id}&select=member_id`) || [];
   const memberIds = memberRows.map(r => r.member_id);
 
-  const posts = memberIds.length
+  const posts = sanitizePostAuthors(memberIds.length
     ? (await sbGet('posts',
         `author_id=in.(${memberIds.map(m => encodeURIComponent(m)).join(',')})&is_deleted=eq.false&select=id,body,created_at,like_count,reply_count,repost_count,profile:profiles!posts_author_id_fkey(username,display_name,avatar_url)&order=created_at.desc&limit=20`) || [])
-    : [];
+    : []);
 
   const titleText = `${list.name} — InteractInk`;
   const descText = (list.description || `${list.name} — a List on InteractInk.`).slice(0, 200);
@@ -537,6 +579,7 @@ async function renderArticle(origin, id) {
 
   const authors = await sbGet('profiles', `id=eq.${encodeURIComponent(article.author_id)}&select=username,display_name,avatar_url`);
   const author = authors && authors[0];
+  if (author) author.username = cleanUsername(author.username);
 
   const titleText = `${article.title} — InteractInk`;
   const descText = (article.body || '').replace(/\s+/g, ' ').trim().slice(0, 200);
@@ -613,6 +656,8 @@ async function renderThread(origin, username, id) {
     sbGet('replies', `post_id=eq.${encodeURIComponent(id)}&is_deleted=eq.false&select=body,created_at,profile:profiles(username,display_name)&order=created_at.asc&limit=50`).then(r => r || []),
   ]);
   const post = posts && posts[0];
+  if (post && post.profile && post.profile.username) post.profile.username = cleanUsername(post.profile.username);
+  sanitizePostAuthors(replies);
 
   if (!post) {
     html = replaceLine(html, '<title>Post — InteractInk</title>', '<title>Post not found — InteractInk</title>');
