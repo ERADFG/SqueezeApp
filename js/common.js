@@ -370,6 +370,19 @@ function setJsonLd(obj) {
 
 function u_(s) { return encodeURIComponent(s); }
 
+// Strips any leading '@' character(s) off a username before it goes into
+// a /@username URL. Every *Url() builder below runs its username through
+// this first — without it, a caller that (accidentally, or because a
+// stored username is dirty — see supabase/fix_leading_at_usernames.sql)
+// passes in a value that already starts with '@' ends up with the URL
+// prepending a second '@' on top of it, and a caller that does this more
+// than once (e.g. a value that's round-tripped through more than one of
+// these builders) stacks up '@'s — the exact bug behind
+// /@@@@@@@@@@username links that don't resolve to anything. Trims ALL
+// leading '@'s (not just one) so it self-heals even from already-mangled
+// input, not just the single-'@' case.
+function cleanUsername(u) { return String(u ?? '').replace(/^@+/, ''); }
+
 // ── HOVER/TOUCH PREFETCH — this app does full page navigations (no
 // SPA router), so the biggest thing standing between a click and a
 // painted page is the round trip to fetch that page's HTML. Warming
@@ -530,20 +543,20 @@ if (window.visualViewport) {
 }
 syncViewportHeight();
 
-function profileUrl(username) { return `/@${u_(username)}`; }
+function profileUrl(username) { return `/@${u_(cleanUsername(username))}`; }
 function postUrl(post, replyId = null) {
   const id = replyId || post?.id;
-  const base = post?.profile?.username ? `/@${u_(post.profile.username)}/status/${u_(post.id)}` : `/i/status/${u_(post?.id ?? id)}`;
+  const base = post?.profile?.username ? `/@${u_(cleanUsername(post.profile.username))}/status/${u_(post.id)}` : `/i/status/${u_(post?.id ?? id)}`;
   return replyId ? `${base}#reply-${u_(replyId)}` : base;
 }
 function postUrlById(id, username = null) {
-  return username ? `/@${u_(username)}/status/${u_(id)}` : `/i/status/${u_(id)}`;
+  return username ? `/@${u_(cleanUsername(username))}/status/${u_(id)}` : `/i/status/${u_(id)}`;
 }
-function followListUrl(username, tab) { return `/@${u_(username)}/${tab === 'following' ? 'following' : 'followers'}`; }
-function messagesUrl(username = null) { return username ? `/messages/${u_(username)}` : '/messages'; }
+function followListUrl(username, tab) { return `/@${u_(cleanUsername(username))}/${tab === 'following' ? 'following' : 'followers'}`; }
+function messagesUrl(username = null) { return username ? `/messages/${u_(cleanUsername(username))}` : '/messages'; }
 function communityUrl(slug) { return `/communities/${u_(slug)}`; }
 function listUrl(id) { return `/i/lists/${u_(id)}`; }
-function profileListsUrl(username) { return `/@${u_(username)}/lists`; }
+function profileListsUrl(username) { return `/@${u_(cleanUsername(username))}/lists`; }
 function articleUrl(id) { return `/i/articles/${u_(id)}`; }
 
 // Kept as prettyXxx() aliases too — profile.js/thread.js/followlist.js/
@@ -663,7 +676,11 @@ function currentProfileUsername() {
     // /settings, since none of those start with '@'), so it's checked
     // first and needs no RESERVED_TOP_LEVEL lookup at all.
     if (seg.startsWith('@')) {
-      const bare = seg.slice(1);
+      // Strip ALL leading '@'s, not just one — a stray extra '@' (from a
+      // dirty stored username or an old mangled link, see cleanUsername()
+      // in this file) must still resolve to the right profile instead of
+      // failing USERNAME_RE and landing on "No user specified".
+      const bare = cleanUsername(seg);
       if (USERNAME_RE.test(bare)) return decodeURIComponent(bare);
     } else if (USERNAME_RE.test(seg) && !RESERVED_TOP_LEVEL.has(seg.toLowerCase())) {
       // Legacy bare /username link (pre-@ scheme, e.g. an old bookmark

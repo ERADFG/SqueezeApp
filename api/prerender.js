@@ -213,6 +213,12 @@ async function renderHome(origin) {
 async function renderProfile(origin, username) {
   let html = readTemplate('profile.html');
 
+  // Defense in depth against a stray leading '@' making it this far (a
+  // dirty stored profiles.username value, or a pre-canonicalization
+  // request hitting this function directly) — see cleanUsername() in
+  // js/common.js for the client-side counterpart of this same guard.
+  username = String(username || '').replace(/^@+/, '');
+
   const profiles = await sbGet('profiles', `username=ilike.${encodeURIComponent(username)}&select=*`);
   const profile = profiles && profiles[0];
 
@@ -589,6 +595,12 @@ async function renderArticle(origin, id) {
 
 async function renderThread(origin, username, id) {
   let html = readTemplate('thread.html');
+
+  // Same stray-'@' guard as renderProfile() above — `username` here is
+  // only ever used to build the canonical /@username/status/:id link
+  // (the real post author comes from the post row itself), but it
+  // should still never leak a mangled '@@@…' value into that link.
+  username = String(username || '').replace(/^@+/, '');
 
   // `replies` is keyed off the route's `id` param directly, same as
   // `posts` below — it doesn't depend on the post fetch resolving
