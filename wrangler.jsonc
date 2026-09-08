@@ -1,0 +1,9 @@
+{
+  "name": "interactink",
+  "compatibility_date": "2026-09-07",
+  "assets": {
+    "directory": ".",
+    "html_handling": "none",
+    "not_found_handling": "404-page"
+  }
+}
