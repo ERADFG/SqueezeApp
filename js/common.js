@@ -623,7 +623,7 @@ function currentStatusId() {
 // "profile.html" itself as the first path segment, treated it as
 // the username to look up, and always failed with "No user found",
 // even for your own profile link.
-const RESERVED_TOP_LEVEL = new Set(['home','notifications','messages','bookmarks','settings','search','login','signup','rules','i','communities','lists','articles']);
+const RESERVED_TOP_LEVEL = new Set(['home','notifications','messages','bookmarks','settings','search','login','signup','rules','i','communities','lists','articles','about','contact','privacy','terms','achievements','insights','start','admin','help','blog']);
 
 // Reads the community slug out of the current URL on community.html,
 // whether it arrived as a pretty path (/communities/some-slug) or the
