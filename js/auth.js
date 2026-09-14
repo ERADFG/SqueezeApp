@@ -43,13 +43,25 @@ setTimeout(() => resolveAuthReady(), 8000);
 // the calling action indefinitely.
 async function getSessionSafe(timeoutMs = 6000) {
   try {
-    const { data } = await Promise.race([
+    const { data, error } = await Promise.race([
       sb.auth.getSession(),
       new Promise((_, reject) => setTimeout(() => reject(new Error('getSession timed out')), timeoutMs))
     ]);
-    return data.session;
+    if (error) {
+      // A real auth error (e.g. an invalid/expired refresh token) means
+      // this session is dead — treat it as logged out rather than
+      // trusting whatever's cached, so callers correctly prompt a
+      // re-login instead of sending a request that's doomed to fail
+      // RLS with an error indistinguishable from a policy bug.
+      console.error('getSession returned an error, treating as logged out:', error);
+      return null;
+    }
+    return data.session; // null here already means "not logged in" — pass it through as-is
   } catch (e) {
-    console.error('getSession failed/timed out, falling back to cached session:', e);
+    // Only a genuine lock/timeout (no verdict from Supabase either way)
+    // falls back to the cached session — an actual error is handled
+    // above and never reaches here.
+    console.error('getSession timed out (stuck lock) — falling back to cached session:', e);
     return currentSession;
   }
 }
@@ -57,6 +69,58 @@ async function getSessionSafe(timeoutMs = 6000) {
 async function getProfile(userId) {
   const { data } = await sb.from('profiles').select('*').eq('id', userId).single();
   return data || null;
+}
+
+// ─────────────────────────────────────────────────────────────
+// ACCOUNT WALL — InteractInk no longer allows logged-out browsing.
+// Every page sets <body data-page="..."> (see each .html file); the
+// handful listed here are the only ones a signed-out visitor is
+// allowed to see at all — the auth screens themselves plus the
+// static informational pages. Everything else (the feed, profiles,
+// communities, chat, settings, ...) requires a real session.
+// ─────────────────────────────────────────────────────────────
+const AUTH_GATE_PUBLIC_PAGES = ['auth', 'about', 'contact', 'privacy', 'terms', 'rules', '404'];
+
+function authGateIsPublicPage() {
+  return AUTH_GATE_PUBLIC_PAGES.includes(document.body?.dataset?.page);
+}
+
+// Called wherever renderAuthArea() has just determined there is NO
+// session. Sends a signed-out visitor straight to /login unless
+// they're already somewhere in the public allow-list above, carrying
+// along where they were trying to go (?redirect=) so login/signup can
+// bounce them back afterward. Returns true when it redirected so the
+// caller can bail out immediately instead of still painting a
+// logged-out version of a gated page first.
+function enforceAuthGate() {
+  if (authGateIsPublicPage()) return false;
+  const dest = location.pathname + location.search;
+  location.href = '/login' + (dest && dest !== '/' ? `?redirect=${encodeURIComponent(dest)}` : '');
+  return true;
+}
+
+// The mirror image: someone who already has a session has no reason
+// to be looking at the login/signup/start screen — send them on to
+// their feed instead of showing them the auth form again.
+// EXCEPTION: ?add=1 means they got here on purpose from the account-
+// switcher sheet's "Add account" row specifically *because* they're
+// already signed in and want to sign into a second account — bouncing
+// them straight back here would make that row a dead tap.
+function redirectIfAlreadyAuthed() {
+  if (document.body?.dataset?.page !== 'auth') return false;
+  if (new URLSearchParams(location.search).get('add') === '1') return false;
+  location.href = postAuthDestination();
+  return true;
+}
+
+// Where to send someone right after they finish logging in or signing
+// up: back to whatever gated page enforceAuthGate() bounced them from
+// (?redirect=...), or /home by default. Only ever honors a same-site
+// path (starts with "/") so this can't be turned into an open
+// redirect via a crafted login link.
+function postAuthDestination() {
+  const redirect = new URLSearchParams(location.search).get('redirect');
+  return (redirect && redirect.startsWith('/')) ? redirect : '/home';
 }
 
 // Calls api/ip.js, which reads the caller's real IP server-side (not
@@ -99,8 +163,16 @@ async function renderAuthArea() {
     ({ data: { session } } = await sb.auth.getSession());
   } catch (e) {
     console.error('getSession failed, continuing as logged out:', e);
-  } finally {
+    currentSession = null;
+    currentProfile = null;
+    unreadNotifCount = 0;
+    unreadChatCount = 0;
     resolveAuthReady();
+    if (enforceAuthGate()) return;
+    renderSideNav(); renderMobileChrome();
+    if (el) el.innerHTML = `<div class="auth-cta"><a class="cta-primary" href="/start"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"></path></svg><span>Create account</span></a></div>`;
+    refreshPostGates();
+    return;
   }
   currentSession = session;
 
@@ -108,13 +180,31 @@ async function renderAuthArea() {
     currentProfile = null;
     unreadNotifCount = 0;
     unreadChatCount = 0;
+    resolveAuthReady();
+    if (enforceAuthGate()) return;
     renderSideNav(); renderMobileChrome();
     if (el) el.innerHTML = `<div class="auth-cta"><a class="cta-primary" href="/start"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"></path></svg><span>Create account</span></a></div>`;
     refreshPostGates();
     return;
   }
 
+  // Signed in, but sitting on the login/signup/start screen — bounce
+  // onward instead of showing the auth form to someone who doesn't
+  // need it.
+  if (redirectIfAlreadyAuthed()) return;
+
+  // NOTE: authReady must not resolve until currentProfile is actually
+  // populated below — pages like profile.js's loadProfile() run the
+  // instant authReady resolves and read currentProfile synchronously
+  // right after. Resolving any earlier (e.g. right after getSession())
+  // leaves a window where currentSession is set but currentProfile is
+  // still null, which used to make a bare profile-page hit (no
+  // username in the URL, e.g. the sidebar's own "Profile"/account-card
+  // link) wrongly show "No user specified" instead of redirecting to
+  // your own profile — timing-dependent on how fast the profiles query
+  // came back, so it didn't reproduce every time.
   currentProfile = await getProfile(session.user.id);
+  resolveAuthReady();
 
   // IP ban check — records this device/network's IP against the
   // account (api/ip.js reads the real IP server-side; see
@@ -129,6 +219,7 @@ async function renderAuthArea() {
     currentProfile = null;
     unreadNotifCount = 0;
     unreadChatCount = 0;
+    if (enforceAuthGate()) { alert('This device/network has been banned from InteractInk.'); return; }
     renderSideNav(); renderMobileChrome();
     if (el) el.innerHTML = `<div class="auth-cta"><a class="cta-primary" href="/start"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"></path></svg><span>Create account</span></a></div>`;
     refreshPostGates();
@@ -159,10 +250,11 @@ async function renderAuthArea() {
     currentProfile = null;
     unreadNotifCount = 0;
     unreadChatCount = 0;
+    const until = suspendedUntil ? ` until ${new Date(suspendedUntil).toLocaleString()}` : '';
+    if (enforceAuthGate()) { alert(`This account has been suspended${until}.`); return; }
     renderSideNav(); renderMobileChrome();
     if (el) el.innerHTML = `<div class="auth-cta"><a class="cta-primary" href="/start"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"></path></svg><span>Create account</span></a></div>`;
     refreshPostGates();
-    const until = suspendedUntil ? ` until ${new Date(suspendedUntil).toLocaleString()}` : '';
     alert(`This account has been suspended${until}.`);
     return;
   }
@@ -538,7 +630,7 @@ async function doSignUp(e) {
         const { error: profileErr } = await sb.from('profiles').update(patch).eq('id', data.user.id);
         if (profileErr) console.error('Failed to save age/gender:', profileErr);
       }
-      location.href = '/home';
+      location.href = postAuthDestination();
       return;
     }
 
@@ -639,7 +731,7 @@ async function doLogIn(e) {
       btn.disabled = false; btn.value = 'Log In';
       return;
     }
-    location.href = '/home';
+    location.href = postAuthDestination();
   } catch (err) {
     showErr(errEl, err.message === 'Invalid login credentials'
       ? 'Incorrect email or password.'
@@ -649,8 +741,34 @@ async function doLogIn(e) {
 }
 
 // ── LOG OUT ──
+// Signs out of the account you're currently on only. If you've got
+// other accounts saved (see upsertSavedAccount()/the account-switch
+// sheet in common.js), logging out doesn't dump you back to a
+// logged-out state — it drops the account you just logged out of
+// from the saved list and quietly resumes the next saved one, so the
+// other accounts you're "logged into" on this device stay that way.
+// Only when there's nobody left to fall back to do you actually land
+// on a logged-out /home.
 async function logOut() {
+  const outId = currentSession?.user?.id || null;
   await sb.auth.signOut();
+
+  let remaining = outId ? loadSavedAccounts().filter(a => a.id !== outId) : loadSavedAccounts();
+  saveSavedAccounts(remaining);
+
+  while (remaining.length) {
+    const next = remaining[0];
+    try {
+      const { error } = await sb.auth.setSession({ access_token: next.access_token, refresh_token: next.refresh_token });
+      if (error) throw error;
+      break; // resumed another saved account — head to the feed signed in as them
+    } catch (e) {
+      // That saved session had expired/gone bad — drop it and try the next one.
+      remaining = remaining.slice(1);
+      saveSavedAccounts(remaining);
+    }
+  }
+
   location.href = '/home';
 }
 
