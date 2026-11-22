@@ -1,0 +1,41 @@
+{
+ "settings": {
+  "running": true,
+  "intervalSeconds": 10,
+  "dailyCap": 0,
+  "likesAbove": 10,
+  "niche": [],
+  "siteUrl": "https://interactink.com",
+  "boardId": "936115541236450678",
+  "dryRun": false,
+  "autoLearn": true,
+  "learnEveryHours": 6,
+  "recycleDays": 30
+ },
+ "queue": [],
+ "posted": [],
+ "log": [
+  {
+   "t": "2026-11-22T14:27:24.800Z",
+   "level": "info",
+   "msg": "No eligible pins in the queue"
+  },
+  {
+   "t": "2026-11-22T14:27:24.800Z",
+   "level": "info",
+   "msg": "Learned your niche from 0 pins (0 added to the queue)"
+  },
+  {
+   "t": "2026-11-22T14:27:21.112Z",
+   "level": "info",
+   "msg": "Batch started (up to 5 pins, 240s budget)"
+  }
+ ],
+ "learned": {
+  "at": "2026-11-22T14:27:24.799Z",
+  "pinsScanned": 0,
+  "keywords": []
+ },
+ "learnTried": "2026-11-22T14:27:24.799Z",
+ "account": null
+}
