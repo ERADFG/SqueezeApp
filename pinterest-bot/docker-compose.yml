@@ -1,0 +1,14 @@
+# For a VPS: docker compose up -d --build
+# Put HTTPS in front (Caddy or Cloudflare) before you open the admin page from outside.
+services:
+  pinbot:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      HOST: 0.0.0.0
+      DATA_DIR: /data
+    ports: ["127.0.0.1:3000:3000"]
+    volumes: ["pinbot-data:/data"]
+volumes:
+  pinbot-data: {}

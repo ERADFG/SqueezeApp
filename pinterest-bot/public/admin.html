@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pin bot admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3f4f6;--panel:#fff;--ink:#1c1f24;--mute:#667085;--line:#d9dde3;--accent:#e60023;--ok:#18794e;--bad:#b42318}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "IBM Plex Sans",system-ui,sans-serif}
+header{position:sticky;top:0;z-index:2;display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px 20px;background:var(--panel);border-bottom:1px solid var(--line)}
+h1{margin:0 auto 0 0;font-size:18px;font-weight:600}
+#dot{width:10px;height:10px;border-radius:50%;background:var(--line)}
+#dot.on{background:var(--ok)}
+main{max-width:960px;margin:0 auto;padding:0 20px 60px}
+section{padding:22px 0;border-bottom:1px solid var(--line)}
+h2{margin:0 0 12px;font-size:16px;font-weight:600}
+.stats{display:flex;flex-wrap:wrap;gap:32px}
+.stats b{display:block;font-size:22px;font-weight:600}
+.stats span,.hint{color:var(--mute);font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+label{display:block;font-weight:500;font-size:14px}
+input,textarea,button{font:inherit}
+input,textarea{width:100%;margin-top:4px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
+textarea{min-height:120px;font-family:ui-monospace,Menlo,monospace;font-size:13px}
+button{padding:8px 14px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;align-items:center}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-weight:500;color:var(--mute)}
+td.title{max-width:380px;overflow-wrap:anywhere}
+.posted{color:var(--ok)}.failed,.error{color:var(--bad)}.pending{color:var(--mute)}
+.scroll{overflow-x:auto}
+#msg{min-height:22px;font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chips span{padding:2px 9px;border:1px solid var(--line);border-radius:12px;background:#fff;font-size:13px}
+#log{margin:0;padding:0;list-style:none;font-size:13px}
+#log li{padding:3px 0;border-bottom:1px solid var(--line)}
+#log time{color:var(--mute);margin-right:8px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Pin bot</h1>
+  <span id="dot" aria-hidden="true"></span><span id="status">Loading</span><span id="acct" class="hint"></span>
+  <button id="postnow">Post one now</button>
+  <button id="toggle" class="primary">Start bot</button>
+</header>
+<main>
+  <p id="msg" role="status"></p>
+
+  <section>
+    <div class="stats">
+      <div><b id="st-pending">0</b><span>Waiting in queue</span></div>
+      <div><b id="st-posted">0</b><span>Posted in total</span></div>
+      <div><b id="st-today">0</b><span>Posted today</span></div>
+      <div><b id="st-failed">0</b><span>Failed</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Settings</h2>
+    <div class="grid">
+      <label>Website URL every pin links to<input id="siteUrl" type="url" placeholder="https://example.com"></label>
+      <label>Board ID<input id="boardId" list="boards" placeholder="Load boards, then pick one"></label>
+      <label>Extra niche keywords, optional, comma separated<input id="niche" placeholder="ink, writing, journaling"></label>
+      <label>Seconds between pins<input id="interval" type="number" min="5"></label>
+      <label>Daily cap, 0 means no cap<input id="cap" type="number" min="0"></label>
+      <label>Only pins with more than this many likes<input id="likes" type="number" min="0"></label>
+      <label><input id="dry" type="checkbox" style="width:auto;margin-right:6px">Dry run: check everything, post nothing</label>
+      <label><input id="auto" type="checkbox" style="width:auto;margin-right:6px">Re-learn my niche every 6 hours</label>
+    </div>
+    <datalist id="boards"></datalist>
+    <p class="hint">The bot slows down on its own when Pinterest rate-limits it. Posting every 10 seconds on a live account can still get it flagged, so run a dry run first.</p>
+    <div class="row"><button id="save" class="primary">Save settings</button><button id="loadBoards">Load my boards</button></div>
+  </section>
+
+  <section>
+    <h2>Your niche</h2>
+    <p class="hint" id="learnInfo">Not learned yet.</p>
+    <div id="chips" class="chips"></div>
+    <div class="row"><button id="learn">Learn from my account now</button></div>
+    <p class="hint">The bot reads every pin and board on your account, weights pins people liked or saved, and only queues pins that fit. Pins on your account that link to your site and have more likes than the limit are queued automatically.</p>
+  </section>
+
+  <section>
+    <h2>Add pins to the queue</h2>
+    <label>JSON array of pins you have the rights to use
+      <textarea id="add" placeholder='[{"imageUrl":"https://.../pin.jpg","title":"Pin title","description":"Short description","likes":25,"path":"/some-page","tags":["ink"]}]'></textarea>
+    </label>
+    <p class="hint">Required: imageUrl (https) and title. Optional: description, alt, likes, path, tags, boardId. Duplicate images are skipped.</p>
+    <div class="row"><button id="addBtn" class="primary">Add to queue</button></div>
+  </section>
+
+  <section>
+    <h2>Queue</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>Title</th><th>Likes</th><th>Status</th><th></th></tr></thead>
+      <tbody id="queue"></tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>Recently posted</h2>
+    <div class="scroll"><table><tbody id="posted"></tbody></table></div>
+  </section>
+
+  <section>
+    <h2>Activity</h2>
+    <ul id="log"></ul>
+  </section>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const flash = (t, bad) => { const m = $('#msg'); m.textContent = t; m.style.color = bad ? 'var(--bad)' : 'var(--ok)'; };
+
+async function api(path, method = 'GET', body) {
+  const r = await fetch('/api' + path, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+const act = fn => async () => { try { await fn(); refresh(); } catch (e) { flash(e.message, true); } };
+
+let formFilled = false;
+async function refresh() {
+  const st = await api('/state'); const { settings: s, stats, queue, posted, log } = st;
+  $('#status').textContent = s.running ? 'Running' : 'Stopped';
+  $('#dot').className = s.running ? 'on' : '';
+  $('#toggle').textContent = s.running ? 'Stop bot' : 'Start bot';
+  $('#toggle').dataset.run = s.running ? '0' : '1';
+  for (const k in stats) $('#st-' + k).textContent = stats[k];
+  $('#acct').textContent = st.account ? `Account ${st.account.username}${st.sandbox ? ' (sandbox)' : ''}` : (st.sandbox ? 'Sandbox' : '');
+  $('#learnInfo').textContent = st.learned ? `Learned from ${st.learned.pinsScanned} pins on ${new Date(st.learned.at).toLocaleString()}.` : 'Not learned yet. Click the button, or start the bot.';
+  $('#chips').innerHTML = (st.learned?.keywords || []).map(k => `<span title="weight ${k.weight}">${esc(k.w)}</span>`).join('');
+
+  if (!formFilled) {
+    $('#siteUrl').value = s.siteUrl; $('#boardId').value = s.boardId; $('#niche').value = s.niche.join(', ');
+    $('#interval').value = s.intervalSeconds; $('#cap').value = s.dailyCap; $('#likes').value = s.likesAbove;
+    $('#dry').checked = s.dryRun; $('#auto').checked = s.autoLearn;
+    formFilled = true;
+  }
+  $('#queue').innerHTML = queue.length ? queue.map(i =>
+    `<tr><td class="title">${esc(i.title)}</td><td>${i.likes ?? '-'}</td>
+     <td class="${i.status}" title="${esc(i.error)}">${i.status}</td>
+     <td><button data-del="${esc(i.id)}">Remove</button></td></tr>`).join('')
+    : '<tr><td colspan="4" class="hint">The queue is empty. Add pins above.</td></tr>';
+  $('#posted').innerHTML = posted.map(p =>
+    `<tr><td>${new Date(p.t).toLocaleString()}</td><td class="title">${esc(p.title)}</td><td><a href="${esc(p.link)}" target="_blank" rel="noopener">Link</a></td></tr>`).join('');
+  $('#log').innerHTML = log.map(l =>
+    `<li class="${l.level}"><time>${new Date(l.t).toLocaleTimeString()}</time>${esc(l.msg)}</li>`).join('');
+}
+
+$('#toggle').onclick = act(async () => { await api('/bot', 'POST', { running: $('#toggle').dataset.run === '1' }); });
+$('#postnow').onclick = act(async () => { await api('/post-now', 'POST'); flash('Pin posted'); });
+$('#save').onclick = act(async () => {
+  await api('/settings', 'POST', {
+    siteUrl: $('#siteUrl').value, boardId: $('#boardId').value,
+    niche: $('#niche').value.split(','), intervalSeconds: +$('#interval').value,
+    dailyCap: +$('#cap').value, likesAbove: +$('#likes').value, dryRun: $('#dry').checked, autoLearn: $('#auto').checked,
+  });
+  flash('Settings saved');
+});
+$('#learn').onclick = act(async () => {
+  flash('Reading your account...');
+  const r = await api('/learn', 'POST');
+  flash(`Learned ${r.keywords.length} keywords from ${r.pinsScanned} pins, ${r.queued} pins added to the queue`);
+});
+$('#loadBoards').onclick = act(async () => {
+  const boards = await api('/boards');
+  $('#boards').innerHTML = boards.map(b => `<option value="${esc(b.id)}">${esc(b.name)}</option>`).join('');
+  flash(boards.length ? `Found ${boards.length} boards. Click the Board ID field to choose one.` : 'No boards found. Create one on Pinterest first.');
+});
+$('#addBtn').onclick = act(async () => {
+  let data; try { data = JSON.parse($('#add').value); } catch { throw new Error('That is not valid JSON'); }
+  const { added } = await api('/queue', 'POST', data);
+  flash(`Added ${added} pin${added === 1 ? '' : 's'}`); if (added) $('#add').value = '';
+});
+document.addEventListener('click', e => {
+  const id = e.target.dataset?.del;
+  if (id) act(() => api('/queue/' + id, 'DELETE'))();
+});
+
+refresh().catch(e => flash(e.message, true));
+setInterval(() => refresh().catch(() => {}), 3000);
+</script>
+</body>
+</html>

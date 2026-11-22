@@ -1,0 +1,16 @@
+{
+  "name": "pin-bot",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file=.env server.js",
+    "test": "node test/run.mjs",
+    "test:once": "node test/once.mjs"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  },
+  "engines": {
+    "node": ">=20.6"
+  }
+}
