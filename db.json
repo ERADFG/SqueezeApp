@@ -16,6 +16,16 @@
  "posted": [],
  "log": [
   {
+   "t": "2026-11-23T01:14:06.719Z",
+   "level": "info",
+   "msg": "No eligible pins in the queue"
+  },
+  {
+   "t": "2026-11-23T01:14:06.716Z",
+   "level": "info",
+   "msg": "Batch started (up to 5 pins, 240s budget)"
+  },
+  {
    "t": "2026-11-22T20:46:43.892Z",
    "level": "info",
    "msg": "No eligible pins in the queue"
