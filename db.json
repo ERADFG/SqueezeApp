@@ -16,6 +16,21 @@
  "posted": [],
  "log": [
   {
+   "t": "2026-11-23T09:18:51.038Z",
+   "level": "info",
+   "msg": "No eligible pins in the queue"
+  },
+  {
+   "t": "2026-11-23T09:18:51.038Z",
+   "level": "info",
+   "msg": "Learned your niche from 13 pins (0 added to the queue)"
+  },
+  {
+   "t": "2026-11-23T09:18:44.207Z",
+   "level": "info",
+   "msg": "Batch started (up to 5 pins, 240s budget)"
+  },
+  {
    "t": "2026-11-23T01:14:06.719Z",
    "level": "info",
    "msg": "No eligible pins in the queue"
@@ -57,7 +72,7 @@
   }
  ],
  "learned": {
-  "at": "2026-11-22T20:46:43.890Z",
+  "at": "2026-11-23T09:18:51.037Z",
   "pinsScanned": 13,
   "keywords": [
    {
@@ -106,6 +121,6 @@
    }
   ]
  },
- "learnTried": "2026-11-22T20:46:43.890Z",
+ "learnTried": "2026-11-23T09:18:51.037Z",
  "account": null
 }
