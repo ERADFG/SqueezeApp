@@ -16,6 +16,21 @@
  "posted": [],
  "log": [
   {
+   "t": "2026-11-25T01:12:01.535Z",
+   "level": "info",
+   "msg": "No eligible pins in the queue"
+  },
+  {
+   "t": "2026-11-25T01:12:01.535Z",
+   "level": "info",
+   "msg": "Learned your niche from 22 pins (0 added to the queue)"
+  },
+  {
+   "t": "2026-11-25T01:11:54.223Z",
+   "level": "info",
+   "msg": "Batch started (up to 5 pins, 240s budget)"
+  },
+  {
    "t": "2026-11-24T16:40:55.592Z",
    "level": "info",
    "msg": "No eligible pins in the queue"
@@ -117,8 +132,8 @@
   }
  ],
  "learned": {
-  "at": "2026-11-24T16:40:55.590Z",
-  "pinsScanned": 13,
+  "at": "2026-11-25T01:12:01.532Z",
+  "pinsScanned": 22,
   "keywords": [
    {
     "w": "interactink",
@@ -126,46 +141,122 @@
    },
    {
     "w": "community",
-    "weight": 0.962
+    "weight": 0.714
+   },
+   {
+    "w": "summer",
+    "weight": 0.571
+   },
+   {
+    "w": "outfit",
+    "weight": 0.429
    },
    {
     "w": "actually",
-    "weight": 0.577
+    "weight": 0.429
+   },
+   {
+    "w": "outfits",
+    "weight": 0.314
+   },
+   {
+    "w": "style",
+    "weight": 0.314
+   },
+   {
+    "w": "female",
+    "weight": 0.286
+   },
+   {
+    "w": "female outfit",
+    "weight": 0.286
+   },
+   {
+    "w": "outfit summer",
+    "weight": 0.286
+   },
+   {
+    "w": "white",
+    "weight": 0.286
+   },
+   {
+    "w": "tank",
+    "weight": 0.286
+   },
+   {
+    "w": "edit",
+    "weight": 0.286
+   },
+   {
+    "w": "tease",
+    "weight": 0.286
+   },
+   {
+    "w": "skin",
+    "weight": 0.286
+   },
+   {
+    "w": "steal",
+    "weight": 0.286
+   },
+   {
+    "w": "glances",
+    "weight": 0.286
+   },
+   {
+    "w": "slay",
+    "weight": 0.286
+   },
+   {
+    "w": "outfits tease",
+    "weight": 0.286
+   },
+   {
+    "w": "tease skin",
+    "weight": 0.286
+   },
+   {
+    "w": "skin steal",
+    "weight": 0.286
+   },
+   {
+    "w": "steal glances",
+    "weight": 0.286
+   },
+   {
+    "w": "glances slay",
+    "weight": 0.286
    },
    {
     "w": "metrics",
-    "weight": 0.385
+    "weight": 0.286
    },
    {
     "w": "vanity",
-    "weight": 0.385
+    "weight": 0.286
    },
    {
     "w": "weekly",
-    "weight": 0.385
+    "weight": 0.286
    },
    {
     "w": "versus",
-    "weight": 0.385
+    "weight": 0.286
    },
    {
     "w": "guidelines",
-    "weight": 0.385
+    "weight": 0.286
    },
    {
     "w": "works",
-    "weight": 0.385
+    "weight": 0.286
    },
    {
     "w": "community guidelines",
-    "weight": 0.385
-   },
-   {
-    "w": "anonymous",
-    "weight": 0.385
+    "weight": 0.286
    }
   ]
  },
- "learnTried": "2026-11-24T16:40:55.590Z",
+ "learnTried": "2026-11-25T01:12:01.532Z",
  "account": null
 }
