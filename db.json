@@ -16,6 +16,21 @@
  "posted": [],
  "log": [
   {
+   "t": "2026-11-27T12:52:48.161Z",
+   "level": "info",
+   "msg": "No eligible pins in the queue"
+  },
+  {
+   "t": "2026-11-27T12:52:48.161Z",
+   "level": "info",
+   "msg": "Learned your niche from 21 pins (0 added to the queue)"
+  },
+  {
+   "t": "2026-11-27T12:52:41.852Z",
+   "level": "info",
+   "msg": "Batch started (up to 5 pins, 240s budget)"
+  },
+  {
    "t": "2026-11-27T03:21:56.888Z",
    "level": "info",
    "msg": "No eligible pins in the queue"
@@ -222,8 +237,8 @@
   }
  ],
  "learned": {
-  "at": "2026-11-27T03:21:56.886Z",
-  "pinsScanned": 22,
+  "at": "2026-11-27T12:52:48.159Z",
+  "pinsScanned": 21,
   "keywords": [
    {
     "w": "interactink",
@@ -231,122 +246,122 @@
    },
    {
     "w": "community",
-    "weight": 0.714
+    "weight": 0.735
    },
    {
     "w": "summer",
-    "weight": 0.571
+    "weight": 0.588
    },
    {
     "w": "outfit",
-    "weight": 0.429
+    "weight": 0.441
    },
    {
     "w": "actually",
-    "weight": 0.429
+    "weight": 0.441
    },
    {
     "w": "outfits",
-    "weight": 0.314
+    "weight": 0.324
    },
    {
     "w": "style",
-    "weight": 0.314
+    "weight": 0.324
    },
    {
     "w": "female",
-    "weight": 0.286
+    "weight": 0.294
    },
    {
     "w": "female outfit",
-    "weight": 0.286
+    "weight": 0.294
    },
    {
     "w": "outfit summer",
-    "weight": 0.286
-   },
-   {
-    "w": "white",
-    "weight": 0.286
+    "weight": 0.294
    },
    {
     "w": "tank",
-    "weight": 0.286
+    "weight": 0.294
    },
    {
     "w": "edit",
-    "weight": 0.286
+    "weight": 0.294
    },
    {
     "w": "tease",
-    "weight": 0.286
+    "weight": 0.294
    },
    {
     "w": "skin",
-    "weight": 0.286
+    "weight": 0.294
    },
    {
     "w": "steal",
-    "weight": 0.286
+    "weight": 0.294
    },
    {
     "w": "glances",
-    "weight": 0.286
+    "weight": 0.294
    },
    {
     "w": "slay",
-    "weight": 0.286
+    "weight": 0.294
    },
    {
     "w": "outfits tease",
-    "weight": 0.286
+    "weight": 0.294
    },
    {
     "w": "tease skin",
-    "weight": 0.286
+    "weight": 0.294
    },
    {
     "w": "skin steal",
-    "weight": 0.286
+    "weight": 0.294
    },
    {
     "w": "steal glances",
-    "weight": 0.286
+    "weight": 0.294
    },
    {
     "w": "glances slay",
-    "weight": 0.286
+    "weight": 0.294
    },
    {
     "w": "metrics",
-    "weight": 0.286
+    "weight": 0.294
    },
    {
     "w": "vanity",
-    "weight": 0.286
+    "weight": 0.294
    },
    {
     "w": "weekly",
-    "weight": 0.286
+    "weight": 0.294
    },
    {
     "w": "versus",
-    "weight": 0.286
+    "weight": 0.294
    },
    {
     "w": "guidelines",
-    "weight": 0.286
+    "weight": 0.294
    },
    {
     "w": "works",
-    "weight": 0.286
+    "weight": 0.294
    },
    {
     "w": "community guidelines",
-    "weight": 0.286
+    "weight": 0.294
+   },
+   {
+    "w": "anonymous",
+    "weight": 0.294
    }
   ]
  },
- "learnTried": "2026-11-27T03:21:56.886Z",
+ "learnTried": "2026-11-27T12:52:48.159Z",
  "account": null
 }
